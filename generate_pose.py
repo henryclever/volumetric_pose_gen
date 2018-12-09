@@ -3,7 +3,9 @@ from opendr.renderer import ColoredRenderer
 from opendr.lighting import LambertianPointLight
 from opendr.camera import ProjectPoints
 from smpl.smpl_webuser.serialization import load_model
+
 import lib_visualization as libVisualization
+import lib_kinematics as libKinematics
 
 #ROS
 import rospy
@@ -91,8 +93,8 @@ m.pose[49] = -np.pi/4
 m.pose[50] = -np.pi/4 #left outer shoulder pitch
 
 m.pose[51] = 0. #right outer shoulder roll
-m.pose[52] = np.pi/4
-m.pose[53] = np.pi/4
+m.pose[52] = np.pi/2
+m.pose[53] = np.pi/3
 
 m.pose[54] = 0 #left elbow roll KEEP AT ZERO
 m.pose[55] = -np.pi/4 #left elbow flexion/extension. KEEP NEGATIVE
@@ -130,7 +132,7 @@ print m.betas, 'betas'
 
 
 
-if render == 'standard':
+def standard_render():
 
     ## Create OpenDR renderer
     rn = ColoredRenderer()
@@ -168,16 +170,101 @@ if render == 'standard':
     # import pdb; pdb.set_trace()
 
 
-def solve_ik_tree():
+def solve_ik_tree_smpl():
 
-    # print m.J_transformed
+    # print the origin
     print m.J - m.J[0, :]
 
     ax = plt.figure().add_subplot(111, projection='3d')
 
+    #grab the joint positions
+    r_leg_pos_origins = np.array([np.array(m.J[0, :]), np.array(m.J[2, :]), np.array(m.J[5, :]), np.array(m.J[8, :])])
+    r_leg_pos_current = np.array([np.array(m.J_transformed[0, :]), np.array(m.J_transformed[2, :]), np.array(m.J_transformed[5, :]), np.array(m.J_transformed[8, :])])
 
-    print IK_RK, 'RK'
-    print IK_RA, 'RA'
+    #get the IK solution
+    r_knee_chain, IK_RK, r_ankle_chain, IK_RA = libKinematics.ik_leg(r_leg_pos_origins, r_leg_pos_current)
+
+    #get the RPH values
+    r_hip_angles = [IK_RK[1], IK_RA[2], IK_RK[2]]
+    r_knee_angle = [IK_RA[4]]
+
+    #grab the joint angle ground truth
+    r_hip_angles_GT = m.pose[6:9]
+    r_knee_angle_GT = m.pose[15]
+    IK_RA_GT = np.copy(IK_RA)
+    IK_RA_GT[2] = r_hip_angles_GT[1]
+    IK_RA_GT[4] = r_knee_angle_GT
+
+
+    print "right hip GT: ", r_hip_angles_GT
+    print "right hip estimated: ", r_hip_angles
+    print "right knee GT: ", r_knee_angle_GT
+    print "right knee estimated: ", r_knee_angle
+
+
+    #grab the joint positions
+    l_leg_pos_origins = np.array([np.array(m.J[0, :]), np.array(m.J[1, :]), np.array(m.J[4, :]), np.array(m.J[7, :])])
+    l_leg_pos_current = np.array([np.array(m.J_transformed[0, :]), np.array(m.J_transformed[1, :]), np.array(m.J_transformed[4, :]), np.array(m.J_transformed[7, :])])
+
+    #get the IK solution
+    l_knee_chain, IK_LK, l_ankle_chain, IK_LA  = libKinematics.ik_leg(l_leg_pos_origins, l_leg_pos_current)
+
+    #get the RPH values
+    l_hip_angles = [IK_LK[1], IK_LA[2], IK_LK[2]]
+    l_knee_angle = [IK_LA[4]]
+
+    #grab the joint angle ground truth
+    l_hip_angles_GT = m.pose[3:6]
+    l_knee_angle_GT = m.pose[12]
+    IK_LA_GT = np.copy(IK_LA)
+    IK_LA_GT[2] = l_hip_angles_GT[1]
+    IK_LA_GT[4] = l_knee_angle_GT
+
+    print "left hip GT: ", l_hip_angles_GT
+    print "left hip estimated: ", l_hip_angles
+    print "left knee GT: ", l_knee_angle_GT
+    print "left knee estimated: ", l_knee_angle
+
+
+
+    #grab the joint positions
+    r_arm_pos_origins = np.array([np.array(m.J[0, :]), np.array(m.J[12, :]), np.array(m.J[17, :]), np.array(m.J[19, :]), np.array(m.J[21, :]) ])
+    r_arm_pos_current = np.array([np.array(m.J_transformed[0, :]), np.array(m.J_transformed[12, :]), np.array(m.J_transformed[17, :]), np.array(m.J_transformed[19, :]), np.array(m.J_transformed[21, :])])
+
+    #get the IK solution
+    r_elbow_chain, IK_RE, r_wrist_chain, IK_RW = libKinematics.ik_arm(r_arm_pos_origins, r_arm_pos_current)
+
+    #get the RPH values
+    r_shoulder_angles = [IK_RW[2], IK_RE[2], IK_RE[3]]
+    r_elbow_angle = [IK_RW[5]]
+
+    #grab the joint angle ground truth
+    r_shoulder_angles_GT = m.pose[51:54]
+    r_elbow_angle_GT = m.pose[58]
+    IK_RW_GT = np.copy(IK_RW)
+    IK_RW_GT[2] = r_shoulder_angles_GT[1]
+    IK_RW_GT[5] = r_elbow_angle_GT
+
+
+    print "right shoulder GT: ", r_shoulder_angles_GT
+    print "right shoulder estimated: ", r_shoulder_angles
+    print "right elbow GT: ", r_elbow_angle_GT
+    print "right elbow estimated: ", r_elbow_angle
+
+
+
+
+    # right_knee_chain.plot(IK_RK, ax)
+    r_ankle_chain.plot(IK_RA, ax)
+    r_ankle_chain.plot(IK_RA_GT, ax)
+    #l_ankle_chain.plot(IK_LA, ax)
+    # right_elbow_chain.plot(IK_RE, ax)
+    r_wrist_chain.plot(IK_RW, ax)
+    #r_wrist_chain.plot(IK_RW_GT, ax)
+    # left_elbow_chain.plot(IK_LE, ax)
+    #left_wrist_chain.plot(IK_LW, ax)
+
+    plt.show()
 
 
 def render_rviz():
@@ -200,4 +287,4 @@ def render_rviz():
 
 
 if __name__ == "__main__":
-    print 'blah'
+    solve_ik_tree_smpl()
