@@ -44,23 +44,23 @@ m.pose[0] = 0 #pitch rotation of the person in space. 0 means the person is upsi
 m.pose[1] = 0 #roll of the person in space. -pi/2 means they are tilted to their right side
 m.pose[2] = 0 #-np.pi/4 #yaw of the person in space, like turning around normal to the ground
 
-m.pose[3] = np.pi/4 #left hip extension (i.e. leg bends back for np.pi/2)
-m.pose[4] = 0 #left leg yaw about hip, where np.pi/2 makes bowed leg
+m.pose[3] = -np.pi/4 #left hip extension (i.e. leg bends back for np.pi/2)
+m.pose[4] = np.pi/8 #left leg yaw about hip, where np.pi/2 makes bowed leg
 m.pose[5] = 0#-np.pi/8 #left leg abduction (POS) /adduction (NEG)
 
-m.pose[6] = np.pi/2 #right hip extension (i.e. leg bends back for np.pi/2)
-m.pose[7] = -np.pi/2
-m.pose[8] = 0#-np.pi/2 #right leg abduction (NEG) /adduction (POS)
+m.pose[6] = -np.pi/4 #right hip extension (i.e. leg bends back for np.pi/2)
+m.pose[7] = 0#-np.pi/2
+m.pose[8] = -np.pi/4 #right leg abduction (NEG) /adduction (POS)
 
 m.pose[9] = 0 #bending of spine at hips. np.pi/2 means person bends down to touch the ground
 m.pose[10] = 0 #twisting of spine at hips. body above spine yaws normal to the ground
 m.pose[11] = 0 #bending of spine at hips. np.pi/2 means person bends down sideways to touch the ground 3
 
-m.pose[12] = np.pi/4 #left knee extension. (i.e. knee bends back for np.pi/2)
+m.pose[12] = np.pi/3 #left knee extension. (i.e. knee bends back for np.pi/2)
 m.pose[13] = 0 #twisting of knee normal to ground. KEEP AT ZERO
 m.pose[14] = 0 #bending of knee sideways. KEEP AT ZERO
 
-m.pose[15] = np.pi/2 #right knee extension (i.e. knee bends back for np.pi/2)
+m.pose[15] = np.pi/4 #right knee extension (i.e. knee bends back for np.pi/2)
 
 m.pose[18] = 0 #bending at mid spine. makes person into a hunchback for positive values
 m.pose[19] = 0#twisting of midspine. body above midspine yaws normal to the ground
@@ -89,7 +89,7 @@ m.pose[39] = 0 #left inner shoulder roll
 m.pose[40] = 0 #left inner shoulder yaw, negative moves forward
 m.pose[41] = 0 #left inner shoulder pitch, positive moves up
 
-m.pose[42] = 0
+m.pose[42] = 0#np.pi/4
 m.pose[43] = 0 #right inner shoulder yaw, positive moves forward
 m.pose[44] = 0 #right inner shoulder pitch, positive moves down
 
@@ -99,16 +99,16 @@ m.pose[48] = 0 #left outer shoulder roll
 #m.pose[49] = -np.pi/4
 m.pose[50] = np.pi/4 #left outer shoulder pitch
 
-m.pose[51] = 0. #right outer shoulder roll
-m.pose[52] = 0.#np.pi/2
-m.pose[53] = 0.#np.pi/3
+m.pose[51] = -np.pi/3 #right outer shoulder roll
+m.pose[52] = np.pi/3
+m.pose[53] = np.pi/4
 
 m.pose[54] = 0 #left elbow roll KEEP AT ZERO
 #m.pose[55] = -np.pi/4 #left elbow flexion/extension. KEEP NEGATIVE
 m.pose[56] = 0 #left elbow KEEP AT ZERO
 
 m.pose[57] = 0
-m.pose[58] = 0#np.pi/4 #right elbow flexsion/extension KEEP POSITIVE
+m.pose[58] = np.pi/4 #right elbow flexsion/extension KEEP POSITIVE
 
 m.pose[60] = 0 #left wrist roll
 
@@ -190,7 +190,7 @@ def solve_ik_tree_smpl():
 
 
     #get the IKPY solution
-    r_knee_chain, IK_RK, r_ankle_chain, IK_RA = libKinematics.ikpy_leg(r_leg_pos_origins, r_leg_pos_current)
+    r_omega_hip, r_knee_chain, IK_RK, r_ankle_chain, IK_RA = libKinematics.ikpy_leg(r_leg_pos_origins, r_leg_pos_current)
 
 
     #get the RPH values
@@ -200,56 +200,40 @@ def solve_ik_tree_smpl():
     #grab the joint angle ground truth
     r_hip_angles_GT = m.pose[6:9]
     r_knee_angle_GT = m.pose[15]
-    IK_RK_GT = np.copy(IK_RK)
-    IK_RK_GT[1] = r_hip_angles_GT[0]
-    IK_RK_GT[2] = r_hip_angles_GT[2]
-
-    IK_RA_GT = np.copy(IK_RA)
-    IK_RA_GT[1] = r_hip_angles_GT[0]
-    IK_RA_GT[2] = r_hip_angles_GT[1]
-    IK_RA_GT[3] = r_hip_angles_GT[2]
-    IK_RA_GT[4] = r_knee_angle_GT
 
     print IK_RK, 'IK_RK'
-    print IK_RK_GT, 'IK_RK_GT'
     print IK_RA, "IK_RA"
-    print IK_RA_GT, 'IK_RA_GT'
-
-   # #IK_RK_GT = np.copy(IK_RK)
-    #IK_RK_GT[2] = r_hip_angles_GT[1]
-    #IK_RK_GT[4] = r_knee_angle_GT
-
-    #IK_RA[3] = 1.0
 
 
-    print "right hip GT: ", r_hip_angles_GT
-    print "right hip estimated: ", r_hip_angles
-    print "right knee GT: ", r_knee_angle_GT
-    print "right knee estimated: ", r_knee_angle
+    print "right hip Angle-axis GT: ", r_hip_angles_GT
+    print "right hip Angle-axis est:", r_omega_hip
+    print "right hip Euler est: ", r_hip_angles
+    print "right knee Angle-axis GT: ", r_knee_angle_GT
+    #print "right knee Angle-axis est:", r_omega_knee
+    print "right knee Euler est: ", r_knee_angle
 
 
     #grab the joint positions
-    #l_leg_pos_origins = np.array([np.array(m.J[0, :]), np.array(m.J[1, :]), np.array(m.J[4, :]), np.array(m.J[7, :])])
-    #l_leg_pos_current = np.array([np.array(m.J_transformed[0, :]), np.array(m.J_transformed[1, :]), np.array(m.J_transformed[4, :]), np.array(m.J_transformed[7, :])])
+    l_leg_pos_origins = np.array([np.array(m.J[0, :]), np.array(m.J[1, :]), np.array(m.J[4, :]), np.array(m.J[7, :])])
+    l_leg_pos_current = np.array([np.array(m.J_transformed[0, :]), np.array(m.J_transformed[1, :]), np.array(m.J_transformed[4, :]), np.array(m.J_transformed[7, :])])
 
     #get the IK solution
-    #l_knee_chain, IK_LK, l_ankle_chain, IK_LA  = libKinematics.ikpy_leg(l_leg_pos_origins, l_leg_pos_current)
+    l_omega_hip, l_knee_chain, IK_LK, l_ankle_chain, IK_LA  = libKinematics.ikpy_leg(l_leg_pos_origins, l_leg_pos_current)
 
     #get the RPH values
-    #l_hip_angles = [IK_LK[1], IK_LA[2], IK_LK[2]]
-    #l_knee_angle = [IK_LA[4]]
+    l_hip_angles = [IK_LK[1], IK_LA[2], IK_LK[2]]
+    l_knee_angle = [IK_LA[4]]
 
     #grab the joint angle ground truth
-    #l_hip_angles_GT = m.pose[3:6]
-    #l_knee_angle_GT = m.pose[12]
-    #IK_LA_GT = np.copy(IK_LA)
-    #IK_LA_GT[2] = l_hip_angles_GT[1]
-    #IK_LA_GT[4] = l_knee_angle_GT
+    l_hip_angles_GT = m.pose[3:6]
+    l_knee_angle_GT = m.pose[12]
 
-    #print "left hip GT: ", l_hip_angles_GT
-    #print "left hip estimated: ", l_hip_angles
-    #print "left knee GT: ", l_knee_angle_GT
-    #print "left knee estimated: ", l_knee_angle
+    print "left hip Angle-axis GT: ", l_hip_angles_GT
+    print "left hip Angle-axis est: ", l_omega_hip
+    print "left hip Euler estimation: ", l_hip_angles
+    print "left knee Angle-axis GT: ", l_knee_angle_GT
+    #print "left knee Angle-axis est: ", l_omega_knee
+    print "left knee Euler est: ", l_knee_angle
 
 
 
@@ -258,7 +242,7 @@ def solve_ik_tree_smpl():
     r_arm_pos_current = np.array([np.array(m.J_transformed[0, :]), np.array(m.J_transformed[12, :]), np.array(m.J_transformed[17, :]), np.array(m.J_transformed[19, :]), np.array(m.J_transformed[21, :])])
 
     #get the IK solution
-    r_elbow_chain, IK_RE, r_wrist_chain, IK_RW = libKinematics.ikpy_arm(r_arm_pos_origins, r_arm_pos_current)
+    r_omega_shoulder, r_elbow_chain, IK_RE, r_wrist_chain, IK_RW = libKinematics.ikpy_arm(r_arm_pos_origins, r_arm_pos_current)
 
     #get the RPH values
     r_shoulder_angles = [IK_RW[2], IK_RE[2], IK_RE[3]]
@@ -267,30 +251,25 @@ def solve_ik_tree_smpl():
     #grab the joint angle ground truth
     r_shoulder_angles_GT = m.pose[51:54]
     r_elbow_angle_GT = m.pose[58]
-    IK_RW_GT = np.copy(IK_RW)
-    IK_RW_GT[2] = r_shoulder_angles_GT[1]
-    IK_RW_GT[5] = r_elbow_angle_GT
 
+    print IK_RE
+    print IK_RW
 
-    IK_RE_GT = np.copy(IK_RE)
-    IK_RE_GT[2] = r_shoulder_angles_GT[0]
-    IK_RE_GT[3] = r_shoulder_angles_GT[1]
-    IK_RE_GT[4] = r_shoulder_angles_GT[2]
-
-
-    print "right shoulder GT: ", r_shoulder_angles_GT
-    print "right shoulder estimated: ", r_shoulder_angles
-    print "right elbow GT: ", r_elbow_angle_GT
-    print "right elbow estimated: ", r_elbow_angle
+    print "right shoulder Angle-axis GT: ", r_shoulder_angles_GT
+    print "right shoulder Angle-axis est: ", r_omega_shoulder
+    print "right shoulder Euler est: ", r_shoulder_angles
+    print "right elbow Angle-axis GT: ", r_elbow_angle_GT
+    print "right elbow Euler est: ", r_elbow_angle
 
 
 
 
     r_knee_chain.plot(IK_RK, ax)
     r_ankle_chain.plot(IK_RA, ax)
-    #l_ankle_chain.plot(IK_LA, ax)
-    #r_elbow_chain.plot(IK_RE, ax)
-    #r_wrist_chain.plot(IK_RW, ax)
+    l_knee_chain.plot(IK_LK, ax)
+    l_ankle_chain.plot(IK_LA, ax)
+    r_elbow_chain.plot(IK_RE, ax)
+    r_wrist_chain.plot(IK_RW, ax)
     # left_elbow_chain.plot(IK_LE, ax)
     #left_wrist_chain.plot(IK_LW, ax)
 

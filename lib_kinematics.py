@@ -116,73 +116,94 @@ def ikpy_leg(origins, current):
     #print hip_3, 'hip 3'
 
     rot_hip = hip_1.dot(hip_2).dot(hip_3)
-    Tr = rot_hip[0,0] + rot_hip[1,1] + rot_hip[2,2]
-    theta_inv = np.arccos((Tr - 1)/2)
-    #print(theta_inv)
-    omega = np.array([rot_hip[2,1]-rot_hip[1,2], rot_hip[0,2]-rot_hip[2,0], rot_hip[1,0]-rot_hip[0,1]])
-    omega = (1/(2*np.sin(theta_inv)))*omega
-    print(omega*theta_inv, 'axis angle solution')
+    Tr_hip = rot_hip[0,0] + rot_hip[1,1] + rot_hip[2,2]
+    theta_inv_hip = np.arccos((Tr_hip - 1)/2)
+    omega_hip = np.array([rot_hip[2,1]-rot_hip[1,2], rot_hip[0,2]-rot_hip[2,0], rot_hip[1,0]-rot_hip[0,1]])
+    omega_hip = (1/(2*np.sin(theta_inv_hip)))*omega_hip
+
+    #rot_knee = geometry_utils.Rx_matrix(IK_A[4])
+    #print(rot_knee)
+    #Tr_knee = rot_knee[0,0] + rot_knee[1,1] + rot_knee[2,2]
+    #print Tr_knee, 'Tr knee'
+    #theta_inv_knee = np.arccos((Tr_knee - 1)/2)
+    #print theta_inv_knee, 'th inv knee'
+    #omega_knee = np.array([rot_knee[2,1]-rot_knee[1,2], rot_knee[0,2]-rot_knee[2,0], rot_knee[1,0]-rot_knee[0,1]])
+    #print omega_knee, 'omega knee'
+    #omega_knee = (1/(2*np.sin(theta_inv_knee)))*omega_knee
 
 
-
-    return knee_chain, IK_K, ankle_chain, IK_A
+    return omega_hip, knee_chain, IK_K, ankle_chain, IK_A
 
 
 
 def ikpy_arm(origin, current):
 
 
-    right_elbow_chain = Chain(name='right_elbow', links=[
+    elbow_chain = Chain(name='elbow', links=[
         OriginLink(),
         URDFLink(name="neck", translation_vector=origin[1, :] - origin[0, :],
                  orientation=[0, 0, 0], rotation=[1, 0, 0], ),
-        URDFLink(name="r_shoulder_1", translation_vector=origin[2, :] - origin[1, :],
+        URDFLink(name="shoulder_1", translation_vector=origin[2, :] - origin[1, :],
                  orientation=[0, 0, 0], rotation=[1, 0, 0], ),
-        URDFLink(name="r_shoulder_3", translation_vector=[.0, 0, 0],
+        URDFLink(name="shoulder_2", translation_vector=[.0, 0, 0],
                  orientation=[0, 0, 0], rotation=[0, 0, 1], ),
-        URDFLink(name="r_elbow", translation_vector=origin[3, :] - origin[2, :],
+        URDFLink(name="elbow", translation_vector=origin[3, :] - origin[2, :],
                  orientation=[0, 0, 0], rotation=[0, 1, 0], ), ],
                               active_links_mask=[False, False, True, True, False]
                               )
 
 
-    R_Elbow_Pos = current[3, :] - current[0, :]
+    Elbow_Pos = current[3, :] - current[0, :]
     #print current[3, :] - current[0, :]
     #print origin[3, :] - origin[0, :], 'origin'
-    IK_RE = right_elbow_chain.inverse_kinematics([
-        [1., 0., 0., R_Elbow_Pos[0]],
-        [0., 1., 0., R_Elbow_Pos[1]],
-        [0., 0., 1., R_Elbow_Pos[2]],
+    IK_E = elbow_chain.inverse_kinematics([
+        [1., 0., 0., Elbow_Pos[0]],
+        [0., 1., 0., Elbow_Pos[1]],
+        [0., 0., 1., Elbow_Pos[2]],
         [0., 0., 0., 1.]])
 
     #print IK_RE, 'RE'
 
-    right_wrist_chain = Chain(name='right_wrist', links=[
+    wrist_chain = Chain(name='wrist', links=[
         OriginLink(),
         URDFLink(name="neck", translation_vector=origin[1, :] - origin[0, :],
                  orientation=[0, 0, 0], rotation=[1, 0, 0], ),
-        URDFLink(name="r_shoulder_1", translation_vector=origin[2, :] - origin[1, :],
-                 orientation=[0, 0, 0], rotation=[1, 0, 0], ),
-        URDFLink(name="r_shoulder_2", translation_vector=[.0, 0, 0],
-                 orientation=[0, IK_RE[2], 0], rotation=[0, 1, 0], ),
-        URDFLink(name="r_shoulder_3", translation_vector=[.0, 0, 0],
-                 orientation=[0, 0, IK_RE[3]], rotation=[0, 0, 1], ),
-        URDFLink(name="r_elbow", translation_vector=origin[3, :] - origin[2, :],
+        URDFLink(name="shoulder_1", translation_vector=origin[2, :] - origin[1, :],
+                 orientation=[IK_E[2], 0, 0], rotation=[1, 0, 0], ),
+        URDFLink(name="shoulder_2", translation_vector=[.0, 0, 0],
+                 orientation=[0, 0, IK_E[3]], rotation=[0, 0, 1], ),
+        URDFLink(name="shoulder_3", translation_vector=[0, 0, 0],
                  orientation=[0, 0, 0], rotation=[0, 1, 0], ),
-        URDFLink(name="r_wrist", translation_vector=origin[4, :] - origin[3, :],
+        URDFLink(name="elbow", translation_vector=origin[3, :] - origin[2, :],
+                 orientation=[0, 0, 0], rotation=[0, 0, 1], ),
+        URDFLink(name="wrist", translation_vector=origin[4, :] - origin[3, :],
                  orientation=[0, 0, 0], rotation=[1, 0, 0], ), ],
-                              active_links_mask=[False, False, True, False, False, True, False]
+                              active_links_mask=[False, False, False, False, True, True, False]
                               )
 
-    R_Wrist_Pos = current[4, :] - current[0, :]
-    IK_RW = right_wrist_chain.inverse_kinematics([
-        [1., 0., 0., R_Wrist_Pos[0]],
-        [0., 1., 0., R_Wrist_Pos[1]],
-        [0., 0., 1., R_Wrist_Pos[2]],
+    Wrist_Pos = current[4, :] - current[0, :]
+    IK_W = wrist_chain.inverse_kinematics([
+        [1., 0., 0., Wrist_Pos[0]],
+        [0., 1., 0., Wrist_Pos[1]],
+        [0., 0., 1., Wrist_Pos[2]],
         [0., 0., 0., 1.]])
 
    # print IK_RW, 'RW'
-    return right_elbow_chain, IK_RE, right_wrist_chain, IK_RW
+
+    shoulder_1 = geometry_utils.Rx_matrix(IK_E[2])
+    shoulder_2 = geometry_utils.Rz_matrix(IK_E[3])
+    shoulder_3 = geometry_utils.Ry_matrix(IK_W[4])
+    # print shoulder_1, 'shoulder 1'
+    # print shoulder_2, 'shoulder 2'
+    # print shoulder_3, 'shoulder 3'
+
+    rot_shoulder = shoulder_1.dot(shoulder_2).dot(shoulder_3)
+    Tr_shoulder = rot_shoulder[0, 0] + rot_shoulder[1, 1] + rot_shoulder[2, 2]
+    theta_inv_shoulder = np.arccos((Tr_shoulder - 1) / 2)
+    omega_shoulder = np.array([rot_shoulder[2, 1] - rot_shoulder[1, 2], rot_shoulder[0, 2] - rot_shoulder[2, 0], rot_shoulder[1, 0] - rot_shoulder[0, 1]])
+    omega_shoulder = (1 / (2 * np.sin(theta_inv_shoulder))) * omega_shoulder
+
+    return omega_shoulder, elbow_chain, IK_E, wrist_chain, IK_W
 
 
 def other(m):
