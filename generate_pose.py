@@ -1,12 +1,15 @@
 import numpy as np
+import random
 from opendr.renderer import ColoredRenderer
 from opendr.lighting import LambertianPointLight
 from opendr.camera import ProjectPoints
 from smpl.smpl_webuser.serialization import load_model
 
+#volumetric pose gen libraries
 import lib_visualization as libVisualization
 import lib_kinematics as libKinematics
 from process_yash_data import ProcessYashData
+import dart_skel_sim
 
 #ROS
 import rospy
@@ -123,16 +126,16 @@ class GeneratePose():
         #self.m.pose[71] = np.pi/5 #right fist
 
 
-        self.m.betas[0] = 0. #overall body size. more positive number makes smaller, negative makes larger with bigger belly
-        self.m.betas[1] = 0. #positive number makes person very skinny, negative makes fat
-        self.m.betas[2] = 3. #muscle mass. higher makes person less physically fit
-        self.m.betas[3] = 0. #proportion for upper vs lower bone lengths. more negative number makes legs much bigger than arms
-        self.m.betas[4] = 3. #neck. more negative seems to make neck longer and body more skinny
-        self.m.betas[5] = 6. #size of hips. larger means bigger hips
-        self.m.betas[6] = 0. #proportion of belly with respect to rest of the body. higher number is larger belly
-        self.m.betas[7] = 0
-        self.m.betas[8] = -4
-        self.m.betas[9] = 0
+        self.m.betas[0] = random.uniform(-2, 2) #overall body size. more positive number makes smaller, negative makes larger with bigger belly
+        self.m.betas[1] = random.uniform(-2, 2) #positive number makes person very skinny, negative makes fat
+        self.m.betas[2] = random.uniform(-2, 2) #muscle mass. higher makes person less physically fit
+        self.m.betas[3] = random.uniform(-2, 2) #proportion for upper vs lower bone lengths. more negative number makes legs much bigger than arms
+        self.m.betas[4] = random.uniform(-2, 2) #neck. more negative seems to make neck longer and body more skinny
+        self.m.betas[5] = random.uniform(-2, 2) #size of hips. larger means bigger hips
+        self.m.betas[6] = random.uniform(-2, 2) #proportion of belly with respect to rest of the body. higher number is larger belly
+        self.m.betas[7] = random.uniform(-2, 2)
+        #self.m.betas[8] = random.uniform(-3, 3)
+        #self.m.betas[9] = random.uniform(-3, 3)
 
         print self.m.pose.shape
         print self.m.pose, 'pose'
@@ -630,8 +633,62 @@ class GeneratePose():
                     self.m.pose[55] = entry['l_elbow_angle_axis'][1]
                     if verbose == True: print 'l elbow', self.m.pose[54:57]
 
+    def map_random_selection_to_smpl_angles(self):
+        alter_angles = False
+        if alter_angles == True:
+            selection_r_leg = processYashData.sample_angles('r_leg')
+            self.m.pose[6] = selection_r_leg['rG_ext']
+            self.m.pose[7] = selection_r_leg['rG_yaw']/2
+            self.m.pose[8] = selection_r_leg['rG_abd']
+
+            self.m.pose[15] = selection_r_leg['rK']
+            self.m.pose[16] = selection_r_leg['rG_yaw']/2
+
+            selection_l_leg = processYashData.sample_angles('l_leg')
+            self.m.pose[3] = selection_l_leg['lG_ext']
+            self.m.pose[4] = selection_l_leg['lG_yaw']/2
+            self.m.pose[5] = selection_l_leg['lG_abd']
+
+            self.m.pose[12] = selection_l_leg['lK']
+            self.m.pose[13] = selection_l_leg['lG_yaw']/2
+
+            selection_r_arm = processYashData.sample_angles('r_arm')
+            self.m.pose[51] = selection_r_arm['rS_roll']*2/3
+            self.m.pose[52] = selection_r_arm['rS_yaw']*2/3
+            self.m.pose[53] = selection_r_arm['rS_pitch']*2/3
+            self.m.pose[42] = selection_r_arm['rS_roll']*1/3
+            self.m.pose[43] = selection_r_arm['rS_yaw']*1/3
+            self.m.pose[44] = selection_r_arm['rS_pitch']*1/3
+
+            self.m.pose[58] = selection_r_arm['rE']
+
+            selection_l_arm = processYashData.sample_angles('l_arm')
+            self.m.pose[48] = selection_l_arm['lS_roll']*2/3
+            self.m.pose[49] = selection_l_arm['lS_yaw']*2/3
+            self.m.pose[50] = selection_l_arm['lS_pitch']*2/3
+            self.m.pose[39] = selection_l_arm['lS_roll']*1/3
+            self.m.pose[40] = selection_l_arm['lS_yaw']*1/3
+            self.m.pose[41] = selection_l_arm['lS_pitch']*1/3
+
+            self.m.pose[55] = selection_l_arm['lE']
+
+        #self.m.pose[51] = selection_r
+        from capsule_body import get_capsules, get_joint2name, get_rots0
+        capsules = get_capsules(self.m)
+        joint2name = get_joint2name()
+        rots0 = get_rots0()
+        print len(capsules)
+
+        #put these capsules into dart based on these angles. Make Dart joints only as necessary.
+        #Use the positions found in dart to update positions in FleX. Do not use angles in Flex
+        #repeat: do not need a forward kinematics model in FleX! Just need the capsule positions and radii. Can potentially get rotation from the Capsule end positions.
+        #Find IK solution at the very end.
+
+        dss = dart_skel_sim.DartSkelSim(render = True, m = self.m, capsules = capsules, joint_names = joint2name, initial_rots = rots0)
+        dss.run()
 
 
+        self.standard_render()
 
 
 
@@ -646,4 +703,5 @@ if __name__ == "__main__":
     #processYashData.map_yash_to_axis_angle(verbose=False)
     #processYashData.check_found_limits()
 
-    processYashData.get_r_leg_angles()
+    #processYashData.get_r_leg_angles()
+    generator.map_random_selection_to_smpl_angles()

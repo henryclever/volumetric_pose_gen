@@ -33,48 +33,95 @@ from hmr.src.tf_smpl.batch_smpl import SMPL
 class ProcessYashData():
     def __init__(self):
         self.dependencies = {}
-        self.dependencies['exclude_rG_ext'] = ['rG_yaw', 'rG_abd', 'rK']
-        self.dependencies['exclude_rG_abd'] = ['rG_ext', 'rG_yaw', 'rK']
-        self.dependencies['exclude_rG_yaw'] = ['rG_ext', 'rG_abd', 'rK']
-        self.dependencies['exclude_rK'] = ['rG_ext', 'rG_abd', 'rG_yaw']
+        for side in ['r', 'l']:
+            self.dependencies['exclude_'+side+'G_ext'] = [side+'G_yaw', side+'G_abd', side+'K']
+            self.dependencies['exclude_'+side+'G_abd'] = [side+'G_ext', side+'G_yaw', side+'K']
+            self.dependencies['exclude_'+side+'G_yaw'] = [side+'G_ext', side+'G_abd', side+'K']
+            self.dependencies['exclude_'+side+'K'] = [side+'G_ext', side+'G_abd', side+'G_yaw']
 
-        self.dependencies['exclude_rG_ext_rG_abd'] = ['rG_yaw', 'rK']
-        self.dependencies['exclude_rG_ext_rG_yaw'] = ['rG_abd', 'rK']
-        self.dependencies['exclude_rG_ext_rK'] = ['rG_yaw', 'rG_abd']
-        self.dependencies['exclude_rG_abd_rG_ext'] = ['rG_yaw', 'rK']
-        self.dependencies['exclude_rG_abd_rG_yaw'] = ['rG_ext', 'rK']
-        self.dependencies['exclude_rG_abd_rK'] = ['rG_ext', 'rG_yaw']
-        self.dependencies['exclude_rG_yaw_rG_ext'] = ['rG_abd', 'rK']
-        self.dependencies['exclude_rG_yaw_rG_abd'] = ['rG_ext', 'rK']
-        self.dependencies['exclude_rG_yaw_rK'] = ['rG_ext', 'rG_abd']
-        self.dependencies['exclude_rK_rG_ext'] = ['rG_abd', 'rG_yaw']
-        self.dependencies['exclude_rK_rG_abd'] = ['rG_ext', 'rG_yaw']
-        self.dependencies['exclude_rK_rG_yaw'] = ['rG_ext', 'rG_abd']
+            self.dependencies['exclude_'+side+'G_ext_'+side+'G_abd'] = [side+'G_yaw', side+'K']
+            self.dependencies['exclude_'+side+'G_ext_'+side+'G_yaw'] = [side+'G_abd', side+'K']
+            self.dependencies['exclude_'+side+'G_ext_'+side+'K'] = [side+'G_yaw', side+'G_abd']
+            self.dependencies['exclude_'+side+'G_abd_'+side+'G_ext'] = [side+'G_yaw', side+'K']
+            self.dependencies['exclude_'+side+'G_abd_'+side+'G_yaw'] = [side+'G_ext', side+'K']
+            self.dependencies['exclude_'+side+'G_abd_'+side+'K'] = [side+'G_ext', side+'G_yaw']
+            self.dependencies['exclude_'+side+'G_yaw_'+side+'G_ext'] = [side+'G_abd', side+'K']
+            self.dependencies['exclude_'+side+'G_yaw_'+side+'G_abd'] = [side+'G_ext', side+'K']
+            self.dependencies['exclude_'+side+'G_yaw_'+side+'K'] = [side+'G_ext', side+'G_abd']
+            self.dependencies['exclude_'+side+'K_'+side+'G_ext'] = [side+'G_abd', side+'G_yaw']
+            self.dependencies['exclude_'+side+'K_'+side+'G_abd'] = [side+'G_ext', side+'G_yaw']
+            self.dependencies['exclude_'+side+'K_'+side+'G_yaw'] = [side+'G_ext', side+'G_abd']
 
-        self.dependencies['exclude_rG_ext_rG_abd_rG_yaw'] = ['rK']
-        self.dependencies['exclude_rG_ext_rG_abd_rK'] = ['rG_yaw']
-        self.dependencies['exclude_rG_ext_rG_yaw_rG_abd'] = ['rK']
-        self.dependencies['exclude_rG_ext_rG_yaw_rK'] = ['rG_abd']
-        self.dependencies['exclude_rG_ext_rK_rG_yaw'] = ['rG_abd']
-        self.dependencies['exclude_rG_ext_rK_rG_abd'] = ['rG_yaw']
-        self.dependencies['exclude_rG_abd_rG_ext_rG_yaw'] = ['rK']
-        self.dependencies['exclude_rG_abd_rG_ext_rK'] = ['rG_yaw']
-        self.dependencies['exclude_rG_abd_rG_yaw_rG_ext'] = ['rK']
-        self.dependencies['exclude_rG_abd_rG_yaw_rK'] = ['rG_ext']
-        self.dependencies['exclude_rG_abd_rK_rG_ext'] = ['rG_yaw']
-        self.dependencies['exclude_rG_abd_rK_rG_yaw'] = ['rG_ext']
-        self.dependencies['exclude_rG_yaw_rG_ext_rK'] = ['rG_abd']
-        self.dependencies['exclude_rG_yaw_rG_ext_rG_abd'] = ['rK']
-        self.dependencies['exclude_rG_yaw_rG_abd_rK'] = ['rG_ext']
-        self.dependencies['exclude_rG_yaw_rG_abd_rG_ext'] = ['rK']
-        self.dependencies['exclude_rG_yaw_rK_rG_ext'] = ['rG_abd']
-        self.dependencies['exclude_rG_yaw_rK_rG_abd'] = ['rG_ext']
-        self.dependencies['exclude_rK_rG_ext_rG_abd'] = ['rG_yaw']
-        self.dependencies['exclude_rK_rG_ext_rG_yaw'] = ['rG_abd']
-        self.dependencies['exclude_rK_rG_abd_rG_ext'] = ['rG_yaw']
-        self.dependencies['exclude_rK_rG_abd_rG_yaw'] = ['rG_ext']
-        self.dependencies['exclude_rK_rG_yaw_rG_ext'] = ['rG_abd']
-        self.dependencies['exclude_rK_rG_yaw_rG_abd'] = ['rG_ext']
+            self.dependencies['exclude_'+side+'G_ext_'+side+'G_abd_'+side+'G_yaw'] = [side+'K']
+            self.dependencies['exclude_'+side+'G_ext_'+side+'G_abd_'+side+'K'] = [side+'G_yaw']
+            self.dependencies['exclude_'+side+'G_ext_'+side+'G_yaw_'+side+'G_abd'] = [side+'K']
+            self.dependencies['exclude_'+side+'G_ext_'+side+'G_yaw_'+side+'K'] = [side+'G_abd']
+            self.dependencies['exclude_'+side+'G_ext_'+side+'K_'+side+'G_yaw'] = [side+'G_abd']
+            self.dependencies['exclude_'+side+'G_ext_'+side+'K_'+side+'G_abd'] = [side+'G_yaw']
+            self.dependencies['exclude_'+side+'G_abd_'+side+'G_ext_'+side+'G_yaw'] = [side+'K']
+            self.dependencies['exclude_'+side+'G_abd_'+side+'G_ext_'+side+'K'] = [side+'G_yaw']
+            self.dependencies['exclude_'+side+'G_abd_'+side+'G_yaw_'+side+'G_ext'] = [side+'K']
+            self.dependencies['exclude_'+side+'G_abd_'+side+'G_yaw_'+side+'K'] = [side+'G_ext']
+            self.dependencies['exclude_'+side+'G_abd_'+side+'K_'+side+'G_ext'] = [side+'G_yaw']
+            self.dependencies['exclude_'+side+'G_abd_'+side+'K_'+side+'G_yaw'] = [side+'G_ext']
+            self.dependencies['exclude_'+side+'G_yaw_'+side+'G_ext_'+side+'K'] = [side+'G_abd']
+            self.dependencies['exclude_'+side+'G_yaw_'+side+'G_ext_'+side+'G_abd'] = [side+'K']
+            self.dependencies['exclude_'+side+'G_yaw_'+side+'G_abd_'+side+'K'] = [side+'G_ext']
+            self.dependencies['exclude_'+side+'G_yaw_'+side+'G_abd_'+side+'G_ext'] = [side+'K']
+            self.dependencies['exclude_'+side+'G_yaw_'+side+'K_'+side+'G_ext'] = [side+'G_abd']
+            self.dependencies['exclude_'+side+'G_yaw_'+side+'K_'+side+'G_abd'] = [side+'G_ext']
+            self.dependencies['exclude_'+side+'K_'+side+'G_ext_'+side+'G_abd'] = [side+'G_yaw']
+            self.dependencies['exclude_'+side+'K_'+side+'G_ext_'+side+'G_yaw'] = [side+'G_abd']
+            self.dependencies['exclude_'+side+'K_'+side+'G_abd_'+side+'G_ext'] = [side+'G_yaw']
+            self.dependencies['exclude_'+side+'K_'+side+'G_abd_'+side+'G_yaw'] = [side+'G_ext']
+            self.dependencies['exclude_'+side+'K_'+side+'G_yaw_'+side+'G_ext'] = [side+'G_abd']
+            self.dependencies['exclude_'+side+'K_'+side+'G_yaw_'+side+'G_abd'] = [side+'G_ext']
+
+
+            self.dependencies['exclude_'+side+'S_roll'] = [side+'S_yaw', side+'S_pitch', side+'E']
+            self.dependencies['exclude_'+side+'S_pitch'] = [side+'S_roll', side+'S_yaw', side+'E']
+            self.dependencies['exclude_'+side+'S_yaw'] = [side+'S_roll', side+'S_pitch', side+'E']
+            self.dependencies['exclude_'+side+'E'] = [side+'S_roll', side+'S_pitch', side+'S_yaw']
+
+            self.dependencies['exclude_'+side+'S_roll_'+side+'S_pitch'] = [side+'S_yaw', side+'E']
+            self.dependencies['exclude_'+side+'S_roll_'+side+'S_yaw'] = [side+'S_pitch', side+'E']
+            self.dependencies['exclude_'+side+'S_roll_'+side+'E'] = [side+'S_yaw', side+'S_pitch']
+            self.dependencies['exclude_'+side+'S_pitch_'+side+'S_roll'] = [side+'S_yaw', side+'E']
+            self.dependencies['exclude_'+side+'S_pitch_'+side+'S_yaw'] = [side+'S_roll', side+'E']
+            self.dependencies['exclude_'+side+'S_pitch_'+side+'E'] = [side+'S_roll', side+'S_yaw']
+            self.dependencies['exclude_'+side+'S_yaw_'+side+'S_roll'] = [side+'S_pitch', side+'E']
+            self.dependencies['exclude_'+side+'S_yaw_'+side+'S_pitch'] = [side+'S_roll', side+'E']
+            self.dependencies['exclude_'+side+'S_yaw_'+side+'E'] = [side+'S_roll', side+'S_pitch']
+            self.dependencies['exclude_'+side+'E_'+side+'S_roll'] = [side+'S_pitch', side+'S_yaw']
+            self.dependencies['exclude_'+side+'E_'+side+'S_pitch'] = [side+'S_roll', side+'S_yaw']
+            self.dependencies['exclude_'+side+'E_'+side+'S_yaw'] = [side+'S_roll', side+'S_pitch']
+
+            self.dependencies['exclude_'+side+'S_roll_'+side+'S_pitch_'+side+'S_yaw'] = [side+'E']
+            self.dependencies['exclude_'+side+'S_roll_'+side+'S_pitch_'+side+'E'] = [side+'S_yaw']
+            self.dependencies['exclude_'+side+'S_roll_'+side+'S_yaw_'+side+'S_pitch'] = [side+'E']
+            self.dependencies['exclude_'+side+'S_roll_'+side+'S_yaw_'+side+'E'] = [side+'S_pitch']
+            self.dependencies['exclude_'+side+'S_roll_'+side+'E_'+side+'S_yaw'] = [side+'S_pitch']
+            self.dependencies['exclude_'+side+'S_roll_'+side+'E_'+side+'S_pitch'] = [side+'S_yaw']
+            self.dependencies['exclude_'+side+'S_pitch_'+side+'S_roll_'+side+'S_yaw'] = [side+'E']
+            self.dependencies['exclude_'+side+'S_pitch_'+side+'S_roll_'+side+'E'] = [side+'S_yaw']
+            self.dependencies['exclude_'+side+'S_pitch_'+side+'S_yaw_'+side+'S_roll'] = [side+'E']
+            self.dependencies['exclude_'+side+'S_pitch_'+side+'S_yaw_'+side+'E'] = [side+'S_roll']
+            self.dependencies['exclude_'+side+'S_pitch_'+side+'E_'+side+'S_roll'] = [side+'S_yaw']
+            self.dependencies['exclude_'+side+'S_pitch_'+side+'E_'+side+'S_yaw'] = [side+'S_roll']
+            self.dependencies['exclude_'+side+'S_yaw_'+side+'S_roll_'+side+'E'] = [side+'S_pitch']
+            self.dependencies['exclude_'+side+'S_yaw_'+side+'S_roll_'+side+'S_pitch'] = [side+'E']
+            self.dependencies['exclude_'+side+'S_yaw_'+side+'S_pitch_'+side+'E'] = [side+'S_roll']
+            self.dependencies['exclude_'+side+'S_yaw_'+side+'S_pitch_'+side+'S_roll'] = [side+'E']
+            self.dependencies['exclude_'+side+'S_yaw_'+side+'E_'+side+'S_roll'] = [side+'S_pitch']
+            self.dependencies['exclude_'+side+'S_yaw_'+side+'E_'+side+'S_pitch'] = [side+'S_roll']
+            self.dependencies['exclude_'+side+'E_'+side+'S_roll_'+side+'S_pitch'] = [side+'S_yaw']
+            self.dependencies['exclude_'+side+'E_'+side+'S_roll_'+side+'S_yaw'] = [side+'S_pitch']
+            self.dependencies['exclude_'+side+'E_'+side+'S_pitch_'+side+'S_roll'] = [side+'S_yaw']
+            self.dependencies['exclude_'+side+'E_'+side+'S_pitch_'+side+'S_yaw'] = [side+'S_roll']
+            self.dependencies['exclude_'+side+'E_'+side+'S_yaw_'+side+'S_roll'] = [side+'S_pitch']
+            self.dependencies['exclude_'+side+'E_'+side+'S_yaw_'+side+'S_pitch'] = [side+'S_roll']
+
+
 
 
     def solve_ik_tree_yashdata(self, filename, subject, verbose = True):
@@ -280,31 +327,27 @@ class ProcessYashData():
                     pickle.dump(new_data, fp)
                 print 'done saving ', filename_save
 
-    def map_yash_to_axis_angle(self, verbose = True):
-
-        movements = ['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
-        subjects = ['40ESJ', '4ZZZQ', '5LDJG', 'A4G4Y','G55Q1','GF5Q3', 'GRTJK', 'RQCLC', 'TSQNA', 'TX887', 'WCNOM', 'WE2SZ', 'WFGW9', 'WM9KJ', 'ZV7TE']
 
 
 
-        select_r_leg = {}
-        all = {}
-
-        #create lists
-        for angle_type in ['rG_ext', 'rG_abd', 'rG_yaw', 'rK']:
-            all[angle_type] = []
+    def create_all_angle_lists(self, all_angle_types, all_leg):
+        print 'creating leg all angle lists'
+        for angle_type in all_angle_types:
+            all_leg[angle_type] = []
             for segment in [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]:
                 for dependent_angle in self.dependencies['exclude_'+angle_type]:
-                    all[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle] = []
+                    all_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle] = []
                     for next_segment in [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]:
                         for dependent_angle2 in self.dependencies['exclude_'+angle_type+'_'+dependent_angle]:
-                            all[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2] = []
+                            all_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2] = []
                             for last_segment in [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]:
                                 for dependent_angle3 in self.dependencies['exclude_'+angle_type+'_'+dependent_angle+'_'+dependent_angle2]:
-                                    all[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+dependent_angle3] = []
+                                    all_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+dependent_angle3] = []
+        return all_leg
 
 
-
+    def fill_initial_leg_all_angle_lists(self, subjects, movements, all_leg, r_or_l):
+        print 'filling initial leg all angle lists'
         for subject in subjects:
             for movement in movements:
                 print "subject: ", subject, " movement: ", movement
@@ -312,111 +355,192 @@ class ProcessYashData():
                 with open(filename, 'rb') as fp:
                     angles_data = pickle.load(fp)
                 for entry in angles_data:
-                    if entry['r_knee_angle_axis'][0] > 0.0:
-                        all['rG_ext'].append(entry['r_hip_angle_axis'][0])
-                        all['rG_yaw'].append(entry['r_hip_angle_axis'][1])
-                        all['rG_abd'].append(entry['r_hip_angle_axis'][2])
-                        all['rK'].append(entry['r_knee_angle_axis'][0])
+                    if entry[r_or_l+'_knee_angle_axis'][0] > 0.0:
+                        all_leg[r_or_l+'G_ext'].append(entry[r_or_l+'_hip_angle_axis'][0])
+                        all_leg[r_or_l+'G_yaw'].append(entry[r_or_l+'_hip_angle_axis'][1])
+                        all_leg[r_or_l+'G_abd'].append(entry[r_or_l+'_hip_angle_axis'][2])
+                        all_leg[r_or_l+'K'].append(entry[r_or_l+'_knee_angle_axis'][0])
+        return all_leg
+
+    def fill_initial_arm_all_angle_lists(self, subjects, movements, all_arm, r_or_l):
+        print 'filling initial arm all angle lists'
+        for subject in subjects:
+            for movement in movements:
+                print "subject: ", subject, " movement: ", movement
+                filename = "/media/henry/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/" + movement + "_angles.p"
+                with open(filename, 'rb') as fp:
+                    angles_data = pickle.load(fp)
+                for entry in angles_data:
+                    if r_or_l == 'r':
+                        if entry[r_or_l+'_elbow_angle_axis'][1] > 0.0:
+                            all_arm[r_or_l+'S_roll'].append(entry[r_or_l+'_shoulder_angle_axis'][0])
+                            all_arm[r_or_l+'S_yaw'].append(entry[r_or_l+'_shoulder_angle_axis'][1])
+                            all_arm[r_or_l+'S_pitch'].append(entry[r_or_l+'_shoulder_angle_axis'][2])
+                            all_arm[r_or_l+'E'].append(entry[r_or_l+'_elbow_angle_axis'][1])
+                    elif r_or_l == 'l':
+                        if entry[r_or_l+'_elbow_angle_axis'][1] < 0.0:
+                            all_arm[r_or_l+'S_roll'].append(entry[r_or_l+'_shoulder_angle_axis'][0])
+                            all_arm[r_or_l+'S_yaw'].append(entry[r_or_l+'_shoulder_angle_axis'][1])
+                            all_arm[r_or_l+'S_pitch'].append(entry[r_or_l+'_shoulder_angle_axis'][2])
+                            all_arm[r_or_l+'E'].append(entry[r_or_l+'_elbow_angle_axis'][1])
+        return all_arm
 
 
+    def fill_initial_range_angle_lists(self, all_leg_angle_types, all_leg, select_leg):
+        print 'filling initial leg range angle lists'
+        for angle_type in all_leg_angle_types:
+            print('min of',angle_type,': ', min(all_leg[angle_type]))
+            print('max of',angle_type,': ', max(all_leg[angle_type]))
+            select_leg[angle_type] = [min(all_leg[angle_type]), max(all_leg[angle_type]), len(all_leg[angle_type])]
+        return select_leg
 
-        print min(all['rG_ext'])
-        print max(all['rG_ext'])
-        print min(all['rG_yaw'])
-        print max(all['rG_yaw'])
-        print min(all['rG_abd'])
-        print max(all['rG_abd'])
-        print min(all['rK'])
-        print max(all['rK'])
-
-        select_r_leg['rG_ext'] = [min(all['rG_ext']), max(all['rG_ext']), len(all['rG_ext'])]
-        select_r_leg['rG_abd'] = [min(all['rG_abd']), max(all['rG_abd']), len(all['rG_abd'])]
-        select_r_leg['rG_yaw'] = [min(all['rG_yaw']), max(all['rG_yaw']), len(all['rG_yaw'])]
-        select_r_leg['rK'] = [min(all['rK']), max(all['rK']),len(all['rK'])]
-
-
-        print 'building lists of conditioned ranges'
-        #Build lists of conditioned ranges
-        for index in range(0, len(all['rG_ext'])): #iterate over every angle in the set
+    def fill_conditioned_all_angle_lists(self, all_leg_angle_types, all_leg, select_leg):
+        print 'building lists of conditioned ranges on leg'
+        #Build lists of conditioned ranges on right leg
+        for index in range(0, len(all_leg[all_leg_angle_types[0]])): #iterate over every angle in the set
             for segment in [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]: #break up into ten segments
-                for angle_type in ['rG_ext', 'rG_abd', 'rG_yaw', 'rK']: #the angle we are first conditioning on
-                    if all[angle_type][index] > select_r_leg[angle_type][0]+(segment*0.01)*(select_r_leg[angle_type][1] - select_r_leg[angle_type][0]) and \
-                        all[angle_type][index] <= select_r_leg[angle_type][0]+(segment*0.01+0.1)* (select_r_leg[angle_type][1] - select_r_leg[angle_type][0]):
+                for angle_type in all_leg_angle_types: #the angle we are first conditioning on
+                    if all_leg[angle_type][index] > select_leg[angle_type][0]+(segment*0.01)*(select_leg[angle_type][1] - select_leg[angle_type][0]) and \
+                        all_leg[angle_type][index] <= select_leg[angle_type][0]+(segment*0.01+0.1)* (select_leg[angle_type][1] - select_leg[angle_type][0]):
                         for dependent_angle in self.dependencies['exclude_'+angle_type]: #the next dependent angle
-                            all[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle].append(all[dependent_angle][index])
+                            all_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle].append(all_leg[dependent_angle][index])
                             for next_segment in [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]:
-                                if all[dependent_angle][index] > select_r_leg[dependent_angle][0]+(next_segment * 0.01) * (select_r_leg[dependent_angle][1] - select_r_leg[dependent_angle][0]) and \
-                                    all[dependent_angle][index] <= select_r_leg[dependent_angle][0]+(next_segment * 0.01+0.1) * (select_r_leg[dependent_angle][1] - select_r_leg[dependent_angle][0]):
+                                if all_leg[dependent_angle][index] > select_leg[dependent_angle][0]+(next_segment * 0.01) * (select_leg[dependent_angle][1] - select_leg[dependent_angle][0]) and \
+                                    all_leg[dependent_angle][index] <= select_leg[dependent_angle][0]+(next_segment * 0.01+0.1) * (select_leg[dependent_angle][1] - select_leg[dependent_angle][0]):
                                     for dependent_angle2 in self.dependencies['exclude_'+angle_type+'_'+dependent_angle]:
-                                        all[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2].append(all[dependent_angle2][index])
+                                        all_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2].append(all_leg[dependent_angle2][index])
                                         for last_segment in [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]:
-                                            if all[dependent_angle2][index] > select_r_leg[dependent_angle2][0]+(last_segment * 0.01) * (select_r_leg[dependent_angle2][1] - select_r_leg[dependent_angle2][0]) and \
-                                                all[dependent_angle2][index] <= select_r_leg[dependent_angle2][0]+(last_segment * 0.01+0.1) * (select_r_leg[dependent_angle2][1] - select_r_leg[dependent_angle2][0]):
+                                            if all_leg[dependent_angle2][index] > select_leg[dependent_angle2][0]+(last_segment * 0.01) * (select_leg[dependent_angle2][1] - select_leg[dependent_angle2][0]) and \
+                                                all_leg[dependent_angle2][index] <= select_leg[dependent_angle2][0]+(last_segment * 0.01+0.1) * (select_leg[dependent_angle2][1] - select_leg[dependent_angle2][0]):
                                                 for dependent_angle3 in self.dependencies['exclude_'+angle_type+'_'+dependent_angle+'_'+dependent_angle2]:
-                                                    all[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2+'_'+ \
-                                                        str(last_segment)+'_'+str(last_segment+10)+'__'+dependent_angle3].append(all[dependent_angle3][index])
+                                                    all_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2+'_'+ \
+                                                        str(last_segment)+'_'+str(last_segment+10)+'__'+dependent_angle3].append(all_leg[dependent_angle3][index])
+        return all_leg
 
-
-
-
-
-        print 'assigning new mins and maxes'
+    def fill_conditioned_range_angle_lists(self, all_leg_angle_types, all_leg, select_leg):
+        print 'assigning conditioned mins and maxes on leg'
         #Assign the new mins and maxes to a file we will save
         for segment in [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]:
-            for angle_type in ['rG_ext', 'rG_abd', 'rG_yaw', 'rK']:  # the angle we are first conditioning on
+            for angle_type in all_leg_angle_types:  # the angle we are first conditioning on
                 for dependent_angle in self.dependencies['exclude_'+angle_type]:
-                    try: select_r_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle] = \
-                        [min(all[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle]),
-                         max(all[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle]),
-                         len(all[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle])]
-                    except: select_r_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle] = [None, None, 0]
+                    try: select_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle] = \
+                        [min(all_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle]),
+                         max(all_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle]),
+                         len(all_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle])]
+                    except: select_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle] = [None, None, 0]
                     for next_segment in [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]:
                         for dependent_angle2 in self.dependencies['exclude_'+angle_type+'_'+dependent_angle]:
-                            try: select_r_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2] = \
-                                    [min(all[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2]),
-                                     max(all[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2]),
-                                     len(all[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2])]
-                            except: select_r_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2] = [None, None, 0]
+                            try: select_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2] = \
+                                    [min(all_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2]),
+                                     max(all_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2]),
+                                     len(all_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2])]
+                            except: select_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2] = [None, None, 0]
 
                             for last_segment in [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]:
                                 for dependent_angle3 in self.dependencies['exclude_'+angle_type+'_'+dependent_angle+'_'+dependent_angle2]:
-                                    try: select_r_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+dependent_angle3] = \
-                                            [min(all[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+dependent_angle3]),
-                                             max(all[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+dependent_angle3]),
-                                             len(all[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+dependent_angle3])]
-                                    except: select_r_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+dependent_angle3] = [None, None, 0]
+                                    try: select_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+dependent_angle3] = \
+                                            [min(all_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+dependent_angle3]),
+                                             max(all_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+dependent_angle3]),
+                                             len(all_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+dependent_angle3])]
+                                    except: select_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+dependent_angle3] = [None, None, 0]
+        return select_leg
 
-
-
+    def print_conditioned_range_tree(self, all_leg_angle_types, all_leg, select_leg):
         #print things out to check them
-        for angle_type in ['rG_ext', 'rG_abd', 'rG_yaw', 'rK']:  # the angle we are first conditioning on
+        for angle_type in all_leg_angle_types:  # the angle we are first conditioning on
             for dependent_angle in self.dependencies['exclude_'+angle_type]:
                 print('________________________________________________________________________________________________')
-                print(len(all[angle_type]), angle_type, 'range: ',select_r_leg[angle_type])
+                print(len(all_leg[angle_type]), angle_type, 'range: ',select_leg[angle_type])
                 for segment in [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]:
                     print('____________________________________________')
-                    print(angle_type+'_'+str(segment)+'_'+str(segment+10), len(all[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle]),
-                        dependent_angle, 'range: ',  select_r_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle])
+                    print(angle_type+'_'+str(segment)+'_'+str(segment+10), len(all_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle]),
+                        dependent_angle, 'range: ',  select_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle])
                     for dependent_angle2 in self.dependencies['exclude_' + angle_type+'_'+dependent_angle]:
                         for next_segment in [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]:
                             print('______________________')
                             print(angle_type+'_'+str(segment)+'_'+str(segment+10)+'_'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10),
-                                len(all[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2]),
-                                dependent_angle2, 'range: ',  select_r_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2])
+                                len(all_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2]),
+                                dependent_angle2, 'range: ',  select_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2])
                             for dependent_angle3 in self.dependencies['exclude_' + angle_type + '_' + dependent_angle + '_' + dependent_angle2]:
                                 for last_segment in [0, 10, 20, 30, 40, 50, 60, 70, 80, 90]:
                                     print(angle_type+'_'+str(segment)+'_'+str(segment+10)+'_'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'_'+dependent_angle2+'_'+str(last_segment)+'_'+str(last_segment+10),
-                                        len(all[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+dependent_angle3]),
-                                        dependent_angle3, 'range: ',  select_r_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+dependent_angle3])
+                                        len(all_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+dependent_angle3]),
+                                        dependent_angle3, 'range: ',  select_leg[angle_type+'_'+str(segment)+'_'+str(segment+10)+'__'+dependent_angle+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+dependent_angle2+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+dependent_angle3])
 
 
 
-        #generator.standard_render()
+
+    def map_yash_to_axis_angle(self, verbose = True):
+
+        subjects = ['40ESJ', '4ZZZQ', '5LDJG', 'A4G4Y','G55Q1','GF5Q3', 'GRTJK', 'RQCLC', 'TSQNA', 'TX887', 'WCNOM', 'WE2SZ', 'WFGW9', 'WM9KJ', 'ZV7TE']
+        movements = ['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
+
+
+        select_r_leg = {}
+        select_l_leg = {}
+        select_r_arm = {}
+        select_l_arm = {}
+        all_r_leg = {}
+        all_l_leg = {}
+        all_r_arm = {}
+        all_l_arm = {}
+
+
+        all_r_leg_angle_types = ['rG_ext', 'rG_abd', 'rG_yaw', 'rK']
+        all_l_leg_angle_types = ['lG_ext', 'lG_abd', 'lG_yaw', 'lK']
+        all_r_arm_angle_types = ['rS_roll', 'rS_yaw', 'rS_pitch', 'rE']
+        all_l_arm_angle_types = ['lS_roll', 'lS_yaw', 'lS_pitch', 'lE']
+
+
+        all_r_leg = self.create_all_angle_lists(all_r_leg_angle_types, all_r_leg)
+        all_l_leg = self.create_all_angle_lists(all_l_leg_angle_types, all_l_leg)
+        all_r_arm = self.create_all_angle_lists(all_r_arm_angle_types, all_r_arm)
+        all_l_arm = self.create_all_angle_lists(all_l_arm_angle_types, all_l_arm)
+
+
+        all_r_leg = self.fill_initial_leg_all_angle_lists(subjects, movements, all_r_leg, 'r')
+        all_l_leg = self.fill_initial_leg_all_angle_lists(subjects, movements, all_l_leg, 'l')
+        all_r_arm = self.fill_initial_arm_all_angle_lists(subjects, movements, all_r_arm, 'r')
+        all_l_arm = self.fill_initial_arm_all_angle_lists(subjects, movements, all_l_arm, 'l')
+
+        select_r_leg = self.fill_initial_range_angle_lists(all_r_leg_angle_types, all_r_leg, select_r_leg)
+        select_l_leg = self.fill_initial_range_angle_lists(all_l_leg_angle_types, all_l_leg, select_l_leg)
+        select_r_arm = self.fill_initial_range_angle_lists(all_r_arm_angle_types, all_r_arm, select_r_arm)
+        select_l_arm = self.fill_initial_range_angle_lists(all_l_arm_angle_types, all_l_arm, select_l_arm)
+
+        all_r_leg = self.fill_conditioned_all_angle_lists(all_r_leg_angle_types, all_r_leg, select_r_leg)
+        all_l_leg = self.fill_conditioned_all_angle_lists(all_l_leg_angle_types, all_l_leg, select_l_leg)
+        all_r_arm = self.fill_conditioned_all_angle_lists(all_r_arm_angle_types, all_r_arm, select_r_arm)
+        all_l_arm = self.fill_conditioned_all_angle_lists(all_l_arm_angle_types, all_l_arm, select_l_arm)
+
+
+        select_r_leg = self.fill_conditioned_range_angle_lists(all_r_leg_angle_types, all_r_leg, select_r_leg)
+        select_l_leg = self.fill_conditioned_range_angle_lists(all_l_leg_angle_types, all_l_leg, select_l_leg)
+        select_r_arm = self.fill_conditioned_range_angle_lists(all_r_arm_angle_types, all_r_arm, select_r_arm)
+        select_l_arm = self.fill_conditioned_range_angle_lists(all_l_arm_angle_types, all_l_arm, select_l_arm)
+
+        #self.print_conditioned_range_tree(all_r_leg_angle_types, all_r_leg, select_r_leg)
+        #self.print_conditioned_range_tree(all_l_leg_angle_types, all_l_leg, select_l_leg)
+
 
         filename_save = "/media/henry/multimodal_data_2/pressure_mat_pose_data/select_r_leg.p"
-
         with open(filename_save, 'wb') as fp:
             pickle.dump(select_r_leg, fp)
+        print 'done saving ', filename_save
+
+        filename_save = "/media/henry/multimodal_data_2/pressure_mat_pose_data/select_l_leg.p"
+        with open(filename_save, 'wb') as fp:
+            pickle.dump(select_l_leg, fp)
+        print 'done saving ', filename_save
+
+        filename_save = "/media/henry/multimodal_data_2/pressure_mat_pose_data/select_r_arm.p"
+        with open(filename_save, 'wb') as fp:
+            pickle.dump(select_r_arm, fp)
+        print 'done saving ', filename_save
+
+        filename_save = "/media/henry/multimodal_data_2/pressure_mat_pose_data/select_l_arm.p"
+        with open(filename_save, 'wb') as fp:
+            pickle.dump(select_l_arm, fp)
         print 'done saving ', filename_save
 
 
@@ -451,15 +575,24 @@ class ProcessYashData():
     def round_down(self, num, divisor):
         return int(num - (num % divisor))
 
-    def get_r_leg_angles(self):
-
-        filename = "/media/henry/multimodal_data_2/pressure_mat_pose_data/select_r_leg.p"
+    def sample_angles(self, limb):
+        filename = "/home/henry/git/volumetric_pose_gen/select_"+limb+".p"
 
         with open(filename, 'rb') as fp:
-            select_r_leg = pickle.load(fp)
+            select = pickle.load(fp)
             # print things out to check them
 
-        angles = ['rG_ext', 'rG_abd', 'rG_yaw', 'rK']
+        if limb == 'r_leg':
+            angles = ['rG_ext', 'rG_abd', 'rG_yaw', 'rK']
+        elif limb == 'l_leg':
+            angles = ['lG_ext', 'lG_abd', 'lG_yaw', 'lK']
+        elif limb == 'r_arm':
+            angles = ['rS_roll', 'rS_yaw', 'rS_pitch', 'rE']
+        elif limb == 'l_arm':
+            angles = ['lS_roll', 'lS_yaw', 'lS_pitch', 'lE']
+        else:
+            return "ERROR"
+
         angles = random.sample(angles, len(angles))
 
         selection = {}
@@ -469,50 +602,56 @@ class ProcessYashData():
         third_angle_select = angles.pop()
         fourth_angle_select = angles.pop()
 
-        print first_angle_select, select_r_leg[first_angle_select]
-        selection[first_angle_select] = random.uniform(select_r_leg[first_angle_select][0],
-                                                       select_r_leg[first_angle_select][1])
-
-        segment = 100*(selection[first_angle_select] - select_r_leg[first_angle_select][0])/(select_r_leg[first_angle_select][1] -  select_r_leg[first_angle_select][0])
-        segment = self.round_down(segment, 10)
-        print 'selected',first_angle_select,'value of',selection[first_angle_select],' a value within', str(segment), 'and', str(segment+10)
-
-
-        print second_angle_select, select_r_leg[first_angle_select+'_'+str(segment)+'_'+str(segment+10)+'__'+second_angle_select]
+        print first_angle_select, select[first_angle_select]
 
         while True:
             try:
-                selection[second_angle_select] = random.uniform(select_r_leg[first_angle_select+'_'+str(segment)+'_'+str(segment+10)+'__'+second_angle_select][0],
-                                                               select_r_leg[first_angle_select+'_'+str(segment)+'_'+str(segment+10)+'__'+second_angle_select][1])
+                selection[first_angle_select] = random.uniform(select[first_angle_select][0],  select[first_angle_select][1])
 
-                next_segment = 100*(selection[second_angle_select] - select_r_leg[second_angle_select][0])/(select_r_leg[second_angle_select][1] -  select_r_leg[second_angle_select][0])
-                next_segment = self.round_down(next_segment, 10)
-                print 'selected',second_angle_select,'value of',selection[second_angle_select],' a value within', str(next_segment), 'and', str(next_segment+10)
+                segment = 100*(selection[first_angle_select] - select[first_angle_select][0])/(select[first_angle_select][1] -  select[first_angle_select][0])
+                segment = self.round_down(segment, 10)
+                print 'selected',first_angle_select,'value of',selection[first_angle_select],' a value within', str(segment), 'and', str(segment+10)
 
 
-                print third_angle_select, select_r_leg[first_angle_select+'_'+str(segment)+'_'+str(segment+10)+'__'+second_angle_select+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+third_angle_select]
+                print second_angle_select, select[first_angle_select+'_'+str(segment)+'_'+str(segment+10)+'__'+second_angle_select]
+
                 while True:
                     try:
-                        selection[third_angle_select] = random.uniform(select_r_leg[first_angle_select+'_'+str(segment)+'_'+str(segment+10)+'__'+second_angle_select+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+third_angle_select][0],
-                                                                       select_r_leg[first_angle_select+'_'+str(segment)+'_'+str(segment+10)+'__'+second_angle_select+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+third_angle_select][1])
+                        selection[second_angle_select] = random.uniform(select[first_angle_select+'_'+str(segment)+'_'+str(segment+10)+'__'+second_angle_select][0],
+                                                                       select[first_angle_select+'_'+str(segment)+'_'+str(segment+10)+'__'+second_angle_select][1])
 
-                        last_segment = 100*(selection[third_angle_select] - select_r_leg[third_angle_select][0])/(select_r_leg[third_angle_select][1] -  select_r_leg[third_angle_select][0])
-                        last_segment = self.round_down(last_segment, 10)
-                        print 'selected',third_angle_select,'value of',selection[third_angle_select],' a value within', str(last_segment), 'and', str(last_segment+10)
-
-
+                        next_segment = 100*(selection[second_angle_select] - select[second_angle_select][0])/(select[second_angle_select][1] -  select[second_angle_select][0])
+                        next_segment = self.round_down(next_segment, 10)
+                        print 'selected',second_angle_select,'value of',selection[second_angle_select],' a value within', str(next_segment), 'and', str(next_segment+10)
 
 
-                        print fourth_angle_select, select_r_leg[first_angle_select+'_'+str(segment)+'_'+str(segment+10)+'__'+second_angle_select+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+third_angle_select+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+fourth_angle_select]
-                        selection[fourth_angle_select] = random.uniform(select_r_leg[first_angle_select+'_'+str(segment)+'_'+str(segment+10)+'__'+second_angle_select+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+third_angle_select+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+fourth_angle_select][0],
-                                                                       select_r_leg[first_angle_select+'_'+str(segment)+'_'+str(segment+10)+'__'+second_angle_select+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+third_angle_select+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+fourth_angle_select][1])
+                        print third_angle_select, select[first_angle_select+'_'+str(segment)+'_'+str(segment+10)+'__'+second_angle_select+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+third_angle_select]
+                        while True:
+                            try:
+                                selection[third_angle_select] = random.uniform(select[first_angle_select+'_'+str(segment)+'_'+str(segment+10)+'__'+second_angle_select+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+third_angle_select][0],
+                                                                               select[first_angle_select+'_'+str(segment)+'_'+str(segment+10)+'__'+second_angle_select+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+third_angle_select][1])
 
-                        last_last_segment = 100*(selection[fourth_angle_select] - select_r_leg[fourth_angle_select][0])/(select_r_leg[fourth_angle_select][1] -  select_r_leg[fourth_angle_select][0])
-                        last_last_segment = self.round_down(last_last_segment, 10)
-                        print 'selected',fourth_angle_select,'value of',selection[fourth_angle_select],' a value within', str(last_last_segment), 'and', str(last_last_segment+10)
-                        return selection
+                                last_segment = 100*(selection[third_angle_select] - select[third_angle_select][0])/(select[third_angle_select][1] -  select[third_angle_select][0])
+                                last_segment = self.round_down(last_segment, 10)
+                                print 'selected',third_angle_select,'value of',selection[third_angle_select],' a value within', str(last_segment), 'and', str(last_segment+10)
+
+
+
+
+                                print fourth_angle_select, select[first_angle_select+'_'+str(segment)+'_'+str(segment+10)+'__'+second_angle_select+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+third_angle_select+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+fourth_angle_select]
+                                selection[fourth_angle_select] = random.uniform(select[first_angle_select+'_'+str(segment)+'_'+str(segment+10)+'__'+second_angle_select+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+third_angle_select+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+fourth_angle_select][0],
+                                                                               select[first_angle_select+'_'+str(segment)+'_'+str(segment+10)+'__'+second_angle_select+'_'+str(next_segment)+'_'+str(next_segment+10)+'__'+third_angle_select+'_'+str(last_segment)+'_'+str(last_segment+10)+'__'+fourth_angle_select][1])
+
+                                last_last_segment = 100*(selection[fourth_angle_select] - select[fourth_angle_select][0])/(select[fourth_angle_select][1] -  select[fourth_angle_select][0])
+                                last_last_segment = self.round_down(last_last_segment, 10)
+                                print 'selected',fourth_angle_select,'value of',selection[fourth_angle_select],' a value within', str(last_last_segment), 'and', str(last_last_segment+10)
+                                return selection
+                            except:
+                                print('repeating inner loop')
+                                break
+                        break
                     except:
-                        pass
+                        print('repeating middle loop')
+                        break
             except:
                 pass
-
