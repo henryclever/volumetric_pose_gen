@@ -126,18 +126,18 @@ class GeneratePose():
         #self.m.pose[71] = np.pi/5 #right fist
 
 
-        min_shape_coeff = -4
-        max_shape_coeff = 4
-        self.m.betas[0] = random.uniform(min_shape_coeff, max_shape_coeff) #overall body size. more positive number makes smaller, negative makes larger with bigger belly
-        self.m.betas[1] = random.uniform(min_shape_coeff, max_shape_coeff) #positive number makes person very skinny, negative makes fat
-        self.m.betas[2] = random.uniform(min_shape_coeff, max_shape_coeff) #muscle mass. higher makes person less physically fit
-        self.m.betas[3] = random.uniform(min_shape_coeff, max_shape_coeff) #proportion for upper vs lower bone lengths. more negative number makes legs much bigger than arms
-        self.m.betas[4] = random.uniform(min_shape_coeff, max_shape_coeff) #neck. more negative seems to make neck longer and body more skinny
-        self.m.betas[5] = random.uniform(min_shape_coeff, max_shape_coeff) #size of hips. larger means bigger hips
-        self.m.betas[6] = random.uniform(min_shape_coeff, max_shape_coeff) #proportion of belly with respect to rest of the body. higher number is larger belly
-        self.m.betas[7] = random.uniform(min_shape_coeff, max_shape_coeff)
-        #self.m.betas[8] = random.uniform(-3, 3)
-        #self.m.betas[9] = random.uniform(-3, 3)
+        mu = 0
+        sigma = 2
+        self.m.betas[0] = random.normalvariate(mu, sigma) #overall body size. more positive number makes smaller, negative makes larger with bigger belly
+        self.m.betas[1] = random.normalvariate(mu, sigma) #positive number makes person very skinny, negative makes fat
+        self.m.betas[2] = random.normalvariate(mu, sigma) #muscle mass. higher makes person less physically fit
+        self.m.betas[3] = random.normalvariate(mu, sigma) #proportion for upper vs lower bone lengths. more negative number makes legs much bigger than arms
+        self.m.betas[4] = random.normalvariate(mu, sigma) #neck. more negative seems to make neck longer and body more skinny
+        self.m.betas[5] = random.normalvariate(mu, sigma) #size of hips. larger means bigger hips
+        self.m.betas[6] = random.normalvariate(mu, sigma) #proportion of belly with respect to rest of the body. higher number is larger belly
+        self.m.betas[7] = random.normalvariate(mu, sigma)
+        #self.m.betas[8] = random.normalvariate(-3, 3)
+        #self.m.betas[9] = random.normalvariate(-3, 3)
 
         print self.m.pose.shape
         print self.m.pose, 'pose'
@@ -636,23 +636,23 @@ class GeneratePose():
                     if verbose == True: print 'l elbow', self.m.pose[54:57]
 
     def map_random_selection_to_smpl_angles(self):
-        alter_angles = False
+        alter_angles = True
         if alter_angles == True:
             selection_r_leg = processYashData.sample_angles('r_leg')
             self.m.pose[6] = selection_r_leg['rG_ext']
-            self.m.pose[7] = selection_r_leg['rG_yaw']/2
+            self.m.pose[7] = selection_r_leg['rG_yaw']#/2
             self.m.pose[8] = selection_r_leg['rG_abd']
 
             self.m.pose[15] = selection_r_leg['rK']
-            self.m.pose[16] = selection_r_leg['rG_yaw']/2
+            #self.m.pose[16] = selection_r_leg['rG_yaw']/2
 
             selection_l_leg = processYashData.sample_angles('l_leg')
             self.m.pose[3] = selection_l_leg['lG_ext']
-            self.m.pose[4] = selection_l_leg['lG_yaw']/2
+            self.m.pose[4] = selection_l_leg['lG_yaw']#/2
             self.m.pose[5] = selection_l_leg['lG_abd']
 
             self.m.pose[12] = selection_l_leg['lK']
-            self.m.pose[13] = selection_l_leg['lG_yaw']/2
+            #self.m.pose[13] = selection_l_leg['lG_yaw']/2
 
             selection_r_arm = processYashData.sample_angles('r_arm')
             self.m.pose[51] = selection_r_arm['rS_roll']*2/3

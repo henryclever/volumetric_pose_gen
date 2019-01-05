@@ -146,19 +146,19 @@ class DartSkelSim(object):
             if count == 4 or count == 5:
                 self.world.add_capsule(parent=int(red_parent_ref[count]), radius=cap_rad, length=cap_len,
                                        cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc,
-                                       joint_damping = 5.0, joint_type="REVOLUTE_X", joint_name=joint_names[count])
+                                       joint_type="REVOLUTE_X", joint_name=joint_names[count])
             elif count == 16 or count == 17:
                 self.world.add_capsule(parent=int(red_parent_ref[count]), radius=cap_rad, length=cap_len,
                                        cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc,
-                                       joint_damping = 5.0, joint_type="REVOLUTE_Y", joint_name=joint_names[count])
+                                       joint_type="REVOLUTE_Y", joint_name=joint_names[count])
             else:
                 self.world.add_capsule(parent=int(red_parent_ref[count]), radius=cap_rad, length=cap_len,
                                        cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc,
-                                       joint_damping = 5.0, joint_type="BALL", joint_name=joint_names[count])
+                                       joint_type="BALL", joint_name=joint_names[count])
 
-            #self.world.add_capsule(parent=int(-1), radius=cap_rad, length=0.001, cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc_abs, joint_damping = 5.0, joint_type="BALL", joint_name=joint_names[count])
+            #self.world.add_capsule(parent=int(-1), radius=cap_rad, length=0.001, cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc_abs, joint_type="BALL", joint_name=joint_names[count])
             #capsule_loc_abs[0] += 1.0
-            #self.world.add_capsule(parent=int(-1), radius=cap_rad, length=0.001, cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=capsule_loc_abs, joint_damping = 5.0, joint_type="BALL", joint_name=joint_names[count])
+            #self.world.add_capsule(parent=int(-1), radius=cap_rad, length=0.001, cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=capsule_loc_abs, joint_type="BALL", joint_name=joint_names[count])
 
 
             #if count == 10:
@@ -170,16 +170,87 @@ class DartSkelSim(object):
 
 
         skel = self.world.skeletons[0]
+
+
+        ########################################ASSIGN INITIAL JOINT ANGLES#############################################
         #skel_q_init = np.random.rand(skel.ndofs) - 0.5
         skel_q_init = skel.ndofs * [0]
-        #skel_q_init[3] = np.pi/2
+        skel_q_init[3:6] = np.asarray(m.pose[3:6]) #left glute
+        skel_q_init[6:9] = np.asarray(m.pose[6:9]) #right glute
+        skel_q_init[9:12] = np.asarray(m.pose[9:12]) #low spine
+
+        skel_q_init[12] = float(m.pose[12]) #left knee. should be 0.0 to 3.14
+        skel_q_init[13] = float(m.pose[15]) #right knee. should be 0.0 to 3.14
+
+        skel_q_init[14:17] = np.asarray(m.pose[18:21]) #mid spine
+
+        skel_q_init[17:20] = np.asarray(m.pose[21:24]) #left foot
+        skel_q_init[20:23] = np.asarray(m.pose[24:27]) #right foot
+
+        skel_q_init[23:26] = np.asarray(m.pose[27:30]) #upper spine
+
+        skel_q_init[26:29] = np.asarray(m.pose[36:39]) #neck
+
+        skel_q_init[29:32] = np.asarray(m.pose[39:42]) #left inner shoulder
+        skel_q_init[32:35] = np.asarray(m.pose[42:45]) #right inner shoulder
+
+        skel_q_init[35:38] = np.asarray(m.pose[45:48]) #head
+
+        skel_q_init[38:41] = np.asarray(m.pose[48:51]) #left outer shoulder
+        skel_q_init[41:44] = np.asarray(m.pose[51:54]) #right outer shoulder
+
+        skel_q_init[44] = float(m.pose[55]) #left elbow. should be -3.14 to 0.0
+        skel_q_init[45] = float(m.pose[58]) #right elbow. should be  0.0 to 3.14
+
+        skel_q_init[46:49] = np.asarray(m.pose[60:63]) #left hand
+        skel_q_init[49:52] = np.asarray(m.pose[63:66]) #right hand
+
+
+
         #this is where you set the angles according to m, the angle axis representation.
-        print skel_q_init
         skel.set_positions(skel_q_init)
         #print skel.root_bodynode()
         #print skel.name
         #from pydart2 import bodynode
         #bn = bodynode.BodyNode(skel, 8)
+
+        ##############################################ASSIGN JOINT LIMITS###############################################
+
+        standard_damping = 1.0
+        for joint in skel.joints:
+            print joint
+            if joint.name == "leftCalf":
+                joint.set_position_lower_limit(0, 0.0)
+                joint.set_position_upper_limit(0, 3.14)
+                joint.set_position_limit_enforced(True)
+                joint.set_damping_coefficient(0, standard_damping)
+            elif joint.name == "rightCalf":
+                joint.set_position_lower_limit(0, 0.0)
+                joint.set_position_upper_limit(0, 3.14)
+                joint.set_position_limit_enforced(True)
+                joint.set_damping_coefficient(0, standard_damping)
+            elif joint.name == "leftForeArm":
+                joint.set_position_lower_limit(0, -3.14)
+                joint.set_position_upper_limit(0, 0.0)
+                joint.set_position_limit_enforced(True)
+                joint.set_damping_coefficient(0, standard_damping)
+            elif joint.name == "rightForeArm":
+                joint.set_position_lower_limit(0, 0.0)
+                joint.set_position_upper_limit(0, 3.14)
+                joint.set_position_limit_enforced(True)
+                joint.set_damping_coefficient(0, standard_damping)
+            else:
+                joint.set_damping_coefficient(0, standard_damping)
+                joint.set_damping_coefficient(1, standard_damping)
+                joint.set_damping_coefficient(2, standard_damping)
+            #print "is enforced", joint.is_position_limit_enforced()
+            #print "has limit", joint.has_position_limit(0)
+            #print "lower limit", joint.position_lower_limit(0)
+            #print "upper limit", joint.position_upper_limit(0)
+
+
+
+
         for body in skel.bodynodes:
             print body.C
 
@@ -194,8 +265,6 @@ class DartSkelSim(object):
         print arrow_head, 'arrow head'
         skel.bodynodes[self.body_node].add_ext_force_with_arrow(self.force, location, arrow_tail[0], arrow_tail[1], arrow_tail[2], arrow_head[0], arrow_head[1], arrow_head[2], False, False)
 
-        for joint in skel.joints:
-            print joint
 
         for marker in skel.markers:
             print marker.world_position()
