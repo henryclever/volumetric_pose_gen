@@ -143,7 +143,19 @@ class DartSkelSim(object):
             #print joint_root_loc
             #print "Rot: ", list(np.asarray(capsule.rod))
             #print capsule.centers
-            self.world.add_capsule(parent=int(red_parent_ref[count]), radius=cap_rad, length=cap_len, cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc, joint_damping = 5.0, joint_type="BALL", joint_name=joint_names[count])
+            if count == 4 or count == 5:
+                self.world.add_capsule(parent=int(red_parent_ref[count]), radius=cap_rad, length=cap_len,
+                                       cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc,
+                                       joint_damping = 5.0, joint_type="REVOLUTE_X", joint_name=joint_names[count])
+            elif count == 16 or count == 17:
+                self.world.add_capsule(parent=int(red_parent_ref[count]), radius=cap_rad, length=cap_len,
+                                       cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc,
+                                       joint_damping = 5.0, joint_type="REVOLUTE_Y", joint_name=joint_names[count])
+            else:
+                self.world.add_capsule(parent=int(red_parent_ref[count]), radius=cap_rad, length=cap_len,
+                                       cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc,
+                                       joint_damping = 5.0, joint_type="BALL", joint_name=joint_names[count])
+
             #self.world.add_capsule(parent=int(-1), radius=cap_rad, length=0.001, cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc_abs, joint_damping = 5.0, joint_type="BALL", joint_name=joint_names[count])
             #capsule_loc_abs[0] += 1.0
             #self.world.add_capsule(parent=int(-1), radius=cap_rad, length=0.001, cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=capsule_loc_abs, joint_damping = 5.0, joint_type="BALL", joint_name=joint_names[count])
@@ -161,6 +173,7 @@ class DartSkelSim(object):
         #skel_q_init = np.random.rand(skel.ndofs) - 0.5
         skel_q_init = skel.ndofs * [0]
         #skel_q_init[3] = np.pi/2
+        #this is where you set the angles according to m, the angle axis representation.
         print skel_q_init
         skel.set_positions(skel_q_init)
         #print skel.root_bodynode()
@@ -172,7 +185,6 @@ class DartSkelSim(object):
 
 
         self.body_node = 9 #need to solve for the body node that corresponds to a force using flex.
-
         self.force = np.asarray([0.0, 0.0, 100.0])
         self.offset_from_centroid = np.asarray([-0.15, 0.0, 0.0])
 
@@ -283,7 +295,6 @@ class DartSkelSim(object):
             force_dir = np.matmul(rot_force, np.expand_dims(self.force / np.linalg.norm(self.force) * 0.5, 1))
             force_dir = np.asarray([force_dir[0,0], force_dir[1,0], force_dir[2,0]])
             location = list(np.asarray(skel.bodynodes[self.body_node].C) + self.offset_from_centroid)
-
 
             arrow_tail = list(self.cap_offsets[self.body_node] + self.offset_from_centroid - force_dir.T)
             arrow_head = list(self.cap_offsets[self.body_node] + self.offset_from_centroid) # origin is the center of the joint sphere
