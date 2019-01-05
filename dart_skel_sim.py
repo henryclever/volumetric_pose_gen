@@ -8,6 +8,13 @@ import pydart2 as pydart
 from pydart2 import skeleton_builder
 from dart_opengl_window import GLUTWindow
 
+import OpenGL.GL as GL
+import OpenGL.GLU as GLU
+import OpenGL.GLUT as GLUT
+import sys
+from pydart2.gui.opengl.scene import OpenGLScene
+from time import time
+
 
 class DampingController(object):
     """ Add damping force to the skeleton """
@@ -65,8 +72,6 @@ class DartSkelSim(object):
         l_arm_ref = [11, 14, 16, 18]
         r_arm_ref = [12, 15, 17, 19]
 
-        #print red_joint_ref
-        #print red_parent_ref
 
         #make lists of the locations of the joint locations and the smplify capsule initial ends
         for i in range(np.shape(mJ)[0]):
@@ -90,7 +95,7 @@ class DartSkelSim(object):
                         capsule_locs[i][0] -= (float(capsules[i].length[0])-float(capsules[red_parent_ref[i]].length[0]))/2
                     if i in [10, 11, 12]: #shift over the inner shoulders and neck to match the middle of the top spine capsule
                         capsule_locs[i][0] += float(capsules[red_parent_ref[i]].length[0]) / 2
-                    if i in [3, 6, 9]: #shift over everything to match the root
+                    if i in [3, 6, 9]: #shift over everything in the abs list to match the root
                         capsule_locs_abs[i][0] -= float(capsules[i].length[0]) / 2
 
         del(joint_locs[10])
@@ -98,17 +103,10 @@ class DartSkelSim(object):
         del(joint_locs_abs[10])
         del(joint_locs_abs[10])
 
-        #print len(joint_locs)
-
-        #for i in range(20):
-        #    print joint_names[i]
-        #    print "joint locs m: ", joint_locs[i]
-        #    print "joint locs s: ", capsule_locs[i]
 
         count = 0
 
-        #joint_locs = capsule_locs
-
+        self.cap_offsets = []
         for capsule in capsules:
             print "************* Capsule No.",count, joint_names[count], " joint ref: ", red_joint_ref[count]," parent_ref: ", red_parent_ref[count]," ****************"
             cap_rad = float(capsule.rad[0])
@@ -132,12 +130,13 @@ class DartSkelSim(object):
             cap_offset[0] += capsule_loc_abs[0] - joint_loc_abs[0]
             cap_offset[1] += capsule_loc_abs[1] - joint_loc_abs[1] - .04
             cap_offset[2] += capsule_loc_abs[2] - joint_loc_abs[2]
+            self.cap_offsets.append(np.asarray(cap_offset))
 
 
             print "radius: ", cap_rad, "   length: ", cap_len
             print "Rot0: ", cap_init_rot
-            print "T joint: ", joint_loc
-            print "T capsu: ", capsule_loc
+            print "T joint: ", joint_loc_abs
+            print "T capsu: ", capsule_loc_abs
 
             #print list((np.asarray(np.transpose(capsule.t)[0])))
 
@@ -146,7 +145,6 @@ class DartSkelSim(object):
             #print capsule.centers
             self.world.add_capsule(parent=int(red_parent_ref[count]), radius=cap_rad, length=cap_len, cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc, joint_damping = 5.0, joint_type="BALL", joint_name=joint_names[count])
             #self.world.add_capsule(parent=int(-1), radius=cap_rad, length=0.001, cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc_abs, joint_damping = 5.0, joint_type="BALL", joint_name=joint_names[count])
-
             #capsule_loc_abs[0] += 1.0
             #self.world.add_capsule(parent=int(-1), radius=cap_rad, length=0.001, cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=capsule_loc_abs, joint_damping = 5.0, joint_type="BALL", joint_name=joint_names[count])
 
@@ -154,12 +152,6 @@ class DartSkelSim(object):
             #if count == 10:
             #    break
             count += 1
-
-        #self.world.add_capsule(parent=-1, radius=0.1, length=1.0, joint_loc=[0, 0, 0], joint_damping = 5.0, joint_type="BALL", joint_name="joint 1")
-        #self.world.add_capsule(parent=0, radius=0.1, length=0.5, joint_loc=[0, 0, 1.0], joint_damping = 5.0, joint_type="BALL", joint_name="joint 2")
-        #self.world.add_capsule(parent=0, radius=0.1, length=1.0, joint_loc=[0, 0, 1.0], joint_damping = 5.0, joint_type="REVOLUTE", joint_name="joint 3")
-        #self.world.add_capsule(parent=2, radius=0.1, length=0.5, joint_loc=[0, 0, 1.0], joint_damping = 5.0, joint_type="REVOLUTE", joint_name="joint 4")
-        #self.world.add_capsule(parent=3, radius=0.1, length=0.5, joint_loc=[0, 0, 1.0], joint_damping = 5.0, joint_type="REVOLUTE", joint_name="joint 5")
 
         built_skel = self.world.add_built_skeleton(_skel_id=0, _skel_name="human")
         built_skel.set_self_collision_check(True)
@@ -178,6 +170,18 @@ class DartSkelSim(object):
         for body in skel.bodynodes:
             print body.C
 
+
+        self.body_node = 9 #need to solve for the body node that corresponds to a force using flex.
+
+        self.force = np.asarray([0.0, 0.0, 100.0])
+        self.offset_from_centroid = np.asarray([-0.15, 0.0, 0.0])
+
+        location = list(np.asarray(skel.bodynodes[self.body_node].C) + self.offset_from_centroid)
+        arrow_tail = list(self.cap_offsets[self.body_node] + self.offset_from_centroid - self.force/np.linalg.norm(self.force)*0.5)
+        arrow_head = list(self.cap_offsets[self.body_node] + self.offset_from_centroid) #origin is the center of the joint sphere
+        print arrow_head, 'arrow head'
+        skel.bodynodes[self.body_node].add_ext_force_with_arrow(self.force, location, arrow_tail[0], arrow_tail[1], arrow_tail[2], arrow_head[0], arrow_head[1], arrow_head[2], False, False)
+
         for joint in skel.joints:
             print joint
 
@@ -189,9 +193,163 @@ class DartSkelSim(object):
         skel.controller = DampingController(skel)
 
 
-    def run(self):
+        #now setup the open GL window
+        self.title = "GLUT Window"
+        self.window_size = (1280, 720)
+        self.scene = OpenGLScene(*self.window_size)
+
+        self.mouseLastPos = None
+        self.is_simulating = False
+        self.is_animating = False
+        self.frame_index = 0
+        self.capture_index = 0
+
+
+
+    def initGL(self, w, h):
+        self.scene.init()
+
+    def resizeGL(self, w, h):
+        self.scene.resize(w, h)
+
+    def drawGL(self, ):
+        self.scene.render(self.world)
+        # GLUT.glutSolidSphere(0.3, 20, 20)  # Default object for debugging
+        GLUT.glutSwapBuffers()
+
+    # The function called whenever a key is pressed.
+    # Note the use of Python tuples to pass in: (key, x, y)
+    def keyPressed(self, key, x, y):
+        keycode = ord(key)
+        key = key.decode('utf-8')
+        # print("key = [%s] = [%d]" % (key, ord(key)))
+
+        # n = sim.num_frames()
+        if keycode == 27:
+            GLUT.glutDestroyWindow(self.window)
+            sys.exit()
+        elif key == ' ':
+            self.is_simulating = not self.is_simulating
+            self.is_animating = False
+            print("self.is_simulating = %s" % self.is_simulating)
+        elif key == 'a':
+            self.is_animating = not self.is_animating
+            self.is_simulating = False
+            print("self.is_animating = %s" % self.is_animating)
+        elif key == ']':
+            self.frame_index = (self.frame_index + 1) % self.world.num_frames()
+            print("frame = %d/%d" % (self.frame_index, self.world.num_frames()))
+            if hasattr(self.world, "set_frame"):
+                self.world.set_frame(self.frame_index)
+        elif key == '[':
+            self.frame_index = (self.frame_index - 1) % self.world.num_frames()
+            print("frame = %d/%d" % (self.frame_index, self.world.num_frames()))
+            if hasattr(self.world, "set_frame"):
+                self.world.set_frame(self.frame_index)
+        elif key == 'c':
+            self.capture()
+
+    def mouseFunc(self, button, state, x, y):
+        if state == 0:  # Mouse pressed
+            self.mouseLastPos = np.array([x, y])
+        elif state == 1:
+            self.mouseLastPos = None
+
+    def motionFunc(self, x, y):
+        dx = x - self.mouseLastPos[0]
+        dy = y - self.mouseLastPos[1]
+        modifiers = GLUT.glutGetModifiers()
+        tb = self.scene.tb
+        if modifiers == GLUT.GLUT_ACTIVE_SHIFT:
+            tb.zoom_to(dx, -dy)
+        elif modifiers == GLUT.GLUT_ACTIVE_CTRL:
+            tb.trans_to(dx, -dy)
+        else:
+            tb.drag_to(x, y, dx, -dy)
+        self.mouseLastPos = np.array([x, y])
+
+    def idle(self, ):
+        if self.world is None:
+            return
+        if self.is_simulating:
+            self.world.step()
+            print "did a step"
+            self.world.check_collision()
+            print self.world.collision_result.contacted_bodies
+            skel = self.world.skeletons[0]
+            #print skel.q
+
+            rot_force = np.matrix(skel.bodynodes[self.body_node].T)[0:3, 0:3].I
+            force_dir = np.matmul(rot_force, np.expand_dims(self.force / np.linalg.norm(self.force) * 0.5, 1))
+            force_dir = np.asarray([force_dir[0,0], force_dir[1,0], force_dir[2,0]])
+            location = list(np.asarray(skel.bodynodes[self.body_node].C) + self.offset_from_centroid)
+
+
+            arrow_tail = list(self.cap_offsets[self.body_node] + self.offset_from_centroid - force_dir.T)
+            arrow_head = list(self.cap_offsets[self.body_node] + self.offset_from_centroid) # origin is the center of the joint sphere
+            skel.bodynodes[self.body_node].set_ext_force_with_arrow(self.force, location, arrow_tail[0], arrow_tail[1], arrow_tail[2], arrow_head[0], arrow_head[1], arrow_head[2], False, False)
+
+            # if self.world.frame % 10 == 0:
+            #     self.capture()
+        elif self.is_animating:
+            self.frame_index = (self.frame_index + 1) % self.world.num_frames()
+            if hasattr(self.world, "set_frame"):
+                self.world.set_frame(self.frame_index)
+
+    def renderTimer(self, timer):
+        GLUT.glutPostRedisplay()
+        GLUT.glutTimerFunc(20, self.renderTimer, 1)
+
+    def capture(self, ):
+        print("capture! index = %d" % self.capture_index)
+        from PIL import Image
+        GL.glPixelStorei(GL.GL_PACK_ALIGNMENT, 1)
+        w, h = 1280, 720
+        data = GL.glReadPixels(0, 0, w, h, GL.GL_RGBA, GL.GL_UNSIGNED_BYTE)
+        img = Image.fromstring("RGBA", (w, h), data)
+        img = img.transpose(Image.FLIP_TOP_BOTTOM)
+        filename = "./data/captures/capture%04d.png" % self.capture_index
+        img.save(filename, 'png')
+        self.capture_index += 1
+
+    def run_sim_with_window(self, ):
+        print("\n")
+        print("space bar: simulation on/off")
+        print("' ': run/stop simulation")
+        print("'a': run/stop animation")
+        print("'[' and ']': play one frame backward and forward")
+
+        # Init glut
+        GLUT.glutInit(())
+        GLUT.glutInitDisplayMode(GLUT.GLUT_RGBA |
+                                 GLUT.GLUT_DOUBLE |
+                                 GLUT.GLUT_MULTISAMPLE |
+                                 GLUT.GLUT_ALPHA |
+                                 GLUT.GLUT_DEPTH)
+        GLUT.glutInitWindowSize(*self.window_size)
+        GLUT.glutInitWindowPosition(0, 0)
+        self.window = GLUT.glutCreateWindow(self.title)
+
+        # Init functions
+        # glutFullScreen()
+        GLUT.glutDisplayFunc(self.drawGL)
+        GLUT.glutIdleFunc(self.idle)
+        GLUT.glutReshapeFunc(self.resizeGL)
+        GLUT.glutKeyboardFunc(self.keyPressed)
+        GLUT.glutMouseFunc(self.mouseFunc)
+        GLUT.glutMotionFunc(self.motionFunc)
+        GLUT.glutTimerFunc(25, self.renderTimer, 1)
+        self.initGL(*self.window_size)
+
+        # Run
+        GLUT.glutMainLoop()
+
+
+
+    def run_simulation(self):
         #pydart.gui.viewer.launch(world)
 
+        #run without visualizing
         if self.render_dart == False:
             for i in range(0, 100):
                 self.world.step()
@@ -199,14 +357,14 @@ class DartSkelSim(object):
                 skel = self.world.skeletons[0]
                 print skel.q
 
+        #run with OpenGL GLUT
         elif self.render_dart == True:
-            win = GLUTWindow(self.world, title=None)
             default_camera = None
             if default_camera is not None:
-                win.scene.set_camera(default_camera)
-            win.run()
+                self.scene.set_camera(default_camera)
+            self.run_sim_with_window()
 
 
 if __name__ == '__main__':
     dss = DartSkelSim(render=True)
-    dss.run()
+    dss.run_simulation()

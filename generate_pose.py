@@ -126,14 +126,16 @@ class GeneratePose():
         #self.m.pose[71] = np.pi/5 #right fist
 
 
-        self.m.betas[0] = random.uniform(-2, 2) #overall body size. more positive number makes smaller, negative makes larger with bigger belly
-        self.m.betas[1] = random.uniform(-2, 2) #positive number makes person very skinny, negative makes fat
-        self.m.betas[2] = random.uniform(-2, 2) #muscle mass. higher makes person less physically fit
-        self.m.betas[3] = random.uniform(-2, 2) #proportion for upper vs lower bone lengths. more negative number makes legs much bigger than arms
-        self.m.betas[4] = random.uniform(-2, 2) #neck. more negative seems to make neck longer and body more skinny
-        self.m.betas[5] = random.uniform(-2, 2) #size of hips. larger means bigger hips
-        self.m.betas[6] = random.uniform(-2, 2) #proportion of belly with respect to rest of the body. higher number is larger belly
-        self.m.betas[7] = random.uniform(-2, 2)
+        min_shape_coeff = -4
+        max_shape_coeff = 4
+        self.m.betas[0] = random.uniform(min_shape_coeff, max_shape_coeff) #overall body size. more positive number makes smaller, negative makes larger with bigger belly
+        self.m.betas[1] = random.uniform(min_shape_coeff, max_shape_coeff) #positive number makes person very skinny, negative makes fat
+        self.m.betas[2] = random.uniform(min_shape_coeff, max_shape_coeff) #muscle mass. higher makes person less physically fit
+        self.m.betas[3] = random.uniform(min_shape_coeff, max_shape_coeff) #proportion for upper vs lower bone lengths. more negative number makes legs much bigger than arms
+        self.m.betas[4] = random.uniform(min_shape_coeff, max_shape_coeff) #neck. more negative seems to make neck longer and body more skinny
+        self.m.betas[5] = random.uniform(min_shape_coeff, max_shape_coeff) #size of hips. larger means bigger hips
+        self.m.betas[6] = random.uniform(min_shape_coeff, max_shape_coeff) #proportion of belly with respect to rest of the body. higher number is larger belly
+        self.m.betas[7] = random.uniform(min_shape_coeff, max_shape_coeff)
         #self.m.betas[8] = random.uniform(-3, 3)
         #self.m.betas[9] = random.uniform(-3, 3)
 
@@ -685,10 +687,11 @@ class GeneratePose():
         #Find IK solution at the very end.
 
         dss = dart_skel_sim.DartSkelSim(render = True, m = self.m, capsules = capsules, joint_names = joint2name, initial_rots = rots0)
-        dss.run()
+        #
 
 
         self.standard_render()
+        dss.run_simulation()
 
 
 

@@ -93,7 +93,13 @@ class GLUTWindow(object):
             self.sim.check_collision()
             print self.sim.collision_result.contacted_bodies
             skel = self.sim.skeletons[0]
-            print skel.q
+            #print skel.q
+
+            body_node = 9
+            force = [0.0, -10.0, 0.0]
+            location = skel.bodynodes[body_node].C + [-0.3, 0.0, 0.0]
+            skel.bodynodes[body_node].set_ext_force(force, location, True, True)
+
             # if self.sim.frame % 10 == 0:
             #     self.capture()
         elif self.is_animating:
