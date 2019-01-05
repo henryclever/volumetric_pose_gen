@@ -595,6 +595,7 @@ class ProcessYashData():
 
         angles = random.sample(angles, len(angles))
 
+
         selection = {}
 
         first_angle_select = angles.pop()
@@ -606,6 +607,7 @@ class ProcessYashData():
 
         while True:
             try:
+                print first_angle_select, "min: ", select[first_angle_select][0], "max: ",  select[first_angle_select][1]
                 selection[first_angle_select] = random.uniform(select[first_angle_select][0],  select[first_angle_select][1])
 
                 segment = 100*(selection[first_angle_select] - select[first_angle_select][0])/(select[first_angle_select][1] -  select[first_angle_select][0])

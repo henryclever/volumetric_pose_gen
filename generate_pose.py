@@ -623,7 +623,6 @@ class GeneratePose():
                     if verbose == True: print 'r elbow', self.m.pose[57:60]
 
 
-
                     self.m.pose[48] = entry['l_shoulder_angle_axis'][0]*2/3
                     self.m.pose[49] = entry['l_shoulder_angle_axis'][1]*2/3
                     self.m.pose[50] = entry['l_shoulder_angle_axis'][2]*2/3

@@ -8,6 +8,8 @@ import pydart2 as pydart
 from pydart2 import skeleton_builder
 from dart_opengl_window import GLUTWindow
 
+from lib_dart_skel import LibDartSkel
+
 import OpenGL.GL as GL
 import OpenGL.GLU as GLU
 import OpenGL.GLUT as GLUT
@@ -171,99 +173,32 @@ class DartSkelSim(object):
 
         skel = self.world.skeletons[0]
 
+        skel = LibDartSkel().assign_init_joint_angles(skel, m)
 
-        ########################################ASSIGN INITIAL JOINT ANGLES#############################################
-        #skel_q_init = np.random.rand(skel.ndofs) - 0.5
-        skel_q_init = skel.ndofs * [0]
-        skel_q_init[3:6] = np.asarray(m.pose[3:6]) #left glute
-        skel_q_init[6:9] = np.asarray(m.pose[6:9]) #right glute
-        skel_q_init[9:12] = np.asarray(m.pose[9:12]) #low spine
+        skel = LibDartSkel().assign_joint_limits_and_damping(skel)
 
-        skel_q_init[12] = float(m.pose[12]) #left knee. should be 0.0 to 3.14
-        skel_q_init[13] = float(m.pose[15]) #right knee. should be 0.0 to 3.14
+        #weight the capsules appropriately
+        for body_ct in range(len(skel.bodynodes)):
+            #give the capsules a weight propertional to their volume
+            cap_rad = float(capsules[body_ct].rad[0])
+            cap_len = float(capsules[body_ct].length[0])
+            volume = np.pi*np.square(cap_rad)*(cap_rad*4/3 + cap_len)
 
-        skel_q_init[14:17] = np.asarray(m.pose[18:21]) #mid spine
-
-        skel_q_init[17:20] = np.asarray(m.pose[21:24]) #left foot
-        skel_q_init[20:23] = np.asarray(m.pose[24:27]) #right foot
-
-        skel_q_init[23:26] = np.asarray(m.pose[27:30]) #upper spine
-
-        skel_q_init[26:29] = np.asarray(m.pose[36:39]) #neck
-
-        skel_q_init[29:32] = np.asarray(m.pose[39:42]) #left inner shoulder
-        skel_q_init[32:35] = np.asarray(m.pose[42:45]) #right inner shoulder
-
-        skel_q_init[35:38] = np.asarray(m.pose[45:48]) #head
-
-        skel_q_init[38:41] = np.asarray(m.pose[48:51]) #left outer shoulder
-        skel_q_init[41:44] = np.asarray(m.pose[51:54]) #right outer shoulder
-
-        skel_q_init[44] = float(m.pose[55]) #left elbow. should be -3.14 to 0.0
-        skel_q_init[45] = float(m.pose[58]) #right elbow. should be  0.0 to 3.14
-
-        skel_q_init[46:49] = np.asarray(m.pose[60:63]) #left hand
-        skel_q_init[49:52] = np.asarray(m.pose[63:66]) #right hand
+            skel.bodynodes[body_ct].set_mass(volume*1000)
+            #print "COM: ", skel.bodynodes[body_ct].C
+            #print "MASS: ", skel.bodynodes[body_ct].m
 
 
-
-        #this is where you set the angles according to m, the angle axis representation.
-        skel.set_positions(skel_q_init)
-        #print skel.root_bodynode()
-        #print skel.name
-        #from pydart2 import bodynode
-        #bn = bodynode.BodyNode(skel, 8)
-
-        ##############################################ASSIGN JOINT LIMITS###############################################
-
-        standard_damping = 1.0
-        for joint in skel.joints:
-            print joint
-            if joint.name == "leftCalf":
-                joint.set_position_lower_limit(0, 0.0)
-                joint.set_position_upper_limit(0, 3.14)
-                joint.set_position_limit_enforced(True)
-                joint.set_damping_coefficient(0, standard_damping)
-            elif joint.name == "rightCalf":
-                joint.set_position_lower_limit(0, 0.0)
-                joint.set_position_upper_limit(0, 3.14)
-                joint.set_position_limit_enforced(True)
-                joint.set_damping_coefficient(0, standard_damping)
-            elif joint.name == "leftForeArm":
-                joint.set_position_lower_limit(0, -3.14)
-                joint.set_position_upper_limit(0, 0.0)
-                joint.set_position_limit_enforced(True)
-                joint.set_damping_coefficient(0, standard_damping)
-            elif joint.name == "rightForeArm":
-                joint.set_position_lower_limit(0, 0.0)
-                joint.set_position_upper_limit(0, 3.14)
-                joint.set_position_limit_enforced(True)
-                joint.set_damping_coefficient(0, standard_damping)
-            else:
-                joint.set_damping_coefficient(0, standard_damping)
-                joint.set_damping_coefficient(1, standard_damping)
-                joint.set_damping_coefficient(2, standard_damping)
-            #print "is enforced", joint.is_position_limit_enforced()
-            #print "has limit", joint.has_position_limit(0)
-            #print "lower limit", joint.position_lower_limit(0)
-            #print "upper limit", joint.position_upper_limit(0)
-
-
-
-
-        for body in skel.bodynodes:
-            print body.C
 
 
         self.body_node = 9 #need to solve for the body node that corresponds to a force using flex.
         self.force = np.asarray([0.0, 0.0, 100.0])
         self.offset_from_centroid = np.asarray([-0.15, 0.0, 0.0])
 
-        location = list(np.asarray(skel.bodynodes[self.body_node].C) + self.offset_from_centroid)
-        arrow_tail = list(self.cap_offsets[self.body_node] + self.offset_from_centroid - self.force/np.linalg.norm(self.force)*0.5)
-        arrow_head = list(self.cap_offsets[self.body_node] + self.offset_from_centroid) #origin is the center of the joint sphere
-        print arrow_head, 'arrow head'
-        skel.bodynodes[self.body_node].add_ext_force_with_arrow(self.force, location, arrow_tail[0], arrow_tail[1], arrow_tail[2], arrow_head[0], arrow_head[1], arrow_head[2], False, False)
+        LibDartSkel().impose_force(skel=skel, body_node=self.body_node, force=self.force,
+                                   offset_from_centroid = self.offset_from_centroid, cap_offsets = self.cap_offsets,
+                                   render=self.render_dart, init=True)
+
 
 
         for marker in skel.markers:
@@ -360,14 +295,10 @@ class DartSkelSim(object):
             skel = self.world.skeletons[0]
             #print skel.q
 
-            rot_force = np.matrix(skel.bodynodes[self.body_node].T)[0:3, 0:3].I
-            force_dir = np.matmul(rot_force, np.expand_dims(self.force / np.linalg.norm(self.force) * 0.5, 1))
-            force_dir = np.asarray([force_dir[0,0], force_dir[1,0], force_dir[2,0]])
-            location = list(np.asarray(skel.bodynodes[self.body_node].C) + self.offset_from_centroid)
+            LibDartSkel().impose_force(skel=skel, body_node=self.body_node, force=self.force,
+                                       offset_from_centroid = self.offset_from_centroid, cap_offsets = self.cap_offsets,
+                                       render=True, init=False)
 
-            arrow_tail = list(self.cap_offsets[self.body_node] + self.offset_from_centroid - force_dir.T)
-            arrow_head = list(self.cap_offsets[self.body_node] + self.offset_from_centroid) # origin is the center of the joint sphere
-            skel.bodynodes[self.body_node].set_ext_force_with_arrow(self.force, location, arrow_tail[0], arrow_tail[1], arrow_tail[2], arrow_head[0], arrow_head[1], arrow_head[2], False, False)
 
             # if self.world.frame % 10 == 0:
             #     self.capture()
@@ -436,6 +367,13 @@ class DartSkelSim(object):
                 print "did a step"
                 skel = self.world.skeletons[0]
                 print skel.q
+
+
+                LibDartSkel().impose_force(skel=skel, body_node=self.body_node, force=self.force, offset_from_centroid = self.offset_from_centroid, cap_offsets = self.cap_offsets, render=False, init=False)
+
+
+
+
 
         #run with OpenGL GLUT
         elif self.render_dart == True:
