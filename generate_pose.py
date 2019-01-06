@@ -686,7 +686,6 @@ class GeneratePose():
         #Find IK solution at the very end.
 
         dss = dart_skel_sim.DartSkelSim(render = True, m = self.m, capsules = capsules, joint_names = joint2name, initial_rots = rots0)
-        #
 
 
         self.standard_render()
