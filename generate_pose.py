@@ -36,7 +36,7 @@ from hmr.src.tf_smpl.batch_smpl import SMPL
 class GeneratePose():
     def __init__(self):
         ## Load SMPL model (here we load the female model)
-        model_path = '../SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
+        model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
         self.m = load_model(model_path)
 
         ## Assign random pose and shape parameters
@@ -144,7 +144,6 @@ class GeneratePose():
         print self.m.betas, 'betas'
 
 
-        self.ax = plt.figure().add_subplot(111, projection='3d')
 
 
     def standard_render(self):
@@ -634,10 +633,9 @@ class GeneratePose():
                     self.m.pose[55] = entry['l_elbow_angle_axis'][1]
                     if verbose == True: print 'l elbow', self.m.pose[54:57]
 
-    def map_random_selection_to_smpl_angles(self):
-        alter_angles = True
+    def map_random_selection_to_smpl_angles(self, alter_angles):
         if alter_angles == True:
-            selection_r_leg = processYashData.sample_angles('r_leg')
+            selection_r_leg = ProcessYashData().sample_angles('r_leg')
             self.m.pose[6] = selection_r_leg['rG_ext']
             self.m.pose[7] = selection_r_leg['rG_yaw']#/2
             self.m.pose[8] = selection_r_leg['rG_abd']
@@ -645,7 +643,7 @@ class GeneratePose():
             self.m.pose[15] = selection_r_leg['rK']
             #self.m.pose[16] = selection_r_leg['rG_yaw']/2
 
-            selection_l_leg = processYashData.sample_angles('l_leg')
+            selection_l_leg = ProcessYashData().sample_angles('l_leg')
             self.m.pose[3] = selection_l_leg['lG_ext']
             self.m.pose[4] = selection_l_leg['lG_yaw']#/2
             self.m.pose[5] = selection_l_leg['lG_abd']
@@ -653,7 +651,7 @@ class GeneratePose():
             self.m.pose[12] = selection_l_leg['lK']
             #self.m.pose[13] = selection_l_leg['lG_yaw']/2
 
-            selection_r_arm = processYashData.sample_angles('r_arm')
+            selection_r_arm = ProcessYashData().sample_angles('r_arm')
             self.m.pose[51] = selection_r_arm['rS_roll']*2/3
             self.m.pose[52] = selection_r_arm['rS_yaw']*2/3
             self.m.pose[53] = selection_r_arm['rS_pitch']*2/3
@@ -663,7 +661,7 @@ class GeneratePose():
 
             self.m.pose[58] = selection_r_arm['rE']
 
-            selection_l_arm = processYashData.sample_angles('l_arm')
+            selection_l_arm = ProcessYashData().sample_angles('l_arm')
             self.m.pose[48] = selection_l_arm['lS_roll']*2/3
             self.m.pose[49] = selection_l_arm['lS_yaw']*2/3
             self.m.pose[50] = selection_l_arm['lS_pitch']*2/3
@@ -674,10 +672,10 @@ class GeneratePose():
             self.m.pose[55] = selection_l_arm['lE']
 
         #self.m.pose[51] = selection_r
-        from capsule_body import get_capsules, get_joint2name, get_rots0
+        from capsule_body import get_capsules, joint2name, rots0
         capsules = get_capsules(self.m)
-        joint2name = get_joint2name()
-        rots0 = get_rots0()
+        joint2name = joint2name
+        rots0 = rots0
         print len(capsules)
 
         #put these capsules into dart based on these angles. Make Dart joints only as necessary.
@@ -685,24 +683,27 @@ class GeneratePose():
         #repeat: do not need a forward kinematics model in FleX! Just need the capsule positions and radii. Can potentially get rotation from the Capsule end positions.
         #Find IK solution at the very end.
 
-        dss = dart_skel_sim.DartSkelSim(render = True, m = self.m, capsules = capsules, joint_names = joint2name, initial_rots = rots0)
 
-
-        self.standard_render()
-        dss.run_simulation()
+        return self.m, capsules, joint2name, rots0
 
 
 
 if __name__ == "__main__":
     generator = GeneratePose()
+    generator.ax = plt.figure().add_subplot(111, projection='3d')
     #generator.solve_ik_tree_smpl()
     #generator.save_yash_data_with_angles()
 
     #generator.check_found_limits()
 
-    processYashData = ProcessYashData()
+    #processYashData = ProcessYashData()
     #processYashData.map_yash_to_axis_angle(verbose=False)
     #processYashData.check_found_limits()
 
     #processYashData.get_r_leg_angles()
-    generator.map_random_selection_to_smpl_angles()
+    m, capsules, joint2name, rots0 = generator.map_random_selection_to_smpl_angles(alter_angles = True)
+
+    dss = dart_skel_sim.DartSkelSim(render=True, m=m, capsules=capsules, joint_names=joint2name, initial_rots=rots0)
+
+    generator.standard_render()
+    dss.run_simulation()

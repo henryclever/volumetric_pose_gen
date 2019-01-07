@@ -36,13 +36,14 @@ class DartSkelSim(object):
         parent_ref = list(m.kintree_table[0]) #parent of each joint
         parent_ref[0] = -1
 
+        self.capsules = capsules
 
 
         pydart.init(verbose=True)
         print('pydart initialization OK')
 
         self.world = pydart.World(0.0002, "EMPTY")
-        self.world.set_gravity([0, 0,  9.81])
+        self.world.set_gravity([0, 0,  -9.81])
         self.world.set_collision_detector(detector_type=2)
         self.world.create_empty_skeleton(_skel_name="human")
 
@@ -73,6 +74,9 @@ class DartSkelSim(object):
         foot_ref = [7, 8]
         l_arm_ref = [11, 14, 16, 18]
         r_arm_ref = [12, 15, 17, 19]
+
+        self.red_joint_ref = red_joint_ref
+        self.red_parent_ref = red_parent_ref
 
 
         #make lists of the locations of the joint locations and the smplify capsule initial ends
@@ -105,10 +109,13 @@ class DartSkelSim(object):
         del(joint_locs_abs[10])
         del(joint_locs_abs[10])
 
+        self.joint_locs = joint_locs
+
 
         count = 0
 
         self.cap_offsets = []
+        self.cap_init_rots = []
         for capsule in capsules:
             print "************* Capsule No.",count, joint_names[count], " joint ref: ", red_joint_ref[count]," parent_ref: ", red_parent_ref[count]," ****************"
             cap_rad = float(capsule.rad[0])
@@ -133,6 +140,7 @@ class DartSkelSim(object):
             cap_offset[1] += capsule_loc_abs[1] - joint_loc_abs[1] - .04
             cap_offset[2] += capsule_loc_abs[2] - joint_loc_abs[2]
             self.cap_offsets.append(np.asarray(cap_offset))
+            self.cap_init_rots.append(np.asarray(cap_init_rot))
 
 
             print "radius: ", cap_rad, "   length: ", cap_len
@@ -153,6 +161,10 @@ class DartSkelSim(object):
                 self.world.add_capsule(parent=int(red_parent_ref[count]), radius=cap_rad, length=cap_len,
                                        cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc,
                                        joint_type="REVOLUTE_Y", joint_name=joint_names[count])
+            elif count == 0:
+                self.world.add_capsule(parent=int(red_parent_ref[count]), radius=cap_rad, length=cap_len,
+                                       cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc,
+                                       joint_type="BALL", joint_name=joint_names[count])
             else:
                 self.world.add_capsule(parent=int(red_parent_ref[count]), radius=cap_rad, length=cap_len,
                                        cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc,
@@ -195,9 +207,9 @@ class DartSkelSim(object):
         self.force = np.asarray([0.0, 0.0, 100.0])
         self.offset_from_centroid = np.asarray([-0.15, 0.0, 0.0])
 
-        LibDartSkel().impose_force(skel=skel, body_node=self.body_node, force=self.force,
-                                   offset_from_centroid = self.offset_from_centroid, cap_offsets = self.cap_offsets,
-                                   render=self.render_dart, init=True)
+        #LibDartSkel().impose_force(skel=skel, body_node=self.body_node, force=self.force,
+        #                           offset_from_centroid = self.offset_from_centroid, cap_offsets = self.cap_offsets,
+        #                           render=self.render_dart, init=True)
 
 
 
@@ -293,11 +305,13 @@ class DartSkelSim(object):
             self.world.check_collision()
             print self.world.collision_result.contacted_bodies
             skel = self.world.skeletons[0]
-            #print skel.q
+            print skel.q
 
-            LibDartSkel().impose_force(skel=skel, body_node=self.body_node, force=self.force,
-                                       offset_from_centroid = self.offset_from_centroid, cap_offsets = self.cap_offsets,
-                                       render=True, init=False)
+
+
+            #LibDartSkel().impose_force(skel=skel, body_node=self.body_node, force=self.force,
+            #                           offset_from_centroid = self.offset_from_centroid, cap_offsets = self.cap_offsets,
+            #                           render=True, init=False)
 
 
             # if self.world.frame % 10 == 0:
@@ -355,6 +369,30 @@ class DartSkelSim(object):
         # Run
         GLUT.glutMainLoop()
 
+
+
+    def run_sim_step(self):
+        self.world.step()
+        self.world.step()
+        self.world.step()
+        self.world.step()
+        self.world.step()
+        self.world.step()
+        self.world.step()
+        self.world.step()
+        self.world.step()
+        self.world.step()
+        self.world.step()
+        self.world.step()
+        self.world.step()
+        self.world.step()
+        self.world.step()
+        #print "did a step"
+        skel = self.world.skeletons[0]
+
+        #LibDartSkel().impose_force(skel=skel, body_node=self.body_node, force=self.force, offset_from_centroid=self.offset_from_centroid, cap_offsets=self.cap_offsets, render=False, init=False)
+
+        return skel.q, skel.bodynodes
 
 
     def run_simulation(self):
