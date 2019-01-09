@@ -34,7 +34,7 @@ from hmr.src.tf_smpl.batch_smpl import SMPL
 
 
 class GeneratePose():
-    def __init__(self):
+    def __init__(self, sigma = 0):
         ## Load SMPL model (here we load the female model)
         model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
         self.m = load_model(model_path)
@@ -44,7 +44,7 @@ class GeneratePose():
         self.m.betas[:] = np.random.rand(self.m.betas.size) * .0
         #self.m.betas[5] = 20.
 
-        self.m.pose[0] = np.pi #pitch rotation of the person in space. 0 means the person is upside down facing back. pi is standing up facing forward
+        self.m.pose[0] = 0 #pitch rotation of the person in space. 0 means the person is upside down facing back. pi is standing up facing forward
         self.m.pose[1] = 0 #roll of the person in space. -pi/2 means they are tilted to their right side
         self.m.pose[2] = 0 #-np.pi/4 #yaw of the person in space, like turning around normal to the ground
 
@@ -86,7 +86,7 @@ class GeneratePose():
 
         self.m.pose[33] = 0 #flexion/extension of right ankle midpoint
 
-        self.m.pose[36] = 0.001#np.pi/2 #flexion/extension of neck. i.e. whiplash 12
+        self.m.pose[36] = 0#np.pi/2 #flexion/extension of neck. i.e. whiplash 12
         self.m.pose[37] = 0#-np.pi/2 #yaw of neck
         self.m.pose[38] = 0#np.pi/4  #tilt head side to side
 
@@ -127,7 +127,7 @@ class GeneratePose():
 
 
         mu = 0
-        sigma = 2
+
         self.m.betas[0] = random.normalvariate(mu, sigma) #overall body size. more positive number makes smaller, negative makes larger with bigger belly
         self.m.betas[1] = random.normalvariate(mu, sigma) #positive number makes person very skinny, negative makes fat
         self.m.betas[2] = random.normalvariate(mu, sigma) #muscle mass. higher makes person less physically fit
@@ -139,9 +139,9 @@ class GeneratePose():
         #self.m.betas[8] = random.normalvariate(-3, 3)
         #self.m.betas[9] = random.normalvariate(-3, 3)
 
-        print self.m.pose.shape
-        print self.m.pose, 'pose'
-        print self.m.betas, 'betas'
+        #print self.m.pose.shape
+        #print self.m.pose, 'pose'
+        #print self.m.betas, 'betas'
 
 
 

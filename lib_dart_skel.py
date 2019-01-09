@@ -18,39 +18,51 @@ from time import time
 
 
 class LibDartSkel():
-    def assign_init_joint_angles(self, skel, m):
+    def assign_init_joint_angles(self, skel, m, root_joint_type = "FREE"):
         ####################################### ASSIGN INITIAL JOINT ANGLES ############################################
         #skel_q_init = np.random.rand(skel.ndofs) - 0.5
         skel_q_init = skel.ndofs * [0]
-        skel_q_init[3:6] = np.asarray(m.pose[3:6]) #left glute
-        skel_q_init[6:9] = np.asarray(m.pose[6:9]) #right glute
-        skel_q_init[9:12] = np.asarray(m.pose[9:12]) #low spine
+        print "NUMBER OF SKEL DOFS", skel.ndofs
 
-        skel_q_init[12] = float(m.pose[12]) #left knee. should be 0.0 to 3.14
-        skel_q_init[13] = float(m.pose[15]) #right knee. should be 0.0 to 3.14
+        if root_joint_type == "FREE":
+            index_offset = 3
+            skel_q_init[0:3] = np.asarray(m.pose[0:3])
+            #root node index:
+            #0 to 3 is orientation
+            #3 to 6 is position
 
-        skel_q_init[14:17] = np.asarray(m.pose[18:21]) #mid spine
+        else:
+            index_offset = 0
 
-        skel_q_init[17:20] = np.asarray(m.pose[21:24]) #left foot
-        skel_q_init[20:23] = np.asarray(m.pose[24:27]) #right foot
+        skel_q_init[index_offset+3:6+index_offset] = np.asarray(m.pose[3:6]) #left glute
+        skel_q_init[index_offset+6:9+index_offset] = np.asarray(m.pose[6:9]) #right glute
+        skel_q_init[index_offset+9:12+index_offset] = np.asarray(m.pose[9:12]) #low spine
 
-        skel_q_init[23:26] = np.asarray(m.pose[27:30]) #upper spine
+        skel_q_init[index_offset+12] = float(m.pose[12]) #left knee. should be 0.0 to 3.14
+        skel_q_init[index_offset+13] = float(m.pose[15]) #right knee. should be 0.0 to 3.14
 
-        skel_q_init[26:29] = np.asarray(m.pose[36:39]) #neck
+        skel_q_init[index_offset+14:17+index_offset] = np.asarray(m.pose[18:21]) #mid spine
 
-        skel_q_init[29:32] = np.asarray(m.pose[39:42]) #left inner shoulder
-        skel_q_init[32:35] = np.asarray(m.pose[42:45]) #right inner shoulder
+        skel_q_init[index_offset+17:20+index_offset] = np.asarray(m.pose[21:24]) #left foot
+        skel_q_init[index_offset+20:23+index_offset] = np.asarray(m.pose[24:27]) #right foot
 
-        skel_q_init[35:38] = np.asarray(m.pose[45:48]) #head
+        skel_q_init[index_offset+23:26+index_offset] = np.asarray(m.pose[27:30]) #upper spine
 
-        skel_q_init[38:41] = np.asarray(m.pose[48:51]) #left outer shoulder
-        skel_q_init[41:44] = np.asarray(m.pose[51:54]) #right outer shoulder
+        skel_q_init[index_offset+26:29+index_offset] = np.asarray(m.pose[36:39]) #neck
 
-        skel_q_init[44] = float(m.pose[55]) #left elbow. should be -3.14 to 0.0
-        skel_q_init[45] = float(m.pose[58]) #right elbow. should be  0.0 to 3.14
+        skel_q_init[index_offset+29:32+index_offset] = np.asarray(m.pose[39:42]) #left inner shoulder
+        skel_q_init[index_offset+32:35+index_offset] = np.asarray(m.pose[42:45]) #right inner shoulder
 
-        skel_q_init[46:49] = np.asarray(m.pose[60:63]) #left hand
-        skel_q_init[49:52] = np.asarray(m.pose[63:66]) #right hand
+        skel_q_init[index_offset+35:38+index_offset] = np.asarray(m.pose[45:48]) #head
+
+        skel_q_init[index_offset+38:41+index_offset] = np.asarray(m.pose[48:51]) #left outer shoulder
+        skel_q_init[index_offset+41:44+index_offset] = np.asarray(m.pose[51:54]) #right outer shoulder
+
+        skel_q_init[index_offset+44] = float(m.pose[55]) #left elbow. should be -3.14 to 0.0
+        skel_q_init[index_offset+45] = float(m.pose[58]) #right elbow. should be  0.0 to 3.14
+
+        skel_q_init[index_offset+46:49+index_offset] = np.asarray(m.pose[60:63]) #left hand
+        skel_q_init[index_offset+49:52+index_offset] = np.asarray(m.pose[63:66]) #right hand
 
 
 

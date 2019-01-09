@@ -43,7 +43,7 @@ class DartSkelSim(object):
         print('pydart initialization OK')
 
         self.world = pydart.World(0.0002, "EMPTY")
-        self.world.set_gravity([0, 0,  -9.81])
+        self.world.set_gravity([0, 0, 0])#([0, 0,  -9.81])
         self.world.set_collision_detector(detector_type=2)
         self.world.create_empty_skeleton(_skel_name="human")
 
@@ -113,6 +113,7 @@ class DartSkelSim(object):
 
 
         count = 0
+        root_joint_type = "FREE"
 
         self.cap_offsets = []
         self.cap_init_rots = []
@@ -153,7 +154,13 @@ class DartSkelSim(object):
             #print joint_root_loc
             #print "Rot: ", list(np.asarray(capsule.rod))
             #print capsule.centers
-            if count == 4 or count == 5:
+
+
+            if count == 0:
+                self.world.add_capsule(parent=int(red_parent_ref[count]), radius=cap_rad, length=cap_len,
+                                       cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc,
+                                       joint_type=root_joint_type, joint_name=joint_names[count])
+            elif count == 4 or count == 5:
                 self.world.add_capsule(parent=int(red_parent_ref[count]), radius=cap_rad, length=cap_len,
                                        cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc,
                                        joint_type="REVOLUTE_X", joint_name=joint_names[count])
@@ -161,10 +168,6 @@ class DartSkelSim(object):
                 self.world.add_capsule(parent=int(red_parent_ref[count]), radius=cap_rad, length=cap_len,
                                        cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc,
                                        joint_type="REVOLUTE_Y", joint_name=joint_names[count])
-            elif count == 0:
-                self.world.add_capsule(parent=int(red_parent_ref[count]), radius=cap_rad, length=cap_len,
-                                       cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc,
-                                       joint_type="BALL", joint_name=joint_names[count])
             else:
                 self.world.add_capsule(parent=int(red_parent_ref[count]), radius=cap_rad, length=cap_len,
                                        cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc,
@@ -185,7 +188,7 @@ class DartSkelSim(object):
 
         skel = self.world.skeletons[0]
 
-        skel = LibDartSkel().assign_init_joint_angles(skel, m)
+        skel = LibDartSkel().assign_init_joint_angles(skel, m, root_joint_type)
 
         skel = LibDartSkel().assign_joint_limits_and_damping(skel)
 
