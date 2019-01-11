@@ -42,8 +42,8 @@ class DartSkelSim(object):
         pydart.init(verbose=True)
         print('pydart initialization OK')
 
-        self.world = pydart.World(0.0002, "EMPTY")
-        self.world.set_gravity([0, 0, 0])#([0, 0,  -9.81])
+        self.world = pydart.World(0.003, "EMPTY")
+        self.world.set_gravity([0, 0, -9.81])#([0, 0,  -9.81])
         self.world.set_collision_detector(detector_type=2)
         self.world.create_empty_skeleton(_skel_name="human")
 
@@ -154,6 +154,7 @@ class DartSkelSim(object):
             #print joint_root_loc
             #print "Rot: ", list(np.asarray(capsule.rod))
             #print capsule.centers
+
 
 
             if count == 0:
@@ -374,25 +375,16 @@ class DartSkelSim(object):
 
 
 
-    def run_sim_step(self):
-        self.world.step()
-        self.world.step()
-        self.world.step()
-        self.world.step()
-        self.world.step()
-        self.world.step()
-        self.world.step()
-        self.world.step()
-        self.world.step()
-        self.world.step()
-        self.world.step()
-        self.world.step()
-        self.world.step()
-        self.world.step()
+    def run_sim_step(self, pmat_red_list, force_loc_red_dart, force_dir_red_dart, nearest_capsule_list):
         self.world.step()
         #print "did a step"
         skel = self.world.skeletons[0]
 
+        #print "lengths", len(pmat_red_list), len(force_dir_red_dart), len(force_loc_red_dart), len(nearest_capsule_list)
+        #print np.shape(pmat_red_list), np.shape(force_dir_red_dart), np.shape(force_loc_red_dart), np.shape(nearest_capsule_list)
+
+
+        
         #LibDartSkel().impose_force(skel=skel, body_node=self.body_node, force=self.force, offset_from_centroid=self.offset_from_centroid, cap_offsets=self.cap_offsets, render=False, init=False)
 
         return skel.q, skel.bodynodes
