@@ -701,7 +701,7 @@ if __name__ == "__main__":
     #processYashData.check_found_limits()
 
     #processYashData.get_r_leg_angles()
-    m, capsules, joint2name, rots0 = generator.map_random_selection_to_smpl_angles(alter_angles = True)
+    m, capsules, joint2name, rots0 = generator.map_random_selection_to_smpl_angles(alter_angles = False)
 
     dss = dart_skel_sim.DartSkelSim(render=True, m=m, capsules=capsules, joint_names=joint2name, initial_rots=rots0)
 

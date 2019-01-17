@@ -4,6 +4,7 @@
 # Author(s): Sehoon Ha <sehoon.ha@disneyresearch.com>
 # Disney Research Robotics Group
 import numpy as np
+import math
 import pydart2 as pydart
 from pydart2 import skeleton_builder
 from dart_opengl_window import GLUTWindow
@@ -18,6 +19,28 @@ from time import time
 
 
 class LibDartSkel():
+
+    def eulerAnglesToRotationMatrix(self, theta):
+        R_x = np.array([[1, 0, 0],
+                        [0, math.cos(theta[0]), -math.sin(theta[0])],
+                        [0, math.sin(theta[0]), math.cos(theta[0])]
+                        ])
+
+        R_y = np.array([[math.cos(theta[1]), 0, math.sin(theta[1])],
+                        [0, 1, 0],
+                        [-math.sin(theta[1]), 0, math.cos(theta[1])]
+                        ])
+
+        R_z = np.array([[math.cos(theta[2]), -math.sin(theta[2]), 0],
+                        [math.sin(theta[2]), math.cos(theta[2]), 0],
+                        [0, 0, 1]
+                        ])
+
+        R = np.dot(R_z, np.dot(R_y, R_x))
+
+        return R
+
+
     def assign_init_joint_angles(self, skel, m, root_joint_type = "FREE"):
         ####################################### ASSIGN INITIAL JOINT ANGLES ############################################
         #skel_q_init = np.random.rand(skel.ndofs) - 0.5
@@ -77,10 +100,11 @@ class LibDartSkel():
     def assign_joint_limits_and_damping(self, skel):
         ######################################## ASSIGN JOINT LIMITS AND DAMPING #######################################
 
-        arm_damping = 1.0
-        leg_damping = 2.0
-        head_damping = 2.0
-        torso_damping = 5.0
+        arm_damping = 5.0
+        leg_damping = 15.0
+        knee_damping = 50.0
+        head_damping = 10.0
+        torso_damping = 75.0
         for joint in skel.joints:
             print joint
 
@@ -110,12 +134,12 @@ class LibDartSkel():
                 joint.set_position_lower_limit(0, 0.0)
                 joint.set_position_upper_limit(0, 2.3720944626178713)
                 joint.set_position_limit_enforced(True)
-                joint.set_damping_coefficient(0, leg_damping)
+                joint.set_damping_coefficient(0, knee_damping)
             elif joint.name == "rightCalf":
                 joint.set_position_lower_limit(0, 0.0)
                 joint.set_position_upper_limit(0, 2.320752282574325)
                 joint.set_position_limit_enforced(True)
-                joint.set_damping_coefficient(0, leg_damping)
+                joint.set_damping_coefficient(0, knee_damping)
             elif joint.name == "leftShoulder":
                 joint.set_position_lower_limit(0, -1.9811361489978918*1/3) #roll
                 joint.set_position_upper_limit(0,  1.4701759095910327*1/3)
@@ -124,9 +148,9 @@ class LibDartSkel():
                 joint.set_position_lower_limit(2, -1.9671878788002621*1/3) #pitch
                 joint.set_position_upper_limit(2,  1.3280993848963953*1/3)
                 joint.set_position_limit_enforced(True)
-                joint.set_damping_coefficient(0, arm_damping)
-                joint.set_damping_coefficient(1, arm_damping)
-                joint.set_damping_coefficient(2, arm_damping)
+                joint.set_damping_coefficient(0, torso_damping)
+                joint.set_damping_coefficient(1, torso_damping)
+                joint.set_damping_coefficient(2, torso_damping)
             elif joint.name == "leftUpperArm":
                 joint.set_position_lower_limit(0, -1.9811361489978918*2/3) #roll
                 joint.set_position_upper_limit(0,  1.4701759095910327*2/3)
@@ -146,9 +170,9 @@ class LibDartSkel():
                 joint.set_position_lower_limit(2, -1.483831592135514*1/3) #pitch
                 joint.set_position_upper_limit(2,  2.050392704184662*1/3)
                 joint.set_position_limit_enforced(True)
-                joint.set_damping_coefficient(0, arm_damping)
-                joint.set_damping_coefficient(1, arm_damping)
-                joint.set_damping_coefficient(2, arm_damping)
+                joint.set_damping_coefficient(0, torso_damping)
+                joint.set_damping_coefficient(1, torso_damping)
+                joint.set_damping_coefficient(2, torso_damping)
             elif joint.name == "rightUpperArm":
                 joint.set_position_lower_limit(0, -1.7735924284100764*2/3) #roll
                 joint.set_position_upper_limit(0,  1.7843466954767204*2/3)
@@ -204,13 +228,22 @@ class LibDartSkel():
 
         if init == True:
             if render == True:
-                skel.bodynodes[body_node].add_ext_force_with_arrow(force, location, arrow_tail[0], arrow_tail[1], arrow_tail[2], arrow_head[0], arrow_head[1], arrow_head[2], False, False)
+                skel.bodynodes[body_node].add_ext_force_with_arrow(force, location, arrow_tail[0], arrow_tail[1], arrow_tail[2], arrow_head[0], arrow_head[1], arrow_head[2], body_node, False, False)
             else:
                 skel.bodynodes[body_node].add_ext_force(force, location, False, False)
         else:
             if render == True:
-                skel.bodynodes[body_node].set_ext_force_with_arrow(force, location, arrow_tail[0], arrow_tail[1], arrow_tail[2], arrow_head[0], arrow_head[1], arrow_head[2], False, False)
+                skel.bodynodes[body_node].set_ext_force_with_arrow(force, location, arrow_tail[0], arrow_tail[1], arrow_tail[2], arrow_head[0], arrow_head[1], arrow_head[2], body_node, False, False)
             else:
                 skel.bodynodes[body_node].set_ext_force(force, location, False, False)
+
+
+    def impose_torque(self, skel, body_node, torque, init=True):
+
+
+        if init == True:
+            skel.bodynodes[body_node].add_ext_torque(torque, False)
+        else:
+            skel.bodynodes[body_node].set_ext_torque(torque, False)
 
 
