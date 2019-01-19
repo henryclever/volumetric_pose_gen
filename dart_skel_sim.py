@@ -41,6 +41,7 @@ class DampingController(object):
 
 class DartSkelSim(object):
     def __init__(self, render, m, capsules, joint_names, initial_rots):
+        self.num_steps = 10000
         self.render_dart = render
 
         joint_ref = list(m.kintree_table[1]) #joints
@@ -233,7 +234,9 @@ class DartSkelSim(object):
         volume_head = volume[10] + volume[13]
 
         #Human Body Dynamics: Classical Mechanics and Human Movement by Aydin Tozeren, the average percentage of weight for each body part is as follows:
-        #Trunk(Chest, back and abdomen) - 50.80,  Head - 7.30, Thigh - 9.88 x 2, Lower leg - 4.65 x 2, Foot - 1.45 x 2, Upper arm - 2.7 x 2, Forearm - 1.60 x 2, Hand - 0.66 x 2,
+        #Trunk(Chest, back and abdomen)- 50.80,  Head - 7.30, Thigh - 9.88 x 2, Lower leg - 4.65 x 2, Foot - 1.45 x 2, Upper arm - 2.7 x 2, Forearm - 1.60 x 2, Hand - 0.66 x 2,
+        #Trunk(Chest, back and abdomen) Women- 50.80,  Head - 9.40, Thigh - 8.30 x 2, Lower leg - 5.50 x 2, Foot - 1.20 x 2, Upper arm - 2.7 x 2, Forearm - 1.60 x 2, Hand - 0.50 x 2,
+        #Trunk(Chest, back and abdomen) Men - 48.30,  Head - 7.10, Thigh - 10.50 x 2, Lower leg - 4.50 x 2, Foot - 1.50 x 2, Upper arm - 3.3 x 2, Forearm - 1.90 x 2, Hand - 0.60 x 2,
         skel.bodynodes[0].set_mass(BODY_MASS * 0.5080 * volume[0]/volume_torso)
         skel.bodynodes[1].set_mass(BODY_MASS * 0.0988)
         skel.bodynodes[2].set_mass(BODY_MASS * 0.0988)
@@ -285,24 +288,6 @@ class DartSkelSim(object):
             skel.bodynodes[body_ct].set_inertia_entries(Ixx, Iyy, Izz)
 
 
-            #print skel.bodynodes[body_ct].I
-
-
-            #skel.bodynodes[body_ct].set_inertia_entries(1000., 1000., 1000., Ixy=0.0, Ixz=0.0, Iyz=0.0)
-
-            #skel.bodynodes[body_ct].set_restitution_coeff(100.0)
-
-
-            #print "COM: ", skel.bodynodes[body_ct].C
-            #print "MASS: ", skel.bodynodes[body_ct].m
-
-
-
-            #LibDartSkel().impose_torque(skel=skel, body_node=body_ct, torque=np.asarray([0.01, 0.01, 0.01]), init=True)
-
-        #LibDartSkel().impose_force(skel=skel, body_node=1, force=np.asarray([0.01, 0.01, 0.01]),
-        #                           offset_from_centroid=np.asarray([0.0, 0.0, 0.0]), cap_offsets=self.cap_offsets,
-        #                           render=True, init=True)
 
         self.body_node = 9 #need to solve for the body node that corresponds to a force using flex.
         self.force = np.asarray([0.0, 100.0, 100.0])
@@ -315,15 +300,6 @@ class DartSkelSim(object):
             self.force_dir_red_dart_all[element] = (np.multiply(np.asarray(self.force_dir_red_dart_all[element]),np.expand_dims(np.asarray(self.pmat_red_all[element]), axis = 1)))
         self.force_loc_red_dart_all = np.load("/home/henry/git/volumetric_pose_gen/data/force_loc_red.npy").tolist()
         self.nearest_capsule_list_all = np.load("/home/henry/git/volumetric_pose_gen/data/nearest_capsule.npy").tolist()
-
-
-        #LibDartSkel().impose_force(skel=skel, body_node=self.body_node, force=self.force,
-        #                           offset_from_centroid = self.offset_from_centroid, cap_offsets = self.cap_offsets,
-        #                           render=self.render_dart, init=True)
-
-
-        #for marker in skel.markers:
-        #    print marker.world_position()
 
 
         print('init pose = %s' % skel.q)
@@ -342,6 +318,7 @@ class DartSkelSim(object):
         self.capture_index = 0
 
         self.force_application_count = 0
+        self.count = 0
 
         #print "joint locs",
 
@@ -408,14 +385,19 @@ class DartSkelSim(object):
             tb.drag_to(x, y, dx, -dy)
         self.mouseLastPos = np.array([x, y])
 
-    def idle(self, ):
+    def idle(self):
         if self.world is None:
             return
+
+        if self.count == self.num_steps: self.is_simulating = False
+
+
+
         if self.is_simulating:
+            self.count += 1
             self.world.step()
             print "did a step"
             self.world.check_collision()
-            print self.world.collision_result.contacted_bodies
             skel = self.world.skeletons[0]
             print skel.q
 
@@ -426,73 +408,6 @@ class DartSkelSim(object):
             #sum force on capsule at COM: sum of
 
             time_orig = time()
-
-
-            #LibDartSkel().impose_force(skel=skel, body_node=11, force=[0.0, 0.0, 100.],
-            #                           offset_from_centroid=np.asarray([0.0, 0.0, 0.0]),
-            #                           cap_offsets=self.cap_offsets,
-            #                           render=False, init=False)
-
-
-            #print len(self.force_dir_red_dart_all)
-            #print self.force_application_count
-            #if self.force_application_count == 94: self.is_simulating = False
-            #force_dir_red_dart = self.force_dir_red_dart_all[self.force_application_count]
-            #force_loc_red_dart = self.force_loc_red_dart_all[self.force_application_count]
-            #nearest_capsules = self.nearest_capsule_list_all[self.force_application_count]
-
-            #force_dir_list = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
-            #force_loc_list = [[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
-            #for idx in range(len(nearest_capsules)):
-            #    force_dir_list[nearest_capsules[idx]].append(force_dir_red_dart[idx])
-            #    force_loc_list[nearest_capsules[idx]].append(force_loc_red_dart[idx])
-
-            #for item in range(len(force_dir_list)):
-            #    if len(force_dir_list[item]) is not 0:
-            #        print item, len(force_dir_list[item])
-                    #find the sum of forces and the moment about the center of mass of each capsule
-
-            #        COM = skel.bodynodes[item].C + [0.96986/DART_TO_FLEX_CONV, 2.4/DART_TO_FLEX_CONV, self.STARTING_HEIGHT/DART_TO_FLEX_CONV]
-            #        print "COM: ", COM
-            #        print self.capsules[item].rad
-
-            #        force_at_COM = np.sum(np.asarray(force_dir_list[item]), axis=0)
-
-            #        print force_loc_list[item][0:5]
-            #        d_forces = force_loc_list[item] - COM
-
-            #        print "r: ", d_forces[0:5]
-            #        print "F: ", force_dir_list[item][0:5]
-
-                    #moments = d_forces cross force_dir_list[item]
-            #        moments = np.cross(d_forces, force_dir_list[item])
-            #        moment_at_COM = np.sum(moments, axis=0)
-
-            #        print moments[0:5]
-
-            #        print "F at COM", force_at_COM
-            #        print "M at COM", moment_at_COM
-
-
-
-                    #LibDartSkel().impose_force(skel=skel, body_node=item, force=force_at_COM,
-                    #                                   offset_from_centroid = np.asarray([0.0, 0.0, 0.0]), cap_offsets = self.cap_offsets,
-                    #                                   render=True, init=False)
-
-                    #LibDartSkel().impose_torque(skel=skel, body_node=item, torque=moment_at_COM, init=False)
-                    #skel.bodynodes[item].set_inertia_entries(10000., 10000., 10000., Ixy=0.0, Ixz=0.0, Iyz=0.0)
-
-
-
-
-
-
-            #print "COM: ", skel.bodynodes[0].C
-            #for force_loc in force_loc_list[0]:
-            #    print force_loc
-            #for force_dir in force_dir_list[0]:
-            #    print "force dir: ", force_dir
-
 
 
 
@@ -532,7 +447,7 @@ class DartSkelSim(object):
         img.save(filename, 'png')
         self.capture_index += 1
 
-    def run_sim_with_window(self, ):
+    def run_sim_with_window(self):
         print("\n")
         print("space bar: simulation on/off")
         print("' ': run/stop simulation")
@@ -566,9 +481,12 @@ class DartSkelSim(object):
 
 
 
-    def run_sim_step(self, pmat_red_list, force_loc_red_dart, force_dir_red_dart, pmat_vel_red_dart, nearest_capsule_list):
+    def run_sim_step(self, pmat_red_list = [], force_loc_red_dart = [], force_dir_red_dart = [], pmat_vel_red_dart = [], nearest_capsule_list = []):
         self.world.step()
-        #print "did a step"
+        print "did a step"
+        self.world.check_collision()
+        print "checked collisions"
+
         skel = self.world.skeletons[0]
 
 
@@ -642,12 +560,15 @@ class DartSkelSim(object):
         return skel.q, skel.bodynodes
 
 
-    def run_simulation(self):
+
+
+    def run_simulation(self, num_steps = 100):
+        self.num_steps = num_steps
         #pydart.gui.viewer.launch(world)
 
         #run without visualizing
         if self.render_dart == False:
-            for i in range(0, 100):
+            for i in range(0, num_steps):
                 self.world.step()
                 print "did a step"
                 skel = self.world.skeletons[0]

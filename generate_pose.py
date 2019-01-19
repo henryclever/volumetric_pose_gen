@@ -34,7 +34,7 @@ from hmr.src.tf_smpl.batch_smpl import SMPL
 
 
 class GeneratePose():
-    def __init__(self, sigma = 0):
+    def __init__(self, sampling = "NORMAL", sigma = 0, one_side_range = 0):
         ## Load SMPL model (here we load the female model)
         model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
         self.m = load_model(model_path)
@@ -128,14 +128,21 @@ class GeneratePose():
 
         mu = 0
 
-        self.m.betas[0] = random.normalvariate(mu, sigma) #overall body size. more positive number makes smaller, negative makes larger with bigger belly
-        self.m.betas[1] = random.normalvariate(mu, sigma) #positive number makes person very skinny, negative makes fat
-        self.m.betas[2] = random.normalvariate(mu, sigma) #muscle mass. higher makes person less physically fit
-        self.m.betas[3] = random.normalvariate(mu, sigma) #proportion for upper vs lower bone lengths. more negative number makes legs much bigger than arms
-        self.m.betas[4] = random.normalvariate(mu, sigma) #neck. more negative seems to make neck longer and body more skinny
-        self.m.betas[5] = random.normalvariate(mu, sigma) #size of hips. larger means bigger hips
-        self.m.betas[6] = random.normalvariate(mu, sigma) #proportion of belly with respect to rest of the body. higher number is larger belly
-        self.m.betas[7] = random.normalvariate(mu, sigma)
+
+
+        for i in range(10):
+            if sampling == "NORMAL":
+                self.m.betas[i] = random.normalvariate(mu, sigma)
+            elif sampling == "UNIFORM":
+                self.m.betas[i]  = np.random.uniform(-one_side_range, one_side_range)
+        #self.m.betas[0] = random.normalvariate(mu, sigma) #overall body size. more positive number makes smaller, negative makes larger with bigger belly
+        #self.m.betas[1] = random.normalvariate(mu, sigma) #positive number makes person very skinny, negative makes fat
+        #self.m.betas[2] = random.normalvariate(mu, sigma) #muscle mass. higher makes person less physically fit
+        #self.m.betas[3] = random.normalvariate(mu, sigma) #proportion for upper vs lower bone lengths. more negative number makes legs much bigger than arms
+        #self.m.betas[4] = random.normalvariate(mu, sigma) #neck. more negative seems to make neck longer and body more skinny
+        #self.m.betas[5] = random.normalvariate(mu, sigma) #size of hips. larger means bigger hips
+        #self.m.betas[6] = random.normalvariate(mu, sigma) #proportion of belly with respect to rest of the body. higher number is larger belly
+        #self.m.betas[7] = random.normalvariate(mu, sigma)
         #self.m.betas[8] = random.normalvariate(-3, 3)
         #self.m.betas[9] = random.normalvariate(-3, 3)
 
@@ -689,7 +696,7 @@ class GeneratePose():
 
 
 if __name__ == "__main__":
-    generator = GeneratePose()
+    generator = GeneratePose(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
     generator.ax = plt.figure().add_subplot(111, projection='3d')
     #generator.solve_ik_tree_smpl()
     #generator.save_yash_data_with_angles()
@@ -701,7 +708,7 @@ if __name__ == "__main__":
     #processYashData.check_found_limits()
 
     #processYashData.get_r_leg_angles()
-    m, capsules, joint2name, rots0 = generator.map_random_selection_to_smpl_angles(alter_angles = False)
+    m, capsules, joint2name, rots0 = generator.map_random_selection_to_smpl_angles(alter_angles = True)
 
     dss = dart_skel_sim.DartSkelSim(render=True, m=m, capsules=capsules, joint_names=joint2name, initial_rots=rots0)
 
