@@ -214,6 +214,79 @@ class LibDartSkel():
 
         return skel
 
+
+
+    def get_particle_based_damping_force(self, pmat_idx_list, pmat_idx_list_prev, force_dir_list, force_dir_list_prev, force_vel_list, item, B):
+
+        # get the velocities of the array to make the damping force
+        prev_offset = 0
+        for idx in range(len(pmat_idx_list[item])):
+            idx_match = False
+            while idx_match == False:
+                try:
+                    if pmat_idx_list_prev[item][idx + prev_offset] == pmat_idx_list[item][idx]:
+                        force_vel_list[item].append(force_dir_list_prev[item][idx + prev_offset] - force_dir_list[item][idx])
+                        idx_match = True
+                    elif pmat_idx_list_prev[item][idx + prev_offset] < pmat_idx_list[item][idx]:
+                        prev_offset += 1
+                        if idx + prev_offset < 0 or pmat_idx_list_prev[item][idx + prev_offset] > pmat_idx_list[item][idx]:
+                            force_vel_list[item].append(-force_dir_list[item][idx])
+                            idx_match = True
+
+                    elif pmat_idx_list_prev[item][idx + prev_offset] > pmat_idx_list[item][idx]:
+                        prev_offset -= 1
+                        if idx + prev_offset < 0 or pmat_idx_list_prev[item][idx + prev_offset] < pmat_idx_list[item][idx]:
+                            force_vel_list[item].append(-force_dir_list[item][idx])
+                            idx_match = True
+                except:
+                    force_vel_list[item].append(-force_dir_list[item][idx])
+                    idx_match = True
+
+        f_damping = -B * np.asarray(force_vel_list[item])
+
+        # print "vel:", len(force_vel_list[item]), force_vel_list[item]
+        return f_damping
+
+
+
+    def get_particle_based_friction_force(self, f_normal, V, uk):
+
+        # print np.dot(f_normal, V)
+
+        # print np.linalg.norm(f_normal, axis = 1)
+
+        # print np.square(np.linalg.norm(f_normal, axis = 1))
+
+        # print np.dot(f_normal, V)/np.square(np.linalg.norm(f_normal, axis = 1))
+
+        #print "projection: ", np.expand_dims(np.dot(f_normal, V) / np.square(np.linalg.norm(f_normal, axis=1)), 1) * f_normal
+
+        if np.sum(np.linalg.norm(f_normal, axis=1)) > 0:
+            f_friction_dir = (V - np.expand_dims(np.dot(f_normal, V) / np.square(np.linalg.norm(f_normal, axis=1)), 1) * f_normal)
+            f_friction = -uk * (f_friction_dir / np.expand_dims(np.linalg.norm(f_friction_dir, axis=1), 1)) * np.expand_dims(np.linalg.norm(f_normal, axis=1), 1)
+        else:
+            f_friction = np.asarray([0., 0., 0.])
+
+        return f_friction
+
+    def get_capsule_based_friction_force(self, force_spring_COM, force_damping_COM, uk):
+        # F_uk
+        if skel.bodynodes[item].com_linear_velocity()[0] < 0.0:
+            force_friction_X = uk * np.linalg.norm(force_spring_COM + force_damping_COM)
+        else:
+            force_friction_X = -uk * np.linalg.norm(force_spring_COM + force_damping_COM)
+
+        if skel.bodynodes[item].com_linear_velocity()[1] < 0.0:
+            force_friction_Y = uk * np.linalg.norm(force_spring_COM + force_damping_COM)
+        else:
+            force_friction_Y = -uk * np.linalg.norm(force_spring_COM + force_damping_COM)
+
+        force_friction_COM = np.asarray([force_friction_X, force_friction_Y, 0.0])
+        return force_friction_COM
+
+
+
+
     def impose_force(self, skel, body_node, force, offset_from_centroid, cap_offsets, render = True, init=True):
         ######################################### ADD INITIAL FORCE ARROWS #############################################
 

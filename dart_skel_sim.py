@@ -481,7 +481,6 @@ class DartSkelSim(object):
         GLUT.glutMainLoop()
 
 
-
     def run_sim_step(self, pmat_red_list = [], force_loc_red_dart = [], force_dir_red_dart = [], pmat_idx_red_dart = [], nearest_capsule_list = []):
         self.world.step()
         print "did a step"
@@ -519,125 +518,41 @@ class DartSkelSim(object):
                 #print self.force_dir_list_prev[item]
                 #print "dir:", len(force_dir_list[item]), force_dir_list[item]
 
-                #get the velocities of the array to make the damping force
-                prev_offset = 0
-                for idx in range(len(pmat_idx_list[item])):
-                    idx_match = False
-                    while idx_match == False:
-                        try:
-                            if self.pmat_idx_list_prev[item][idx + prev_offset] == pmat_idx_list[item][idx]:
 
-
-
-
-                                force_vel_list[item].append(self.force_dir_list_prev[item][idx + prev_offset] - force_dir_list[item][idx])
-                                idx_match = True
-                            elif self.pmat_idx_list_prev[item][idx + prev_offset] < pmat_idx_list[item][idx]:
-                                prev_offset += 1
-                                if idx+prev_offset < 0 or self.pmat_idx_list_prev[item][idx + prev_offset] > pmat_idx_list[item][idx]:
-                                    force_vel_list[item].append(-force_dir_list[item][idx])
-                                    idx_match = True
-
-                            elif self.pmat_idx_list_prev[item][idx + prev_offset] > pmat_idx_list[item][idx]:
-                                prev_offset -= 1
-                                if idx+prev_offset < 0 or self.pmat_idx_list_prev[item][idx + prev_offset] < pmat_idx_list[item][idx]:
-                                    force_vel_list[item].append(-force_dir_list[item][idx])
-                                    idx_match = True
-                        except:
-                            force_vel_list[item].append(-force_dir_list[item][idx])
-                            idx_match = True
-
-
-
-                #print "vel:", len(force_vel_list[item]), force_vel_list[item]
-                #print self.pmat_idx_list_prev[item], pmat_idx_list[item]
-
-
-
-
+                #Calculate the spring force
                 f_spring = K*np.asarray(force_dir_list[item]) + np.asarray([0.00001, 0.00001, 0.00001])
-                f_damping = -B*np.asarray(force_vel_list[item])
-
-
-                f_normal = f_spring + f_damping
-
-
-                print "Fn", f_normal
-                V = skel.bodynodes[item].com_linear_velocity() + np.asarray([0.00001, 0.00001, 0.00001])
-                print "V", V
-
-                #print np.dot(f_normal, V)
-
-                #print np.linalg.norm(f_normal, axis = 1)
-
-                #print np.square(np.linalg.norm(f_normal, axis = 1))
-
-                #print np.dot(f_normal, V)/np.square(np.linalg.norm(f_normal, axis = 1))
-
-                print "projection: ", np.expand_dims(np.dot(f_normal, V)/np.square(np.linalg.norm(f_normal, axis = 1)), 1)*f_normal
-
-                if np.sum(np.linalg.norm(f_normal, axis=1)) > 0:
-                    f_friction_dir = (V - np.expand_dims(np.dot(f_normal, V)/np.square(np.linalg.norm(f_normal, axis = 1)), 1)*f_normal)
-                    f_friction = -FRICTION_COEFF*(f_friction_dir/np.expand_dims(np.linalg.norm(f_friction_dir, axis = 1), 1))*np.expand_dims(np.linalg.norm(f_normal, axis = 1), 1)
-                else:
-                    f_friction = np.asarray([0., 0., 0.])
-
-
                 force_spring_COM = np.sum(f_spring, axis=0)
 
 
-                # choose how we compute the damping force
-                #force_damping_COM = - B*skel.bodynodes[item].com_linear_velocity()
+                #Calculate the damping force
+                f_damping = LibDartSkel().get_particle_based_damping_force(pmat_idx_list, self.pmat_idx_list_prev, force_dir_list, self.force_dir_list_prev, force_vel_list, item, B)
                 force_damping_COM = np.sum(f_damping, axis=0)
+                #force_damping_COM = - B*skel.bodynodes[item].com_linear_velocity()
 
 
+                #Calculate the friction force
+                f_normal = f_spring + f_damping
+                V_capsule = skel.bodynodes[item].com_linear_velocity() + np.asarray([0.00001, 0.00001, 0.00001])
+
+                f_friction = LibDartSkel().get_particle_based_friction_force(f_normal, V_capsule, FRICTION_COEFF)
                 force_friction_COM = np.sum(f_friction, axis = 0)
-
-                #print item, "capsule damping: ", - B*skel.bodynodes[item].com_linear_velocity()
-                #print "mat damping: ", force_damping_COM
-
-                #F_uk
-                if skel.bodynodes[item].com_linear_velocity()[0] < 0.0:
-                    force_friction_X = FRICTION_COEFF*np.linalg.norm(force_spring_COM + force_damping_COM)
-                else:
-                    force_friction_X = -FRICTION_COEFF*np.linalg.norm(force_spring_COM + force_damping_COM)
-
-                if skel.bodynodes[item].com_linear_velocity()[1] < 0.0:
-                    force_friction_Y = FRICTION_COEFF*np.linalg.norm(force_spring_COM + force_damping_COM)
-                else:
-                    force_friction_Y = -FRICTION_COEFF*np.linalg.norm(force_spring_COM + force_damping_COM)
-
-                print f_friction
-
-                force_friction = np.asarray([force_friction_X, force_friction_Y, 0.0])
-
-                print force_friction
-                print force_friction_COM
+                #force_friction_COM = LibDartSkel().get_capsule_based_friction_force(force_spring_COM, force_damping_COM, FRICTION_COEFF)
 
 
-                #print "forces: ", force_spring_COM, force_damping, force_friction
+                #
+                force_resultant_COM = force_spring_COM + force_damping_COM + force_friction_COM
 
 
-                #F_R, resultant force
-                resultant_at_COM = force_spring_COM + force_damping_COM + force_friction_COM
-
-
+                #Calculate the moment arm
                 d_forces = force_loc_list[item] - COM
 
-                # moments = d_forces cross force_dir_list[item]
-
-                #print f_normal
-                #print f_damping
-
-                #print f_normal + f_damping
-
-                moments = np.cross(d_forces, f_normal)
+                #Calculate the moment
+                moments = np.cross(d_forces, f_normal+f_friction)
+                #moments = np.cross(d_forces, f_spring)
                 moment_at_COM = np.sum(moments, axis=0)
 
-                #print moment_at_COM
 
-
-                LibDartSkel().impose_force(skel=skel, body_node=item, force=resultant_at_COM,
+                LibDartSkel().impose_force(skel=skel, body_node=item, force=force_resultant_COM,
                                            offset_from_centroid=np.asarray([0.0, 0.0, 0.0]),
                                            cap_offsets=self.cap_offsets,
                                            render=False, init=False)
