@@ -173,6 +173,7 @@ class DartSkelSim(object):
 
 
 
+
             if count == 0:
                 self.world.add_capsule(parent=int(red_parent_ref[count]), radius=cap_rad, length=cap_len,
                                        cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc,
@@ -201,7 +202,6 @@ class DartSkelSim(object):
 
 
         self.STARTING_HEIGHT = STARTING_HEIGHT - np.min(np.asarray(joint_locs_trans_abs)[:, 2])*DART_TO_FLEX_CONV
-        #print self.STARTING_HEIGHT, "STARTING!"
 
 
         #add a floor-STARTING_HEIGHT / DART_TO_FLEX_CONV
@@ -484,8 +484,6 @@ class DartSkelSim(object):
     def run_sim_step(self, pmat_red_list = [], force_loc_red_dart = [], force_dir_red_dart = [], pmat_vel_red_dart = [], nearest_capsule_list = []):
         self.world.step()
         print "did a step"
-        self.world.check_collision()
-        print "checked collisions"
 
         skel = self.world.skeletons[0]
 
