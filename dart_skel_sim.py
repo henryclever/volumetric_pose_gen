@@ -20,7 +20,7 @@ from time import time
 GRAVITY = -9.81
 STARTING_HEIGHT = 0.8
 
-K = 6.0
+K = 10.0
 B = 50.0
 FRICTION_COEFF = 0.1
 
@@ -59,8 +59,9 @@ class DartSkelSim(object):
         self.world.set_collision_detector(detector_type=2)
         self.world.create_empty_skeleton(_skel_name="human")
 
-
-
+        self.force_dir_list_prev = [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []]
+        self.pmat_idx_list_prev = [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []]
+        self.force_loc_list_prev = [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []]
 
         joint_root_loc = np.asarray(np.transpose(capsules[0].t)[0])
         joint_locs = []
@@ -481,7 +482,7 @@ class DartSkelSim(object):
 
 
 
-    def run_sim_step(self, pmat_red_list = [], force_loc_red_dart = [], force_dir_red_dart = [], pmat_vel_red_dart = [], nearest_capsule_list = []):
+    def run_sim_step(self, pmat_red_list = [], force_loc_red_dart = [], force_dir_red_dart = [], pmat_idx_red_dart = [], nearest_capsule_list = []):
         self.world.step()
         print "did a step"
         self.world.check_collision()
@@ -495,12 +496,14 @@ class DartSkelSim(object):
 
         nearest_capsules = nearest_capsule_list
 
+
         force_dir_list = [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []]
-        pmat_vel_list = [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []]
+        pmat_idx_list = [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []]
         force_loc_list = [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []]
+        force_vel_list = [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []]
         for idx in range(len(nearest_capsules)):
             force_dir_list[nearest_capsules[idx]].append(force_dir_red_dart[idx])
-            pmat_vel_list[nearest_capsules[idx]].append(pmat_vel_red_dart[idx])
+            pmat_idx_list[nearest_capsules[idx]].append(pmat_idx_red_dart[idx])
             force_loc_list[nearest_capsules[idx]].append(force_loc_red_dart[idx])
 
 
@@ -513,11 +516,70 @@ class DartSkelSim(object):
                 # find the sum of forces and the moment about the center of mass of each capsule
                 COM = skel.bodynodes[item].C + [0.96986 / DART_TO_FLEX_CONV, 2.4 / DART_TO_FLEX_CONV, self.STARTING_HEIGHT / DART_TO_FLEX_CONV]
 
+                #print item
+                #print self.pmat_idx_list_prev[item], pmat_idx_list[item]
+                #print self.force_dir_list_prev[item]
+                #print "dir:", len(force_dir_list[item]), force_dir_list[item]
+
+                #pmat_index_list_both = sorted(list(set(self.pmat_idx_list_prev[item] + pmat_idx_list[item])))
 
 
-                force_normal_COM = K*np.sum(np.asarray(force_dir_list[item]), axis=0)
-                force_damping = - B*skel.bodynodes[item].com_linear_velocity()
+                prev_offset = 0
+                for idx in range(len(pmat_idx_list[item])):
+                    idx_match = False
+                    while idx_match == False:
+                        try:
+                            if self.pmat_idx_list_prev[item][idx + prev_offset] == pmat_idx_list[item][idx]:
+                                #print "equal",self.pmat_idx_list_prev[item], pmat_idx_list[item], idx, prev_offset, idx + prev_offset, "appending ",  pmat_idx_list[item][idx]
+                                #print self.pmat_idx_list_prev[item][idx + prev_offset], pmat_idx_list[item][idx]
+                                force_vel_list[item].append(self.force_dir_list_prev[item][idx + prev_offset] - force_dir_list[item][idx])
+                                idx_match = True
+                            elif self.pmat_idx_list_prev[item][idx + prev_offset] < pmat_idx_list[item][idx]:
+                                #print "less than",self.pmat_idx_list_prev[item], pmat_idx_list[item], idx, prev_offset, idx + prev_offset
+                                #print self.pmat_idx_list_prev[item][idx + prev_offset], pmat_idx_list[item][idx]
+                                prev_offset += 1
+                                if idx+prev_offset < 0 or self.pmat_idx_list_prev[item][idx + prev_offset] > pmat_idx_list[item][idx]:
+                                    #print "less than 0 or nothing in prev, appending",  pmat_idx_list[item][idx]
+                                    force_vel_list[item].append(-force_dir_list[item][idx])
+                                    idx_match = True
 
+                            elif self.pmat_idx_list_prev[item][idx + prev_offset] > pmat_idx_list[item][idx]:
+                                #print "greater than",self.pmat_idx_list_prev[item], pmat_idx_list[item], idx, prev_offset, idx + prev_offset
+                                #print self.pmat_idx_list_prev[item][idx + prev_offset], pmat_idx_list[item][idx]
+                                prev_offset -= 1
+                                if idx+prev_offset < 0 or self.pmat_idx_list_prev[item][idx + prev_offset] < pmat_idx_list[item][idx]:
+                                    #print "less than 0 or nothing in prev, appending",  pmat_idx_list[item][idx]
+                                    force_vel_list[item].append(-force_dir_list[item][idx])
+                                    idx_match = True
+                        except:
+                            #print self.pmat_idx_list_prev[item], pmat_idx_list[item], idx, prev_offset, idx + prev_offset
+                            force_vel_list[item].append(-force_dir_list[item][idx])
+                            idx_match = True
+
+
+
+                #print "vel:", len(force_vel_list[item]), force_vel_list[item]
+                #print self.pmat_idx_list_prev[item], pmat_idx_list[item]
+
+
+
+
+                x_normal_COM = np.sum(np.asarray(force_dir_list[item]), axis=0)
+                x_dot_normal_COM = np.sum(np.asarray(force_vel_list[item]), axis=0)
+
+
+
+                force_normal_COM = K*x_normal_COM
+
+
+                # choose how we compute the damping force
+                #force_damping = - B*skel.bodynodes[item].com_linear_velocity()
+                force_damping = -B*x_dot_normal_COM#
+
+                print "capsule damping: ", force_damping
+                print "mat damping: ", -B*x_dot_normal_COM
+
+                #F_uk
                 if skel.bodynodes[item].com_linear_velocity()[0] < 0.0:
                     force_friction_X = FRICTION_COEFF*np.linalg.norm(force_normal_COM)
                 else:
@@ -534,6 +596,7 @@ class DartSkelSim(object):
                 #print "forces: ", force_normal_COM, force_damping, force_friction
 
 
+                #F_R, resultant force
                 resultant_at_COM = force_normal_COM + force_damping + force_friction
 
 
@@ -557,6 +620,9 @@ class DartSkelSim(object):
 
         #LibDartSkel().impose_force(skel=skel, body_node=self.body_node, force=self.force, offset_from_centroid=self.offset_from_centroid, cap_offsets=self.cap_offsets, render=False, init=False)
 
+        self.force_dir_list_prev = force_dir_list
+        self.pmat_idx_list_prev = pmat_idx_list
+        self.force_loc_list_prev = force_loc_list
         return skel.q, skel.bodynodes
 
 
