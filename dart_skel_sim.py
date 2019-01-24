@@ -40,7 +40,7 @@ class DampingController(object):
         return damping
 
 class DartSkelSim(object):
-    def __init__(self, render, m, capsules, joint_names, initial_rots):
+    def __init__(self, render, m, capsules, joint_names, initial_rots, shiftSIDE, shiftUD):
         self.num_steps = 10000
         self.render_dart = render
 
@@ -64,6 +64,9 @@ class DartSkelSim(object):
         self.force_loc_list_prev = [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []]
 
         joint_root_loc = np.asarray(np.transpose(capsules[0].t)[0])
+
+
+
         joint_locs = []
         capsule_locs = []
         joint_locs_abs = []
@@ -72,6 +75,8 @@ class DartSkelSim(object):
 
         mJ = np.asarray(m.J)
         mJ_transformed = np.asarray(m.J_transformed)
+
+        shift = [shiftSIDE, shiftUD, 0.0]
 
 
         red_joint_ref = joint_ref[0:20] #joints
@@ -97,7 +102,7 @@ class DartSkelSim(object):
         #make lists of the locations of the joint locations and the smplify capsule initial ends
         for i in range(np.shape(mJ)[0]):
             if i == 0:
-                joint_locs.append(list(mJ[0, :] - mJ[0, :]))
+                joint_locs.append(list(mJ[0, :] - mJ[0, :] + shift))
                 joint_locs_abs.append(list(mJ[0, :] - mJ[0, :]))
                 joint_locs_trans_abs.append(list(mJ_transformed[0, :] - mJ_transformed[0, :]))
                 if i < 20:
@@ -518,7 +523,6 @@ class DartSkelSim(object):
                 #print self.force_dir_list_prev[item]
                 #print "dir:", len(force_dir_list[item]), force_dir_list[item]
 
-
                 #Calculate the spring force
                 f_spring = K*np.asarray(force_dir_list[item]) + np.asarray([0.00001, 0.00001, 0.00001])
                 force_spring_COM = np.sum(f_spring, axis=0)
@@ -560,7 +564,9 @@ class DartSkelSim(object):
 
                 LibDartSkel().impose_torque(skel=skel, body_node=item, torque=moment_at_COM, init=False)
 
-
+        #this root joint position will tell us how to shift the root when we remesh the capsule model
+        root_joint_pos = [skel.bodynodes[0].C[0] - self.cap_offsets[0][0]*np.cos(skel.q[2]) + self.cap_offsets[0][1]*np.sin(skel.q[2]),
+                          skel.bodynodes[0].C[1] - self.cap_offsets[0][0]*np.sin(skel.q[2]) - self.cap_offsets[0][1]*np.cos(skel.q[2])]
         #print "appending time", time() - time_orig
 
         #LibDartSkel().impose_force(skel=skel, body_node=self.body_node, force=self.force, offset_from_centroid=self.offset_from_centroid, cap_offsets=self.cap_offsets, render=False, init=False)
@@ -568,7 +574,7 @@ class DartSkelSim(object):
         self.force_dir_list_prev = force_dir_list
         self.pmat_idx_list_prev = pmat_idx_list
         self.force_loc_list_prev = force_loc_list
-        return skel.q, skel.bodynodes
+        return skel.q, skel.bodynodes, root_joint_pos
 
 
 
