@@ -20,7 +20,7 @@ from time import time
 GRAVITY = -9.81
 STARTING_HEIGHT = 0.8
 
-K = 7.0
+K = 15.0
 B = 150.0
 FRICTION_COEFF = 0.2
 
@@ -40,7 +40,7 @@ class DampingController(object):
         return damping
 
 class DartSkelSim(object):
-    def __init__(self, render, m, capsules, joint_names, initial_rots, shiftSIDE, shiftUD):
+    def __init__(self, render, m, capsules, joint_names, initial_rots, shiftSIDE = 0.0, shiftUD = 0.0):
         self.num_steps = 10000
         self.render_dart = render
 
