@@ -98,34 +98,33 @@ class LibDartSkel():
         return skel
 
     def assign_joint_rest_and_stiffness(self, skel, m, STIFFNESS):
+
         ################################# ASSIGN JOINT REST POSITION AND SPRING COEFF ##################################
+
+
         if STIFFNESS == "LOW":
             arm_stiffness = 1.0
-            shoulder_stiffness = 260.0
-            head_stiffness = 20.0
+            head_stiffness = 1.0
             leg_stiffness = 20.0
             knee_stiffness = 20.0
-            torso_stiffness = 500.0
+            torso_stiffness = 200.0
 
         elif STIFFNESS == "MED":
             arm_stiffness = 10.0
-            shoulder_stiffness = 50.0
-            head_stiffness = 50.0
+            head_stiffness = 10.0
             leg_stiffness = 50.0
             knee_stiffness = 50.0
-            torso_stiffness = 750.0
+            torso_stiffness = 500.0
 
         elif STIFFNESS == "HIGH":
             arm_stiffness = 50.0
-            shoulder_stiffness = 200.0
-            head_stiffness =200.0
+            head_stiffness = 50.0
             leg_stiffness = 200.0
             knee_stiffness = 200.0
             torso_stiffness = 1000.0
 
         for joint in skel.joints:
-            print
-            joint.spring_stiffness(0)
+            print joint.spring_stiffness(0)
             if joint.name == "leftThigh":
                 joint.set_rest_position(0, float(m.pose[3]))
                 joint.set_rest_position(1, float(m.pose[4]))
@@ -192,16 +191,16 @@ class LibDartSkel():
                 joint.set_rest_position(0, float(m.pose[39]))
                 joint.set_rest_position(1, float(m.pose[40]))
                 joint.set_rest_position(2, float(m.pose[41]))
-                joint.set_spring_stiffness(0, shoulder_stiffness)
-                joint.set_spring_stiffness(1, shoulder_stiffness)
-                joint.set_spring_stiffness(2, shoulder_stiffness)
+                joint.set_spring_stiffness(0, torso_stiffness)
+                joint.set_spring_stiffness(1, torso_stiffness)
+                joint.set_spring_stiffness(2, torso_stiffness)
             elif joint.name == "rightShoulder":
                 joint.set_rest_position(0, float(m.pose[42]))
                 joint.set_rest_position(1, float(m.pose[43]))
                 joint.set_rest_position(2, float(m.pose[44]))
-                joint.set_spring_stiffness(0, shoulder_stiffness)
-                joint.set_spring_stiffness(1, shoulder_stiffness)
-                joint.set_spring_stiffness(2, shoulder_stiffness)
+                joint.set_spring_stiffness(0, torso_stiffness)
+                joint.set_spring_stiffness(1, torso_stiffness)
+                joint.set_spring_stiffness(2, torso_stiffness)
             elif joint.name == "head":
                 joint.set_rest_position(0, float(m.pose[45]))
                 joint.set_rest_position(1, float(m.pose[46]))
@@ -244,8 +243,9 @@ class LibDartSkel():
                 joint.set_spring_stiffness(1, arm_stiffness)
                 joint.set_spring_stiffness(2, arm_stiffness)
 
-        print
-        skel.q
+        print skel.q
+
+        #print skel.q
         return skel
 
     def assign_joint_limits_and_damping(self, skel):

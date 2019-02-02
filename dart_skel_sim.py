@@ -398,7 +398,7 @@ class DartSkelSim(object):
         if self.world is None:
             return
 
-        if self.count == self.num_steps: self.is_simulating = False
+        #if self.count == self.num_steps: self.is_simulating = False
 
 
 
