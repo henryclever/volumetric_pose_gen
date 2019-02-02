@@ -34,9 +34,9 @@ from hmr.src.tf_smpl.batch_smpl import SMPL
 
 
 class GeneratePose():
-    def __init__(self, sampling = "NORMAL", sigma = 0, one_side_range = 0):
+    def __init__(self, sampling = "NORMAL", sigma = 0, one_side_range = 0, gender="m"):
         ## Load SMPL model (here we load the female model)
-        model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
+        model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_'+gender+'_lbs_10_207_0_v1.0.0.pkl'
         self.m = load_model(model_path)
 
         ## Assign random pose and shape parameters

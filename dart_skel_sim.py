@@ -20,8 +20,8 @@ from time import time
 GRAVITY = -9.81
 STARTING_HEIGHT = 0.8
 
-K = 15.0
-B = 150.0
+K = 7000.0
+B = 200000.0
 FRICTION_COEFF = 0.2
 
 BODY_MASS = 70.0 #kg
@@ -40,7 +40,7 @@ class DampingController(object):
         return damping
 
 class DartSkelSim(object):
-    def __init__(self, render, m, capsules, joint_names, initial_rots, shiftSIDE = 0.0, shiftUD = 0.0):
+    def __init__(self, render, m, capsules, joint_names, initial_rots, shiftSIDE = 0.0, shiftUD = 0.0, stiffness = "LOW"):
         self.num_steps = 10000
         self.render_dart = render
 
@@ -54,7 +54,7 @@ class DartSkelSim(object):
         pydart.init(verbose=True)
         print('pydart initialization OK')
 
-        self.world = pydart.World(0.0005, "EMPTY") #0.003, .0002 #have tried 0.00001
+        self.world = pydart.World(0.001, "EMPTY") #0.003, .0002 #have tried 0.00001
         self.world.set_gravity([0, 0, GRAVITY])#([0, 0,  -9.81])
         self.world.set_collision_detector(detector_type=2)
         self.world.create_empty_skeleton(_skel_name="human")
@@ -221,6 +221,8 @@ class DartSkelSim(object):
 
         skel = LibDartSkel().assign_init_joint_angles(skel, m, root_joint_type)
 
+        skel = LibDartSkel().assign_joint_rest_and_stiffness(skel, m, STIFFNESS = stiffness)
+
         skel = LibDartSkel().assign_joint_limits_and_damping(skel)
 
 
@@ -327,7 +329,8 @@ class DartSkelSim(object):
         self.count = 0
 
         #print "joint locs",
-
+    def destroyWorld(self):
+        self.world.destroy()
 
     def initGL(self, w, h):
         self.scene.init()
@@ -490,6 +493,7 @@ class DartSkelSim(object):
         self.world.step()
         print "did a step"
 
+        max_vel = 0.0
         skel = self.world.skeletons[0]
 
 
@@ -509,14 +513,18 @@ class DartSkelSim(object):
             force_loc_list[nearest_capsules[idx]].append(force_loc_red_dart[idx])
 
 
-
         for item in range(len(force_dir_list)):
             #print "linear v", skel.bodynodes[item].com_linear_velocity()
+
+
+            if np.linalg.norm(skel.bodynodes[item].com_linear_velocity()) > max_vel:
+                max_vel = np.linalg.norm(skel.bodynodes[item].com_linear_velocity())
 
             if len(force_dir_list[item]) is not 0:
                 item, len(force_dir_list[item])
                 # find the sum of forces and the moment about the center of mass of each capsule
-                COM = skel.bodynodes[item].C + [0.96986 / DART_TO_FLEX_CONV, 2.4 / DART_TO_FLEX_CONV, self.STARTING_HEIGHT / DART_TO_FLEX_CONV]
+                #COM = skel.bodynodes[item].C + [0.96986 / DART_TO_FLEX_CONV, 2.4 / DART_TO_FLEX_CONV, self.STARTING_HEIGHT / DART_TO_FLEX_CONV]
+                COM = skel.bodynodes[item].C + [1.185 / DART_TO_FLEX_CONV, 2.55 / DART_TO_FLEX_CONV, self.STARTING_HEIGHT / DART_TO_FLEX_CONV]
 
                 #print item
                 #print self.pmat_idx_list_prev[item], pmat_idx_list[item]
@@ -524,23 +532,27 @@ class DartSkelSim(object):
                 #print "dir:", len(force_dir_list[item]), force_dir_list[item]
 
                 #Calculate the spring force
+                ##PARTICLE BASIS##
                 f_spring = K*np.asarray(force_dir_list[item]) + np.asarray([0.00001, 0.00001, 0.00001])
                 force_spring_COM = np.sum(f_spring, axis=0)
 
 
                 #Calculate the damping force
+                ##PARTICLE BASIS##
                 f_damping = LibDartSkel().get_particle_based_damping_force(pmat_idx_list, self.pmat_idx_list_prev, force_dir_list, self.force_dir_list_prev, force_vel_list, item, B)
                 force_damping_COM = np.sum(f_damping, axis=0)
+                ##CAPSULE BASIS##
                 #force_damping_COM = - B*skel.bodynodes[item].com_linear_velocity()
 
 
                 #Calculate the friction force
+                ##PARTICLE BASIS##
                 f_normal = f_spring + f_damping
                 V_capsule = skel.bodynodes[item].com_linear_velocity() + np.asarray([0.00001, 0.00001, 0.00001])
-
                 f_friction = LibDartSkel().get_particle_based_friction_force(f_normal, V_capsule, FRICTION_COEFF)
                 force_friction_COM = np.sum(f_friction, axis = 0)
-                #force_friction_COM = LibDartSkel().get_capsule_based_friction_force(force_spring_COM, force_damping_COM, FRICTION_COEFF)
+                ##CAPSULE BASIS##
+                #force_friction_COM = LibDartSkel().get_capsule_based_friction_force(skel.bodynodes[item], force_spring_COM, force_damping_COM, FRICTION_COEFF)
 
 
                 #
@@ -551,8 +563,13 @@ class DartSkelSim(object):
                 d_forces = force_loc_list[item] - COM
 
                 #Calculate the moment
-                moments = np.cross(d_forces, f_normal+f_friction)
+                ##PARTICLE BASIS##
+                moments = np.cross(d_forces, f_normal)#+f_friction
+                ##CAPSULE BASIS##
                 #moments = np.cross(d_forces, f_spring)
+
+
+
                 moment_at_COM = np.sum(moments, axis=0)
 
 
@@ -564,6 +581,8 @@ class DartSkelSim(object):
 
                 LibDartSkel().impose_torque(skel=skel, body_node=item, torque=moment_at_COM, init=False)
 
+
+
         #this root joint position will tell us how to shift the root when we remesh the capsule model
         root_joint_pos = [skel.bodynodes[0].C[0] - self.cap_offsets[0][0]*np.cos(skel.q[2]) + self.cap_offsets[0][1]*np.sin(skel.q[2]),
                           skel.bodynodes[0].C[1] - self.cap_offsets[0][0]*np.sin(skel.q[2]) - self.cap_offsets[0][1]*np.cos(skel.q[2])]
@@ -574,7 +593,9 @@ class DartSkelSim(object):
         self.force_dir_list_prev = force_dir_list
         self.pmat_idx_list_prev = pmat_idx_list
         self.force_loc_list_prev = force_loc_list
-        return skel.q, skel.bodynodes, root_joint_pos
+
+
+        return skel.q, skel.bodynodes, root_joint_pos, max_vel
 
 
 
