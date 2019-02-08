@@ -713,4 +713,4 @@ if __name__ == "__main__":
     dss = dart_skel_sim.DartSkelSim(render=True, m=m, capsules=capsules, joint_names=joint2name, initial_rots=rots0)
 
     generator.standard_render()
-    dss.run_simulation()
+dss.run_simulation()

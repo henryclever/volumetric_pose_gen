@@ -104,9 +104,9 @@ class LibDartSkel():
 
         if STIFFNESS == "LOW":
             arm_stiffness = 1.0
-            head_stiffness = 1.0
+            head_stiffness = 10.0
             leg_stiffness = 20.0
-            knee_stiffness = 20.0
+            knee_stiffness = 10.0
             torso_stiffness = 200.0
 
         elif STIFFNESS == "MED":

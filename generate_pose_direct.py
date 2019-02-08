@@ -240,14 +240,17 @@ class GeneratePose():
 
 
     def get_noisy_angle(self, angle, angle_min, angle_max):
-
         not_within_bounds = True
         mu = 0
         sigma = np.pi/16
-
         while not_within_bounds == True:
 
             noisy_angle = angle + random.normalvariate(mu, sigma)
+            if noisy_angle > angle_min and noisy_angle < angle_max:
+                not_within_bounds = False
+            else:
+                pass
+        return noisy_angle
 
 
 
@@ -261,50 +264,53 @@ class GeneratePose():
         shuffle(angles_data)
         for entry in angles_data:
 
-
-            #entry = angles_data[50]
-            self.m.pose[6] = entry['r_hip_angle_axis'][0]
-            self.m.pose[7] = entry['r_hip_angle_axis'][1]#/2
-            self.m.pose[8] = entry['r_hip_angle_axis'][2]
-            if verbose == True: print 'r hip', self.m.pose[6:9]
-
-            self.m.pose[15] = entry['r_knee_angle_axis'][0]
-            #self.m.pose[16] = entry['r_hip_angle_axis'][1]
-            if verbose == True: print 'r knee', self.m.pose[15:18]
-
-
-            self.m.pose[3] = entry['l_hip_angle_axis'][0]
-            self.m.pose[4] = entry['l_hip_angle_axis'][1]#/2
-            self.m.pose[5] = entry['l_hip_angle_axis'][2]
+            self.m.pose[3] = generator.get_noisy_angle(entry['l_hip_angle_axis'][0], -0.9999455988016526, -0.1716378496297634)
+            self.m.pose[4] = generator.get_noisy_angle(entry['l_hip_angle_axis'][1], -0.9763807967155833,  0.9792771003511667)
+            self.m.pose[5] = generator.get_noisy_angle(entry['l_hip_angle_axis'][2], -0.35342183756490175, 0.9029919511354418)
             if verbose == True: print 'l hip', self.m.pose[3:6]
 
-            self.m.pose[12] = entry['l_knee_angle_axis'][0]
+            self.m.pose[12] = generator.get_noisy_angle(entry['l_knee_angle_axis'][0], 0.0, 2.3720944626178713)
             #self.m.pose[13] = entry['l_hip_angle_axis'][1]
             if verbose == True: print 'l knee', self.m.pose[12:15]
 
 
-            self.m.pose[51] = entry['r_shoulder_angle_axis'][0]*2/3
-            self.m.pose[52] = entry['r_shoulder_angle_axis'][1]*2/3
-            self.m.pose[53] = entry['r_shoulder_angle_axis'][2]*2/3
-            self.m.pose[42] = entry['r_shoulder_angle_axis'][0]*1/3
-            self.m.pose[43] = entry['r_shoulder_angle_axis'][1]*1/3
-            self.m.pose[44] = entry['r_shoulder_angle_axis'][2]*1/3
-            if verbose == True: print 'r shoulder', self.m.pose[51:54] + self.m.pose[42:45]
 
-            self.m.pose[58] = entry['r_elbow_angle_axis'][1]
-            if verbose == True: print 'r elbow', self.m.pose[57:60]
+            #entry = angles_data[50]
+            self.m.pose[6] = generator.get_noisy_angle(entry['r_hip_angle_axis'][0], -0.9999902632535546, -0.1026015392807176)
+            self.m.pose[7] = generator.get_noisy_angle(entry['r_hip_angle_axis'][1], -0.9701910881430709,  0.9821826206061518)
+            self.m.pose[8] = generator.get_noisy_angle(entry['r_hip_angle_axis'][2], -0.8767199629302654, 0.35738032396710084)
+            if verbose == True: print 'r hip', self.m.pose[6:9]
+
+            self.m.pose[15] = generator.get_noisy_angle(entry['r_knee_angle_axis'][0], 0.0, 2.320752282574325)
+            #self.m.pose[16] = entry['r_hip_angle_axis'][1]
+            if verbose == True: print 'r knee', self.m.pose[15:18]
 
 
-            self.m.pose[48] = entry['l_shoulder_angle_axis'][0]*2/3
-            self.m.pose[49] = entry['l_shoulder_angle_axis'][1]*2/3
-            self.m.pose[50] = entry['l_shoulder_angle_axis'][2]*2/3
-            self.m.pose[39] = entry['l_shoulder_angle_axis'][0]*1/3
-            self.m.pose[40] = entry['l_shoulder_angle_axis'][1]*1/3
-            self.m.pose[41] = entry['l_shoulder_angle_axis'][2]*1/3
+            self.m.pose[39] = generator.get_noisy_angle(entry['l_shoulder_angle_axis'][0]*1/3, -1.9811361489978918 * 1 / 3, 1.4701759095910327 * 1 / 3)
+            self.m.pose[40] = generator.get_noisy_angle(entry['l_shoulder_angle_axis'][1]*1/3, -1.5656401670211908 * 1 / 3, 1.047255481259413 * 1 / 3)
+            self.m.pose[41] = generator.get_noisy_angle(entry['l_shoulder_angle_axis'][2]*1/3, -1.9671878788002621 * 1 / 3, 1.3280993848963953 * 1 / 3)
+
+            self.m.pose[48] = generator.get_noisy_angle(entry['l_shoulder_angle_axis'][0]*2/3, -1.9811361489978918 * 2 / 3, 1.4701759095910327 * 2 / 3)
+            self.m.pose[49] = generator.get_noisy_angle(entry['l_shoulder_angle_axis'][1]*2/3, -1.5656401670211908 * 2 / 3, 1.047255481259413 * 2 / 3)
+            self.m.pose[50] = generator.get_noisy_angle(entry['l_shoulder_angle_axis'][2]*2/3, -1.9671878788002621 * 2 / 3, 1.3280993848963953 * 2 / 3)
+
             if verbose == True: print 'l shoulder', self.m.pose[48:51] + self.m.pose[39:42]
 
-            self.m.pose[55] = entry['l_elbow_angle_axis'][1]
+            self.m.pose[55] = generator.get_noisy_angle(entry['l_elbow_angle_axis'][1], -2.3104353421664428, 0.0)
             if verbose == True: print 'l elbow', self.m.pose[54:57]
+
+            self.m.pose[42] = generator.get_noisy_angle(entry['r_shoulder_angle_axis'][0]*1/3, -1.7735924284100764 * 1 / 3, 1.7843466954767204 * 1 / 3)
+            self.m.pose[43] = generator.get_noisy_angle(entry['r_shoulder_angle_axis'][1]*1/3, -1.3128987757338355 * 1 / 3, 1.5001029778132429 * 1 / 3)
+            self.m.pose[44] = generator.get_noisy_angle(entry['r_shoulder_angle_axis'][2]*1/3, -1.483831592135514 * 1 / 3, 2.050392704184662 * 1 / 3)
+
+            self.m.pose[51] = generator.get_noisy_angle(entry['r_shoulder_angle_axis'][0]*2/3, -1.7735924284100764 * 2 / 3, 1.7843466954767204 * 2 / 3)
+            self.m.pose[52] = generator.get_noisy_angle(entry['r_shoulder_angle_axis'][1]*2/3, -1.3128987757338355 * 2 / 3, 1.5001029778132429 * 2 / 3)
+            self.m.pose[53] = generator.get_noisy_angle(entry['r_shoulder_angle_axis'][2]*2/3, -1.483831592135514 * 2 / 3, 2.050392704184662 * 2 / 3)
+            if verbose == True: print 'r shoulder', self.m.pose[51:54] + self.m.pose[42:45]
+
+            self.m.pose[58] = generator.get_noisy_angle(entry['r_elbow_angle_axis'][1], 0.0, 2.206311095551016)
+            if verbose == True: print 'r elbow', self.m.pose[57:60]
+
             break
 
         from capsule_body import get_capsules, joint2name, rots0
@@ -385,59 +391,6 @@ class GeneratePose():
         joint2name = joint2name
         rots0 = rots0
         print len(capsules)
-
-        return self.m, capsules, joint2name, rots0
-
-    def map_random_selection_to_smpl_angles(self, alter_angles):
-        if alter_angles == True:
-            selection_r_leg = ProcessYashData().sample_angles('r_leg')
-            self.m.pose[6] = selection_r_leg['rG_ext']
-            self.m.pose[7] = selection_r_leg['rG_yaw']#/2
-            self.m.pose[8] = selection_r_leg['rG_abd']
-
-            self.m.pose[15] = selection_r_leg['rK']
-            #self.m.pose[16] = selection_r_leg['rG_yaw']/2
-
-            selection_l_leg = ProcessYashData().sample_angles('l_leg')
-            self.m.pose[3] = selection_l_leg['lG_ext']
-            self.m.pose[4] = selection_l_leg['lG_yaw']#/2
-            self.m.pose[5] = selection_l_leg['lG_abd']
-
-            self.m.pose[12] = selection_l_leg['lK']
-            #self.m.pose[13] = selection_l_leg['lG_yaw']/2
-
-            selection_r_arm = ProcessYashData().sample_angles('r_arm')
-            self.m.pose[51] = selection_r_arm['rS_roll']*2/3
-            self.m.pose[52] = selection_r_arm['rS_yaw']*2/3
-            self.m.pose[53] = selection_r_arm['rS_pitch']*2/3
-            self.m.pose[42] = selection_r_arm['rS_roll']*1/3
-            self.m.pose[43] = selection_r_arm['rS_yaw']*1/3
-            self.m.pose[44] = selection_r_arm['rS_pitch']*1/3
-
-            self.m.pose[58] = selection_r_arm['rE']
-
-            selection_l_arm = ProcessYashData().sample_angles('l_arm')
-            self.m.pose[48] = selection_l_arm['lS_roll']*2/3
-            self.m.pose[49] = selection_l_arm['lS_yaw']*2/3
-            self.m.pose[50] = selection_l_arm['lS_pitch']*2/3
-            self.m.pose[39] = selection_l_arm['lS_roll']*1/3
-            self.m.pose[40] = selection_l_arm['lS_yaw']*1/3
-            self.m.pose[41] = selection_l_arm['lS_pitch']*1/3
-
-            self.m.pose[55] = selection_l_arm['lE']
-
-        #self.m.pose[51] = selection_r
-        from capsule_body import get_capsules, joint2name, rots0
-        capsules = get_capsules(self.m)
-        joint2name = joint2name
-        rots0 = rots0
-        print len(capsules)
-
-        #put these capsules into dart based on these angles. Make Dart joints only as necessary.
-        #Use the positions found in dart to update positions in FleX. Do not use angles in Flex
-        #repeat: do not need a forward kinematics model in FleX! Just need the capsule positions and radii. Can potentially get rotation from the Capsule end positions.
-        #Find IK solution at the very end.
-
 
         return self.m, capsules, joint2name, rots0
 
