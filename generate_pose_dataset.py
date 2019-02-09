@@ -37,7 +37,7 @@ class GeneratePose():
     def __init__(self, gender):
         ## Load SMPL model (here we load the female model)
 
-        if gender == "male":
+        if gender == "m":
             model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
         else:
             model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_f_lbs_10_207_0_v1.0.0.pkl'
@@ -365,7 +365,7 @@ if __name__ == "__main__":
         angles_data = pickle.load(fp)
     shuffle(angles_data)
 
-    gender = "male"
+    gender = "f"
     num_data = "1000"
 
 
