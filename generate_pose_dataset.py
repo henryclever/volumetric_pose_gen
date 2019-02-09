@@ -227,7 +227,7 @@ class GeneratePose():
         return self.m, capsules, joint2name, rots0
 
 
-    def generate_dataset(self, gender, num_data):
+    def generate_dataset(self, gender, stiffness, num_data):
         #NEED FOR DATASET: pose Nx72, shape Nx10
         shape_pose_list = []
         contact_check_bns = [1, 2, 4, 5, 7, 8, 14, 15, 16, 17, 18, 19]
@@ -313,7 +313,7 @@ class GeneratePose():
         #pickle.dump(shape_pose_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_list1.pkl", "wb"))
         np.save("/home/henry/git/volumetric_pose_gen/valid_shape_pose_"+gender+"_list_"+str(num_data)+".npy", np.array(shape_pose_list))
 
-    def generate_prechecked_pose(self, filename):
+    def generate_prechecked_pose(self, gender, stiffness, filename):
         prechecked_pose_list = np.load(filename).tolist()
 
         from capsule_body import get_capsules, joint2name, rots0
@@ -347,7 +347,7 @@ class GeneratePose():
             joint2name = joint2name
             rots0 = rots0
 
-            dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, capsules=capsules, joint_names=joint2name, initial_rots=rots0)
+            dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, stiffness = stiffness, capsules=capsules, joint_names=joint2name, initial_rots=rots0)
             generator.standard_render()
             dss.run_simulation(10000)
 
@@ -366,7 +366,11 @@ if __name__ == "__main__":
     shuffle(angles_data)
 
     gender = "male"
-    num_data = "100"
+    num_data = "1000"
+
+
     generator = GeneratePose(gender)
-    #generator.generate_dataset(gender, num_data = 100)
-    generator.generate_prechecked_pose("/home/henry/git/volumetric_pose_gen/valid_shape_pose_"+gender+"_list_"+num_data+".npy")
+    #generator.generate_dataset(gender = "male", num_data = 1000)
+
+    stiffness = "lowerbody"
+    generator.generate_prechecked_pose(gender, stiffness, "/home/henry/git/volumetric_pose_gen/valid_shape_pose_"+gender+"_"+num_data+"_"+stiffness+"_stiff.npy")

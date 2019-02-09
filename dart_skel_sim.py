@@ -24,7 +24,6 @@ K = 7000.0
 B = 200000.0
 FRICTION_COEFF = 0.2
 
-BODY_MASS = 70.0 #kg
 NUM_CAPSULES = 20
 DART_TO_FLEX_CONV = 2.58872
 
@@ -40,7 +39,7 @@ class DampingController(object):
         return damping
 
 class DartSkelSim(object):
-    def __init__(self, render, m, capsules, joint_names, initial_rots, shiftSIDE = 0.0, shiftUD = 0.0, stiffness = "LOW"):
+    def __init__(self, render, m, gender, stiffness, capsules, joint_names, initial_rots, shiftSIDE = 0.0, shiftUD = 0.0):
         self.num_steps = 10000
         self.render_dart = render
 
@@ -245,26 +244,51 @@ class DartSkelSim(object):
         #Trunk(Chest, back and abdomen)- 50.80,  Head - 7.30, Thigh - 9.88 x 2, Lower leg - 4.65 x 2, Foot - 1.45 x 2, Upper arm - 2.7 x 2, Forearm - 1.60 x 2, Hand - 0.66 x 2,
         #Trunk(Chest, back and abdomen) Women- 50.80,  Head - 9.40, Thigh - 8.30 x 2, Lower leg - 5.50 x 2, Foot - 1.20 x 2, Upper arm - 2.7 x 2, Forearm - 1.60 x 2, Hand - 0.50 x 2,
         #Trunk(Chest, back and abdomen) Men - 48.30,  Head - 7.10, Thigh - 10.50 x 2, Lower leg - 4.50 x 2, Foot - 1.50 x 2, Upper arm - 3.3 x 2, Forearm - 1.90 x 2, Hand - 0.60 x 2,
-        skel.bodynodes[0].set_mass(BODY_MASS * 0.5080 * volume[0]/volume_torso)
-        skel.bodynodes[1].set_mass(BODY_MASS * 0.0988)
-        skel.bodynodes[2].set_mass(BODY_MASS * 0.0988)
-        skel.bodynodes[3].set_mass(BODY_MASS * 0.5080 * volume[3]/volume_torso)
-        skel.bodynodes[4].set_mass(BODY_MASS * 0.0465)
-        skel.bodynodes[5].set_mass(BODY_MASS * 0.0465)
-        skel.bodynodes[6].set_mass(BODY_MASS * 0.5080 * volume[6]/volume_torso)
-        skel.bodynodes[7].set_mass(BODY_MASS * 0.0145)
-        skel.bodynodes[8].set_mass(BODY_MASS * 0.0145)
-        skel.bodynodes[9].set_mass(BODY_MASS * 0.5080 * volume[9]/volume_torso)
-        skel.bodynodes[10].set_mass(BODY_MASS * 0.0730 * volume[10]/volume_head)
-        skel.bodynodes[11].set_mass(BODY_MASS * 0.5080 * volume[11]/volume_torso)
-        skel.bodynodes[12].set_mass(BODY_MASS * 0.5080 * volume[12]/volume_torso)
-        skel.bodynodes[13].set_mass(BODY_MASS * 0.0730 * volume[13]/volume_head)
-        skel.bodynodes[14].set_mass(BODY_MASS * 0.0270)
-        skel.bodynodes[15].set_mass(BODY_MASS * 0.0270)
-        skel.bodynodes[16].set_mass(BODY_MASS * 0.0160)
-        skel.bodynodes[17].set_mass(BODY_MASS * 0.0160)
-        skel.bodynodes[18].set_mass(BODY_MASS * 0.0066)
-        skel.bodynodes[19].set_mass(BODY_MASS * 0.0066)
+        if gender == "female":
+            BODY_MASS = 75.0 #kg
+            skel.bodynodes[0].set_mass(BODY_MASS * 0.5080 * volume[0]/volume_torso)
+            skel.bodynodes[1].set_mass(BODY_MASS * 0.0830)
+            skel.bodynodes[2].set_mass(BODY_MASS * 0.0830)
+            skel.bodynodes[3].set_mass(BODY_MASS * 0.5080 * volume[3]/volume_torso)
+            skel.bodynodes[4].set_mass(BODY_MASS * 0.0550)
+            skel.bodynodes[5].set_mass(BODY_MASS * 0.0550)
+            skel.bodynodes[6].set_mass(BODY_MASS * 0.5080 * volume[6]/volume_torso)
+            skel.bodynodes[7].set_mass(BODY_MASS * 0.0120)
+            skel.bodynodes[8].set_mass(BODY_MASS * 0.0120)
+            skel.bodynodes[9].set_mass(BODY_MASS * 0.5080 * volume[9]/volume_torso)
+            skel.bodynodes[10].set_mass(BODY_MASS * 0.0940 * volume[10]/volume_head)
+            skel.bodynodes[11].set_mass(BODY_MASS * 0.5080 * volume[11]/volume_torso)
+            skel.bodynodes[12].set_mass(BODY_MASS * 0.5080 * volume[12]/volume_torso)
+            skel.bodynodes[13].set_mass(BODY_MASS * 0.0940 * volume[13]/volume_head)
+            skel.bodynodes[14].set_mass(BODY_MASS * 0.0270)
+            skel.bodynodes[15].set_mass(BODY_MASS * 0.0270)
+            skel.bodynodes[16].set_mass(BODY_MASS * 0.0160)
+            skel.bodynodes[17].set_mass(BODY_MASS * 0.0160)
+            skel.bodynodes[18].set_mass(BODY_MASS * 0.0050)
+            skel.bodynodes[19].set_mass(BODY_MASS * 0.0050)
+        else:
+            BODY_MASS = 85.0 #kg
+            skel.bodynodes[0].set_mass(BODY_MASS * 0.4830 * volume[0]/volume_torso)
+            skel.bodynodes[1].set_mass(BODY_MASS * 0.1050)
+            skel.bodynodes[2].set_mass(BODY_MASS * 0.1050)
+            skel.bodynodes[3].set_mass(BODY_MASS * 0.4830 * volume[3]/volume_torso)
+            skel.bodynodes[4].set_mass(BODY_MASS * 0.0450)
+            skel.bodynodes[5].set_mass(BODY_MASS * 0.0450)
+            skel.bodynodes[6].set_mass(BODY_MASS * 0.4830 * volume[6]/volume_torso)
+            skel.bodynodes[7].set_mass(BODY_MASS * 0.0150)
+            skel.bodynodes[8].set_mass(BODY_MASS * 0.0150)
+            skel.bodynodes[9].set_mass(BODY_MASS * 0.4830 * volume[9]/volume_torso)
+            skel.bodynodes[10].set_mass(BODY_MASS * 0.0710 * volume[10]/volume_head)
+            skel.bodynodes[11].set_mass(BODY_MASS * 0.4830 * volume[11]/volume_torso)
+            skel.bodynodes[12].set_mass(BODY_MASS * 0.4830 * volume[12]/volume_torso)
+            skel.bodynodes[13].set_mass(BODY_MASS * 0.0710 * volume[13]/volume_head)
+            skel.bodynodes[14].set_mass(BODY_MASS * 0.0330)
+            skel.bodynodes[15].set_mass(BODY_MASS * 0.0330)
+            skel.bodynodes[16].set_mass(BODY_MASS * 0.0190)
+            skel.bodynodes[17].set_mass(BODY_MASS * 0.0190)
+            skel.bodynodes[18].set_mass(BODY_MASS * 0.0060)
+            skel.bodynodes[19].set_mass(BODY_MASS * 0.0060)
+
 
         #set the mass moment of inertia matrices
         for body_ct in range(NUM_CAPSULES):

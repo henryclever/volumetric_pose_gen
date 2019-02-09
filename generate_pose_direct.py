@@ -217,19 +217,38 @@ class GeneratePose():
     def random_bag_yash_data(self, verbose = True):
 
         movements = ['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
-        subjects = ['40ESJ', 'GRTJK', 'TX887', 'WFGW9', 'WM9KJ', 'ZV7TE'] #FMNGQ
+        movement_ct = [150, 150, 200, 150, 100, 200, 150, 100]
+
+        subjects = ['40ESJ', 'GRTJK', 'TX887', 'WFGW9', 'WM9KJ', 'ZV7TE', 'FMNGQ']
         bag = []
 
+
         for subject in subjects:
-            for movement in movements:
-                print "subject: ", subject, " movement: ", movement
-                filename = "/home/henry/pressure_mat_angles/subject_" + subject + "/" + movement + "_angles.p"
+            for movement in range(len(movements)):
+                #print "subject: ", subject, " movement: ", movement
+
+                filename = "/home/henry/pressure_mat_angles/subject_" + subject + "/" + movements[movement] + "_angles.p"
 
                 with open(filename, 'rb') as fp:
                     angles_data = pickle.load(fp)
 
-                for entry in angles_data:
-                    bag.append(entry)
+                num_appended = 0
+                shuffle(angles_data)
+                while num_appended < movement_ct[movement]:
+
+                    print "beginning!"
+                    for entry in angles_data:
+                        if num_appended >= movement_ct[movement]:
+                            print "breaking!"
+                            break
+
+                        else:
+                            bag.append(entry)
+                            num_appended += 1
+
+
+
+                print "subject: ", subject, "  movement: ", movements[movement], "  ct: ", num_appended
 
 
         #filename = "/home/henry/pressure_mat_angles/all_angles.p"
@@ -324,8 +343,8 @@ class GeneratePose():
 
     def map_yash_to_smpl_angles(self, verbose = True):
 
-        movements = ['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
-        subjects = ['40ESJ', 'GRTJK', 'TX887', 'WFGW9', 'WM9KJ', 'ZV7TE'] #FMNGQ
+        movements = ['LL', 'RL']#, 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
+        subjects = ['40ESJ', 'GRTJK', 'TX887', 'WFGW9', 'WM9KJ', 'ZV7TE' 'FMNGQ']
 
 
         for subject in subjects:
@@ -403,12 +422,12 @@ if __name__ == "__main__":
     #processYashData.get_r_leg_angles()
     #m, capsules, joint2name, rots0 = generator.map_random_selection_to_smpl_angles(alter_angles = True)
 
-    #generator.random_bag_yash_data()
+    generator.random_bag_yash_data()
 
     #m, capsules, joint2name, rots0 = generator.map_yash_to_smpl_angles(True)
-    m, capsules, joint2name, rots0 = generator.map_shuffled_yash_to_smpl_angles(True)
+    #m, capsules, joint2name, rots0 = generator.map_shuffled_yash_to_smpl_angles(True)
 
-    dss = dart_skel_sim.DartSkelSim(render=True, m=m, capsules=capsules, joint_names=joint2name, initial_rots=rots0, shiftSIDE = 0.0, shiftUD = 0.0, stiffness = "LOW")
+    #dss = dart_skel_sim.DartSkelSim(render=True, m=m, capsules=capsules, joint_names=joint2name, initial_rots=rots0, shiftSIDE = 0.0, shiftUD = 0.0, stiffness = "LOW")
 
-    generator.standard_render()
-    dss.run_simulation()
+    #generator.standard_render()
+    #dss.run_simulation()

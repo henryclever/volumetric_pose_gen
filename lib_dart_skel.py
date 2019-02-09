@@ -102,26 +102,74 @@ class LibDartSkel():
         ################################# ASSIGN JOINT REST POSITION AND SPRING COEFF ##################################
 
 
-        if STIFFNESS == "LOW":
-            arm_stiffness = 1.0
-            head_stiffness = 10.0
-            leg_stiffness = 20.0
-            knee_stiffness = 10.0
+        #if STIFFNESS == "LOW":
+        #    arm_stiffness = 1.0
+        #    head_stiffness = 10.0
+        #    leg_stiffness = 20.0
+        #    knee_stiffness = 10.0
+        #    torso_stiffness = 200.0
+
+        #elif STIFFNESS == "MED":
+        #    arm_stiffness = 10.0
+        #    head_stiffness = 10.0
+        #    leg_stiffness = 50.0
+        #    knee_stiffness = 50.0
+        #    torso_stiffness = 500.0
+
+        #elif STIFFNESS == "HIGH":
+        #    arm_stiffness = 50.0
+        #    head_stiffness = 50.0
+        #    leg_stiffness = 200.0
+        #    knee_stiffness = 200.0
+        #    torso_stiffness = 1000.0
+
+        if STIFFNESS == "upperbody":
+            r_arm_stiffness = 50.0
+            l_arm_stiffness = 50.0
+            head_stiffness = 50.0
+            r_leg_stiffness = 20.0
+            l_leg_stiffness = 20.0
+            r_knee_stiffness = 20.0
+            l_knee_stiffness = 20.0
+            torso_stiffness = 200.0
+        elif STIFFNESS == "lowerbody":
+            r_arm_stiffness = 1.0
+            l_arm_stiffness = 1.0
+            head_stiffness = 50.0
+            r_leg_stiffness = 200.0
+            l_leg_stiffness = 200.0
+            r_knee_stiffness = 200.0
+            l_knee_stiffness = 200.0
+            torso_stiffness = 1000.0
+        elif STIFFNESS == "rightside":
+            r_arm_stiffness = 50.0
+            l_arm_stiffness = 1.0
+            head_stiffness = 50.0
+            r_leg_stiffness = 200.0
+            l_leg_stiffness = 20.0
+            r_knee_stiffness = 200.0
+            l_knee_stiffness = 20.0
+            torso_stiffness = 500.0
+        elif STIFFNESS == "leftside":
+            r_arm_stiffness = 1.0
+            l_arm_stiffness = 50.0
+            head_stiffness = 50.0
+            r_leg_stiffness = 20.0
+            l_leg_stiffness = 200.0
+            r_knee_stiffness = 20.0
+            l_knee_stiffness = 200.0
+            torso_stiffness = 500.0
+        else: #not stiff
+            r_arm_stiffness = 1.0
+            l_arm_stiffness = 1.0
+            head_stiffness = 50.0
+            r_leg_stiffness = 20.0
+            l_leg_stiffness = 20.0
+            r_knee_stiffness = 20.0
+            l_knee_stiffness = 20.0
             torso_stiffness = 200.0
 
-        elif STIFFNESS == "MED":
-            arm_stiffness = 10.0
-            head_stiffness = 10.0
-            leg_stiffness = 50.0
-            knee_stiffness = 50.0
-            torso_stiffness = 500.0
 
-        elif STIFFNESS == "HIGH":
-            arm_stiffness = 50.0
-            head_stiffness = 50.0
-            leg_stiffness = 200.0
-            knee_stiffness = 200.0
-            torso_stiffness = 1000.0
 
         for joint in skel.joints:
             print joint.spring_stiffness(0)
@@ -129,16 +177,16 @@ class LibDartSkel():
                 joint.set_rest_position(0, float(m.pose[3]))
                 joint.set_rest_position(1, float(m.pose[4]))
                 joint.set_rest_position(2, float(m.pose[5]))
-                joint.set_spring_stiffness(0, leg_stiffness)
-                joint.set_spring_stiffness(1, leg_stiffness)
-                joint.set_spring_stiffness(2, leg_stiffness)
+                joint.set_spring_stiffness(0, l_leg_stiffness)
+                joint.set_spring_stiffness(1, l_leg_stiffness)
+                joint.set_spring_stiffness(2, l_leg_stiffness)
             elif joint.name == "rightThigh":
                 joint.set_rest_position(0, float(m.pose[6]))
                 joint.set_rest_position(1, float(m.pose[7]))
                 joint.set_rest_position(2, float(m.pose[8]))
-                joint.set_spring_stiffness(0, leg_stiffness)
-                joint.set_spring_stiffness(1, leg_stiffness)
-                joint.set_spring_stiffness(2, leg_stiffness)
+                joint.set_spring_stiffness(0, r_leg_stiffness)
+                joint.set_spring_stiffness(1, r_leg_stiffness)
+                joint.set_spring_stiffness(2, r_leg_stiffness)
             elif joint.name == "spine":
                 joint.set_rest_position(0, float(m.pose[9]))
                 joint.set_rest_position(1, float(m.pose[10]))
@@ -148,10 +196,10 @@ class LibDartSkel():
                 joint.set_spring_stiffness(2, torso_stiffness)
             elif joint.name == "leftCalf":
                 joint.set_rest_position(0, float(m.pose[12]))
-                joint.set_spring_stiffness(0, knee_stiffness)
+                joint.set_spring_stiffness(0, l_knee_stiffness)
             elif joint.name == "rightCalf":
                 joint.set_rest_position(0, float(m.pose[15]))
-                joint.set_spring_stiffness(0, knee_stiffness)
+                joint.set_spring_stiffness(0, r_knee_stiffness)
             elif joint.name == "spine1":
                 joint.set_rest_position(0, float(m.pose[18]))
                 joint.set_rest_position(1, float(m.pose[19]))
@@ -163,16 +211,16 @@ class LibDartSkel():
                 joint.set_rest_position(0, float(m.pose[21]))
                 joint.set_rest_position(1, float(m.pose[22]))
                 joint.set_rest_position(2, float(m.pose[23]))
-                joint.set_spring_stiffness(0, leg_stiffness)
-                joint.set_spring_stiffness(1, leg_stiffness)
-                joint.set_spring_stiffness(2, leg_stiffness)
+                joint.set_spring_stiffness(0, l_leg_stiffness)
+                joint.set_spring_stiffness(1, l_leg_stiffness)
+                joint.set_spring_stiffness(2, l_leg_stiffness)
             elif joint.name == "rightFoot":
                 joint.set_rest_position(0, float(m.pose[24]))
                 joint.set_rest_position(1, float(m.pose[25]))
                 joint.set_rest_position(2, float(m.pose[26]))
-                joint.set_spring_stiffness(0, leg_stiffness)
-                joint.set_spring_stiffness(1, leg_stiffness)
-                joint.set_spring_stiffness(2, leg_stiffness)
+                joint.set_spring_stiffness(0, r_leg_stiffness)
+                joint.set_spring_stiffness(1, r_leg_stiffness)
+                joint.set_spring_stiffness(2, r_leg_stiffness)
             elif joint.name == "spine2":
                 joint.set_rest_position(0, float(m.pose[27]))
                 joint.set_rest_position(1, float(m.pose[28]))
@@ -212,36 +260,36 @@ class LibDartSkel():
                 joint.set_rest_position(0, float(m.pose[48]))
                 joint.set_rest_position(1, float(m.pose[49]))
                 joint.set_rest_position(2, float(m.pose[50]))
-                joint.set_spring_stiffness(0, arm_stiffness)
-                joint.set_spring_stiffness(1, arm_stiffness)
-                joint.set_spring_stiffness(2, arm_stiffness)
+                joint.set_spring_stiffness(0, l_arm_stiffness)
+                joint.set_spring_stiffness(1, l_arm_stiffness)
+                joint.set_spring_stiffness(2, l_arm_stiffness)
             elif joint.name == "rightUpperArm":
                 joint.set_rest_position(0, float(m.pose[51]))
                 joint.set_rest_position(1, float(m.pose[52]))
                 joint.set_rest_position(2, float(m.pose[53]))
-                joint.set_spring_stiffness(0, arm_stiffness)
-                joint.set_spring_stiffness(1, arm_stiffness)
-                joint.set_spring_stiffness(2, arm_stiffness)
+                joint.set_spring_stiffness(0, r_arm_stiffness)
+                joint.set_spring_stiffness(1, r_arm_stiffness)
+                joint.set_spring_stiffness(2, r_arm_stiffness)
             elif joint.name == "leftForeArm":
                 joint.set_rest_position(0, float(m.pose[55]))
-                joint.set_spring_stiffness(0, arm_stiffness)
+                joint.set_spring_stiffness(0, l_arm_stiffness)
             elif joint.name == "rightForeArm":
                 joint.set_rest_position(0, float(m.pose[58]))
-                joint.set_spring_stiffness(0, arm_stiffness)
+                joint.set_spring_stiffness(0, r_arm_stiffness)
             elif joint.name == "leftHand":
                 joint.set_rest_position(0, float(m.pose[60]))
                 joint.set_rest_position(1, float(m.pose[61]))
                 joint.set_rest_position(2, float(m.pose[62]))
-                joint.set_spring_stiffness(0, arm_stiffness)
-                joint.set_spring_stiffness(1, arm_stiffness)
-                joint.set_spring_stiffness(2, arm_stiffness)
+                joint.set_spring_stiffness(0, l_arm_stiffness)
+                joint.set_spring_stiffness(1, l_arm_stiffness)
+                joint.set_spring_stiffness(2, l_arm_stiffness)
             elif joint.name == "rightHand":
                 joint.set_rest_position(0, float(m.pose[63]))
                 joint.set_rest_position(1, float(m.pose[64]))
                 joint.set_rest_position(2, float(m.pose[65]))
-                joint.set_spring_stiffness(0, arm_stiffness)
-                joint.set_spring_stiffness(1, arm_stiffness)
-                joint.set_spring_stiffness(2, arm_stiffness)
+                joint.set_spring_stiffness(0, r_arm_stiffness)
+                joint.set_spring_stiffness(1, r_arm_stiffness)
+                joint.set_spring_stiffness(2, r_arm_stiffness)
 
         print skel.q
 

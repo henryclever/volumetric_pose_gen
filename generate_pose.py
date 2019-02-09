@@ -582,7 +582,7 @@ class GeneratePose():
     def map_yash_to_smpl_angles(self, verbose = True):
 
         movements = ['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
-        subjects = ['40ESJ', '4ZZZQ', '5LDJG', 'A4G4Y','G55Q1','GF5Q3', 'GRTJK', 'RQCLC', 'TSQNA', 'TX887', 'WCNOM', 'WE2SZ', 'WFGW9', 'WM9KJ', 'ZV7TE']
+        subjects = ['FMNGQ']#['40ESJ', '4ZZZQ', '5LDJG', 'A4G4Y','G55Q1','GF5Q3', 'GRTJK', 'RQCLC', 'TSQNA', 'TX887', 'WCNOM', 'WE2SZ', 'WFGW9', 'WM9KJ', 'ZV7TE']
 
 
         for subject in subjects:
@@ -713,4 +713,4 @@ if __name__ == "__main__":
     dss = dart_skel_sim.DartSkelSim(render=True, m=m, capsules=capsules, joint_names=joint2name, initial_rots=rots0)
 
     generator.standard_render()
-dss.run_simulation()
+    dss.run_simulation()
