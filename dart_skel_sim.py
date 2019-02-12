@@ -42,6 +42,7 @@ class DartSkelSim(object):
     def __init__(self, render, m, gender, stiffness, capsules, joint_names, initial_rots, shiftSIDE = 0.0, shiftUD = 0.0):
         self.num_steps = 10000
         self.render_dart = render
+        self.has_reset_velocity = False
 
         joint_ref = list(m.kintree_table[1]) #joints
         parent_ref = list(m.kintree_table[0]) #parent of each joint
@@ -431,8 +432,12 @@ class DartSkelSim(object):
             self.world.step()
             print "did a step"
             self.world.check_collision()
+
+            if self.count == 190:
+                self.world.skeletons[0].reset_momentum()
+
             skel = self.world.skeletons[0]
-            print skel.q
+            #print skel.q
 
             #print len(self.force_loc_red_dart_all)
             #print len(self.force_loc_red_dart_all[10])
@@ -516,6 +521,12 @@ class DartSkelSim(object):
     def run_sim_step(self, pmat_red_list = [], force_loc_red_dart = [], force_dir_red_dart = [], pmat_idx_red_dart = [], nearest_capsule_list = []):
         self.world.step()
         print "did a step"
+
+        print self.world.skeletons[0].bodynodes[0].C[2]
+        if self.world.skeletons[0].bodynodes[0].C[2] < 0.2 and self.has_reset_velocity == False:
+            self.world.skeletons[0].reset_momentum()
+            self.has_reset_velocity = True
+
 
         max_vel = 0.0
         skel = self.world.skeletons[0]
