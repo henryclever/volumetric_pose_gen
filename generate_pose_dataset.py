@@ -117,7 +117,7 @@ class GeneratePose():
         not_within_bounds = True
         mu = 0
         counter = 0
-        sigma = np.pi/16
+        sigma = np.pi/24
         while not_within_bounds == True:
 
             noisy_angle = angle + random.normalvariate(mu, sigma)
@@ -152,13 +152,19 @@ class GeneratePose():
             if posture == "sit":
                 if shiftUD >= 0.1:
                     self.m.pose[0] = np.pi/3
+                    self.m.pose[9] = 0.0
+                    self.m.pose[18] = 0.0
+                    self.m.pose[27] = 0.0
                 elif 0.0 <= shiftUD < 0.1:
                     self.m.pose[0] = np.pi/6
                     self.m.pose[9] = np.pi/6
+                    self.m.pose[18] = 0.0
+                    self.m.pose[27] = 0.0
                 elif -0.1 <= shiftUD < 0.0:
                     self.m.pose[0] = np.pi/9
                     self.m.pose[9] = np.pi/9
                     self.m.pose[18] = np.pi/9
+                    self.m.pose[27] = 0.0
                 elif shiftUD < -0.1:
                     self.m.pose[0] = np.pi/12
                     self.m.pose[9] = np.pi/12
@@ -447,7 +453,47 @@ if __name__ == "__main__":
     posture = "sit"
     stiffness = "leftside"
 
-    generator = GeneratePose(gender)
-    #generator.generate_dataset(gender = gender, posture = posture, num_data = num_data, stiffness = stiffness)
+    #generator = GeneratePose(gender)
+    #generator.generate_dataset(gender = gender, posture = sit, num_data = num_data, stiffness = stiffness)
+    generator = GeneratePose("m")
+    generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "rightside")
+    generator = GeneratePose("f")
+    generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "rightside")
+    generator = GeneratePose("m")
+    generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "leftside")
+    generator = GeneratePose("f")
+    generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "leftside")
+    generator = GeneratePose("m")
+    generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "upperbody")
+    generator = GeneratePose("f")
+    generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "upperbody")
+    generator = GeneratePose("m")
+    generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "lowerbody")
+    generator = GeneratePose("f")
+    generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "lowerbody")
+    generator = GeneratePose("m")
+    generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "none")
+    generator = GeneratePose("f")
+    generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "none")
 
-    generator.generate_prechecked_pose(gender, stiffness, "/home/henry/git/volumetric_pose_gen/valid_shape_pose_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
+    generator = GeneratePose("m")
+    generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "rightside")
+    generator = GeneratePose("f")
+    generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "rightside")
+    generator = GeneratePose("m")
+    generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "leftside")
+    generator = GeneratePose("f")
+    generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "leftside")
+    generator = GeneratePose("m")
+    generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "upperbody")
+    generator = GeneratePose("f")
+    generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "upperbody")
+    generator = GeneratePose("m")
+    generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "lowerbody")
+    generator = GeneratePose("f")
+    generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "lowerbody")
+    generator = GeneratePose("m")
+    generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "none")
+    generator = GeneratePose("f")
+    generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "none")
+    #generator.generate_prechecked_pose(gender, stiffness, "/home/henry/git/volumetric_pose_gen/valid_shape_pose_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
