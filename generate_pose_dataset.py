@@ -4,6 +4,7 @@ from opendr.renderer import ColoredRenderer
 from opendr.lighting import LambertianPointLight
 from opendr.camera import ProjectPoints
 from smpl.smpl_webuser.serialization import load_model
+from util import batch_global_rigid_transformation, batch_rodrigues, batch_lrotmin, reflect_pose
 
 #volumetric pose gen libraries
 import lib_visualization as libVisualization
@@ -14,6 +15,12 @@ import dart_skel_sim
 #ROS
 import rospy
 import tf
+
+
+import math
+from random import shuffle
+import torch
+import torch.nn as nn
 
 import tensorflow as tensorflow
 import cPickle as pickle
@@ -44,6 +51,11 @@ class GeneratePose():
 
         self.reset_pose = False
         self.m = load_model(model_path)
+
+        filename = "/home/henry/pressure_mat_angles/all_angles.p"
+        with open(filename, 'rb') as fp:
+            self.angles_data = pickle.load(fp)
+        shuffle(self.angles_data)
 
 
 
@@ -123,51 +135,89 @@ class GeneratePose():
 
 
 
-    def map_shuffled_yash_to_smpl_angles(self, alter_angles = True):
+    def map_shuffled_yash_to_smpl_angles(self, posture, shiftUD,  alter_angles = True):
 
-        while True:
-            self.reset_pose = False
-            entry = angles_data.pop()
-            if alter_angles == True:
-                self.m.pose[3] = generator.get_noisy_angle(entry['l_hip_angle_axis'][0], -0.9999455988016526, -0.1716378496297634)
-                self.m.pose[4] = generator.get_noisy_angle(entry['l_hip_angle_axis'][1], -0.9763807967155833,  0.9792771003511667)
-                self.m.pose[5] = generator.get_noisy_angle(entry['l_hip_angle_axis'][2], -0.35342183756490175, 0.9029919511354418)
+        if alter_angles == True:
 
-                self.m.pose[12] = generator.get_noisy_angle(entry['l_knee_angle_axis'][0], 0.0, 2.3720944626178713)
+            entry = self.angles_data.pop()
+            if entry == None:
+                print "############################# RESAMPLING !! #################################"
+                filename = "/home/henry/pressure_mat_angles/all_angles.p"
+                with open(filename, 'rb') as fp:
+                    self.angles_data = pickle.load(fp)
+                shuffle(self.angles_data)
+                entry = self.angles_data.pop()
+
+
+            if posture == "sit":
+                if shiftUD >= 0.1:
+                    self.m.pose[0] = np.pi/3
+                elif 0.0 <= shiftUD < 0.1:
+                    self.m.pose[0] = np.pi/6
+                    self.m.pose[9] = np.pi/6
+                elif -0.1 <= shiftUD < 0.0:
+                    self.m.pose[0] = np.pi/9
+                    self.m.pose[9] = np.pi/9
+                    self.m.pose[18] = np.pi/9
+                elif shiftUD < -0.1:
+                    self.m.pose[0] = np.pi/12
+                    self.m.pose[9] = np.pi/12
+                    self.m.pose[18] = np.pi/12
+                    self.m.pose[27] = np.pi/12
+
+            R_root = libKinematics.eulerAnglesToRotationMatrix([-float(self.m.pose[0]), 0.0, 0.0])
+
+            R_l_hip_rod = libKinematics.matrix_from_dir_cos_angles(entry['l_hip_angle_axis'])
+            R_r_hip_rod = libKinematics.matrix_from_dir_cos_angles(entry['r_hip_angle_axis'])
+
+            R_l = np.matmul(R_root, R_l_hip_rod)
+            R_r = np.matmul(R_root, R_r_hip_rod)
+
+            new_left_hip = libKinematics.dir_cos_angles_from_matrix(R_l)
+            new_right_hip = libKinematics.dir_cos_angles_from_matrix(R_r)
+
+
+            while True:
+                self.reset_pose = False
+
+                self.m.pose[3] = generator.get_noisy_angle(new_left_hip[0], -2.047187297216041, 0.0008725992352640336)
+                self.m.pose[4] = generator.get_noisy_angle(new_left_hip[1], -1.0056561780573234, 0.9792596381050885)
+                self.m.pose[5] = generator.get_noisy_angle(new_left_hip[2], -0.83127128871961, 0.9840833280290882)
+
+                self.m.pose[12] = generator.get_noisy_angle(entry['l_knee_angle_axis'][0], 0.0,  2.307862756803765)
 
                 #entry = angles_data[50]
-                self.m.pose[6] = generator.get_noisy_angle(entry['r_hip_angle_axis'][0], -0.9999902632535546, -0.1026015392807176)
-                self.m.pose[7] = generator.get_noisy_angle(entry['r_hip_angle_axis'][1], -0.9701910881430709,  0.9821826206061518)
-                self.m.pose[8] = generator.get_noisy_angle(entry['r_hip_angle_axis'][2], -0.8767199629302654, 0.35738032396710084)
-
+                self.m.pose[6] = generator.get_noisy_angle(new_right_hip[0], -2.0467908364949654, 0.005041331594134009)
+                self.m.pose[7] = generator.get_noisy_angle(new_right_hip[1], -0.9477521700520728, 1.0038579032816006)
+                self.m.pose[8] = generator.get_noisy_angle(new_right_hip[2], -0.8767199629302654,  0.35738032396710084)
                 self.m.pose[15] = generator.get_noisy_angle(entry['r_knee_angle_axis'][0], 0.0, 2.320752282574325)
 
 
-                self.m.pose[39] = generator.get_noisy_angle(entry['l_shoulder_angle_axis'][0]*1/3, -1.9811361489978918 * 1 / 3, 1.4701759095910327 * 1 / 3)
-                self.m.pose[40] = generator.get_noisy_angle(entry['l_shoulder_angle_axis'][1]*1/3, -1.5656401670211908 * 1 / 3, 1.047255481259413 * 1 / 3)
-                self.m.pose[41] = generator.get_noisy_angle(entry['l_shoulder_angle_axis'][2]*1/3, -1.9671878788002621 * 1 / 3, 1.3280993848963953 * 1 / 3)
+                self.m.pose[39] = generator.get_noisy_angle(entry['l_shoulder_angle_axis'][0]*1/3, -1.7636153960682888 * 1 / 3, 1.5740500958475525 * 1 / 3)
+                self.m.pose[40] = generator.get_noisy_angle(entry['l_shoulder_angle_axis'][1]*1/3, -1.5168279883317557 * 1 / 3, 1.6123857573735045 * 1 / 3)
+                self.m.pose[41] = generator.get_noisy_angle(entry['l_shoulder_angle_axis'][2]*1/3, -1.7656139149798185 * 1 / 3, 1.9844820788036448 * 1 / 3)
 
-                self.m.pose[48] = generator.get_noisy_angle(entry['l_shoulder_angle_axis'][0]*2/3, -1.9811361489978918 * 2 / 3, 1.4701759095910327 * 2 / 3)
-                self.m.pose[49] = generator.get_noisy_angle(entry['l_shoulder_angle_axis'][1]*2/3, -1.5656401670211908 * 2 / 3, 1.047255481259413 * 2 / 3)
-                self.m.pose[50] = generator.get_noisy_angle(entry['l_shoulder_angle_axis'][2]*2/3, -1.9671878788002621 * 2 / 3, 1.3280993848963953 * 2 / 3)
+                self.m.pose[48] = generator.get_noisy_angle(entry['l_shoulder_angle_axis'][0]*2/3, -1.7636153960682888 * 2 / 3, 1.5740500958475525 * 2 / 3)
+                self.m.pose[49] = generator.get_noisy_angle(entry['l_shoulder_angle_axis'][1]*2/3, -1.5168279883317557 * 2 / 3, 1.6123857573735045 * 2 / 3)
+                self.m.pose[50] = generator.get_noisy_angle(entry['l_shoulder_angle_axis'][2]*2/3, -1.7656139149798185 * 2 / 3, 1.9844820788036448 * 2 / 3)
 
 
-                self.m.pose[55] = generator.get_noisy_angle(entry['l_elbow_angle_axis'][1], -2.3104353421664428, 0.0)
+                self.m.pose[55] = generator.get_noisy_angle(entry['l_elbow_angle_axis'][1], -2.146677709782182, 0.0)
 
-                self.m.pose[42] = generator.get_noisy_angle(entry['r_shoulder_angle_axis'][0]*1/3, -1.7735924284100764 * 1 / 3, 1.7843466954767204 * 1 / 3)
-                self.m.pose[43] = generator.get_noisy_angle(entry['r_shoulder_angle_axis'][1]*1/3, -1.3128987757338355 * 1 / 3, 1.5001029778132429 * 1 / 3)
-                self.m.pose[44] = generator.get_noisy_angle(entry['r_shoulder_angle_axis'][2]*1/3, -1.483831592135514 * 1 / 3, 2.050392704184662 * 1 / 3)
+                self.m.pose[42] = generator.get_noisy_angle(entry['r_shoulder_angle_axis'][0]*1/3, -1.8819412381973686 * 1 / 3, 1.5386423137579994 * 1 / 3)
+                self.m.pose[43] = generator.get_noisy_angle(entry['r_shoulder_angle_axis'][1]*1/3, -1.6424506514942065 * 1 / 3, 2.452871806175492 * 1 / 3)
+                self.m.pose[44] = generator.get_noisy_angle(entry['r_shoulder_angle_axis'][2]*1/3, -1.9397148210114974 * 1 / 3, 1.8997886932520462 * 1 / 3)
 
-                self.m.pose[51] = generator.get_noisy_angle(entry['r_shoulder_angle_axis'][0]*2/3, -1.7735924284100764 * 2 / 3, 1.7843466954767204 * 2 / 3)
-                self.m.pose[52] = generator.get_noisy_angle(entry['r_shoulder_angle_axis'][1]*2/3, -1.3128987757338355 * 2 / 3, 1.5001029778132429 * 2 / 3)
-                self.m.pose[53] = generator.get_noisy_angle(entry['r_shoulder_angle_axis'][2]*2/3, -1.483831592135514 * 2 / 3, 2.050392704184662 * 2 / 3)
+                self.m.pose[51] = generator.get_noisy_angle(entry['r_shoulder_angle_axis'][0]*2/3, -1.8819412381973686 * 2 / 3, 1.5386423137579994 * 2 / 3)
+                self.m.pose[52] = generator.get_noisy_angle(entry['r_shoulder_angle_axis'][1]*2/3, -1.6424506514942065 * 2 / 3, 2.452871806175492 * 2 / 3)
+                self.m.pose[53] = generator.get_noisy_angle(entry['r_shoulder_angle_axis'][2]*2/3, -1.9397148210114974 * 2 / 3, 1.8997886932520462 * 2 / 3)
 
-                self.m.pose[58] = generator.get_noisy_angle(entry['r_elbow_angle_axis'][1], 0.0, 2.206311095551016)
+                self.m.pose[58] = generator.get_noisy_angle(entry['r_elbow_angle_axis'][1], 0.0, 2.136934895040784)
 
-            if self.reset_pose == True:
-                pass
-            else:
-                break
+                if self.reset_pose == True:
+                    pass
+                else:
+                    break
 
         from capsule_body import get_capsules, joint2name, rots0
         capsules = get_capsules(self.m)
@@ -227,7 +277,7 @@ class GeneratePose():
         return self.m, capsules, joint2name, rots0
 
 
-    def generate_dataset(self, gender, stiffness, num_data):
+    def generate_dataset(self, gender, posture, num_data, stiffness):
         #NEED FOR DATASET: pose Nx72, shape Nx10
         shape_pose_list = []
         contact_check_bns = [1, 2, 4, 5, 7, 8, 14, 15, 16, 17, 18, 19]
@@ -235,8 +285,14 @@ class GeneratePose():
 
 
         for i in range(num_data):
-            shape_pose = [[],[],[]]
+            shape_pose = [[],[],[],[],[],[]]
 
+            root_rot = np.random.uniform(-np.pi / 16, np.pi / 16)
+            shift_side = np.random.uniform(-0.2, 0.2)  # in meters
+            shift_ud = np.random.uniform(-0.2, 0.2)  # in meters
+            shape_pose[3] = root_rot
+            shape_pose[4] = shift_side
+            shape_pose[5] = shift_ud
 
             generator.sample_body_shape(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
             in_collision = True
@@ -244,11 +300,11 @@ class GeneratePose():
 
             while in_collision == True:
                 #m, capsules, joint2name, rots0 = generator.map_random_selection_to_smpl_angles(alter_angles = True)
-                m, capsules, joint2name, rots0 = generator.map_shuffled_yash_to_smpl_angles(alter_angles = True)
+                m, capsules, joint2name, rots0 = generator.map_shuffled_yash_to_smpl_angles(posture, shift_ud, alter_angles = True)
 
                 shape_pose[0] = np.asarray(m.betas).tolist()
 
-                dss = dart_skel_sim.DartSkelSim(render=True, m=m, capsules=capsules, joint_names=joint2name, initial_rots=rots0)
+                dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, stiffness=None, capsules=capsules, joint_names=joint2name, initial_rots=rots0)
 
                 print "stepping"
                 invalid_pose = False
@@ -297,7 +353,7 @@ class GeneratePose():
                 dss.world.reset()
                 dss.world.destroy()
 
-            pose_indices = [3, 4, 5, 6, 7, 8, 12, 15, 39, 40, 41, 42, 43, 44, 48, 49, 50, 51, 52, 53, 55, 58]
+            pose_indices = [0, 3, 4, 5, 6, 7, 8, 9, 12, 15, 18, 27, 39, 40, 41, 42, 43, 44, 48, 49, 50, 51, 52, 53, 55, 58]
             pose_angles = []
             for index in pose_indices:
                 pose_angles.append(float(m.pose[index]))
@@ -311,7 +367,7 @@ class GeneratePose():
         print "SAVING! "
         #print shape_pose_list
         #pickle.dump(shape_pose_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_list1.pkl", "wb"))
-        np.save("/home/henry/git/volumetric_pose_gen/valid_shape_pose_"+gender+"_list_"+str(num_data)+".npy", np.array(shape_pose_list))
+        np.save("/home/henry/git/volumetric_pose_gen/valid_shape_pose_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy", np.array(shape_pose_list))
 
     def generate_prechecked_pose(self, gender, stiffness, filename):
         prechecked_pose_list = np.load(filename).tolist()
@@ -323,7 +379,7 @@ class GeneratePose():
         shuffle(prechecked_pose_list)
 
         for shape_pose in prechecked_pose_list:
-            #print shape_pose
+            print shape_pose
             #print shape_pose[0]
             #print shape_pose[1]
             #print shape_pose[2]
@@ -332,16 +388,41 @@ class GeneratePose():
                 self.m.betas[idx] = shape_pose[0][idx]
 
             for idx in range(len(shape_pose[1])):
-                print shape_pose[1][idx]
+                #print shape_pose[1][idx]
                 #print self.m.pose[shape_pose[1][idx]]
-                print shape_pose[2][idx]
+                #print shape_pose[2][idx]
 
                 self.m.pose[shape_pose[1][idx]] = shape_pose[2][idx]
 
-            #print self.m.pose
-            #print shape_pose[1]
-            #print shape_pose[2]
+            print "shift up down", shape_pose[5]
 
+
+            #self.m.pose[0] = np.pi/6
+
+            #print self.m.J_transformed[1, :], self.m.J_transformed[4, :]
+
+
+
+            #R_l_hip_rod = libKinematics.matrix_from_dir_cos_angles([float(self.m.pose[3]), float(self.m.pose[4]), float(self.m.pose[5]) ])
+            #R_r_hip_rod = libKinematics.matrix_from_dir_cos_angles([float(self.m.pose[6]), float(self.m.pose[7]), float(self.m.pose[8]) ])
+            #R_root = libKinematics.eulerAnglesToRotationMatrix([-float(self.m.pose[0]), 0.0, 0.0])
+
+            #R_l = np.matmul(R_root, R_l_hip_rod)
+            #R_r = np.matmul(R_root, R_r_hip_rod)
+
+            #new_left_hip = libKinematics.dir_cos_angles_from_matrix(R_l)
+            #new_right_hip = libKinematics.dir_cos_angles_from_matrix(R_r)
+
+
+            #self.m.pose[3] = new_left_hip[0]
+            #self.m.pose[4] = new_left_hip[1]
+            #self.m.pose[5] = new_left_hip[2]
+            #self.m.pose[6] = new_right_hip[0]
+            #self.m.pose[7] = new_right_hip[1]
+            #self.m.pose[8] = new_right_hip[2]
+
+
+            #print self.m.J_transformed[1, :], self.m.J_transformed[4, :]
             # self.m.pose[51] = selection_r
             capsules = get_capsules(self.m)
             joint2name = joint2name
@@ -359,18 +440,14 @@ class GeneratePose():
 
 
 if __name__ == "__main__":
-    filename = "/home/henry/pressure_mat_angles/all_angles.p"
-    from random import shuffle
-    with open(filename, 'rb') as fp:
-        angles_data = pickle.load(fp)
-    shuffle(angles_data)
+
 
     gender = "f"
-    num_data = "1000"
-
+    num_data = 2000
+    posture = "sit"
+    stiffness = "leftside"
 
     generator = GeneratePose(gender)
-    #generator.generate_dataset(gender = "male", num_data = 1000)
+    #generator.generate_dataset(gender = gender, posture = posture, num_data = num_data, stiffness = stiffness)
 
-    stiffness = "lowerbody"
-    generator.generate_prechecked_pose(gender, stiffness, "/home/henry/git/volumetric_pose_gen/valid_shape_pose_"+gender+"_"+num_data+"_"+stiffness+"_stiff.npy")
+    generator.generate_prechecked_pose(gender, stiffness, "/home/henry/git/volumetric_pose_gen/valid_shape_pose_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")

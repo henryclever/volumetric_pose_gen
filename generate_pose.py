@@ -260,7 +260,7 @@ class GeneratePose():
         r_arm_pos_current = np.array([np.array(self.m.J_transformed[0, :]), np.array(self.m.J_transformed[12, :]), np.array(self.m.J_transformed[17, :]), np.array(self.m.J_transformed[19, :]), np.array(self.m.J_transformed[21, :])])
 
         #get the IK solution
-        r_omega_shoulder, r_elbow_chain, IK_RE, r_wrist_chain, IK_RW = libKinematics.ikpy_arm(r_arm_pos_origins, r_arm_pos_current)
+        r_omega_shoulder, r_elbow_chain, IK_RE, r_wrist_chain, IK_RW = libKinematics.ikpy_right_arm(r_arm_pos_origins, r_arm_pos_current)
 
         #get the RPH values
         r_shoulder_angles = [IK_RW[2], IK_RE[2], IK_RE[3]]
@@ -287,7 +287,7 @@ class GeneratePose():
         l_arm_pos_current = np.array([np.array(self.m.J_transformed[0, :]), np.array(self.m.J_transformed[12, :]), np.array(self.m.J_transformed[16, :]), np.array(self.m.J_transformed[18, :]), np.array(self.m.J_transformed[20, :])])
 
         #get the IK solution
-        l_omega_shoulder, l_elbow_chain, IK_LE, l_wrist_chain, IK_LW = libKinematics.ikpy_arm(l_arm_pos_origins, l_arm_pos_current)
+        l_omega_shoulder, l_elbow_chain, IK_LE, l_wrist_chain, IK_LW = libKinematics.ikpy_left_arm(l_arm_pos_origins, l_arm_pos_current)
 
         #get the RPH values
         l_shoulder_angles = [IK_LW[2], IK_LE[2], IK_LE[3]]
@@ -376,7 +376,7 @@ class GeneratePose():
             time.sleep(0.5)
 
 
-    def solve_ik_tree_yashdata(self, filename, subject, verbose = True):
+    def solve_ik_tree_yashdata(self, filename, subject, movement, verbose = True):
 
         mat_transform_file = "/media/henry/multimodal_data_2/pressure_mat_pose_data/mat_axes.p"
 
@@ -453,6 +453,8 @@ class GeneratePose():
                 print "right hip Euler est: ", r_hip_angles
                 # print "right knee Angle-axis est:", r_omega_knee
                 print "right knee Euler est: ", r_knee_angles
+
+            #print "dir cos is", libKinematics.dir_cos_angles_from_matrix(libKinematics.eulerAnglesToRotationMatrix(r_hip_angles))
             angles['r_hip_angle_axis'] = r_omega_hip
             angles['r_hip_euler'] = r_hip_angles
             angles['r_knee_angle_axis'] = r_knee_angles
@@ -490,7 +492,7 @@ class GeneratePose():
                                           np.array(Jtc[2, :]), np.array(Jtc[4, :])])
 
             # get the IK solution
-            r_omega_shoulder, r_elbow_chain, IK_RE, r_wrist_chain, IK_RW = libKinematics.ikpy_arm(r_arm_pos_origins,
+            r_omega_shoulder, r_elbow_chain, IK_RE, r_wrist_chain, IK_RW = libKinematics.ikpy_right_arm(r_arm_pos_origins,
                                                                                                   r_arm_pos_current)
 
             # get the RPH values
@@ -507,6 +509,9 @@ class GeneratePose():
             angles['r_shoulder_euler'] = r_shoulder_angles
             angles['r_elbow_angle_axis'] = r_elbow_angles
 
+            if r_elbow_angles[1] < 0:
+                print "****************************", subject, movement, "***************************************************"
+
             # grab the joint positions
             l_arm_pos_origins = np.array([np.array(Jtc_origins[1, :]), np.array(Jtc_origins[10, :]), np.array(Jtc_origins[12, :]),
                                           np.array(Jtc_origins[3, :]), np.array(Jtc_origins[5, :])])
@@ -514,7 +519,7 @@ class GeneratePose():
                                           np.array(Jtc[3, :]), np.array(Jtc[5, :])])
 
             # get the IK solution
-            l_omega_shoulder, l_elbow_chain, IK_LE, l_wrist_chain, IK_LW = libKinematics.ikpy_arm(l_arm_pos_origins,
+            l_omega_shoulder, l_elbow_chain, IK_LE, l_wrist_chain, IK_LW = libKinematics.ikpy_left_arm(l_arm_pos_origins,
                                                                                                   l_arm_pos_current)
 
             # get the RPH values
@@ -530,6 +535,9 @@ class GeneratePose():
             angles['l_shoulder_angle_axis'] = l_omega_shoulder
             angles['l_shoulder_euler'] = l_shoulder_angles
             angles['l_elbow_angle_axis'] = l_elbow_angles
+
+            if l_elbow_angles[1] > 0: #40ESJ LH1 #40ESJ LH2
+                print "*********************************", subject, movement, "********************************************************"
 
             plot_first_joint = False
             plot_all_joints = True
@@ -548,12 +556,21 @@ class GeneratePose():
                 #head_chain.plot(IK_H, self.ax)
 
 
-            #self.ax.plot(Jtc_origins[:, 0], Jtc_origins[:, 1], Jtc_origins[:, 2], markerfacecolor='k', markeredgecolor='k', marker='o',  markersize=5, alpha=0.5)
-            #self.ax.plot(Jtc[:, 0], Jtc[:, 1], Jtc[:, 2], markerfacecolor='k', markeredgecolor='k', marker='o',  markersize=5, alpha=0.5)
-            #self.ax.set_xlim(-1, 1)
-            #self.ax.set_ylim(-1, 1)
-            #self.ax.set_zlim(-1, 1)
-            #plt.show()
+            self.ax.plot(Jtc_origins[:, 0], Jtc_origins[:, 1], Jtc_origins[:, 2], markerfacecolor='k', markeredgecolor='k', marker='o',  markersize=5, alpha=0.5)
+            self.ax.plot(Jtc[:, 0], Jtc[:, 1], Jtc[:, 2], markerfacecolor='k', markeredgecolor='k', marker='o',  markersize=5, alpha=0.5)
+            self.ax.set_xlim(-1, 1)
+            self.ax.set_ylim(-1, 1)
+            self.ax.set_zlim(-1, 1)
+            plt.show()
+
+            angles['r_hip_euler'] = angles['r_hip_angle_axis']
+            angles['r_hip_angle_axis'] = libKinematics.dir_cos_angles_from_matrix(libKinematics.eulerAnglesToRotationMatrix(angles['r_hip_euler']))
+            angles['l_hip_euler'] = angles['l_hip_angle_axis']
+            angles['l_hip_angle_axis'] = libKinematics.dir_cos_angles_from_matrix(libKinematics.eulerAnglesToRotationMatrix(angles['l_hip_euler']))
+            angles['r_shoulder_euler'] = angles['r_shoulder_angle_axis']
+            angles['r_shoulder_angle_axis'] = libKinematics.dir_cos_angles_from_matrix(libKinematics.eulerAnglesToRotationMatrix(angles['r_shoulder_euler']))
+            angles['l_shoulder_euler'] = angles['l_shoulder_angle_axis']
+            angles['l_shoulder_angle_axis'] = libKinematics.dir_cos_angles_from_matrix(libKinematics.eulerAnglesToRotationMatrix(angles['l_shoulder_euler']))
 
             new_entry = angles
             new_data.append(new_entry)
@@ -564,20 +581,61 @@ class GeneratePose():
 
     def save_yash_data_with_angles(self):
         movements = ['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
-        subjects = ['1YJAG']#['WE2SZ', 'WFGW9', 'WM9KJ', 'ZV7TE']
+        subjects = ['40ESJ', 'GRTJK', 'TX887', 'WFGW9', 'WM9KJ', 'ZV7TE', 'FMNGQ']
 
         for subject in subjects:
             for movement in movements:
 
                 filename = "/media/henry/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/" + movement + ".p"
                 filename_save = "/media/henry/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/" + movement + "_angles.p"
+                filename_save2 = "/home/henry/pressure_mat_angles/subject_" + subject + "/" + movement + "_angles.p"
 
-                new_data = generator.solve_ik_tree_yashdata(filename, subject, verbose = False)
+                new_data = generator.solve_ik_tree_yashdata(filename, subject, movement, verbose = False)
 
-                print len(new_data), 'length of new data'
+                #sprint len(new_data), 'length of new data'
                 with open(filename_save, 'wb') as fp:
                     pickle.dump(new_data, fp)
                 print 'done saving ', filename_save
+
+                with open(filename_save2, 'wb') as fp:
+                    pickle.dump(new_data, fp)
+                print 'done saving ', filename_save2
+
+
+
+
+    def map_euler_angles_to_axis_angle(self):
+        movements = ['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
+        #subjects = ['FMNGQ', '40ESJ', '4ZZZQ', '5LDJG', 'A4G4Y','G55Q1','GF5Q3', 'GRTJK', 'RQCLC', 'TSQNA', 'TX887', 'WCNOM', 'WE2SZ', 'WFGW9', 'WM9KJ', 'ZV7TE']
+
+        subjects = ['40ESJ', 'GRTJK', 'TX887', 'WFGW9', 'WM9KJ', 'ZV7TE', 'FMNGQ']
+        for subject in subjects:
+            for movement in movements:
+                print "subject: ", subject, " movement: ", movement
+                filename = "/media/henry/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/euler_angles/" + movement + "_angles.p"
+                #filename_save = "/media/henry/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/" + movement + "_angles.p"
+                filename_save = "/home/henry/pressure_mat_angles/subject_" + subject + "/" + movement + "_angles.p"
+
+                with open(filename, 'rb') as fp:
+                    angles_data = pickle.load(fp)
+
+                new_angles_data = []
+                for entry in angles_data:
+                    #print "euler", entry['r_hip_angle_axis']
+                    entry['r_hip_euler'] = entry['r_hip_angle_axis']
+                    entry['r_hip_angle_axis'] = libKinematics.dir_cos_angles_from_matrix(libKinematics.eulerAnglesToRotationMatrix(entry['r_hip_euler']))
+                    entry['l_hip_euler'] = entry['l_hip_angle_axis']
+                    entry['l_hip_angle_axis'] = libKinematics.dir_cos_angles_from_matrix(libKinematics.eulerAnglesToRotationMatrix(entry['l_hip_euler']))
+                    entry['r_shoulder_euler'] = entry['r_shoulder_angle_axis']
+                    entry['r_shoulder_angle_axis'] = libKinematics.dir_cos_angles_from_matrix(libKinematics.eulerAnglesToRotationMatrix(entry['r_shoulder_euler']))
+                    entry['l_shoulder_euler'] = entry['l_shoulder_angle_axis']
+                    entry['l_shoulder_angle_axis'] = libKinematics.dir_cos_angles_from_matrix(libKinematics.eulerAnglesToRotationMatrix(entry['l_shoulder_euler']))
+                    new_angles_data.append(entry)
+                    #print "euler", entry['r_hip_euler']
+                    #print "angleax", entry['r_hip_angle_axis']
+
+                with open(filename_save, 'wb') as fp:
+                    pickle.dump(new_angles_data, fp)
 
     def map_yash_to_smpl_angles(self, verbose = True):
 
@@ -597,6 +655,7 @@ class GeneratePose():
 
 
                     #entry = angles_data[50]
+
                     self.m.pose[6] = entry['r_hip_angle_axis'][0]
                     self.m.pose[7] = entry['r_hip_angle_axis'][1]/2
                     self.m.pose[8] = entry['r_hip_angle_axis'][2]
@@ -699,8 +758,8 @@ if __name__ == "__main__":
     generator = GeneratePose(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
     generator.ax = plt.figure().add_subplot(111, projection='3d')
     #generator.solve_ik_tree_smpl()
-    #generator.save_yash_data_with_angles()
-
+    generator.save_yash_data_with_angles()
+    #generator.map_euler_angles_to_axis_angle()
     #generator.check_found_limits()
 
     #processYashData = ProcessYashData()
@@ -708,9 +767,12 @@ if __name__ == "__main__":
     #processYashData.check_found_limits()
 
     #processYashData.get_r_leg_angles()
-    m, capsules, joint2name, rots0 = generator.map_random_selection_to_smpl_angles(alter_angles = True)
 
-    dss = dart_skel_sim.DartSkelSim(render=True, m=m, capsules=capsules, joint_names=joint2name, initial_rots=rots0)
 
-    generator.standard_render()
-    dss.run_simulation()
+
+    #m, capsules, joint2name, rots0 = generator.map_random_selection_to_smpl_angles(alter_angles = True)
+
+    #dss = dart_skel_sim.DartSkelSim(render=True, m=m, capsules=capsules, joint_names=joint2name, initial_rots=rots0)
+
+    #generator.standard_render()
+    #dss.run_simulation()
