@@ -20,8 +20,8 @@ from time import time
 GRAVITY = -9.81
 STARTING_HEIGHT = 0.8
 
-K = 7000.0
-B = 200000.0
+K = 1269.0
+B = 300000.0
 FRICTION_COEFF = 0.2
 
 NUM_CAPSULES = 20

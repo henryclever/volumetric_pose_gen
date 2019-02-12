@@ -126,7 +126,7 @@ class LibDartSkel():
         if STIFFNESS == "upperbody":
             r_arm_stiffness = 50.0
             l_arm_stiffness = 50.0
-            head_stiffness = 50.0
+            head_stiffness = 100.0
             r_leg_stiffness = 20.0
             l_leg_stiffness = 20.0
             r_knee_stiffness = 20.0
@@ -135,7 +135,7 @@ class LibDartSkel():
         elif STIFFNESS == "lowerbody":
             r_arm_stiffness = 1.0
             l_arm_stiffness = 1.0
-            head_stiffness = 50.0
+            head_stiffness = 100.0
             r_leg_stiffness = 200.0
             l_leg_stiffness = 200.0
             r_knee_stiffness = 200.0
@@ -144,7 +144,7 @@ class LibDartSkel():
         elif STIFFNESS == "rightside":
             r_arm_stiffness = 50.0
             l_arm_stiffness = 1.0
-            head_stiffness = 50.0
+            head_stiffness = 100.0
             r_leg_stiffness = 200.0
             l_leg_stiffness = 20.0
             r_knee_stiffness = 200.0
@@ -153,7 +153,7 @@ class LibDartSkel():
         elif STIFFNESS == "leftside":
             r_arm_stiffness = 1.0
             l_arm_stiffness = 50.0
-            head_stiffness = 50.0
+            head_stiffness = 100.0
             r_leg_stiffness = 20.0
             l_leg_stiffness = 200.0
             r_knee_stiffness = 20.0
@@ -162,7 +162,7 @@ class LibDartSkel():
         else: #not stiff
             r_arm_stiffness = 1.0
             l_arm_stiffness = 1.0
-            head_stiffness = 50.0
+            head_stiffness = 100.0
             r_leg_stiffness = 20.0
             l_leg_stiffness = 20.0
             r_knee_stiffness = 20.0
@@ -301,7 +301,7 @@ class LibDartSkel():
 
         arm_damping = 2.0  # 5.0
         shoulder_damping = 10.0
-        head_damping = 5.0  # 10.0
+        head_damping = 10.0  # 10.0
         leg_damping = 20.0  # 15.0
         knee_damping = 20.0  # 50.0
         torso_damping = 50.0  # 75.0

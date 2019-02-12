@@ -139,8 +139,9 @@ class GeneratePose():
 
         if alter_angles == True:
 
-            entry = self.angles_data.pop()
-            if entry == None:
+            try:
+                entry = self.angles_data.pop()
+            except:
                 print "############################# RESAMPLING !! #################################"
                 filename = "/home/henry/pressure_mat_angles/all_angles.p"
                 with open(filename, 'rb') as fp:
