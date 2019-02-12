@@ -450,7 +450,7 @@ if __name__ == "__main__":
 
 
     gender = "m"
-    num_data = 2000
+    num_data = 50
     posture = "sit"
     stiffness = "rightside"
 
@@ -458,7 +458,7 @@ if __name__ == "__main__":
     generator.generate_prechecked_pose(gender, stiffness, "/home/henry/git/volumetric_pose_gen/valid_shape_pose_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
 
 
-    #generator.generate_dataset(gender = gender, posture = sit, num_data = num_data, stiffness = stiffness)
+    #generator.generate_dataset(gender = gender, posture = posture, num_data = num_data, stiffness = stiffness)
 
     if False:
         generator = GeneratePose("m")

@@ -411,6 +411,11 @@ class LibDartSkel():
 
         return skel
 
+    def assign_capsule_friction(self, skel, friction):
+        for bn in skel.bodynodes:
+            bn.set_friction_coeff(friction)
+        return skel
+
 
     def get_particle_based_damping_force(self, pmat_idx_list, pmat_idx_list_prev, force_dir_list, force_dir_list_prev, force_vel_list, item, B):
 

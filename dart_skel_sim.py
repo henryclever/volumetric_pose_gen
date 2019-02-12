@@ -21,8 +21,8 @@ GRAVITY = -9.81
 STARTING_HEIGHT = 0.8
 
 K = 1269.0
-B = 300000.0
-FRICTION_COEFF = 0.2
+B = 200000.0
+FRICTION_COEFF = 0.3
 
 NUM_CAPSULES = 20
 DART_TO_FLEX_CONV = 2.58872
@@ -224,6 +224,8 @@ class DartSkelSim(object):
         skel = LibDartSkel().assign_joint_rest_and_stiffness(skel, m, STIFFNESS = stiffness)
 
         skel = LibDartSkel().assign_joint_limits_and_damping(skel)
+
+        #skel = LibDartSkel().assign_capsule_friction(skel, friction = 1000.0)
 
 
 
@@ -523,7 +525,7 @@ class DartSkelSim(object):
         print "did a step"
 
         print self.world.skeletons[0].bodynodes[0].C[2]
-        if self.world.skeletons[0].bodynodes[0].C[2] < 0.2 and self.has_reset_velocity == False:
+        if self.world.skeletons[0].bodynodes[0].C[2] < -0.4 and self.has_reset_velocity == False:
             self.world.skeletons[0].reset_momentum()
             self.has_reset_velocity = True
 
