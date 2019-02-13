@@ -176,7 +176,7 @@ class GeneratePose():
                     self.m.pose[18] = np.pi/12
                     self.m.pose[27] = np.pi/12
 
-            R_root = libKinematics.eulerAnglesToRotationMatrix([-float(self.m.pose[0]), 0.0, 0.0])
+            R_root = libKinematics.eulerAnglesToRotationMatrix([-float(self.m.pose[0])/2, 0.0, 0.0])
 
             R_l_hip_rod = libKinematics.matrix_from_dir_cos_angles(entry['l_hip_'+angle_type])
             R_r_hip_rod = libKinematics.matrix_from_dir_cos_angles(entry['r_hip_'+angle_type])
