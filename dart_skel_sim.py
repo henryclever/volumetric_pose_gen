@@ -42,7 +42,8 @@ class DartSkelSim(object):
     def __init__(self, render, m, gender, posture, stiffness, capsules, joint_names, initial_rots, shiftSIDE = 0.0, shiftUD = 0.0):
         self.num_steps = 10000
         self.render_dart = render
-        self.has_reset_velocity = False
+        self.has_reset_velocity1 = False
+        self.has_reset_velocity2 = False
 
         joint_ref = list(m.kintree_table[1]) #joints
         parent_ref = list(m.kintree_table[0]) #parent of each joint
@@ -528,9 +529,13 @@ class DartSkelSim(object):
         print "did a step"
 
         print self.world.skeletons[0].bodynodes[0].C[2]
-        if self.world.skeletons[0].bodynodes[0].C[2] < -0.4 and self.has_reset_velocity == False:
+        if self.world.skeletons[0].bodynodes[0].C[2] < -0.2 and self.has_reset_velocity1 == False:
             self.world.skeletons[0].reset_momentum()
-            self.has_reset_velocity = True
+            self.has_reset_velocity1 = True
+
+        if self.world.skeletons[0].bodynodes[0].C[2] < -0.4 and self.has_reset_velocity2 == False:
+            self.world.skeletons[0].reset_momentum()
+            self.has_reset_velocity2 = True
 
 
         max_vel = 0.0
