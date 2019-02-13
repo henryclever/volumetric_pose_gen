@@ -9,6 +9,7 @@ from pydart2 import skeleton_builder
 from dart_opengl_window import GLUTWindow
 
 from lib_dart_skel import LibDartSkel
+from capsule_body import get_capsules, joint2name, rots0
 
 import OpenGL.GL as GL
 import OpenGL.GLU as GLU
@@ -39,9 +40,24 @@ class DampingController(object):
         return damping
 
 class DartSkelSim(object):
-    def __init__(self, render, m, gender, posture, stiffness, capsules, joint_names, initial_rots, shiftSIDE = 0.0, shiftUD = 0.0):
+    def __init__(self, render, m, gender, posture, stiffness, shiftSIDE = 0.0, shiftUD = 0.0):
+
+        if gender == "n":
+            regs = np.load('/home/henry/git/smplify_public/code/models/regressors_locked_normalized_hybrid.npz')
+        elif gender == "f":
+            regs = np.load('/home/henry/git/smplify_public/code/models/regressors_locked_normalized_female.npz')
+        else:
+            regs = np.load('/home/henry/git/smplify_public/code/models/regressors_locked_normalized_male.npz')
+        length_regs = regs['betas2lens']
+        rad_regs = regs['betas2rads']
+        betas = m.betas
+
+        capsules = get_capsules(m, betas, length_regs, rad_regs)
+        joint_names = joint2name
+        initial_rots = rots0
         self.num_steps = 10000
         self.render_dart = render
+
         self.has_reset_velocity1 = False
         self.has_reset_velocity2 = False
 
@@ -117,15 +133,15 @@ class DartSkelSim(object):
                 if i < 20:
                     capsule_locs.append(list(np.asarray(np.transpose(capsules[i].t)[0]) - np.asarray(np.transpose(capsules[red_parent_ref[i]].t)[0])))
                     capsule_locs_abs.append(list(np.asarray(np.transpose(capsules[i].t)[0]) - joint_root_loc))
-                    capsule_locs_abs[i][0] += float(capsules[0].length[0]) / 2
+                    capsule_locs_abs[i][0] += np.abs(float(capsules[0].length[0])) / 2
                     if i in [1, 2]: #shift over the legs relative to where the pelvis mid capsule is
-                        capsule_locs[i][0] += float(capsules[0].length[0]) / 2
+                        capsule_locs[i][0] += np.abs(float(capsules[0].length[0])) / 2
                     if i in [3, 6, 9]: #shift over the torso segments relative to their length and their parents length to match the mid capsule
-                        capsule_locs[i][0] -= (float(capsules[i].length[0])-float(capsules[red_parent_ref[i]].length[0]))/2
+                        capsule_locs[i][0] -= (np.abs(float(capsules[i].length[0]))-np.abs(float(capsules[red_parent_ref[i]].length[0])))/2
                     if i in [10, 11, 12]: #shift over the inner shoulders and neck to match the middle of the top spine capsule
-                        capsule_locs[i][0] += float(capsules[red_parent_ref[i]].length[0]) / 2
+                        capsule_locs[i][0] += np.abs(float(capsules[red_parent_ref[i]].length[0])) / 2
                     if i in [3, 6, 9]: #shift over everything in the abs list to match the root
-                        capsule_locs_abs[i][0] -= float(capsules[i].length[0]) / 2
+                        capsule_locs_abs[i][0] -= np.abs(float(capsules[i].length[0])) / 2
 
         del(joint_locs[10])
         del(joint_locs[10])
@@ -142,8 +158,8 @@ class DartSkelSim(object):
         self.cap_init_rots = []
         for capsule in capsules:
             print "************* Capsule No.",count, joint_names[count], " joint ref: ", red_joint_ref[count]," parent_ref: ", red_parent_ref[count]," ****************"
-            cap_rad = float(capsule.rad[0])
-            cap_len = float(capsule.length[0])
+            cap_rad = np.abs(float(capsule.rad[0]))
+            cap_len = np.abs(float(capsule.length[0]))
             cap_init_rot = list(np.asarray(initial_rots[count]))
 
 
@@ -167,19 +183,6 @@ class DartSkelSim(object):
             self.cap_init_rots.append(np.asarray(cap_init_rot))
 
 
-            #print "radius: ", cap_rad, "   length: ", cap_len
-            #print "Rot0: ", cap_init_rot
-            #print "T joint: ", joint_loc_abs
-            #print "T capsu: ", capsule_loc_abs
-
-            #print list((np.asarray(np.transpose(capsule.t)[0])))
-
-            #print joint_root_loc
-            #print "Rot: ", list(np.asarray(capsule.rod))
-            #print capsule.centers
-
-
-
 
             if count == 0:
                 self.world.add_capsule(parent=int(red_parent_ref[count]), radius=cap_rad, length=cap_len,
@@ -197,14 +200,6 @@ class DartSkelSim(object):
                 self.world.add_capsule(parent=int(red_parent_ref[count]), radius=cap_rad, length=cap_len,
                                        cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc,
                                        joint_type="BALL", joint_name=joint_names[count])
-
-            #self.world.add_capsule(parent=int(-1), radius=cap_rad, length=0.001, cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc_abs, joint_type="BALL", joint_name=joint_names[count])
-            #capsule_loc_abs[0] += 1.0
-            #self.world.add_capsule(parent=int(-1), radius=cap_rad, length=0.001, cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=capsule_loc_abs, joint_type="BALL", joint_name=joint_names[count])
-
-
-            #if count == 10:
-            #    break
             count += 1
 
 
@@ -240,8 +235,8 @@ class DartSkelSim(object):
         volume = []
         for body_ct in range(NUM_CAPSULES):
             #give the capsules a weight propertional to their volume
-            cap_rad = float(capsules[body_ct].rad[0])
-            cap_len = float(capsules[body_ct].length[0])
+            cap_rad = np.abs(float(capsules[body_ct].rad[0]))
+            cap_len = np.abs(float(capsules[body_ct].length[0]))
             volume.append(np.pi*np.square(cap_rad)*(cap_rad*4/3 + cap_len))
 
         volume_torso = volume[0] + volume[3] + volume[6] + volume[9] + volume[11] + volume[12]
@@ -299,8 +294,8 @@ class DartSkelSim(object):
 
         #set the mass moment of inertia matrices
         for body_ct in range(NUM_CAPSULES):
-            radius = float(capsules[body_ct].rad[0])
-            length = float(capsules[body_ct].length[0])
+            radius = np.abs(float(capsules[body_ct].rad[0]))
+            length = np.abs(float(capsules[body_ct].length[0]))
             radius2 = radius * radius
             length2 = length * length
             mass = skel.bodynodes[body_ct].m

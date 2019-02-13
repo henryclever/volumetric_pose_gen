@@ -120,7 +120,7 @@ class GeneratePose():
         not_within_bounds = True
         mu = 0
         counter = 0
-        sigma = np.pi/24
+        sigma = np.pi/16
         while not_within_bounds == True:
 
             noisy_angle = angle + random.normalvariate(mu, sigma)
@@ -291,8 +291,8 @@ class GeneratePose():
     def generate_dataset(self, gender, posture, num_data, stiffness):
         #NEED FOR DATASET: pose Nx72, shape Nx10
         shape_pose_list = []
-        contact_check_bns = [1, 2, 4, 5, 7, 8, 14, 15, 16, 17, 18, 19]
-        #contact_check_bns = [ 4, 5, 7, 8, 16, 17, 18, 19]
+        #contact_check_bns = [1, 2, 4, 5, 7, 8, 14, 15, 16, 17, 18, 19]
+        contact_check_bns = [4, 5, 7, 8, 16, 17, 18, 19]
         contact_exceptions = [[9, 14],[9, 15]]
 
 
@@ -316,7 +316,7 @@ class GeneratePose():
 
                 shape_pose[0] = np.asarray(m.betas).tolist()
 
-                dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture = posture, stiffness=None, capsules=capsules, joint_names=joint2name, initial_rots=rots0)
+                dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture = posture, stiffness=None)
 
                 print "stepping"
                 invalid_pose = False
@@ -384,14 +384,13 @@ class GeneratePose():
     def generate_prechecked_pose(self, gender, posture, stiffness, filename):
         prechecked_pose_list = np.load(filename).tolist()
 
-        from capsule_body import get_capsules, joint2name, rots0
 
 
         print len(prechecked_pose_list)
         shuffle(prechecked_pose_list)
 
         for shape_pose in prechecked_pose_list:
-            print shape_pose
+            #print shape_pose
             #print shape_pose[0]
             #print shape_pose[1]
             #print shape_pose[2]
@@ -404,32 +403,32 @@ class GeneratePose():
                 #print self.m.pose[shape_pose[1][idx]]
                 #print shape_pose[2][idx]
 
-                #self.m.pose[shape_pose[1][idx]] = shape_pose[2][idx]
-                pass
+                self.m.pose[shape_pose[1][idx]] = shape_pose[2][idx]
+
 
             print "shift up down", shape_pose[5]
 
 
-            self.m.pose[3] = -np.pi/10
-            self.m.pose[5] = np.pi/12
-            self.m.pose[8] = np.pi/6
-            self.m.pose[12] = np.pi/4
-            self.m.pose[44] = np.pi/6
-            self.m.pose[53] = np.pi/4
-            self.m.pose[41] = -np.pi/10
-            self.m.pose[50] = -np.pi/8
-            self.m.pose[48] = -np.pi/6
-            self.m.pose[58] = np.pi/6
-            self.m.pose[55] = -np.pi/6
+            #self.m.pose[3] = -np.pi/10
+            #self.m.pose[5] = np.pi/12
+            #self.m.pose[8] = np.pi/6
+            #self.m.pose[12] = np.pi/4
+            #self.m.pose[44] = np.pi/6
+            #self.m.pose[53] = np.pi/4
+            #self.m.pose[41] = -np.pi/10
+            #self.m.pose[50] = -np.pi/8
+            #self.m.pose[48] = -np.pi/6
+            #self.m.pose[58] = np.pi/6
+            #self.m.pose[55] = -np.pi/6
 
             ## Write to an .obj file
-            outmesh_path = "./data/person.obj"
-            with open(outmesh_path, 'w') as fp:
-                for v in self.m.r:
-                    fp.write('v %f %f %f\n' % (v[0], v[1], v[2]))
+            #outmesh_path = "./data/person.obj"
+            #with open(outmesh_path, 'w') as fp:
+            #    for v in self.m.r:
+            #        fp.write('v %f %f %f\n' % (v[0], v[1], v[2]))
 
-                for f in self.m.f + 1:  # Faces are 1-based, not 0-based in obj files
-                    fp.write('f %d %d %d\n' % (f[0], f[1], f[2]))
+            #    for f in self.m.f + 1:  # Faces are 1-based, not 0-based in obj files
+            #        fp.write('f %d %d %d\n' % (f[0], f[1], f[2]))
 
             #rospy.init_node("smpl_viz")
 
@@ -463,11 +462,8 @@ class GeneratePose():
 
             #print self.m.J_transformed[1, :], self.m.J_transformed[4, :]
             # self.m.pose[51] = selection_r
-            capsules = get_capsules(self.m)
-            joint2name = joint2name
-            rots0 = rots0
 
-            dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, capsules=capsules, joint_names=joint2name, initial_rots=rots0, shiftSIDE = shape_pose[4], shiftUD = shape_pose[5])
+            dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose[4], shiftUD = shape_pose[5])
             generator.standard_render()
             dss.run_simulation(10000)
 
@@ -481,9 +477,9 @@ class GeneratePose():
 if __name__ == "__main__":
 
 
-    gender = "m"
+    gender = "f"
     num_data = 100
-    posture = "lay"
+    posture = "sit"
     stiffness = "rightside"
 
     generator = GeneratePose(gender, posture)
