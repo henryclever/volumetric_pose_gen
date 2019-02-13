@@ -376,11 +376,14 @@ class GeneratePose():
             time.sleep(0.5)
 
 
-    def solve_ik_tree_yashdata(self, filename, subject, movement, verbose = True):
+    def solve_ik_tree_yashdata(self, filename, subject, movement, posture, verbose = True):
 
         mat_transform_file = "/media/henry/multimodal_data_2/pressure_mat_pose_data/mat_axes.p"
 
-        bedangle=0.
+        if posture == "sit":
+            bedangle = 60.
+        else:
+            bedangle=0.
 
         jointLimbFiller = libKinematics.JointLimbFiller()
 
@@ -493,11 +496,11 @@ class GeneratePose():
 
             # get the IK solution
             r_omega_shoulder, r_elbow_chain, IK_RE, r_wrist_chain, IK_RW = libKinematics.ikpy_right_arm(r_arm_pos_origins,
-                                                                                                  r_arm_pos_current)
+                                                                                                  r_arm_pos_current, posture)
 
             # get the RPH values
-            r_shoulder_angles = [IK_RW[2], IK_RE[2], IK_RE[3]]
-            r_elbow_angles = [0, IK_RW[5], 0]
+            r_shoulder_angles = [IK_RW[3], IK_RE[3], IK_RE[4]]
+            r_elbow_angles = [0, IK_RW[6], 0]
 
             if verbose == True:
                 print IK_RE, 'IK_RE'
@@ -520,11 +523,11 @@ class GeneratePose():
 
             # get the IK solution
             l_omega_shoulder, l_elbow_chain, IK_LE, l_wrist_chain, IK_LW = libKinematics.ikpy_left_arm(l_arm_pos_origins,
-                                                                                                  l_arm_pos_current)
+                                                                                                  l_arm_pos_current, posture)
 
             # get the RPH values
-            l_shoulder_angles = [IK_LW[2], IK_LE[2], IK_LE[3]]
-            l_elbow_angles = [0, IK_LW[5], 0]
+            l_shoulder_angles = [IK_LW[3], IK_LE[3], IK_LE[4]]
+            l_elbow_angles = [0, IK_LW[6], 0]
 
             if verbose == True:
                 print IK_LE, 'IK_LE'
@@ -579,9 +582,10 @@ class GeneratePose():
         return new_data
 
 
-    def save_yash_data_with_angles(self):
-        movements = ['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
-        subjects = ['40ESJ', 'GRTJK', 'TX887', 'WFGW9', 'WM9KJ', 'ZV7TE', 'FMNGQ']
+    def save_yash_data_with_angles(self, posture):
+        #movements = ['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
+        movements = ['LL_sitting', 'RL_sitting', 'LH_sitting','RH_sitting']
+        subjects = ['40ESJ',  'TX887', 'WFGW9', 'WM9KJ', 'ZV7TE', 'FMNGQ'] #'GRTJK',
 
         for subject in subjects:
             for movement in movements:
@@ -590,7 +594,7 @@ class GeneratePose():
                 filename_save = "/media/henry/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/" + movement + "_angles.p"
                 filename_save2 = "/home/henry/pressure_mat_angles/subject_" + subject + "/" + movement + "_angles.p"
 
-                new_data = generator.solve_ik_tree_yashdata(filename, subject, movement, verbose = False)
+                new_data = generator.solve_ik_tree_yashdata(filename, subject, movement, posture, verbose = False)
 
                 #sprint len(new_data), 'length of new data'
                 with open(filename_save, 'wb') as fp:
@@ -758,7 +762,9 @@ if __name__ == "__main__":
     generator = GeneratePose(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
     generator.ax = plt.figure().add_subplot(111, projection='3d')
     #generator.solve_ik_tree_smpl()
-    generator.save_yash_data_with_angles()
+
+    posture = "sit"
+    generator.save_yash_data_with_angles(posture)
     #generator.map_euler_angles_to_axis_angle()
     #generator.check_found_limits()
 

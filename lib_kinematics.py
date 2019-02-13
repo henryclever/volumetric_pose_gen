@@ -337,23 +337,29 @@ def ikpy_leg(origins, current):
 
 
 
-def ikpy_left_arm(origin, current):
+def ikpy_left_arm(origin, current, posture = "lay"):
 
     #shoulder_rot1 = (origin[3, :] - origin[2, :])/np.linalg.norm(origin[3, :] - origin[2, :])
     #shoulder_rot1 = list(shoulder_rot1)
 
+    if posture == "sit":
+        shoulder_rot = (np.pi/3)
+    else:
+        shoulder_rot = 0.
 
     elbow_chain = Chain(name='elbow', links=[
         OriginLink(),
         URDFLink(name="neck", translation_vector=origin[1, :] - origin[0, :],
                  orientation=[0, 0, 0], rotation=[1, 0, 0], bounds=(-np.pi, np.pi),),
-        URDFLink(name="shoulder_1", translation_vector=origin[2, :] - origin[1, :],
+        URDFLink(name="shoulder_init", translation_vector=origin[2, :] - origin[1, :],
+                 orientation=[shoulder_rot, 0, 0], rotation=[1, 0, 0], bounds=(-np.pi, np.pi),),
+        URDFLink(name="shoulder_1", translation_vector=[0, 0, 0],
                  orientation=[0, 0, 0], rotation=[0, 0, 1], bounds=(-np.pi, np.pi),),
-        URDFLink(name="shoulder_2", translation_vector=[.0, 0, 0],
+        URDFLink(name="shoulder_2", translation_vector=[0, 0, 0],
                  orientation=[0, 0, 0], rotation=[0, 1, 0], bounds=(-np.pi, np.pi),),
         URDFLink(name="elbow", translation_vector=origin[3, :] - origin[2, :],
                  orientation=[0, 0, 0], rotation=[0, 1, 0], bounds=(-np.pi, 0.0),), ],
-                              active_links_mask=[False, False, True, True, False]
+                              active_links_mask=[False, False, False, True, True, False]
                               )
 
 
@@ -373,17 +379,19 @@ def ikpy_left_arm(origin, current):
         OriginLink(),
         URDFLink(name="neck", translation_vector=origin[1, :] - origin[0, :],
                  orientation=[0, 0, 0], rotation=[1, 0, 0], bounds=(-np.pi, np.pi),),
-        URDFLink(name="shoulder_1", translation_vector=origin[2, :] - origin[1, :],
-                 orientation=[0, 0, IK_E[2]], rotation=[0, 0, 1], bounds=(-np.pi, np.pi),),
+        URDFLink(name="shoulder_init", translation_vector=origin[2, :] - origin[1, :],
+                 orientation=[shoulder_rot, 0, 0], rotation=[1, 0, 0], bounds=(-np.pi, np.pi),),
+        URDFLink(name="shoulder_1", translation_vector=[0, 0, 0],
+                 orientation=[0, 0, IK_E[3]], rotation=[0, 0, 1], bounds=(-np.pi, np.pi),),
         URDFLink(name="shoulder_2", translation_vector=[0, 0, 0],
-                 orientation=[0, IK_E[3], 0], rotation=[0, 1, 0], bounds=(-np.pi, np.pi),),
+                 orientation=[0, IK_E[4], 0], rotation=[0, 1, 0], bounds=(-np.pi, np.pi),),
         URDFLink(name="shoulder_3", translation_vector=[.0, 0, 0],
                  orientation=[0, 0, 0], rotation=[1, 0, 0], bounds=(-np.pi, np.pi),),
         URDFLink(name="elbow", translation_vector=origin[3, :] - origin[2, :],
                  orientation=[0, 0, 0], rotation=[0, 1, 0], bounds=(-np.pi, 0.0),),
         URDFLink(name="wrist", translation_vector=origin[4, :] - origin[3, :],
                  orientation=[0, 0, 0], rotation=[1, 0, 0], bounds=(-np.pi, np.pi),), ],
-                              active_links_mask=[False, False, False, False, True, True, False]
+                              active_links_mask=[False, False, False, False, False, True, True, False]
                               )
 
     Wrist_Pos = current[4, :] - current[0, :]
@@ -396,9 +404,9 @@ def ikpy_left_arm(origin, current):
     #IK_W *= 0
    # print IK_RW, 'RW'
 
-    shoulder_1 = geometry_utils.Rz_matrix(IK_E[2])
-    shoulder_2 = geometry_utils.Ry_matrix(IK_E[3])
-    shoulder_3 = geometry_utils.Rx_matrix(IK_W[4])
+    shoulder_1 = geometry_utils.Rz_matrix(IK_E[3])
+    shoulder_2 = geometry_utils.Ry_matrix(IK_E[4])
+    shoulder_3 = geometry_utils.Rx_matrix(IK_W[5])
     #print shoulder_1, 'shoulder 1'
     #print shoulder_2, 'shoulder 2'
     #print shoulder_3, 'shoulder 3'
@@ -417,23 +425,29 @@ def ikpy_left_arm(origin, current):
     return omega_shoulder, elbow_chain, IK_E, wrist_chain, IK_W
 
 
-def ikpy_right_arm(origin, current):
+def ikpy_right_arm(origin, current, posture = "lay"):
 
     #shoulder_rot1 = (origin[3, :] - origin[2, :])/np.linalg.norm(origin[3, :] - origin[2, :])
     #shoulder_rot1 = list(shoulder_rot1)
 
+    if posture == "sit":
+        shoulder_rot = (np.pi/3)
+    else:
+        shoulder_rot = 0.
 
     elbow_chain = Chain(name='elbow', links=[
         OriginLink(),
         URDFLink(name="neck", translation_vector=origin[1, :] - origin[0, :],
                  orientation=[0, 0, 0], rotation=[1, 0, 0], bounds=(-np.pi, np.pi),),
-        URDFLink(name="shoulder_1", translation_vector=origin[2, :] - origin[1, :],
+        URDFLink(name="shoulder_init", translation_vector=origin[2, :] - origin[1, :],
+                 orientation=[shoulder_rot, 0, 0], rotation=[1, 0, 0], bounds=(-np.pi, np.pi),),
+        URDFLink(name="shoulder_1", translation_vector=[.0, 0, 0],
                  orientation=[0, 0, 0], rotation=[0, 0, 1], bounds=(-np.pi, np.pi),),
         URDFLink(name="shoulder_2", translation_vector=[.0, 0, 0],
                  orientation=[0, 0, 0], rotation=[0, 1, 0], bounds=(-np.pi, np.pi),),
         URDFLink(name="elbow", translation_vector=origin[3, :] - origin[2, :],
                  orientation=[0, 0, 0], rotation=[0, 1, 0], bounds=(0.0, np.pi),), ],
-                              active_links_mask=[False, False, True, True, False]
+                              active_links_mask=[False, False, False, True, True, False]
                               )
 
 
@@ -453,17 +467,19 @@ def ikpy_right_arm(origin, current):
         OriginLink(),
         URDFLink(name="neck", translation_vector=origin[1, :] - origin[0, :],
                  orientation=[0, 0, 0], rotation=[1, 0, 0], bounds=(-np.pi, np.pi),),
-        URDFLink(name="shoulder_1", translation_vector=origin[2, :] - origin[1, :],
-                 orientation=[0, 0, IK_E[2]], rotation=[0, 0, 1], bounds=(-np.pi, np.pi),),
+        URDFLink(name="shoulder_init", translation_vector=origin[2, :] - origin[1, :],
+                 orientation=[shoulder_rot, 0, 0], rotation=[1, 0, 0], bounds=(-np.pi, np.pi),),
+        URDFLink(name="shoulder_1", translation_vector=[0, 0, 0],
+                 orientation=[0, 0, IK_E[3]], rotation=[0, 0, 1], bounds=(-np.pi, np.pi),),
         URDFLink(name="shoulder_2", translation_vector=[0, 0, 0],
-                 orientation=[0, IK_E[3], 0], rotation=[0, 1, 0], bounds=(-np.pi, np.pi),),
+                 orientation=[0, IK_E[4], 0], rotation=[0, 1, 0], bounds=(-np.pi, np.pi),),
         URDFLink(name="shoulder_3", translation_vector=[.0, 0, 0],
                  orientation=[0, 0, 0], rotation=[1, 0, 0], bounds=(-np.pi, np.pi),),
         URDFLink(name="elbow", translation_vector=origin[3, :] - origin[2, :],
                  orientation=[0, 0, 0], rotation=[0, 1, 0], bounds=(0.0, np.pi),),
         URDFLink(name="wrist", translation_vector=origin[4, :] - origin[3, :],
                  orientation=[0, 0, 0], rotation=[1, 0, 0], bounds=(-np.pi, np.pi),), ],
-                              active_links_mask=[False, False, False, False, True, True, False]
+                              active_links_mask=[False, False, False, False, False, True, True, False]
                               )
 
     Wrist_Pos = current[4, :] - current[0, :]
@@ -476,9 +492,9 @@ def ikpy_right_arm(origin, current):
     #IK_W *= 0
    # print IK_RW, 'RW'
 
-    shoulder_1 = geometry_utils.Rz_matrix(IK_E[2])
-    shoulder_2 = geometry_utils.Ry_matrix(IK_E[3])
-    shoulder_3 = geometry_utils.Rx_matrix(IK_W[4])
+    shoulder_1 = geometry_utils.Rz_matrix(IK_E[3])
+    shoulder_2 = geometry_utils.Ry_matrix(IK_E[4])
+    shoulder_3 = geometry_utils.Rx_matrix(IK_W[5])
     #print shoulder_1, 'shoulder 1'
     #print shoulder_2, 'shoulder 2'
     #print shoulder_3, 'shoulder 3'

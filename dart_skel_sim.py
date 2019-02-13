@@ -39,7 +39,7 @@ class DampingController(object):
         return damping
 
 class DartSkelSim(object):
-    def __init__(self, render, m, gender, stiffness, capsules, joint_names, initial_rots, shiftSIDE = 0.0, shiftUD = 0.0):
+    def __init__(self, render, m, gender, posture, stiffness, capsules, joint_names, initial_rots, shiftSIDE = 0.0, shiftUD = 0.0):
         self.num_steps = 10000
         self.render_dart = render
         self.has_reset_velocity = False
@@ -211,7 +211,10 @@ class DartSkelSim(object):
 
 
         #add a floor-STARTING_HEIGHT / DART_TO_FLEX_CONV
-        self.world.add_weld_box(width = 3.0, length = 3.0, height = 0.2, joint_loc = [0.0, 0.0, -self.STARTING_HEIGHT/DART_TO_FLEX_CONV/2 - 0.05], joint_name = "floor") #-0.05
+        self.world.add_weld_box(width = 3.0, length = 3.0, height = 0.2, joint_loc = [0.0, 0.0, -self.STARTING_HEIGHT/DART_TO_FLEX_CONV/2 - 0.05], box_rot=[0.0, 0.0, 0.0], joint_name = "floor") #-0.05
+
+        if posture == "sit": #need to hack the 0.5 to the right spot
+            self.world.add_weld_box(width = 3.0, length = 3.0, height = 0.2, joint_loc = [0.0, 0.5, 0.0], box_rot=[np.pi/3, 0.0, 0.0], joint_name = "headrest") #-0.05
 
         built_skel = self.world.add_built_skeleton(_skel_id=0, _skel_name="human")
         built_skel.set_self_collision_check(True)

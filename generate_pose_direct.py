@@ -214,10 +214,14 @@ class GeneratePose():
 
 
 
-    def random_bag_yash_data(self, verbose = True):
+    def random_bag_yash_data(self, posture = "lay", verbose = True):
+        if posture == "sit":
+            movements = ['LL_sitting', 'RL_sitting', 'LH_sitting', 'RH_sitting']
+            movement_ct = [150, 150, 200, 200]
 
-        movements = ['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
-        movement_ct = [150, 150, 200, 150, 100, 200, 150, 100]
+        else:
+            movements = ['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
+            movement_ct = [150, 150, 200, 150, 100, 200, 150, 100]
 
         subjects = ['40ESJ', 'GRTJK', 'TX887', 'WFGW9', 'WM9KJ', 'ZV7TE', 'FMNGQ']
         bag = []
@@ -225,12 +229,14 @@ class GeneratePose():
 
         for subject in subjects:
             for movement in range(len(movements)):
-                #print "subject: ", subject, " movement: ", movement
+                print "subject: ", subject, " movement: ", movements[movement]
 
                 filename = "/home/henry/pressure_mat_angles/subject_" + subject + "/" + movements[movement] + "_angles.p"
 
                 with open(filename, 'rb') as fp:
                     angles_data = pickle.load(fp)
+
+                print len(angles_data)
 
                 num_appended = 0
                 shuffle(angles_data)
@@ -248,13 +254,8 @@ class GeneratePose():
 
 
 
-                print "subject: ", subject, "  movement: ", movements[movement], "  ct: ", num_appended
+                #print "subject: ", subject, "  movement: ", movements[movement], "  ct: ", num_appended
 
-
-        filename = "/home/henry/pressure_mat_angles/all_angles.p"
-
-        #with open(filename, 'rb') as fp:
-        #    pickle.dump(bag, fp)
 
         r_hip_angle_axis_0 = []
         r_hip_angle_axis_1 = []
@@ -344,7 +345,8 @@ class GeneratePose():
         print min(l_shoulder_angle_axis_2), max(l_shoulder_angle_axis_2)
         print min(l_elbow_angle_axis_1), max(l_elbow_angle_axis_1)
 
-        pickle.dump(bag, open("/home/henry/pressure_mat_angles/all_angles.p", "wb"))
+
+        pickle.dump(bag, open("/home/henry/pressure_mat_angles/all_"+posture+"_angles.p", "wb"))
 
 
     def get_noisy_angle(self, angle, angle_min, angle_max):
@@ -364,8 +366,9 @@ class GeneratePose():
 
     def map_yash_to_smpl_angles(self, verbose = True):
 
-        movements = ['LL']#, 'RL']#, 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
-        subjects = ['40ESJ']#, 'GRTJK', 'TX887', 'WFGW9', 'WM9KJ', 'ZV7TE' 'FMNGQ']
+        movements = ['LL']#, 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
+
+        subjects = ['40ESJ', 'GRTJK', 'TX887', 'WFGW9', 'WM9KJ', 'ZV7TE' 'FMNGQ']
 
 
         for subject in subjects:
@@ -446,7 +449,7 @@ if __name__ == "__main__":
     #processYashData.get_r_leg_angles()
     #m, capsules, joint2name, rots0 = generator.map_random_selection_to_smpl_angles(alter_angles = True)
 
-    generator.random_bag_yash_data()
+    generator.random_bag_yash_data(posture = "sit")
 
     #m, capsules, joint2name, rots0 = generator.map_yash_to_smpl_angles(True)
    # m, capsules, joint2name, rots0 = generator.map_shuffled_yash_to_smpl_angles(True)
