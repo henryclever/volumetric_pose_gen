@@ -212,7 +212,7 @@ class DartSkelSim(object):
 
 
         #add a floor-STARTING_HEIGHT / DART_TO_FLEX_CONV
-        self.world.add_weld_box(width = 3.0, length = 3.0, height = 0.2, joint_loc = [0.0, 0.0, -self.STARTING_HEIGHT/DART_TO_FLEX_CONV/2 - 0.05], box_rot=[0.0, 0.0, 0.0], joint_name = "floor") #-0.05
+        self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.0, -self.STARTING_HEIGHT/DART_TO_FLEX_CONV/2 - 0.05], box_rot=[0.0, 0.0, 0.0], joint_name = "floor") #-0.05
 
         if posture == "sit": #need to hack the 0.5 to the right spot
             self.world.add_weld_box(width = 3.0, length = 3.0, height = 0.2, joint_loc = [0.0, 0.5, 0.0], box_rot=[np.pi/3, 0.0, 0.0], joint_name = "headrest") #-0.05

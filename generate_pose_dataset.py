@@ -55,7 +55,7 @@ class GeneratePose():
         if posture == "sit":
             filename = "/home/henry/git/volumetric_pose_gen/init_pose_angles/all_sit_angles.p"
         else:
-            filename = "/home/henry/volumetric_pose_gen/init_pose_angles/all_angles.p"
+            filename = "/home/henry/git/volumetric_pose_gen/init_pose_angles/all_angles.p"
         with open(filename, 'rb') as fp:
             self.angles_data = pickle.load(fp)
         shuffle(self.angles_data)
@@ -404,13 +404,38 @@ class GeneratePose():
                 #print self.m.pose[shape_pose[1][idx]]
                 #print shape_pose[2][idx]
 
-                self.m.pose[shape_pose[1][idx]] = shape_pose[2][idx]
+                #self.m.pose[shape_pose[1][idx]] = shape_pose[2][idx]
+                pass
 
             print "shift up down", shape_pose[5]
 
 
-            #libVisualization.rviz_publish_output(np.array(self.m.pose).reshape(24,3))
+            self.m.pose[3] = -np.pi/10
+            self.m.pose[5] = np.pi/12
+            self.m.pose[8] = np.pi/6
+            self.m.pose[12] = np.pi/4
+            self.m.pose[44] = np.pi/6
+            self.m.pose[53] = np.pi/4
+            self.m.pose[41] = -np.pi/10
+            self.m.pose[50] = -np.pi/8
+            self.m.pose[48] = -np.pi/6
+            self.m.pose[58] = np.pi/6
+            self.m.pose[55] = -np.pi/6
 
+            ## Write to an .obj file
+            outmesh_path = "./data/person.obj"
+            with open(outmesh_path, 'w') as fp:
+                for v in self.m.r:
+                    fp.write('v %f %f %f\n' % (v[0], v[1], v[2]))
+
+                for f in self.m.f + 1:  # Faces are 1-based, not 0-based in obj files
+                    fp.write('f %d %d %d\n' % (f[0], f[1], f[2]))
+
+            #rospy.init_node("smpl_viz")
+
+            #while not rospy.is_shutdown():
+            #    libVisualization.rviz_publish_output(np.array(self.m.J_transformed))
+            #    libVisualization.rviz_publish_output_limbs_direct(np.array(self.m.J_transformed))
             #self.m.pose[0] = np.pi/6
 
             #print self.m.J_transformed[1, :], self.m.J_transformed[4, :]
@@ -458,16 +483,16 @@ if __name__ == "__main__":
 
     gender = "m"
     num_data = 100
-    posture = "sit"
+    posture = "lay"
     stiffness = "rightside"
 
     generator = GeneratePose(gender, posture)
-    #generator.generate_prechecked_pose(gender, posture, stiffness, "/home/henry/git/volumetric_pose_gen/valid_shape_pose_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
+    generator.generate_prechecked_pose(gender, posture, stiffness, "/home/henry/git/volumetric_pose_gen/valid_shape_pose_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
 
 
     #generator.generate_dataset(gender = gender, posture = posture, num_data = num_data, stiffness = stiffness)
 
-    if True:
+    if False:
         generator = GeneratePose("m",  "sit")
         generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "rightside")
         generator = GeneratePose("f",  "sit")
