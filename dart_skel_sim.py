@@ -156,6 +156,8 @@ class DartSkelSim(object):
 
         self.cap_offsets = []
         self.cap_init_rots = []
+        lowest_points = []
+
         for capsule in capsules:
             print "************* Capsule No.",count, joint_names[count], " joint ref: ", red_joint_ref[count]," parent_ref: ", red_parent_ref[count]," ****************"
             cap_rad = np.abs(float(capsule.rad[0]))
@@ -174,7 +176,7 @@ class DartSkelSim(object):
             if count in foot_ref: cap_offset[2] = cap_len/2
             if count in l_arm_ref: cap_offset[0] = cap_len/2
             if count in r_arm_ref: cap_offset[0] = -cap_len/2
-            if count in head_ref: cap_offset[1] = cap_len/2
+            #if count in head_ref: cap_offset[1] = cap_len/2
 
             cap_offset[0] += capsule_loc_abs[0] - joint_loc_abs[0]
             cap_offset[1] += capsule_loc_abs[1] - joint_loc_abs[1] - .04
@@ -200,17 +202,23 @@ class DartSkelSim(object):
                 self.world.add_capsule(parent=int(red_parent_ref[count]), radius=cap_rad, length=cap_len,
                                        cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc,
                                        joint_type="BALL", joint_name=joint_names[count])
+
+            lowest_points.append(np.asarray(joint_locs_trans_abs)[count, 2] - np.abs(float(capsule.rad[0])))
+
+
             count += 1
 
 
-        self.STARTING_HEIGHT = STARTING_HEIGHT - np.min(np.asarray(joint_locs_trans_abs)[:, 2])*DART_TO_FLEX_CONV
+        #print "pelvis cap",
+        #print np.asarray(joint_locs_trans_abs)[:, 2]
+        self.STARTING_HEIGHT = STARTING_HEIGHT - np.min(np.array(lowest_points))*DART_TO_FLEX_CONV
 
 
         #add a floor-STARTING_HEIGHT / DART_TO_FLEX_CONV
         self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.0, -self.STARTING_HEIGHT/DART_TO_FLEX_CONV/2 - 0.05], box_rot=[0.0, 0.0, 0.0], joint_name = "floor") #-0.05
 
         if posture == "sit": #need to hack the 0.5 to the right spot
-            self.world.add_weld_box(width = 3.0, length = 3.0, height = 0.2, joint_loc = [0.0, 0.5, 0.0], box_rot=[np.pi/3, 0.0, 0.0], joint_name = "headrest") #-0.05
+            self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.3, 0.0], box_rot=[np.pi/3, 0.0, 0.0], joint_name = "headrest") #-0.05
 
         built_skel = self.world.add_built_skeleton(_skel_id=0, _skel_name="human")
         built_skel.set_self_collision_check(True)
@@ -519,11 +527,11 @@ class DartSkelSim(object):
         GLUT.glutMainLoop()
 
 
-    def run_sim_step(self, pmat_red_list = [], force_loc_red_dart = [], force_dir_red_dart = [], pmat_idx_red_dart = [], nearest_capsule_list = []):
+    def run_sim_step(self, pmat_red_list = [], force_loc_red_dart = [], force_dir_red_dart = [], pmat_idx_red_dart = [], nearest_capsule_list = [], stiffness = None):
         self.world.step()
         print "did a step"
 
-        print self.world.skeletons[0].bodynodes[0].C[2]
+        #print self.world.skeletons[0].bodynodes[0].C[2]
         if self.world.skeletons[0].bodynodes[0].C[2] < -0.2 and self.has_reset_velocity1 == False:
             self.world.skeletons[0].reset_momentum()
             self.has_reset_velocity1 = True
@@ -531,6 +539,17 @@ class DartSkelSim(object):
         if self.world.skeletons[0].bodynodes[0].C[2] < -0.4 and self.has_reset_velocity2 == False:
             self.world.skeletons[0].reset_momentum()
             self.has_reset_velocity2 = True
+
+        if stiffness == "upperbody":
+            max_vel_withhold = [11, 12, 14, 15, 16, 17, 18, 19]
+        elif stiffness == "lowerbody":
+            max_vel_withhold = [1, 2, 4, 5, 7, 8]
+        elif stiffness == "leftside":
+            max_vel_withhold = [1, 4, 7, 11, 14, 16, 18]
+        elif stiffness == "rightside":
+            max_vel_withhold = [2, 5, 8, 12, 15, 17, 19]
+        else:
+            max_vel_withhold = []
 
 
         max_vel = 0.0
@@ -557,7 +576,7 @@ class DartSkelSim(object):
             #print "linear v", skel.bodynodes[item].com_linear_velocity()
 
 
-            if np.linalg.norm(skel.bodynodes[item].com_linear_velocity()) > max_vel:
+            if item not in max_vel_withhold and np.linalg.norm(skel.bodynodes[item].com_linear_velocity()) > max_vel:
                 max_vel = np.linalg.norm(skel.bodynodes[item].com_linear_velocity())
 
             if len(force_dir_list[item]) is not 0:
