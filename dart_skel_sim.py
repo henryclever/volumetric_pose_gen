@@ -71,7 +71,7 @@ class DartSkelSim(object):
         pydart.init(verbose=True)
         print('pydart initialization OK')
 
-        self.world = pydart.World(0.001, "EMPTY") #0.003, .0002 #have tried 0.00001
+        self.world = pydart.World(0.002, "EMPTY") #0.003, .0002 #have tried 0.00001
         self.world.set_gravity([0, 0, GRAVITY])#([0, 0,  -9.81])
         self.world.set_collision_detector(detector_type=2)
         self.world.create_empty_skeleton(_skel_name="human")
@@ -536,9 +536,9 @@ class DartSkelSim(object):
             self.world.skeletons[0].reset_momentum()
             self.has_reset_velocity1 = True
 
-        if self.world.skeletons[0].bodynodes[0].C[2] < -0.4 and self.has_reset_velocity2 == False:
-            self.world.skeletons[0].reset_momentum()
-            self.has_reset_velocity2 = True
+        #if self.world.skeletons[0].bodynodes[0].C[2] < -0.4 and self.has_reset_velocity2 == False:
+        #    self.world.skeletons[0].reset_momentum()
+        #    self.has_reset_velocity2 = True
 
         if stiffness == "upperbody":
             max_vel_withhold = [11, 12, 14, 15, 16, 17, 18, 19]

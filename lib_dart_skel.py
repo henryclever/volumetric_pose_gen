@@ -127,47 +127,47 @@ class LibDartSkel():
             r_arm_stiffness = 50.0
             l_arm_stiffness = 50.0
             head_stiffness = 100.0
-            r_leg_stiffness = 50.0
-            l_leg_stiffness = 50.0
-            r_knee_stiffness = 50.0
-            l_knee_stiffness = 50.0
-            torso_stiffness = 500.0#200.0
+            r_leg_stiffness = 20.0
+            l_leg_stiffness = 20.0
+            r_knee_stiffness = 20.0
+            l_knee_stiffness = 20.0
+            torso_stiffness = 100.0#200.0
         elif STIFFNESS == "lowerbody":
             r_arm_stiffness = 1.0
             l_arm_stiffness = 1.0
             head_stiffness = 100.0
-            r_leg_stiffness = 200.0
-            l_leg_stiffness = 200.0
-            r_knee_stiffness = 200.0
-            l_knee_stiffness = 200.0
-            torso_stiffness = 500.0#1000.0
+            r_leg_stiffness = 100.0
+            l_leg_stiffness = 100.0
+            r_knee_stiffness = 100.0
+            l_knee_stiffness = 100.0
+            torso_stiffness = 100.0#1000.0
         elif STIFFNESS == "rightside":
             r_arm_stiffness = 50.0
             l_arm_stiffness = 1.0
             head_stiffness = 100.0
-            r_leg_stiffness = 200.0
-            l_leg_stiffness = 50.0
-            r_knee_stiffness = 200.0
-            l_knee_stiffness = 50.0
-            torso_stiffness = 500.0
+            r_leg_stiffness = 100.0
+            l_leg_stiffness = 20.0
+            r_knee_stiffness = 100.0
+            l_knee_stiffness = 20.0
+            torso_stiffness = 100.0
         elif STIFFNESS == "leftside":
             r_arm_stiffness = 1.0
             l_arm_stiffness = 50.0
             head_stiffness = 100.0
-            r_leg_stiffness = 50.0
-            l_leg_stiffness = 200.0
-            r_knee_stiffness = 50.0
-            l_knee_stiffness = 200.0
-            torso_stiffness = 500.0
+            r_leg_stiffness = 20.0
+            l_leg_stiffness = 100.0
+            r_knee_stiffness = 20.0
+            l_knee_stiffness = 100.0
+            torso_stiffness = 100.0
         else: #not stiff
             r_arm_stiffness = 1.0
             l_arm_stiffness = 1.0
             head_stiffness = 100.0
-            r_leg_stiffness = 50.0
-            l_leg_stiffness = 50.0
-            r_knee_stiffness = 50.0
-            l_knee_stiffness = 50.0
-            torso_stiffness = 500.0#200.0
+            r_leg_stiffness = 20.0
+            l_leg_stiffness = 20.0
+            r_knee_stiffness = 20.0
+            l_knee_stiffness = 20.0
+            torso_stiffness = 100.0#200.0
 
 
 
