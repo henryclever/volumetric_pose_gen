@@ -396,7 +396,8 @@ class GeneratePose():
             #print shape_pose[2]
             for idx in range(len(shape_pose[0])):
                 #print shape_pose[0][idx]
-                self.m.betas[idx] = shape_pose[0][idx]
+                #self.m.betas[idx] = shape_pose[0][idx]
+                pass
 
             for idx in range(len(shape_pose[1])):
                 #print shape_pose[1][idx]
@@ -483,10 +484,10 @@ if __name__ == "__main__":
     stiffness = "rightside"
 
     generator = GeneratePose(gender, posture)
-    #generator.generate_prechecked_pose(gender, posture, stiffness, "/home/henry/git/volumetric_pose_gen/valid_shape_pose_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
+    generator.generate_prechecked_pose(gender, posture, stiffness, "/home/henry/git/volumetric_pose_gen/valid_shape_pose_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
 
 
-    generator.generate_dataset(gender = gender, posture = posture, num_data = num_data, stiffness = stiffness)
+    #generator.generate_dataset(gender = gender, posture = posture, num_data = num_data, stiffness = stiffness)
 
     if False:
         generator = GeneratePose("m",  "sit")
