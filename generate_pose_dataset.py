@@ -396,8 +396,8 @@ class GeneratePose():
             #print shape_pose[2]
             for idx in range(len(shape_pose[0])):
                 #print shape_pose[0][idx]
-                #self.m.betas[idx] = shape_pose[0][idx]
-                pass
+                self.m.betas[idx] = shape_pose[0][idx]
+
 
             for idx in range(len(shape_pose[1])):
                 #print shape_pose[1][idx]
@@ -478,7 +478,7 @@ class GeneratePose():
 if __name__ == "__main__":
 
 
-    gender = "f"
+    gender = "m"
     num_data = 100
     posture = "sit"
     stiffness = "rightside"
