@@ -19,10 +19,10 @@ from pydart2.gui.opengl.scene import OpenGLScene
 from time import time
 
 GRAVITY = -9.81
-STARTING_HEIGHT = 0.8
+STARTING_HEIGHT = 0.85
 
 K = 1269.0
-B = 100000.0
+B = 50000.0
 FRICTION_COEFF = 0.3
 
 NUM_CAPSULES = 20
@@ -57,6 +57,7 @@ class DartSkelSim(object):
         initial_rots = rots0
         self.num_steps = 10000
         self.render_dart = render
+        self.ct = 0
 
         self.has_reset_velocity1 = False
         self.has_reset_velocity2 = False
@@ -236,18 +237,7 @@ class DartSkelSim(object):
 
 
 
-        if gender == "f":
-            volume_orig = [0.02127805665147671, 0.010343367136157348, 0.010344843136151772, 0.011818446225421707,
-                             0.005001256939006257, 0.004999962079534084, 0.012776266037753708, 0.0012267044071123331,
-                             0.0012268511252850407, 0.01562451377505744, 0.0033500862177602117, 0.0028296370679284214,
-                             0.002828833374852818, 0.005804868174710956, 0.0023598462447798623, 0.002318332067290198,
-                             0.001172701547336402, 0.0012021859120531354, 0.00047785138658494554, 0.0004934683971392192]
-        elif gender == "m":
-            volume_orig = [0.019959830849662435, 0.010736331586361812, 0.010739415917589975, 0.014070888534796933,
-                           0.0056609848196731765, 0.005658325963147351, 0.012435516873001514, 0.001620158360146436,
-                           0.0016220573895108265, 0.0170596581501253, 0.005081960905770238, 0.004016367973049507,
-                           0.004015974724899399, 0.006886067257721019, 0.0029146327507952267, 0.002964441833110158,
-                           0.0017819310684504994, 0.0018009523087959244, 0.00047785138658494554, 0.0004934683971392186]
+
 
 
         #weight the capsules appropriately
@@ -258,7 +248,6 @@ class DartSkelSim(object):
             cap_len = np.abs(float(capsules[body_ct].length[0]))
             volume.append(np.pi*np.square(cap_rad)*(cap_rad*4/3 + cap_len))
 
-
         volume_torso = volume[0] + volume[3] + volume[6] + volume[9] + volume[11] + volume[12]
         volume_head = volume[10] + volume[13]
 
@@ -268,48 +257,48 @@ class DartSkelSim(object):
         #Trunk(Chest, back and abdomen) Men - 48.30,  Head - 7.10, Thigh - 10.50 x 2, Lower leg - 4.50 x 2, Foot - 1.50 x 2, Upper arm - 3.3 x 2, Forearm - 1.90 x 2, Hand - 0.60 x 2,
         if gender == "f":
             BODY_MASS = 75.0 #kg
-            skel.bodynodes[0].set_mass((volume[0]/volume_orig[0]) * BODY_MASS * 0.5080 * volume[0]/volume_torso)
-            skel.bodynodes[1].set_mass((volume[1]/volume_orig[1]) * BODY_MASS * 0.0830)
-            skel.bodynodes[2].set_mass((volume[2]/volume_orig[2]) * BODY_MASS * 0.0830)
-            skel.bodynodes[3].set_mass((volume[3]/volume_orig[3]) * BODY_MASS * 0.5080 * volume[3]/volume_torso)
-            skel.bodynodes[4].set_mass((volume[4]/volume_orig[4]) * BODY_MASS * 0.0550)
-            skel.bodynodes[5].set_mass((volume[5]/volume_orig[5]) * BODY_MASS * 0.0550)
-            skel.bodynodes[6].set_mass((volume[6]/volume_orig[6]) * BODY_MASS * 0.5080 * volume[6]/volume_torso)
-            skel.bodynodes[7].set_mass((volume[7]/volume_orig[7]) * BODY_MASS * 0.0120)
-            skel.bodynodes[8].set_mass((volume[8]/volume_orig[8]) * BODY_MASS * 0.0120)
-            skel.bodynodes[9].set_mass((volume[9]/volume_orig[9]) * BODY_MASS * 0.5080 * volume[9]/volume_torso)
-            skel.bodynodes[10].set_mass((volume[10]/volume_orig[10]) * BODY_MASS * 0.0940 * volume[10]/volume_head)
-            skel.bodynodes[11].set_mass((volume[11]/volume_orig[11]) * BODY_MASS * 0.5080 * volume[11]/volume_torso)
-            skel.bodynodes[12].set_mass((volume[12]/volume_orig[12]) * BODY_MASS * 0.5080 * volume[12]/volume_torso)
-            skel.bodynodes[13].set_mass((volume[13]/volume_orig[13]) * BODY_MASS * 0.0940 * volume[13]/volume_head)
-            skel.bodynodes[14].set_mass((volume[14]/volume_orig[14]) * BODY_MASS * 0.0270)
-            skel.bodynodes[15].set_mass((volume[15]/volume_orig[15]) * BODY_MASS * 0.0270)
-            skel.bodynodes[16].set_mass((volume[16]/volume_orig[16]) * BODY_MASS * 0.0160)
-            skel.bodynodes[17].set_mass((volume[17]/volume_orig[17]) * BODY_MASS * 0.0160)
-            skel.bodynodes[18].set_mass((volume[18]/volume_orig[18]) * BODY_MASS * 0.0050)
-            skel.bodynodes[19].set_mass((volume[19]/volume_orig[19]) * BODY_MASS * 0.0050)
+            skel.bodynodes[0].set_mass(BODY_MASS * 0.5080 * volume[0]/volume_torso)
+            skel.bodynodes[1].set_mass(BODY_MASS * 0.0830)
+            skel.bodynodes[2].set_mass(BODY_MASS * 0.0830)
+            skel.bodynodes[3].set_mass(BODY_MASS * 0.5080 * volume[3]/volume_torso)
+            skel.bodynodes[4].set_mass(BODY_MASS * 0.0550)
+            skel.bodynodes[5].set_mass(BODY_MASS * 0.0550)
+            skel.bodynodes[6].set_mass(BODY_MASS * 0.5080 * volume[6]/volume_torso)
+            skel.bodynodes[7].set_mass(BODY_MASS * 0.0120)
+            skel.bodynodes[8].set_mass(BODY_MASS * 0.0120)
+            skel.bodynodes[9].set_mass(BODY_MASS * 0.5080 * volume[9]/volume_torso)
+            skel.bodynodes[10].set_mass(BODY_MASS * 0.0940 * volume[10]/volume_head)
+            skel.bodynodes[11].set_mass(BODY_MASS * 0.5080 * volume[11]/volume_torso)
+            skel.bodynodes[12].set_mass(BODY_MASS * 0.5080 * volume[12]/volume_torso)
+            skel.bodynodes[13].set_mass(BODY_MASS * 0.0940 * volume[13]/volume_head)
+            skel.bodynodes[14].set_mass(BODY_MASS * 0.0270)
+            skel.bodynodes[15].set_mass(BODY_MASS * 0.0270)
+            skel.bodynodes[16].set_mass(BODY_MASS * 0.0160)
+            skel.bodynodes[17].set_mass(BODY_MASS * 0.0160)
+            skel.bodynodes[18].set_mass(BODY_MASS * 0.0050)
+            skel.bodynodes[19].set_mass(BODY_MASS * 0.0050)
         else:
             BODY_MASS = 85.0 #kg
-            skel.bodynodes[0].set_mass((volume[0]/volume_orig[0]) * BODY_MASS * 0.4830 * volume[0]/volume_torso)
-            skel.bodynodes[1].set_mass((volume[1]/volume_orig[1]) * BODY_MASS * 0.1050)
-            skel.bodynodes[2].set_mass((volume[2]/volume_orig[2]) * BODY_MASS * 0.1050)
-            skel.bodynodes[3].set_mass((volume[3]/volume_orig[3]) * BODY_MASS * 0.4830 * volume[3]/volume_torso)
-            skel.bodynodes[4].set_mass((volume[4]/volume_orig[4]) * BODY_MASS * 0.0450)
-            skel.bodynodes[5].set_mass((volume[5]/volume_orig[5]) * BODY_MASS * 0.0450)
-            skel.bodynodes[6].set_mass((volume[6]/volume_orig[6]) * BODY_MASS * 0.4830 * volume[6]/volume_torso)
-            skel.bodynodes[7].set_mass((volume[7]/volume_orig[7]) * BODY_MASS * 0.0150)
-            skel.bodynodes[8].set_mass((volume[8]/volume_orig[8]) * BODY_MASS * 0.0150)
-            skel.bodynodes[9].set_mass((volume[9]/volume_orig[9]) * BODY_MASS * 0.4830 * volume[9]/volume_torso)
-            skel.bodynodes[10].set_mass((volume[10]/volume_orig[10]) * BODY_MASS * 0.0710 * volume[10]/volume_head)
-            skel.bodynodes[11].set_mass((volume[11]/volume_orig[11]) * BODY_MASS * 0.4830 * volume[11]/volume_torso)
-            skel.bodynodes[12].set_mass((volume[12]/volume_orig[12]) * BODY_MASS * 0.4830 * volume[12]/volume_torso)
-            skel.bodynodes[13].set_mass((volume[13]/volume_orig[13]) * BODY_MASS * 0.0710 * volume[13]/volume_head)
-            skel.bodynodes[14].set_mass((volume[14]/volume_orig[14]) * BODY_MASS * 0.0330)
-            skel.bodynodes[15].set_mass((volume[15]/volume_orig[15]) * BODY_MASS * 0.0330)
-            skel.bodynodes[16].set_mass((volume[16]/volume_orig[16]) * BODY_MASS * 0.0190)
-            skel.bodynodes[17].set_mass((volume[17]/volume_orig[17]) * BODY_MASS * 0.0190)
-            skel.bodynodes[18].set_mass((volume[18]/volume_orig[18]) * BODY_MASS * 0.0060)
-            skel.bodynodes[19].set_mass((volume[19]/volume_orig[19]) * BODY_MASS * 0.0060)
+            skel.bodynodes[0].set_mass(BODY_MASS * 0.4830 * volume[0]/volume_torso)
+            skel.bodynodes[1].set_mass(BODY_MASS * 0.1050)
+            skel.bodynodes[2].set_mass(BODY_MASS * 0.1050)
+            skel.bodynodes[3].set_mass(BODY_MASS * 0.4830 * volume[3]/volume_torso)
+            skel.bodynodes[4].set_mass(BODY_MASS * 0.0450)
+            skel.bodynodes[5].set_mass(BODY_MASS * 0.0450)
+            skel.bodynodes[6].set_mass(BODY_MASS * 0.4830 * volume[6]/volume_torso)
+            skel.bodynodes[7].set_mass(BODY_MASS * 0.0150)
+            skel.bodynodes[8].set_mass(BODY_MASS * 0.0150)
+            skel.bodynodes[9].set_mass(BODY_MASS * 0.4830 * volume[9]/volume_torso)
+            skel.bodynodes[10].set_mass(BODY_MASS * 0.0710 * volume[10]/volume_head)
+            skel.bodynodes[11].set_mass(BODY_MASS * 0.4830 * volume[11]/volume_torso)
+            skel.bodynodes[12].set_mass(BODY_MASS * 0.4830 * volume[12]/volume_torso)
+            skel.bodynodes[13].set_mass(BODY_MASS * 0.0710 * volume[13]/volume_head)
+            skel.bodynodes[14].set_mass(BODY_MASS * 0.0330)
+            skel.bodynodes[15].set_mass(BODY_MASS * 0.0330)
+            skel.bodynodes[16].set_mass(BODY_MASS * 0.0190)
+            skel.bodynodes[17].set_mass(BODY_MASS * 0.0190)
+            skel.bodynodes[18].set_mass(BODY_MASS * 0.0060)
+            skel.bodynodes[19].set_mass(BODY_MASS * 0.0060)
 
 
         #set the mass moment of inertia matrices
@@ -544,13 +533,16 @@ class DartSkelSim(object):
         print "did a step"
 
         #print self.world.skeletons[0].bodynodes[0].C[2]
-        if self.world.skeletons[0].bodynodes[0].C[2] < -0.2 and self.has_reset_velocity1 == False:
-            self.world.skeletons[0].reset_momentum()
-            self.has_reset_velocity1 = True
+        #if self.world.skeletons[0].bodynodes[0].C[2] < -0.2 and self.has_reset_velocity1 == False:
+        #    self.world.skeletons[0].reset_momentum()
+        #    self.has_reset_velocity1 = True
 
         #if self.world.skeletons[0].bodynodes[0].C[2] < -0.4 and self.has_reset_velocity2 == False:
         #    self.world.skeletons[0].reset_momentum()
         #    self.has_reset_velocity2 = True
+        self.ct += 1
+        if self.ct == 100 or self.ct == 200 or self.ct == 300:
+            self.world.skeletons[0].reset_momentum()
 
         if stiffness == "upperbody":
             max_vel_withhold = [11, 12, 14, 15, 16, 17, 18, 19]
