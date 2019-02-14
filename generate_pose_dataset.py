@@ -477,7 +477,7 @@ class GeneratePose():
 if __name__ == "__main__":
 
 
-    gender = "m"
+    gender = "f"
     num_data = 100
     posture = "sit"
     stiffness = "rightside"
