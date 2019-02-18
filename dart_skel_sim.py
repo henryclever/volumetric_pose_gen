@@ -72,7 +72,7 @@ class DartSkelSim(object):
         pydart.init(verbose=True)
         print('pydart initialization OK')
 
-        self.world = pydart.World(0.002, "EMPTY") #0.003, .0002 #have tried 0.00001
+        self.world = pydart.World(0.002, "EMPTY") #0.003, .0002
         self.world.set_gravity([0, 0, GRAVITY])#([0, 0,  -9.81])
         self.world.set_collision_detector(detector_type=2)
         self.world.create_empty_skeleton(_skel_name="human")
@@ -528,7 +528,7 @@ class DartSkelSim(object):
         GLUT.glutMainLoop()
 
 
-    def run_sim_step(self, pmat_red_list = [], force_loc_red_dart = [], force_dir_red_dart = [], pmat_idx_red_dart = [], nearest_capsule_list = [], stiffness = None):
+    def run_sim_step(self, pmat_red_list = [], force_loc_red_dart = [], force_dir_red_dart = [], pmat_idx_red_dart = [], nearest_capsule_list = [], stiffness = None, kill_dart_vel = False):
         self.world.step()
         print "did a step"
 
@@ -540,8 +540,7 @@ class DartSkelSim(object):
         #if self.world.skeletons[0].bodynodes[0].C[2] < -0.4 and self.has_reset_velocity2 == False:
         #    self.world.skeletons[0].reset_momentum()
         #    self.has_reset_velocity2 = True
-        self.ct += 1
-        if self.ct == 100 or self.ct == 200 or self.ct == 300:
+        if kill_dart_vel == True:
             self.world.skeletons[0].reset_momentum()
 
         if stiffness == "upperbody":
