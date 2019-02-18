@@ -175,6 +175,8 @@ class GeneratePose():
                     self.m.pose[9] = np.pi/12
                     self.m.pose[18] = np.pi/12
                     self.m.pose[27] = np.pi/12
+                self.m.pose[36] = np.pi / 12
+                self.m.pose[45] = np.pi / 12
 
             R_root = libKinematics.eulerAnglesToRotationMatrix([-float(self.m.pose[0])/2, 0.0, 0.0])
 
@@ -365,7 +367,7 @@ class GeneratePose():
                 dss.world.reset()
                 dss.world.destroy()
 
-            pose_indices = [0, 3, 4, 5, 6, 7, 8, 9, 12, 15, 18, 27, 39, 40, 41, 42, 43, 44, 48, 49, 50, 51, 52, 53, 55, 58]
+            pose_indices = [0, 3, 4, 5, 6, 7, 8, 9, 12, 15, 18, 27, 36, 39, 40, 41, 42, 43, 44, 45, 48, 49, 50, 51, 52, 53, 55, 58]
             pose_angles = []
             for index in pose_indices:
                 pose_angles.append(float(m.pose[index]))
@@ -478,7 +480,7 @@ class GeneratePose():
 if __name__ == "__main__":
 
 
-    gender = "m"
+    gender = "f"
     num_data = 100
     posture = "sit"
     stiffness = "rightside"

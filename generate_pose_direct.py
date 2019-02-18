@@ -346,7 +346,7 @@ class GeneratePose():
         print min(l_elbow_angle_axis_1), max(l_elbow_angle_axis_1)
 
 
-        pickle.dump(bag, open("/home/henry/pressure_mat_angles/all_"+posture+"_angles.p", "wb"))
+        pickle.dump(bag, open("/home/henry/git/volumetric_pose_gen/init_pose_angles/all_"+posture+"_angles.p", "wb"))
 
 
     def get_noisy_angle(self, angle, angle_min, angle_max):
