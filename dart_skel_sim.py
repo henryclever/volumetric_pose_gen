@@ -19,10 +19,10 @@ from pydart2.gui.opengl.scene import OpenGLScene
 from time import time
 
 GRAVITY = -9.81
-STARTING_HEIGHT = 0.85
+STARTING_HEIGHT = 0.90
 
 K = 1269.0
-B = 25000.0
+B = 10000.0
 FRICTION_COEFF = 0.3
 
 NUM_CAPSULES = 20
@@ -219,7 +219,7 @@ class DartSkelSim(object):
         self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.0, -self.STARTING_HEIGHT/DART_TO_FLEX_CONV/2 - 0.05], box_rot=[0.0, 0.0, 0.0], joint_name = "floor") #-0.05
 
         if posture == "sit": #need to hack the 0.5 to the right spot
-            self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.3, 0.0], box_rot=[np.pi/3, 0.0, 0.0], joint_name = "headrest") #-0.05
+            self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.35, 0.0], box_rot=[np.pi/3, 0.0, 0.0], joint_name = "headrest") #-0.05
 
         built_skel = self.world.add_built_skeleton(_skel_id=0, _skel_name="human")
         built_skel.set_self_collision_check(True)
@@ -556,6 +556,7 @@ class DartSkelSim(object):
 
 
         max_vel = 0.0
+        max_acc = 0.0
         skel = self.world.skeletons[0]
 
 
@@ -581,6 +582,7 @@ class DartSkelSim(object):
 
             if item not in max_vel_withhold and np.linalg.norm(skel.bodynodes[item].com_linear_velocity()) > max_vel:
                 max_vel = np.linalg.norm(skel.bodynodes[item].com_linear_velocity())
+                max_acc = np.linalg.norm(skel.bodynodes[item].com_linear_acceleration())
 
             if len(force_dir_list[item]) is not 0:
                 item, len(force_dir_list[item])
@@ -646,8 +648,16 @@ class DartSkelSim(object):
 
 
         #this root joint position will tell us how to shift the root when we remesh the capsule model
+
+
+
         root_joint_pos = [skel.bodynodes[0].C[0] - self.cap_offsets[0][0]*np.cos(skel.q[2]) + self.cap_offsets[0][1]*np.sin(skel.q[2]),
                           skel.bodynodes[0].C[1] - self.cap_offsets[0][0]*np.sin(skel.q[2]) - self.cap_offsets[0][1]*np.cos(skel.q[2])]
+
+        print skel.bodynodes[0].C
+        print root_joint_pos
+        print self.cap_offsets[0]
+
         #print "appending time", time() - time_orig
 
         #LibDartSkel().impose_force(skel=skel, body_node=self.body_node, force=self.force, offset_from_centroid=self.offset_from_centroid, cap_offsets=self.cap_offsets, render=False, init=False)
@@ -657,7 +667,7 @@ class DartSkelSim(object):
         self.force_loc_list_prev = force_loc_list
 
 
-        return skel.q, skel.bodynodes, root_joint_pos, max_vel
+        return skel.q, skel.bodynodes, root_joint_pos, max_vel, max_acc
 
 
 

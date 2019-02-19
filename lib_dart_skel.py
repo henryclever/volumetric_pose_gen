@@ -300,11 +300,11 @@ class LibDartSkel():
         ######################################## ASSIGN JOINT LIMITS AND DAMPING #######################################
 
         arm_damping = 1.0  # 5.0
-        shoulder_damping = 10.0
-        head_damping = 10.0  # 10.0
-        leg_damping = 10.0  # 15.0
-        knee_damping = 10.0  # 50.0
-        torso_damping = 50.0  # 75.0
+        shoulder_damping = 1.0
+        head_damping = 5.0  # 10.0
+        leg_damping = 5.0  # 15.0
+        knee_damping = 5.0  # 50.0
+        torso_damping = 20.0  # 75.0
 
         for joint in skel.joints:
             print
