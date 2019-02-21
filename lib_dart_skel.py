@@ -97,7 +97,7 @@ class LibDartSkel():
         #bn = bodynode.BodyNode(skel, 8)
         return skel
 
-    def assign_joint_rest_and_stiffness(self, skel, m, STIFFNESS):
+    def assign_joint_rest_and_stiffness(self, skel, m, STIFFNESS, posture):
 
         ################################# ASSIGN JOINT REST POSITION AND SPRING COEFF ##################################
 
@@ -122,16 +122,19 @@ class LibDartSkel():
         #    leg_stiffness = 200.0
         #    knee_stiffness = 200.0
         #    torso_stiffness = 1000.0
+        if posture == "sit":
+            torso_stiffness = 100.0
+        else:
+            torso_stiffness = 200.0
 
         if STIFFNESS == "upperbody":
-            r_arm_stiffness = 50.0
-            l_arm_stiffness = 50.0
+            r_arm_stiffness = 20.0
+            l_arm_stiffness = 20.0
             head_stiffness = 20.0
             r_leg_stiffness = 10.0
             l_leg_stiffness = 10.0
             r_knee_stiffness = 10.0
             l_knee_stiffness = 10.0
-            torso_stiffness = 100.0#200.0
         elif STIFFNESS == "lowerbody":
             r_arm_stiffness = 1.0
             l_arm_stiffness = 1.0
@@ -140,25 +143,22 @@ class LibDartSkel():
             l_leg_stiffness = 100.0
             r_knee_stiffness = 100.0
             l_knee_stiffness = 100.0
-            torso_stiffness = 100.0#1000.0
         elif STIFFNESS == "rightside":
-            r_arm_stiffness = 50.0
+            r_arm_stiffness = 20.0
             l_arm_stiffness = 1.0
             head_stiffness = 20.0
             r_leg_stiffness = 100.0
             l_leg_stiffness = 10.0
             r_knee_stiffness = 100.0
             l_knee_stiffness = 10.0
-            torso_stiffness = 100.0
         elif STIFFNESS == "leftside":
             r_arm_stiffness = 1.0
-            l_arm_stiffness = 50.0
+            l_arm_stiffness = 20.0
             head_stiffness = 20.0
             r_leg_stiffness = 10.0
             l_leg_stiffness = 100.0
             r_knee_stiffness = 10.0
             l_knee_stiffness = 100.0
-            torso_stiffness = 100.0
         else: #not stiff
             r_arm_stiffness = 1.0
             l_arm_stiffness = 1.0
@@ -167,12 +167,11 @@ class LibDartSkel():
             l_leg_stiffness = 10.0
             r_knee_stiffness = 10.0
             l_knee_stiffness = 10.0
-            torso_stiffness = 100.0#200.0
 
 
 
         for joint in skel.joints:
-            print joint.spring_stiffness(0)
+            #print joint.spring_stiffness(0)
             if joint.name == "leftThigh":
                 joint.set_rest_position(0, float(m.pose[3]))
                 joint.set_rest_position(1, float(m.pose[4]))
@@ -291,7 +290,7 @@ class LibDartSkel():
                 joint.set_spring_stiffness(1, r_arm_stiffness)
                 joint.set_spring_stiffness(2, r_arm_stiffness)
 
-        print skel.q
+        #print skel.q
 
         #print skel.q
         return skel
@@ -414,6 +413,7 @@ class LibDartSkel():
     def assign_capsule_friction(self, skel, friction):
         for bn in skel.bodynodes:
             bn.set_friction_coeff(friction)
+            #bn.set_restitution_coeff(1.0)
         return skel
 
 

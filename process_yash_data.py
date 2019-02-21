@@ -8,8 +8,8 @@ import lib_visualization as libVisualization
 import lib_kinematics as libKinematics
 
 #ROS
-import rospy
-import tf
+#import rospy
+#import tf
 
 import tensorflow as tensorflow
 import cPickle as pickle

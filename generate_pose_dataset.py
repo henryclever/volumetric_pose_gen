@@ -13,8 +13,8 @@ from process_yash_data import ProcessYashData
 import dart_skel_sim
 
 #ROS
-import rospy
-import tf
+#import rospy
+#import tf
 
 
 import math
@@ -389,9 +389,9 @@ class GeneratePose():
 
 
         print len(prechecked_pose_list)
-        shuffle(prechecked_pose_list)
+        #shuffle(prechecked_pose_list)
 
-        for shape_pose in prechecked_pose_list:
+        for shape_pose in prechecked_pose_list[1:]:
             #print shape_pose
             #print shape_pose[0]
             #print shape_pose[1]
@@ -480,16 +480,16 @@ class GeneratePose():
 if __name__ == "__main__":
 
 
-    gender = "f"
+    gender = "m"
     num_data = 100
-    posture = "lay"
+    posture = "sit"
     stiffness = "rightside"
 
     generator = GeneratePose(gender, posture)
-    #generator.generate_prechecked_pose(gender, posture, stiffness, "/home/henry/git/volumetric_pose_gen/valid_shape_pose_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
+    generator.generate_prechecked_pose(gender, posture, stiffness, "/home/henry/git/volumetric_pose_gen/valid_shape_pose_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
 
 
-    generator.generate_dataset(gender = gender, posture = posture, num_data = num_data, stiffness = stiffness)
+    #generator.generate_dataset(gender = gender, posture = posture, num_data = num_data, stiffness = stiffness)
 
     if False:
         generator = GeneratePose("m",  "sit")
