@@ -76,7 +76,7 @@ class DartSkelSim(object):
         self.world = pydart.World(0.002, "EMPTY") #0.003, .0002
         self.world.set_gravity([0, 0, GRAVITY])#([0, 0,  -9.81])
         self.world.set_collision_detector(detector_type=2)
-        self.world.create_empty_skeleton(_skel_name="human")
+        self.world.add_empty_skeleton(_skel_name="human")
 
         self.force_dir_list_prev = [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []]
         self.pmat_idx_list_prev = [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []]
@@ -220,13 +220,12 @@ class DartSkelSim(object):
         self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.0, -self.STARTING_HEIGHT/DART_TO_FLEX_CONV/2 - 0.05], box_rot=[0.0, 0.0, 0.0], joint_name = "floor") #-0.05
 
         if posture == "sit": #need to hack the 0.5 to the right spot
-            self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.35, 0.0], box_rot=[np.pi/3, 0.0, 0.0], joint_name = "headrest") #-0.05
+            self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.37, 0.0], box_rot=[np.pi/3, 0.0, 0.0], joint_name = "headrest") #-0.05
 
-        built_skel = self.world.add_built_skeleton(_skel_id=0, _skel_name="human")
-        built_skel.set_self_collision_check(True)
+        skel = self.world.add_built_skeleton(_skel_id=0, _skel_name="human")
+        skel.set_self_collision_check(True)
+        skel.set_collision_filter(True)
 
-
-        skel = self.world.skeletons[0]
 
         skel = LibDartSkel().assign_init_joint_angles(skel, m, root_joint_type)
 
@@ -338,11 +337,6 @@ class DartSkelSim(object):
             skel.bodynodes[body_ct].set_inertia_entries(Ixx, Iyy, Izz)
 
             body_mass += skel.bodynodes[body_ct].m
-
-
-        for joint in skel.joints:
-            print joint.spring_stiffness(0)#,skel.joints[3].get_spring_stiffness[1],skel.joints[3].get_spring_stiffness[2]
-        #except: print "could not get stiffness of joint ", body_ct
 
 
         print "Body mass is: ", body_mass, "kg"

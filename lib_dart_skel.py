@@ -87,8 +87,6 @@ class LibDartSkel():
         skel_q_init[index_offset+46:49+index_offset] = np.asarray(m.pose[60:63]) #left hand
         skel_q_init[index_offset+49:52+index_offset] = np.asarray(m.pose[63:66]) #right hand
 
-
-
         #this is where you set the angles according to m, the angle axis representation.
         skel.set_positions(skel_q_init)
         #print skel.root_bodynode()

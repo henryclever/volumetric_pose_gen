@@ -389,9 +389,9 @@ class GeneratePose():
 
 
         print len(prechecked_pose_list)
-        #shuffle(prechecked_pose_list)
+        shuffle(prechecked_pose_list)
 
-        for shape_pose in prechecked_pose_list[1:]:
+        for shape_pose in prechecked_pose_list:
             #print shape_pose
             #print shape_pose[0]
             #print shape_pose[1]
