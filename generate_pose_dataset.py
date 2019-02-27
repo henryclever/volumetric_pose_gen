@@ -147,7 +147,10 @@ class GeneratePose():
                 entry = self.angles_data.pop()
             except:
                 print "############################# RESAMPLING !! #################################"
-                filename = "/home/henry/pressure_mat_angles/all_angles.p"
+                if posture == "sit":
+                    filename = "/home/henry/git/volumetric_pose_gen/init_pose_angles/all_sit_angles.p"
+                else:
+                    filename = "/home/henry/git/volumetric_pose_gen/init_pose_angles/all_angles.p"
                 with open(filename, 'rb') as fp:
                     self.angles_data = pickle.load(fp)
                 shuffle(self.angles_data)
@@ -189,43 +192,69 @@ class GeneratePose():
             new_left_hip = libKinematics.dir_cos_angles_from_matrix(R_l)
             new_right_hip = libKinematics.dir_cos_angles_from_matrix(R_r)
 
+            flip_leftright = random.choice([True, False])
 
             while True:
                 self.reset_pose = False
+                if flip_leftright == False:
 
-                self.m.pose[3] = generator.get_noisy_angle(new_left_hip[0], -2.047187297216041, 0.0008725992352640336)
-                self.m.pose[4] = generator.get_noisy_angle(new_left_hip[1], -1.0056561780573234, 0.9792596381050885)
-                self.m.pose[5] = generator.get_noisy_angle(new_left_hip[2], -0.83127128871961, 0.9840833280290882)
+                    self.m.pose[3] = generator.get_noisy_angle(new_left_hip[0], -2.047187297216041, 0.0008725992352640336)
+                    self.m.pose[4] = generator.get_noisy_angle(new_left_hip[1], -1.0056561780573234, 0.9792596381050885)
+                    self.m.pose[5] = generator.get_noisy_angle(new_left_hip[2], -0.83127128871961, 0.9840833280290882)
+                    self.m.pose[12] = generator.get_noisy_angle(entry['l_knee_angle_axis'][0], 0.0,  2.320752282574325)
 
-                self.m.pose[12] = generator.get_noisy_angle(entry['l_knee_angle_axis'][0], 0.0,  2.307862756803765)
-
-                #entry = angles_data[50]
-                self.m.pose[6] = generator.get_noisy_angle(new_right_hip[0], -2.0467908364949654, 0.005041331594134009)
-                self.m.pose[7] = generator.get_noisy_angle(new_right_hip[1], -0.9477521700520728, 1.0038579032816006)
-                self.m.pose[8] = generator.get_noisy_angle(new_right_hip[2], -0.8767199629302654,  0.35738032396710084)
-                self.m.pose[15] = generator.get_noisy_angle(entry['r_knee_angle_axis'][0], 0.0, 2.320752282574325)
-
-
-                self.m.pose[39] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][0]*1/3, -1.7636153960682888 * 1 / 3, 1.5740500958475525 * 1 / 3)
-                self.m.pose[40] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][1]*1/3, -1.5168279883317557 * 1 / 3, 1.6123857573735045 * 1 / 3)
-                self.m.pose[41] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][2]*1/3, -1.7656139149798185 * 1 / 3, 1.9844820788036448 * 1 / 3)
-
-                self.m.pose[48] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][0]*2/3, -1.7636153960682888 * 2 / 3, 1.5740500958475525 * 2 / 3)
-                self.m.pose[49] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][1]*2/3, -1.5168279883317557 * 2 / 3, 1.6123857573735045 * 2 / 3)
-                self.m.pose[50] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][2]*2/3, -1.7656139149798185 * 2 / 3, 1.9844820788036448 * 2 / 3)
+                    self.m.pose[6] = generator.get_noisy_angle(new_right_hip[0], -2.047187297216041, 0.0008725992352640336)
+                    self.m.pose[7] = generator.get_noisy_angle(new_right_hip[1], -0.9792596381050885, 1.0056561780573234)
+                    self.m.pose[8] = generator.get_noisy_angle(new_right_hip[2], -0.9840833280290882,  0.83127128871961)
+                    self.m.pose[15] = generator.get_noisy_angle(entry['r_knee_angle_axis'][0], 0.0, 2.320752282574325)
 
 
-                self.m.pose[55] = generator.get_noisy_angle(entry['l_elbow_angle_axis'][1], -2.146677709782182, 0.0)
+                    self.m.pose[39] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][0]*1/3, -1.8819412381973686 * 1 / 3, 1.5740500958475525 * 1 / 3)
+                    self.m.pose[40] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][1]*1/3, -2.452871806175492 * 1 / 3, 1.6424506514942065 * 1 / 3)
+                    self.m.pose[41] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][2]*1/3, -1.8997886932520462 * 1 / 3, 1.9844820788036448 * 1 / 3)
+                    self.m.pose[48] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][0]*2/3, -1.8819412381973686 * 2 / 3, 1.5740500958475525 * 2 / 3)
+                    self.m.pose[49] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][1]*2/3, -2.452871806175492 * 2 / 3, 1.6424506514942065 * 2 / 3)
+                    self.m.pose[50] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][2]*2/3, -1.8997886932520462 * 2 / 3, 1.9844820788036448 * 2 / 3)
+                    self.m.pose[55] = generator.get_noisy_angle(entry['l_elbow_angle_axis'][1], -2.146677709782182, 0.0)
 
-                self.m.pose[42] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][0]*1/3, -1.8819412381973686 * 1 / 3, 1.5386423137579994 * 1 / 3)
-                self.m.pose[43] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][1]*1/3, -1.6424506514942065 * 1 / 3, 2.452871806175492 * 1 / 3)
-                self.m.pose[44] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][2]*1/3, -1.9397148210114974 * 1 / 3, 1.8997886932520462 * 1 / 3)
+                    self.m.pose[42] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][0]*1/3, -1.8819412381973686 * 1 / 3, 1.5740500958475525 * 1 / 3)
+                    self.m.pose[43] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][1]*1/3, -1.6424506514942065 * 1 / 3, 2.452871806175492 * 1 / 3)
+                    self.m.pose[44] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][2]*1/3, -1.9844820788036448 * 1 / 3, 1.8997886932520462 * 1 / 3)
+                    self.m.pose[51] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][0]*2/3, -1.8819412381973686 * 2 / 3, 1.5740500958475525 * 2 / 3)
+                    self.m.pose[52] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][1]*2/3, -1.6424506514942065 * 2 / 3, 2.452871806175492 * 2 / 3)
+                    self.m.pose[53] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][2]*2/3, -1.9844820788036448 * 2 / 3, 1.8997886932520462 * 2 / 3)
+                    self.m.pose[58] = generator.get_noisy_angle(entry['r_elbow_angle_axis'][1], 0.0, 2.146677709782182)
 
-                self.m.pose[51] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][0]*2/3, -1.8819412381973686 * 2 / 3, 1.5386423137579994 * 2 / 3)
-                self.m.pose[52] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][1]*2/3, -1.6424506514942065 * 2 / 3, 2.452871806175492 * 2 / 3)
-                self.m.pose[53] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][2]*2/3, -1.9397148210114974 * 2 / 3, 1.8997886932520462 * 2 / 3)
+                elif flip_leftright == True:
 
-                self.m.pose[58] = generator.get_noisy_angle(entry['r_elbow_angle_axis'][1], 0.0, 2.136934895040784)
+                    self.m.pose[3] = generator.get_noisy_angle(new_right_hip[0], -2.047187297216041, 0.0008725992352640336)
+                    self.m.pose[4] = generator.get_noisy_angle(-new_right_hip[1], -1.0056561780573234, 0.9792596381050885)
+                    self.m.pose[5] = generator.get_noisy_angle(-new_right_hip[2], -0.83127128871961, 0.9840833280290882)
+                    self.m.pose[12] = generator.get_noisy_angle(entry['r_knee_angle_axis'][0], 0.0,  2.320752282574325)
+
+                    self.m.pose[6] = generator.get_noisy_angle(new_left_hip[0], -2.047187297216041, 0.0008725992352640336)
+                    self.m.pose[7] = generator.get_noisy_angle(-new_left_hip[1], -0.9792596381050885, 1.0056561780573234)
+                    self.m.pose[8] = generator.get_noisy_angle(-new_left_hip[2], -0.9840833280290882,  0.83127128871961)
+                    self.m.pose[15] = generator.get_noisy_angle(entry['l_knee_angle_axis'][0], 0.0, 2.320752282574325)
+
+
+                    self.m.pose[39] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][0]*1/3, -1.8819412381973686 * 1 / 3, 1.5740500958475525 * 1 / 3)
+                    self.m.pose[40] = generator.get_noisy_angle(-entry['r_shoulder_'+angle_type][1]*1/3, -2.452871806175492 * 1 / 3, 1.6424506514942065 * 1 / 3)
+                    self.m.pose[41] = generator.get_noisy_angle(-entry['r_shoulder_'+angle_type][2]*1/3, -1.8997886932520462 * 1 / 3, 1.9844820788036448 * 1 / 3)
+                    self.m.pose[48] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][0]*2/3, -1.8819412381973686 * 2 / 3, 1.5740500958475525 * 2 / 3)
+                    self.m.pose[49] = generator.get_noisy_angle(-entry['r_shoulder_'+angle_type][1]*2/3, -2.452871806175492 * 2 / 3, 1.6424506514942065 * 2 / 3)
+                    self.m.pose[50] = generator.get_noisy_angle(-entry['r_shoulder_'+angle_type][2]*2/3, -1.8997886932520462 * 2 / 3, 1.9844820788036448 * 2 / 3)
+                    self.m.pose[55] = generator.get_noisy_angle(-entry['r_elbow_angle_axis'][1], -2.146677709782182, 0.0)
+
+                    self.m.pose[42] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][0]*1/3, -1.8819412381973686 * 1 / 3, 1.5740500958475525 * 1 / 3)
+                    self.m.pose[43] = generator.get_noisy_angle(-entry['l_shoulder_'+angle_type][1]*1/3, -1.6424506514942065 * 1 / 3, 2.452871806175492 * 1 / 3)
+                    self.m.pose[44] = generator.get_noisy_angle(-entry['l_shoulder_'+angle_type][2]*1/3, -1.9844820788036448 * 1 / 3, 1.8997886932520462 * 1 / 3)
+                    self.m.pose[51] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][0]*2/3, -1.8819412381973686 * 2 / 3, 1.5740500958475525 * 2 / 3)
+                    self.m.pose[52] = generator.get_noisy_angle(-entry['l_shoulder_'+angle_type][1]*2/3, -1.6424506514942065 * 2 / 3, 2.452871806175492 * 2 / 3)
+                    self.m.pose[53] = generator.get_noisy_angle(-entry['l_shoulder_'+angle_type][2]*2/3, -1.9844820788036448 * 2 / 3, 1.8997886932520462 * 2 / 3)
+                    self.m.pose[58] = generator.get_noisy_angle(-entry['l_elbow_angle_axis'][1], 0.0, 2.146677709782182)
+
+
 
                 if self.reset_pose == True:
                     pass
@@ -331,7 +360,7 @@ class GeneratePose():
                 #print dss.world.CollisionResult()
                 #print dss.world.collision_result.contacted_bodies
                 print dss.world.collision_result.contact_sets
-                if len( dss.world.collision_result.contacted_bodies) != 0:
+                if len(dss.world.collision_result.contacted_bodies) != 0:
                     for contact_set in dss.world.collision_result.contact_sets:
                         if contact_set[0] in contact_check_bns or contact_set[1] in contact_check_bns: #consider removing spine 3 and upper legs
                             if contact_set in contact_exceptions:
@@ -363,7 +392,7 @@ class GeneratePose():
 
                 #dss.world.skeletons[0].remove_all_collision_pairs()
 
-
+                #generator.standard_render()
                 dss.world.reset()
                 dss.world.destroy()
 
@@ -485,8 +514,8 @@ if __name__ == "__main__":
     posture = "sit"
     stiffness = "rightside"
 
-    generator = GeneratePose(gender, posture)
-    generator.generate_prechecked_pose(gender, posture, stiffness, "/home/henry/git/volumetric_pose_gen/valid_shape_pose_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
+    #generator = GeneratePose(gender, posture)
+    #generator.generate_prechecked_pose(gender, posture, stiffness, "/home/henry/git/volumetric_pose_gen/valid_shape_pose_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
 
 
     #generator.generate_dataset(gender = gender, posture = posture, num_data = num_data, stiffness = stiffness)
@@ -500,8 +529,9 @@ if __name__ == "__main__":
         generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "leftside")
         generator = GeneratePose("f",  "sit")
         generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "leftside")
-        generator = GeneratePose("m",  "sit")
-        generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "upperbody")
+    if True:
+        #generator = GeneratePose("m",  "sit")
+        #generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "upperbody")
         generator = GeneratePose("f",  "sit")
         generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "upperbody")
         generator = GeneratePose("m",  "sit")
@@ -512,7 +542,7 @@ if __name__ == "__main__":
         generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "none")
         generator = GeneratePose("f",  "sit")
         generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "none")
-
+    if False:
         generator = GeneratePose("m",  "lay")
         generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "rightside")
         generator = GeneratePose("f",  "lay")
@@ -523,6 +553,7 @@ if __name__ == "__main__":
         generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "leftside")
         generator = GeneratePose("m",  "lay")
         generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "upperbody")
+    if False:
         generator = GeneratePose("f",  "lay")
         generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "upperbody")
         generator = GeneratePose("m",  "lay")

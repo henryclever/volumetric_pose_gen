@@ -220,7 +220,7 @@ class DartSkelSim(object):
         self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.0, -self.STARTING_HEIGHT/DART_TO_FLEX_CONV/2 - 0.05], box_rot=[0.0, 0.0, 0.0], joint_name = "floor") #-0.05
 
         if posture == "sit": #need to hack the 0.5 to the right spot
-            self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.37, 0.0], box_rot=[np.pi/3, 0.0, 0.0], joint_name = "headrest") #-0.05
+            self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 8.37, 0.0], box_rot=[np.pi/3, 0.0, 0.0], joint_name = "headrest") #-0.05
 
         skel = self.world.add_built_skeleton(_skel_id=0, _skel_name="human")
         skel.set_self_collision_check(True)
@@ -231,7 +231,7 @@ class DartSkelSim(object):
 
         skel = LibDartSkel().assign_joint_rest_and_stiffness(skel, m, STIFFNESS = stiffness, posture = posture)
 
-        skel = LibDartSkel().assign_joint_limits_and_damping(skel)
+        #skel = LibDartSkel().assign_joint_limits_and_damping(skel)
 
         #skel = LibDartSkel().assign_capsule_friction(skel, friction = 1000.0)
 

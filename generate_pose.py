@@ -12,8 +12,11 @@ from process_yash_data import ProcessYashData
 import dart_skel_sim
 
 #ROS
-import rospy
-import tf
+try:
+    import rospy
+    import tf
+except:
+    pass
 
 import tensorflow as tensorflow
 import cPickle as pickle
@@ -46,21 +49,21 @@ class GeneratePose():
 
         self.m.pose[0] = 0 #pitch rotation of the person in space. 0 means the person is upside down facing back. pi is standing up facing forward
         self.m.pose[1] = 0 #roll of the person in space. -pi/2 means they are tilted to their right side
-        self.m.pose[2] = 0 #-np.pi/4 #yaw of the person in space, like turning around normal to the ground
+        self.m.pose[2] = 0#-np.pi/4 #yaw of the person in space, like turning around normal to the ground
 
         self.m.pose[3] = 0#-np.pi/4 #left hip extension (i.e. leg bends back for np.pi/2)
         self.m.pose[4] = 0#np.pi/8 #left leg yaw about hip, where np.pi/2 makes bowed leg
-        self.m.pose[5] = 0#-np.pi/8 #left leg abduction (POS) /adduction (NEG)
+        self.m.pose[5] = np.pi/4 #left leg abduction (POS) /adduction (NEG)
 
         self.m.pose[6] = 0#-np.pi/4 #right hip extension (i.e. leg bends back for np.pi/2)
-        self.m.pose[7] = 0#-np.pi/2
-        self.m.pose[8] = 0#-np.pi/4 #right leg abduction (NEG) /adduction (POS)
+        self.m.pose[7] = 0#-np.pi/8
+        self.m.pose[8] = -np.pi/4 #right leg abduction (NEG) /adduction (POS)
 
         self.m.pose[9] = 0 #bending of spine at hips. np.pi/2 means person bends down to touch the ground
         self.m.pose[10] = 0 #twisting of spine at hips. body above spine yaws normal to the ground
         self.m.pose[11] = 0 #bending of spine at hips. np.pi/2 means person bends down sideways to touch the ground 3
 
-        self.m.pose[12] = 0#np.pi/3 #left knee extension. (i.e. knee bends back for np.pi/2)
+        self.m.pose[12] = 0#np.pi/4 #left knee extension. (i.e. knee bends back for np.pi/2)
         self.m.pose[13] = 0 #twisting of knee normal to ground. KEEP AT ZERO
         self.m.pose[14] = 0 #bending of knee sideways. KEEP AT ZERO
 
@@ -92,19 +95,19 @@ class GeneratePose():
 
         self.m.pose[39] = 0 #left inner shoulder roll
         self.m.pose[40] = 0 #left inner shoulder yaw, negative moves forward
-        self.m.pose[41] = 0 #left inner shoulder pitch, positive moves up
+        self.m.pose[41] = np.pi/4 #left inner shoulder pitch, positive moves up
 
-        self.m.pose[42] = 0#np.pi/4
+        self.m.pose[42] = 0
         self.m.pose[43] = 0 #right inner shoulder yaw, positive moves forward
-        self.m.pose[44] = 0 #right inner shoulder pitch, positive moves down
+        self.m.pose[44] = -np.pi/4 #right inner shoulder pitch, positive moves down
 
         self.m.pose[45] = 0 #flexion/extension of head 15
 
-        self.m.pose[48] = 0 #left outer shoulder roll
+        self.m.pose[48] = 0#-np.pi/4 #left outer shoulder roll
         self.m.pose[49] = 0#-np.pi/4
         self.m.pose[50] = 0#np.pi/4 #left outer shoulder pitch
 
-        self.m.pose[51] = 0#-np.pi/3 #right outer shoulder roll
+        self.m.pose[51] = 0#-np.pi/4 #right outer shoulder roll
         self.m.pose[52] = 0#np.pi/4
         self.m.pose[53] = 0#-np.pi/4
 
@@ -760,6 +763,7 @@ class GeneratePose():
 
 if __name__ == "__main__":
     generator = GeneratePose(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
+    generator.standard_render()
     generator.ax = plt.figure().add_subplot(111, projection='3d')
     #generator.solve_ik_tree_smpl()
 
