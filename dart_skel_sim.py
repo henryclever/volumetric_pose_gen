@@ -19,6 +19,8 @@ from pydart2.gui.opengl.scene import OpenGLScene
 from time import time
 import scipy.signal as signal
 
+#import pymrt.geometry
+
 GRAVITY = -9.81
 STARTING_HEIGHT = 1.0
 
@@ -41,7 +43,7 @@ class DampingController(object):
         return damping
 
 class DartSkelSim(object):
-    def __init__(self, render, m, gender, posture, stiffness, shiftSIDE = 0.0, shiftUD = 0.0):
+    def __init__(self, render, m, gender, posture, stiffness, shiftSIDE = 0.0, shiftUD = 0.0, check_only_distal = True):
 
         if gender == "n":
             regs = np.load('/home/henry/git/smplify_public/code/models/regressors_locked_normalized_hybrid.npz')
@@ -74,7 +76,7 @@ class DartSkelSim(object):
         pydart.init(verbose=True)
         print('pydart initialization OK')
 
-        self.world = pydart.World(0.0103, "EMPTY") #0.003, .0002 #0.002 is stable
+        self.world = pydart.World(0.0103/5, "EMPTY") #0.003, .0002 #0.002 is stable
         self.world.set_gravity([0, 0, GRAVITY])#([0, 0,  -9.81])
         self.world.set_collision_detector(detector_type=2)
         self.world.add_empty_skeleton(_skel_name="human")
@@ -84,7 +86,6 @@ class DartSkelSim(object):
         self.force_loc_list_prev = [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []]
 
         joint_root_loc = np.asarray(np.transpose(capsules[0].t)[0])
-
 
 
         joint_locs = []
@@ -128,7 +129,6 @@ class DartSkelSim(object):
                 if i < 20:
                     capsule_locs.append(list(np.asarray(np.transpose(capsules[i].t)[0]) - joint_root_loc))
                     capsule_locs_abs.append(list(np.asarray(np.transpose(capsules[i].t)[0]) - joint_root_loc))
-                    print(capsule_locs_abs, "caps locs abs")
             else:
                 joint_locs.append(list(mJ[i, :] - mJ[parent_ref[i], :]))
                 joint_locs_abs.append(list(mJ[i, :] - mJ[0, :]))
@@ -152,6 +152,7 @@ class DartSkelSim(object):
         del(joint_locs_abs[10])
 
         self.joint_locs = joint_locs
+        self.capsule_locs_abs = capsule_locs_abs
 
 
         count = 0
@@ -224,8 +225,14 @@ class DartSkelSim(object):
             self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 8.37, 0.0], box_rot=[np.pi/3, 0.0, 0.0], joint_name = "headrest") #-0.05
 
         skel = self.world.add_built_skeleton(_skel_id=0, _skel_name="human")
-        skel.set_self_collision_check(True)
-        skel.set_collision_filter(True)
+
+        if check_only_distal == True:
+            skel.set_self_collision_check(True)
+            skel.set_collision_filter(True)
+        else:
+            skel.set_self_collision_check(True)
+            skel.set_adjacent_body_check(True)
+
 
 
         skel = LibDartSkel().assign_init_joint_angles(skel, m, root_joint_type)
@@ -254,6 +261,9 @@ class DartSkelSim(object):
 
             volume.append(np.pi*np.square(cap_rad)*(cap_rad*4/3 + cap_len))
             volume_median.append(np.pi*np.square(cap_rad_median)*(cap_rad_median*4/3 + cap_len_median))
+
+        self.volume = volume
+        self.volume_median = volume_median
 
         volume_torso = volume[0] + volume[3] + volume[6] + volume[9] + volume[11] + volume[12]
         volume_head = volume[10] + volume[13]
@@ -383,6 +393,73 @@ class DartSkelSim(object):
             self.a.append(a)
             self.zi.append(signal.lfilter_zi(self.b[-1], self.a[-1]))
 
+
+
+    def getCapsuleVolumes(self):
+
+        self.run_sim_step()
+        contacts = self.world.collision_result.contact_sets
+
+        contacts_with_all_nodes = []
+
+        for body_ct in range(NUM_CAPSULES):
+            #give the capsules a weight propertional to their volume
+            cap_rad = np.abs(float(self.capsules[body_ct].rad[0]))
+            cap_len = np.abs(float(self.capsules[body_ct].length[0]))
+            print body_ct, cap_len, cap_rad,  self.capsule_locs_abs[body_ct], self.volume[body_ct]
+
+            contacts_with_node = []
+            for contact in contacts: #check all possible contacts
+                if body_ct in contact: #check if the contact set includes the node we're looping through
+                    for bn_contact in contact: #get the body node that the node we're looping through is in contact with
+                        if body_ct != bn_contact:
+                            contacts_with_node.append(bn_contact)
+
+            print contacts_with_node
+            contacts_with_all_nodes.append(contacts_with_node)
+
+        for body_ct in range(NUM_CAPSULES):
+            cap_rad = np.abs(float(self.capsules[body_ct].rad[0]))
+            cap_len = np.abs(float(self.capsules[body_ct].length[0]))
+
+
+            if body_ct in [0, 3, 6, 9, 11, 12, 14, 15, 16, 17, 18, 19]:
+
+                x_range = int((self.capsule_locs_abs[body_ct][0] - cap_len - cap_rad)*500), int((self.capsule_locs_abs[body_ct][0] + cap_len + cap_rad)*500)
+                y_range = int((self.capsule_locs_abs[body_ct][1] - cap_rad)*500), int((self.capsule_locs_abs[body_ct][1] + cap_rad)*500)
+                z_range = int((self.capsule_locs_abs[body_ct][2] - cap_rad)*500), int((self.capsule_locs_abs[body_ct][2] + cap_rad)*500)
+                voxel_space = np.zeros((x_range[1]-x_range[0], y_range[1] - y_range[0], y_range[1] - y_range[0]))
+                #voxel_space[]
+                print np.shape(voxel_space)
+
+                #voxel_space[:, :, :, 0] = [x_range[0]:x_range[1], y_range[0]:y_range[1], z_range[0]:z_range[1]]
+
+
+
+
+        #get sphere
+        radius = 4
+        xx, yy, zz = np.mgrid[0:radius*2+1, 0:radius*2+1, 0:radius*2+1]
+        sphere = (xx - radius) ** 2 + (yy - radius) ** 2 + (zz - radius) ** 2
+
+        print sphere
+
+        sphere[sphere <= radius**2] = 1
+        sphere[sphere > radius**2] = 0
+        print sphere
+
+        #get cylinder
+
+
+            #print pymrt.geometry.sphere(3, 1)
+
+
+        print contacts
+
+        return 0
+
+
+
         #print "joint locs",
     def destroyWorld(self):
         self.world.destroy()
@@ -463,7 +540,7 @@ class DartSkelSim(object):
             print "did a step"
             self.world.check_collision()
 
-            if self.count == 190:
+            if self.count%200 == 1:
                 self.world.skeletons[0].reset_momentum()
 
             skel = self.world.skeletons[0]

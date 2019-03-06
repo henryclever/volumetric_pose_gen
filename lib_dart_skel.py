@@ -167,7 +167,6 @@ class LibDartSkel():
             l_knee_stiffness = 10.0
 
 
-
         for joint in skel.joints:
             #print joint.spring_stiffness(0)
             if joint.name == "leftThigh":

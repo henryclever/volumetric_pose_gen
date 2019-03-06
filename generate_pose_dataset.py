@@ -341,6 +341,9 @@ class GeneratePose():
             in_collision = True
             num_samplings = 0
 
+            dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None, check_only_distal = False)
+            volumes = dss.getCapsuleVolumes()
+
             while in_collision == True:
                 #m, capsules, joint2name, rots0 = generator.map_random_selection_to_smpl_angles(alter_angles = True)
                 m, capsules, joint2name, rots0 = generator.map_shuffled_yash_to_smpl_angles(posture, shift_ud, alter_angles = True)
@@ -514,11 +517,11 @@ if __name__ == "__main__":
     posture = "sit"
     stiffness = "rightside"
 
-    #generator = GeneratePose(gender, posture)
+    generator = GeneratePose(gender, posture)
     #generator.generate_prechecked_pose(gender, posture, stiffness, "/home/henry/git/volumetric_pose_gen/valid_shape_pose_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
 
 
-    #generator.generate_dataset(gender = gender, posture = posture, num_data = num_data, stiffness = stiffness)
+    generator.generate_dataset(gender = gender, posture = posture, num_data = num_data, stiffness = stiffness)
 
     if False:
         generator = GeneratePose("m",  "sit")
@@ -529,7 +532,7 @@ if __name__ == "__main__":
         generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "leftside")
         generator = GeneratePose("f",  "sit")
         generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "leftside")
-    if True:
+    if False:#True:
         #generator = GeneratePose("m",  "sit")
         #generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "upperbody")
         generator = GeneratePose("f",  "sit")
