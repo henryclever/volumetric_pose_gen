@@ -25,7 +25,7 @@ GRAVITY = -9.81
 STARTING_HEIGHT = 1.0
 
 K = 1269.0
-B = 2000.
+B = K*2
 FRICTION_COEFF = 0.5
 
 NUM_CAPSULES = 20
@@ -62,6 +62,7 @@ class DartSkelSim(object):
         self.num_steps = 10000
         self.render_dart = render
         self.ct = 0
+        self.num_dart_steps = 4
 
         self.has_reset_velocity1 = False
         self.has_reset_velocity2 = False
@@ -76,7 +77,7 @@ class DartSkelSim(object):
         pydart.init(verbose=True)
         print('pydart initialization OK')
 
-        self.world = pydart.World(0.0103/5, "EMPTY") #0.003, .0002 #0.002 is stable
+        self.world = pydart.World(0.0103/self.num_dart_steps, "EMPTY") #0.003, .0002 #0.002 is stable
         self.world.set_gravity([0, 0, GRAVITY])#([0, 0,  -9.81])
         self.world.set_collision_detector(detector_type=2)
         self.world.add_empty_skeleton(_skel_name="human")
@@ -625,32 +626,10 @@ class DartSkelSim(object):
         GLUT.glutMainLoop()
 
 
-    def run_sim_step(self, pmat_red_list = [], force_loc_red_dart = [], force_dir_red_dart = [], pmat_idx_red_dart = [], nearest_capsule_list = [], stiffness = None, kill_dart_vel = False):
+    def run_sim_step(self, pmat_red_list = [], force_loc_red_dart = [], force_dir_red_dart = [], pmat_idx_red_dart = [], nearest_capsule_list = [], kill_dart_vel = False):
         self.world.step()
-        print "did a step"
-
-        #print self.world.skeletons[0].bodynodes[0].C[2]
-        #if self.world.skeletons[0].bodynodes[0].C[2] < -0.2 and self.has_reset_velocity1 == False:
-        #    self.world.skeletons[0].reset_momentum()
-        #    self.has_reset_velocity1 = True
-
-        #if self.world.skeletons[0].bodynodes[0].C[2] < -0.4 and self.has_reset_velocity2 == False:
-        #    self.world.skeletons[0].reset_momentum()
-        #    self.has_reset_velocity2 = True
         if kill_dart_vel == True:
             self.world.skeletons[0].reset_momentum()
-
-        if stiffness == "upperbody":
-            max_vel_withhold = [11, 12, 14, 15, 16, 17, 18, 19]
-        elif stiffness == "lowerbody":
-            max_vel_withhold = [1, 2, 4, 5, 7, 8]
-        elif stiffness == "leftside":
-            max_vel_withhold = [1, 4, 7, 11, 14, 16, 18]
-        elif stiffness == "rightside":
-            max_vel_withhold = [2, 5, 8, 12, 15, 17, 19]
-        else:
-            max_vel_withhold = []
-
 
         max_vel = 0.0
         max_acc = 0.0
@@ -683,10 +662,18 @@ class DartSkelSim(object):
             accel_vectors_filtered[i], self.zi[i] = signal.lfilter(self.b[i], self.a[i], [accel_vectors[i]], zi=self.zi[i])
         accel_vectors_filtered = accel_vectors_filtered.reshape(len(accel_vectors.tolist())/3, 3)
 
+        #time3 = time() - time2 - time1 - time0
+
+
+
+        active_bn_list = []
+        active_force_resultant_COM_list = []
+        active_moment_at_COM_list = []
+
+
 
         for item in range(len(force_dir_list)):
             #print "linear v", skel.bodynodes[item].com_linear_velocity()
-
 
             #if item not in max_vel_withhold and np.linalg.norm(skel.bodynodes[item].com_linear_velocity()) > max_vel:
 
@@ -750,16 +737,35 @@ class DartSkelSim(object):
 
                 moment_at_COM = np.sum(moments, axis=0)
 
-
+                active_bn_list.append(item)
+                active_force_resultant_COM_list.append(force_resultant_COM)
+                active_moment_at_COM_list.append(moment_at_COM)
                 LibDartSkel().impose_force(skel=skel, body_node=item, force=force_resultant_COM,
                                            offset_from_centroid=np.asarray([0.0, 0.0, 0.0]),
                                            cap_offsets=self.cap_offsets,
                                            render=False, init=False)
 
-
                 LibDartSkel().impose_torque(skel=skel, body_node=item, torque=moment_at_COM, init=False)
 
 
+        #time4 = time() - time3 - time2 - time1 - time0
+
+        #now apply the forces and step through dart for some repeated number of times. not particularly fast. expect 20 ms for
+        for step in range(self.num_dart_steps-1):
+            self.world.step()
+
+            for active_bn in range(len(active_bn_list)):
+                LibDartSkel().impose_force(skel=skel, body_node=active_bn_list[active_bn], force=active_force_resultant_COM_list[active_bn],
+                                           offset_from_centroid=np.asarray([0.0, 0.0, 0.0]),
+                                           cap_offsets=self.cap_offsets,
+                                           render=False, init=False)
+
+                LibDartSkel().impose_torque(skel=skel, body_node=active_bn_list[active_bn], torque=active_moment_at_COM_list[active_bn], init=False)
+
+
+
+
+        #print "dart timing", time1, time2, time3, time4, time() - time4-time3-time2-time1-time0
 
         #this root joint position will tell us how to shift the root when we remesh the capsule model
 

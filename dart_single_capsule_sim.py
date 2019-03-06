@@ -73,7 +73,7 @@ class DartSingleCapsuleSim(object):
         pydart.init(verbose=True)
         print('pydart initialization OK')
 
-        self.world = pydart.World(0.0103, "EMPTY") #0.002 is what works well. 0.0103 is when the velocity aligns. thus flex is 0.0103/0.0020 = 5.15x more fast than dart
+        self.world = pydart.World(0.0103/5, "EMPTY") #0.002 is what works well. 0.0103 is when the velocity aligns. thus flex is 0.0103/0.0020 = 5.15x more fast than dart
         self.world.set_gravity([0, 0, GRAVITY])#([0, 0,  -9.81])
         self.world.set_collision_detector(detector_type=2)
         self.world.add_empty_skeleton(_skel_name="human")
@@ -480,7 +480,7 @@ class DartSingleCapsuleSim(object):
 
     def run_sim_step(self, pmat_red_list = [], force_loc_red_dart = [], force_dir_red_dart = [], pmat_idx_red_dart = [], nearest_capsule_list = [], stiffness = None, kill_dart_vel = False):
         self.world.step()
-        print "did a step"
+        #print "did a step"
 
 
 
@@ -491,7 +491,7 @@ class DartSingleCapsuleSim(object):
         root_joint_pos = [skel.bodynodes[0].C[0] - self.cap_offsets[0][0]*np.cos(skel.q[2]) + self.cap_offsets[0][1]*np.sin(skel.q[2]),
                           skel.bodynodes[0].C[1] - self.cap_offsets[0][0]*np.sin(skel.q[2]) - self.cap_offsets[0][1]*np.cos(skel.q[2])]
 
-        print skel.bodynodes[0]
+        #print skel.bodynodes[0]
 
         return skel.q, skel.bodynodes, root_joint_pos, vel
 
