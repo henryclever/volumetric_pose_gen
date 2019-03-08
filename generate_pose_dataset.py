@@ -342,7 +342,10 @@ class GeneratePose():
             num_samplings = 0
 
             dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None, check_only_distal = False)
-            volumes = dss.getCapsuleVolumes()
+            volumes = dss.getCapsuleVolumes(mm_resolution = 1.)
+
+            #generator.standard_render()
+
 
             while in_collision == True:
                 #m, capsules, joint2name, rots0 = generator.map_random_selection_to_smpl_angles(alter_angles = True)

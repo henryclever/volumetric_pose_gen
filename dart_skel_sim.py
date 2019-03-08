@@ -396,18 +396,22 @@ class DartSkelSim(object):
 
 
 
-    def getCapsuleVolumes(self):
+    def getCapsuleVolumes(self, mm_resolution):
+        print "calculating volumes"
+
+        res_multiplier = 1000./mm_resolution
 
         self.run_sim_step()
         contacts = self.world.collision_result.contact_sets
 
         contacts_with_all_nodes = []
+        voxel_space_list = []
+        capsule_centers_list = []
 
         for body_ct in range(NUM_CAPSULES):
             #give the capsules a weight propertional to their volume
             cap_rad = np.abs(float(self.capsules[body_ct].rad[0]))
             cap_len = np.abs(float(self.capsules[body_ct].length[0]))
-            print body_ct, cap_len, cap_rad,  self.capsule_locs_abs[body_ct], self.volume[body_ct]
 
             contacts_with_node = []
             for contact in contacts: #check all possible contacts
@@ -416,49 +420,240 @@ class DartSkelSim(object):
                         if body_ct != bn_contact:
                             contacts_with_node.append(bn_contact)
 
-            print contacts_with_node
+            #print contacts_with_node
             contacts_with_all_nodes.append(contacts_with_node)
 
-        for body_ct in range(NUM_CAPSULES):
-            cap_rad = np.abs(float(self.capsules[body_ct].rad[0]))
-            cap_len = np.abs(float(self.capsules[body_ct].length[0]))
-
+            len_range = int((self.capsule_locs_abs[body_ct][0] - cap_len/2 - cap_rad)*res_multiplier), int((self.capsule_locs_abs[body_ct][0] + cap_len/2 + cap_rad)*res_multiplier)
+            rad_range = int((self.capsule_locs_abs[body_ct][1] - cap_rad)*res_multiplier), int((self.capsule_locs_abs[body_ct][1] + cap_rad)*res_multiplier)
 
             if body_ct in [0, 3, 6, 9, 11, 12, 14, 15, 16, 17, 18, 19]:
+                voxel_space = np.zeros((len_range[1]-len_range[0], rad_range[1] - rad_range[0], rad_range[1] - rad_range[0]))
+                voxel_space_shape = np.shape(voxel_space)
 
-                x_range = int((self.capsule_locs_abs[body_ct][0] - cap_len - cap_rad)*500), int((self.capsule_locs_abs[body_ct][0] + cap_len + cap_rad)*500)
-                y_range = int((self.capsule_locs_abs[body_ct][1] - cap_rad)*500), int((self.capsule_locs_abs[body_ct][1] + cap_rad)*500)
-                z_range = int((self.capsule_locs_abs[body_ct][2] - cap_rad)*500), int((self.capsule_locs_abs[body_ct][2] + cap_rad)*500)
-                voxel_space = np.zeros((x_range[1]-x_range[0], y_range[1] - y_range[0], y_range[1] - y_range[0]))
-                #voxel_space[]
-                print np.shape(voxel_space)
+                r = voxel_space_shape[1]/2.
+                l = voxel_space_shape[0] - 2*r
 
-                #voxel_space[:, :, :, 0] = [x_range[0]:x_range[1], y_range[0]:y_range[1], z_range[0]:z_range[1]]
+                #get sphere
+                sphere = self.get_sphere_mask(radius = r)
+                voxel_space[0:int(r), :, :] = sphere[0:int(r), :, :]
+                voxel_space[int(r)+int(l):, :, :] = sphere[int(r):, :, :]
+
+                #get x-dir cylinder
+                cylinder = self.get_cylinder_mask(radius = r, length = l, axis = "x")
+                voxel_space[int(r):int(r)+int(l), :, :] = cylinder
+                if body_ct in [0, 3, 6, 9]:
+                    capsule_centers_list.append((np.array(self.capsule_locs_abs[body_ct])*res_multiplier).astype(int))
+                elif body_ct in [11, 14, 16, 18]:
+                    capsule_centers_list.append(((np.array(self.capsule_locs_abs[body_ct])+np.array([cap_len/2, 0, 0]))*res_multiplier).astype(int))
+                elif body_ct in [12, 15, 17, 19]:
+                    capsule_centers_list.append(((np.array(self.capsule_locs_abs[body_ct])-np.array([cap_len/2, 0, 0]))*res_multiplier).astype(int))
+
+
+            elif body_ct in [1, 2, 4, 5, 10, 13]:
+                voxel_space = np.zeros((rad_range[1] - rad_range[0], len_range[1]-len_range[0], rad_range[1] - rad_range[0]))
+                voxel_space_shape = np.shape(voxel_space)
+
+                r = voxel_space_shape[0]/2.
+                l = voxel_space_shape[1] - 2*r
+
+                #get sphere
+                sphere = self.get_sphere_mask(radius = r)
+                voxel_space[:, 0:int(r), :] = sphere[:, 0:int(r), :]
+                voxel_space[:, int(r)+int(l):, :] = sphere[:, int(r):, :]
+
+                #get x-dir cylinder
+                cylinder = self.get_cylinder_mask(radius = r, length = l, axis = "y")
+                voxel_space[:, int(r):int(r)+int(l), :] = cylinder
+                capsule_centers_list.append(((np.array(self.capsule_locs_abs[body_ct])-np.array([0, cap_len/2, 0]))*res_multiplier).astype(int))
+
+            else:
+                voxel_space = np.zeros((rad_range[1] - rad_range[0], rad_range[1] - rad_range[0], len_range[1]-len_range[0]))
+                voxel_space_shape = np.shape(voxel_space)
+
+                r = voxel_space_shape[0]/2.
+                l = voxel_space_shape[2] - 2*r
+
+                #get sphere
+                sphere = self.get_sphere_mask(radius = r)
+                voxel_space[:, :, 0:int(r)] = sphere[:, :, 0:int(r)]
+                voxel_space[:, :, int(r)+int(l):] = sphere[:, :, int(r):]
+
+                #get x-dir cylinder
+                cylinder = self.get_cylinder_mask(radius = r, length = l, axis = "z")
+                voxel_space[:, :, int(r):int(r)+int(l)] = cylinder
+                capsule_centers_list.append(((np.array(self.capsule_locs_abs[body_ct])+np.array([0, 0, cap_len/2]))*res_multiplier).astype(int))
 
 
 
 
-        #get sphere
-        radius = 4
+            voxel_space_list.append(voxel_space)
+
+
+            #print body_ct, cap_len, cap_rad,  self.capsule_locs_abs[body_ct]
+            #print voxel_space_shape, cap_rad, cap_len+2*cap_rad, np.sum(voxel_space)/(res_multiplier*res_multiplier*res_multiplier), self.volume[body_ct]
+
+            #break
+        print "got initial volume"
+
+        volume_mod = []
+        for body_ct in range(NUM_CAPSULES):
+            orig_shape_center = capsule_centers_list[body_ct]
+            orig_shape_dim = np.shape(voxel_space_list[body_ct])
+            #print capsule_centers_list[body_ct], np.shape(voxel_space_list[body_ct])
+            voxel_space_mod = np.copy(voxel_space_list[body_ct])
+            #print body_ct, "vox sum", np.sum(voxel_space_mod)
+
+            duplicate_check = []
+            for other_bn in contacts_with_all_nodes[body_ct]:
+                if other_bn not in duplicate_check:
+                    duplicate_check.append(other_bn)
+                    new_shape_center = capsule_centers_list[other_bn]
+                    new_shape_dim = np.shape(voxel_space_list[other_bn])
+
+                    x_d_resp_orig = - orig_shape_center[0] + orig_shape_dim[0]/2 + new_shape_center[0] - new_shape_dim[0]/2
+                    if x_d_resp_orig < 0: x_d_resp_orig = 0
+                    if x_d_resp_orig > orig_shape_dim[0]: x_d_resp_orig = orig_shape_dim[0]
+
+                    x_u_resp_orig = - orig_shape_center[0] + orig_shape_dim[0]/2 + new_shape_center[0] + new_shape_dim[0]/2
+                    if x_u_resp_orig < 0: x_u_resp_orig = 0
+                    if x_u_resp_orig > orig_shape_dim[0]: x_u_resp_orig = orig_shape_dim[0]
+
+                    x_d_resp_new = orig_shape_center[0] + new_shape_dim[0]/2 - new_shape_center[0] - orig_shape_dim[0]/2
+                    if x_d_resp_new < 0: x_d_resp_new = 0
+                    if x_d_resp_new > new_shape_dim[0]: x_d_resp_new = new_shape_dim[0]
+
+                    x_u_resp_new = orig_shape_center[0] + new_shape_dim[0]/2 - new_shape_center[0] + orig_shape_dim[0]/2
+                    if x_u_resp_new < 0: x_u_resp_new = 0
+                    if x_u_resp_new > new_shape_dim[0]: x_u_resp_new = new_shape_dim[0]
+
+                    x_discrepancy = (x_u_resp_new - x_d_resp_new) - (x_u_resp_orig - x_d_resp_orig)
+                    if x_discrepancy != 0:
+                        print x_discrepancy
+                        if x_discrepancy > 0 and (x_d_resp_orig >= x_discrepancy):
+                            x_d_resp_orig -= x_discrepancy
+                        elif x_discrepancy > 0 and (x_u_resp_orig <= (orig_shape_dim[0] - x_discrepancy)):
+                            x_u_resp_orig += x_discrepancy
+                        elif x_discrepancy < 0 and (x_d_resp_new >= -x_discrepancy):
+                            x_d_resp_new += x_discrepancy
+                        elif x_discrepancy < 0 and (x_u_resp_new <= (new_shape_dim[0] + x_discrepancy)):
+                            x_u_resp_new -= x_discrepancy
+
+
+                    y_d_resp_orig = - orig_shape_center[1] + orig_shape_dim[1]/2 + new_shape_center[1] - new_shape_dim[1]/2
+                    if y_d_resp_orig < 0: y_d_resp_orig = 0
+                    if y_d_resp_orig > orig_shape_dim[1]: y_d_resp_orig = orig_shape_dim[1]
+
+                    y_u_resp_orig = - orig_shape_center[1] + orig_shape_dim[1]/2 + new_shape_center[1] + new_shape_dim[1]/2
+                    if y_u_resp_orig < 0: y_u_resp_orig = 0
+                    if y_u_resp_orig > orig_shape_dim[1]: y_u_resp_orig = orig_shape_dim[1]
+
+                    y_d_resp_new = orig_shape_center[1] + new_shape_dim[1]/2 - new_shape_center[1] - orig_shape_dim[1]/2
+                    if y_d_resp_new < 0: y_d_resp_new = 0
+                    if y_d_resp_new > new_shape_dim[1]: y_d_resp_new = new_shape_dim[1]
+
+                    y_u_resp_new = orig_shape_center[1] + new_shape_dim[1]/2 - new_shape_center[1] + orig_shape_dim[1]/2
+                    if y_u_resp_new < 0: y_u_resp_new = 0
+                    if y_u_resp_new > new_shape_dim[1]: y_u_resp_new = new_shape_dim[1]
+
+
+                    y_discrepancy = (y_u_resp_new - y_d_resp_new) - (y_u_resp_orig - y_d_resp_orig)
+                    if y_discrepancy != 0:
+                        print y_discrepancy
+                        if y_discrepancy > 0 and (y_d_resp_orig >= y_discrepancy):
+                            y_d_resp_orig -= y_discrepancy
+                        elif y_discrepancy > 0 and (y_u_resp_orig <= (orig_shape_dim[1] - y_discrepancy)):
+                            y_u_resp_orig += y_discrepancy
+                        elif y_discrepancy < 0 and (y_d_resp_new >= -y_discrepancy):
+                            y_d_resp_new += y_discrepancy
+                        elif y_discrepancy < 0 and (y_u_resp_new <= (new_shape_dim[1] + y_discrepancy)):
+                            y_u_resp_new -= y_discrepancy
+
+                    z_d_resp_orig = - orig_shape_center[2] + orig_shape_dim[2]/2 + new_shape_center[2] - new_shape_dim[2]/2
+                    if z_d_resp_orig < 0: z_d_resp_orig = 0
+                    if z_d_resp_orig > orig_shape_dim[2]: z_d_resp_orig = orig_shape_dim[2]
+
+                    z_u_resp_orig = - orig_shape_center[2] + orig_shape_dim[2]/2 + new_shape_center[2] + new_shape_dim[2]/2
+                    if z_u_resp_orig < 0: z_u_resp_orig = 0
+                    if z_u_resp_orig > orig_shape_dim[2]: z_u_resp_orig = orig_shape_dim[2]
+
+                    z_d_resp_new = orig_shape_center[2] + new_shape_dim[2]/2 - new_shape_center[2] - orig_shape_dim[2]/2
+                    if z_d_resp_new < 0: z_d_resp_new = 0
+                    if z_d_resp_new > new_shape_dim[2]: z_d_resp_new = new_shape_dim[2]
+
+                    z_u_resp_new = orig_shape_center[2] + new_shape_dim[2]/2 - new_shape_center[2] + orig_shape_dim[2]/2
+                    if z_u_resp_new < 0: z_u_resp_new = 0
+                    if z_u_resp_new > new_shape_dim[2]: z_u_resp_new = new_shape_dim[2]
+
+                    z_discrepancy = (z_u_resp_new - z_d_resp_new) - (z_u_resp_orig - z_d_resp_orig)
+                    if z_discrepancy != 0:
+                        print z_discrepancy
+                        if z_discrepancy > 0 and (z_d_resp_orig >= z_discrepancy):
+                            z_d_resp_orig -= z_discrepancy
+                        elif z_discrepancy > 0 and (z_u_resp_orig <= (orig_shape_dim[2] - z_discrepancy)):
+                            z_u_resp_orig += z_discrepancy
+                        elif z_discrepancy < 0 and (z_d_resp_new >= -z_discrepancy):
+                            z_d_resp_new += z_discrepancy
+                        elif z_discrepancy < 0 and (z_u_resp_new <= (new_shape_dim[2] + z_discrepancy)):
+                            z_u_resp_new -= z_discrepancy
+
+                    print other_bn, x_d_resp_orig, x_u_resp_orig, "out of", orig_shape_dim[0], "  ", x_d_resp_new, x_u_resp_new, "out of", new_shape_dim[0]
+                    print ' ', y_d_resp_orig, y_u_resp_orig, "out of", orig_shape_dim[1], "  ", y_d_resp_new, y_u_resp_new, "out of", new_shape_dim[1]
+                    print ' ', z_d_resp_orig, z_u_resp_orig, "out of", orig_shape_dim[2], "  ", z_d_resp_new, z_u_resp_new, "out of", new_shape_dim[2]
+
+                    #print capsule_centers_list[other_bn], np.shape(voxel_space_list[other_bn])
+
+                    voxel_space_mod[x_d_resp_orig:x_u_resp_orig, y_d_resp_orig:y_u_resp_orig, z_d_resp_orig:z_u_resp_orig] += \
+                        voxel_space_list[other_bn][x_d_resp_new:x_u_resp_new, y_d_resp_new:y_u_resp_new, z_d_resp_new:z_u_resp_new]
+
+                    #print "new vox sum", np.sum(voxel_space_mod)
+
+            voxel_space_mod = np.array(voxel_space_mod.astype(float).flatten())
+            voxel_space_mod[voxel_space_mod == 0] += 1.
+            voxel_space = np.array(np.copy(voxel_space_list[body_ct]).astype(float).flatten())
+            voxel_space_mod = np.divide(voxel_space, voxel_space_mod)
+
+
+            volume_mod.append(np.sum(voxel_space_mod)/(res_multiplier*res_multiplier*res_multiplier))
+
+            volume_discret = np.sum(voxel_space) / (res_multiplier * res_multiplier * res_multiplier)
+
+
+            print body_ct,  self.volume[body_ct], volume_discret, volume_mod[-1]
+
+            #break
+
+
+
+        #print contacts
+
+        return volume_mod
+
+    def get_sphere_mask(self, radius):
+        radius -= 0.5
+
         xx, yy, zz = np.mgrid[0:radius*2+1, 0:radius*2+1, 0:radius*2+1]
         sphere = (xx - radius) ** 2 + (yy - radius) ** 2 + (zz - radius) ** 2
-
-        print sphere
-
         sphere[sphere <= radius**2] = 1
         sphere[sphere > radius**2] = 0
-        print sphere
+        #print sphere.shape
+        return sphere
 
-        #get cylinder
+    def get_cylinder_mask(self, radius, length, axis):
+        radius -= 0.5
 
+        if axis == "x":
+            xx, yy, zz = np.mgrid[0:length, 0:radius*2+1, 0:radius*2+1]
+            cylinder = (yy - radius) ** 2 + (zz - radius) ** 2
+        elif axis == "y":
+            xx, yy, zz = np.mgrid[0:radius*2+1, 0:length, 0:radius*2+1]
+            cylinder = (xx - radius) ** 2 + (zz - radius) ** 2
+        elif axis == "z":
+            xx, yy, zz = np.mgrid[0:radius*2+1, 0:radius*2+1, 0:length]
+            cylinder = (xx - radius) ** 2 + (yy - radius) ** 2
 
-            #print pymrt.geometry.sphere(3, 1)
-
-
-        print contacts
-
-        return 0
-
+        cylinder[cylinder <= radius**2] = 1
+        cylinder[cylinder > radius**2] = 0
+        return cylinder
 
 
         #print "joint locs",
