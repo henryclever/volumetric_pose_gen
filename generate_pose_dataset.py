@@ -343,7 +343,7 @@ class GeneratePose():
             num_samplings = 0
 
             dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None, check_only_distal = False, filepath_prefix=self.filepath_prefix)
-            volumes = dss.getCapsuleVolumes(mm_resolution = 1.)
+            volumes = dss.getCapsuleVolumes(mm_resolution = 1., dataset_num = dataset_create_type)
 
             #generator.standard_render()
             print volumes
