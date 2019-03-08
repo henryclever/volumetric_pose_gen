@@ -222,8 +222,8 @@ class DartSkelSim(object):
         #add a floor-STARTING_HEIGHT / DART_TO_FLEX_CONV
         self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.0, -self.STARTING_HEIGHT/DART_TO_FLEX_CONV/2 - 0.05], box_rot=[0.0, 0.0, 0.0], joint_name = "floor") #-0.05
 
-        if posture == "sit": #need to hack the 0.5 to the right spot
-            self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.48, 0.0], box_rot=[np.pi/3, 0.0, 0.0], joint_name = "headrest") #-0.05
+        #if posture == "sit": #need to hack the 0.5 to the right spot
+        #    self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.48, 0.0], box_rot=[np.pi/3, 0.0, 0.0], joint_name = "headrest") #-0.05
 
         skel = self.world.add_built_skeleton(_skel_id=0, _skel_name="human")
 
@@ -466,7 +466,7 @@ class DartSkelSim(object):
                 voxel_space[:, int(r):int(r)+int(l), :] = cylinder
                 capsule_centers_list.append(((np.array(self.capsule_locs_abs[body_ct])-np.array([0, cap_len/2, 0]))*res_multiplier).astype(int))
 
-            else:
+            elif body_ct in [7, 8]:
                 voxel_space = np.zeros((rad_range[1] - rad_range[0], rad_range[1] - rad_range[0], len_range[1]-len_range[0] + 1))
                 voxel_space_shape = np.shape(voxel_space)
 
