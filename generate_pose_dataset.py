@@ -521,7 +521,7 @@ if __name__ == "__main__":
     num_data = 2000
     posture = "sit"
     stiffness = "leftside"
-    filepath_prefix = "/home/henry"
+    filepath_prefix = "/home/ubuntu"
 
     dataset_create_type = 1
 

@@ -427,11 +427,11 @@ class DartSkelSim(object):
             rad_range = int((self.capsule_locs_abs[body_ct][1] - cap_rad)*res_multiplier), int((self.capsule_locs_abs[body_ct][1] + cap_rad)*res_multiplier)
 
             if body_ct in [0, 3, 6, 9, 11, 12, 14, 15, 16, 17, 18, 19]:
-                voxel_space = np.zeros((len_range[1]-len_range[0], rad_range[1] - rad_range[0], rad_range[1] - rad_range[0]))
+                voxel_space = np.zeros((len_range[1]-len_range[0] + 1, rad_range[1] - rad_range[0], rad_range[1] - rad_range[0]))
                 voxel_space_shape = np.shape(voxel_space)
 
                 r = voxel_space_shape[1]/2.
-                l = voxel_space_shape[0] - 2*r
+                l = voxel_space_shape[0] - 2*r + 1
 
                 #get sphere
                 sphere = self.get_sphere_mask(radius = r)
@@ -450,11 +450,11 @@ class DartSkelSim(object):
 
 
             elif body_ct in [1, 2, 4, 5, 10, 13]:
-                voxel_space = np.zeros((rad_range[1] - rad_range[0], len_range[1]-len_range[0], rad_range[1] - rad_range[0]))
+                voxel_space = np.zeros((rad_range[1] - rad_range[0], len_range[1]-len_range[0] + 1, rad_range[1] - rad_range[0]))
                 voxel_space_shape = np.shape(voxel_space)
 
                 r = voxel_space_shape[0]/2.
-                l = voxel_space_shape[1] - 2*r
+                l = voxel_space_shape[1] - 2*r + 1
 
                 #get sphere
                 sphere = self.get_sphere_mask(radius = r)
@@ -467,11 +467,11 @@ class DartSkelSim(object):
                 capsule_centers_list.append(((np.array(self.capsule_locs_abs[body_ct])-np.array([0, cap_len/2, 0]))*res_multiplier).astype(int))
 
             else:
-                voxel_space = np.zeros((rad_range[1] - rad_range[0], rad_range[1] - rad_range[0], len_range[1]-len_range[0]))
+                voxel_space = np.zeros((rad_range[1] - rad_range[0], rad_range[1] - rad_range[0], len_range[1]-len_range[0] + 1))
                 voxel_space_shape = np.shape(voxel_space)
 
                 r = voxel_space_shape[0]/2.
-                l = voxel_space_shape[2] - 2*r
+                l = voxel_space_shape[2] - 2*r + 1
 
                 #get sphere
                 sphere = self.get_sphere_mask(radius = r)
@@ -506,6 +506,7 @@ class DartSkelSim(object):
             #print body_ct, "vox sum", np.sum(voxel_space_mod)
 
             duplicate_check = []
+            print contacts_with_all_nodes[body_ct]
             for other_bn in contacts_with_all_nodes[body_ct]:
                 if other_bn not in duplicate_check:
                     duplicate_check.append(other_bn)
