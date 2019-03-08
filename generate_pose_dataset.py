@@ -41,21 +41,22 @@ from hmr.src.tf_smpl.batch_smpl import SMPL
 
 
 class GeneratePose():
-    def __init__(self, gender, posture = "lay"):
+    def __init__(self, gender, posture = "lay", filepath_prefix = '/home/henry'):
         ## Load SMPL model (here we load the female model)
+        self.filepath_prefix = filepath_prefix
 
         if gender == "m":
-            model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
+            model_path = filepath_prefix+'/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
         else:
-            model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_f_lbs_10_207_0_v1.0.0.pkl'
+            model_path = filepath_prefix+'/git/SMPL_python_v.1.0.0/smpl/models/basicModel_f_lbs_10_207_0_v1.0.0.pkl'
 
         self.reset_pose = False
         self.m = load_model(model_path)
 
         if posture == "sit":
-            filename = "/home/henry/git/volumetric_pose_gen/init_pose_angles/all_sit_angles.p"
+            filename = filepath_prefix+'/git/volumetric_pose_gen/init_pose_angles/all_sit_angles.p'
         else:
-            filename = "/home/henry/git/volumetric_pose_gen/init_pose_angles/all_angles.p"
+            filename = filepath_prefix+'/git/volumetric_pose_gen/init_pose_angles/all_angles.p'
         with open(filename, 'rb') as fp:
             self.angles_data = pickle.load(fp)
         shuffle(self.angles_data)
@@ -148,9 +149,9 @@ class GeneratePose():
             except:
                 print "############################# RESAMPLING !! #################################"
                 if posture == "sit":
-                    filename = "/home/henry/git/volumetric_pose_gen/init_pose_angles/all_sit_angles.p"
+                    filename = self.filepath_prefix+'/git/volumetric_pose_gen/init_pose_angles/all_sit_angles.p'
                 else:
-                    filename = "/home/henry/git/volumetric_pose_gen/init_pose_angles/all_angles.p"
+                    filename = self.filepath_prefix+'/git/volumetric_pose_gen/init_pose_angles/all_angles.p'
                 with open(filename, 'rb') as fp:
                     self.angles_data = pickle.load(fp)
                 shuffle(self.angles_data)
@@ -341,7 +342,7 @@ class GeneratePose():
             in_collision = True
             num_samplings = 0
 
-            dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None, check_only_distal = False)
+            dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None, check_only_distal = False, filepath_prefix=self.filepath_prefix)
             volumes = dss.getCapsuleVolumes(mm_resolution = 1.)
 
             #generator.standard_render()
@@ -355,7 +356,7 @@ class GeneratePose():
 
                 shape_pose_vol[0] = np.asarray(m.betas).tolist()
 
-                dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture = posture, stiffness=None)
+                dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture = posture, stiffness=None, filepath_prefix=self.filepath_prefix)
 
                 print "stepping"
                 invalid_pose = False
@@ -418,7 +419,7 @@ class GeneratePose():
         print "SAVING! "
         #print shape_pose_vol_list
         #pickle.dump(shape_pose_vol_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_list1.pkl", "wb"))
-        np.save("/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy", np.array(shape_pose_vol_list))
+        np.save(self.filepath_prefix+"/git/volumetric_pose_gen/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy", np.array(shape_pose_vol_list))
 
     def generate_prechecked_pose(self, gender, posture, stiffness, filename):
         prechecked_pose_list = np.load(filename).tolist()
@@ -503,7 +504,7 @@ class GeneratePose():
             #print self.m.J_transformed[1, :], self.m.J_transformed[4, :]
             # self.m.pose[51] = selection_r
 
-            dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5])
+            dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix)
             generator.standard_render()
             dss.run_simulation(10000)
 
@@ -520,12 +521,13 @@ if __name__ == "__main__":
     num_data = 2000
     posture = "sit"
     stiffness = "leftside"
+    filepath_prefix = "/home/henry"
 
     dataset_create_type = 1
 
     if dataset_create_type == None:
-        generator = GeneratePose(gender, posture)
-        generator.generate_prechecked_pose(gender, posture, stiffness, "/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
+        generator = GeneratePose(gender, posture, filepath_prefix)
+        generator.generate_prechecked_pose(gender, posture, stiffness, filepath_prefix+"/git/volumetric_pose_gen/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
         #generator.generate_dataset(gender = gender, posture = posture, num_data = num_data, stiffness = stiffness)
 
     if dataset_create_type == 1:

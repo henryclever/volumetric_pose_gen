@@ -43,14 +43,14 @@ class DampingController(object):
         return damping
 
 class DartSkelSim(object):
-    def __init__(self, render, m, gender, posture, stiffness, shiftSIDE = 0.0, shiftUD = 0.0, check_only_distal = True):
+    def __init__(self, render, m, gender, posture, stiffness, shiftSIDE = 0.0, shiftUD = 0.0, check_only_distal = True, filepath_prefix = '/home/henry'):
 
         if gender == "n":
-            regs = np.load('/home/henry/git/smplify_public/code/models/regressors_locked_normalized_hybrid.npz')
+            regs = np.load(filepath_prefix+'/git/smplify_public/code/models/regressors_locked_normalized_hybrid.npz')
         elif gender == "f":
-            regs = np.load('/home/henry/git/smplify_public/code/models/regressors_locked_normalized_female.npz')
+            regs = np.load(filepath_prefix+'/git/smplify_public/code/models/regressors_locked_normalized_female.npz')
         else:
-            regs = np.load('/home/henry/git/smplify_public/code/models/regressors_locked_normalized_male.npz')
+            regs = np.load(filepath_prefix+'/git/smplify_public/code/models/regressors_locked_normalized_male.npz')
         length_regs = regs['betas2lens']
         rad_regs = regs['betas2rads']
         betas = m.betas
@@ -357,12 +357,12 @@ class DartSkelSim(object):
         self.offset_from_centroid = np.asarray([-0.15, 0.0, 0.0])
 
 
-        self.pmat_red_all = np.load("/home/henry/git/volumetric_pose_gen/data/pmat_red.npy")
-        self.force_dir_red_dart_all = np.load("/home/henry/git/volumetric_pose_gen/data/force_dir_red.npy")
+        self.pmat_red_all = np.load(filepath_prefix+'/git/volumetric_pose_gen/data/pmat_red.npy')
+        self.force_dir_red_dart_all = np.load(filepath_prefix+'/git/volumetric_pose_gen/data/force_dir_red.npy')
         for element in range(len(self.force_dir_red_dart_all)):
             self.force_dir_red_dart_all[element] = (np.multiply(np.asarray(self.force_dir_red_dart_all[element]),np.expand_dims(np.asarray(self.pmat_red_all[element]), axis = 1)))
-        self.force_loc_red_dart_all = np.load("/home/henry/git/volumetric_pose_gen/data/force_loc_red.npy").tolist()
-        self.nearest_capsule_list_all = np.load("/home/henry/git/volumetric_pose_gen/data/nearest_capsule.npy").tolist()
+        self.force_loc_red_dart_all = np.load(filepath_prefix+'/git/volumetric_pose_gen/data/force_loc_red.npy').tolist()
+        self.nearest_capsule_list_all = np.load(filepath_prefix+'/git/volumetric_pose_gen/data/nearest_capsule.npy').tolist()
 
 
         print('init pose = %s' % skel.q)
