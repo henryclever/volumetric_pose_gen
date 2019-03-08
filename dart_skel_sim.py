@@ -43,7 +43,7 @@ class DampingController(object):
         return damping
 
 class DartSkelSim(object):
-    def __init__(self, render, m, gender, posture, stiffness, shiftSIDE = 0.0, shiftUD = 0.0, check_only_distal = True, filepath_prefix = '/home/henry'):
+    def __init__(self, render, m, gender, posture, stiffness, shiftSIDE = 0.0, shiftUD = 0.0, check_only_distal = True, filepath_prefix = '/home/henry', add_floor = True):
 
         if gender == "n":
             regs = np.load(filepath_prefix+'/git/smplify_public/code/models/regressors_locked_normalized_hybrid.npz')
@@ -219,11 +219,12 @@ class DartSkelSim(object):
         self.STARTING_HEIGHT = STARTING_HEIGHT - np.min(np.array(lowest_points))*DART_TO_FLEX_CONV
 
 
-        #add a floor-STARTING_HEIGHT / DART_TO_FLEX_CONV
-        self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.0, -self.STARTING_HEIGHT/DART_TO_FLEX_CONV/2 - 0.05], box_rot=[0.0, 0.0, 0.0], joint_name = "floor") #-0.05
+        if add_floor == True:
+            #add a floor-STARTING_HEIGHT / DART_TO_FLEX_CONV
+            self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.0, -self.STARTING_HEIGHT/DART_TO_FLEX_CONV/2 - 0.05], box_rot=[0.0, 0.0, 0.0], joint_name = "floor") #-0.05
 
-        #if posture == "sit": #need to hack the 0.5 to the right spot
-        #    self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.48, 0.0], box_rot=[np.pi/3, 0.0, 0.0], joint_name = "headrest") #-0.05
+            if posture == "sit": #need to hack the 0.5 to the right spot
+                self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.48, 0.0], box_rot=[np.pi/3, 0.0, 0.0], joint_name = "headrest") #-0.05
 
         skel = self.world.add_built_skeleton(_skel_id=0, _skel_name="human")
 
