@@ -341,8 +341,8 @@ class GeneratePose():
 
             generator.sample_body_shape(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
             in_collision = True
-            num_samplings = 0
 
+            self.m.pose[:] = np.random.rand(self.m.pose.size) * 0.
             dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None, check_only_distal = False, filepath_prefix=self.filepath_prefix, add_floor = False)
             print "dataset create type", DATASET_CREATE_TYPE
             print self.m.pose
