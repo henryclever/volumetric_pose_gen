@@ -345,6 +345,7 @@ class GeneratePose():
 
             dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None, check_only_distal = False, filepath_prefix=self.filepath_prefix, add_floor = False)
             print "dataset create type", DATASET_CREATE_TYPE
+            print self.m.pose
             volumes = dss.getCapsuleVolumes(mm_resolution = 1., dataset_num = DATASET_CREATE_TYPE)
 
             #generator.standard_render()
