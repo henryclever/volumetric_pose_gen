@@ -396,8 +396,8 @@ class DartSkelSim(object):
 
 
 
-    def getCapsuleVolumes(self, mm_resolution):
-        print "calculating volumes"
+    def getCapsuleVolumes(self, mm_resolution, dataset_num = 1):
+        print "calculating volumes", dataset_num
 
         res_multiplier = 1000./mm_resolution
 
