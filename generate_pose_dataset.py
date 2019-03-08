@@ -520,7 +520,7 @@ class GeneratePose():
 if __name__ == "__main__":
 
     gender = "f"
-    num_data = 2000
+    num_data = 20
     posture = "sit"
     stiffness = "leftside"
     filepath_prefix = "/home/ubuntu"
@@ -528,8 +528,8 @@ if __name__ == "__main__":
 
     if DATASET_CREATE_TYPE == None:
         generator = GeneratePose(gender, posture, filepath_prefix)
-        generator.generate_prechecked_pose(gender, posture, stiffness, filepath_prefix+"/git/volumetric_pose_gen/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
-        #generator.generate_dataset(gender = gender, posture = posture, num_data = num_data, stiffness = stiffness)
+        #generator.generate_prechecked_pose(gender, posture, stiffness, filepath_prefix+"/git/volumetric_pose_gen/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
+        generator.generate_dataset(gender = gender, posture = posture, num_data = num_data, stiffness = stiffness)
 
     if DATASET_CREATE_TYPE == 1:
         generator = GeneratePose("m",  "sit", filepath_prefix)
