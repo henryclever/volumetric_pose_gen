@@ -223,7 +223,7 @@ class DartSkelSim(object):
         self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.0, -self.STARTING_HEIGHT/DART_TO_FLEX_CONV/2 - 0.05], box_rot=[0.0, 0.0, 0.0], joint_name = "floor") #-0.05
 
         if posture == "sit": #need to hack the 0.5 to the right spot
-            self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 8.37, 0.0], box_rot=[np.pi/3, 0.0, 0.0], joint_name = "headrest") #-0.05
+            self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.48, 0.0], box_rot=[np.pi/3, 0.0, 0.0], joint_name = "headrest") #-0.05
 
         skel = self.world.add_built_skeleton(_skel_id=0, _skel_name="human")
 
@@ -495,7 +495,9 @@ class DartSkelSim(object):
             #break
         print "got initial volume"
 
-        volume_mod = []
+        volume_analytic = []
+        volume_discret = []
+        volume_discret_mod = []
         for body_ct in range(NUM_CAPSULES):
             orig_shape_center = capsule_centers_list[body_ct]
             orig_shape_dim = np.shape(voxel_space_list[body_ct])
@@ -528,7 +530,7 @@ class DartSkelSim(object):
 
                     x_discrepancy = (x_u_resp_new - x_d_resp_new) - (x_u_resp_orig - x_d_resp_orig)
                     if x_discrepancy != 0:
-                        print x_discrepancy
+                        #print x_discrepancy
                         if x_discrepancy > 0 and (x_d_resp_orig >= x_discrepancy):
                             x_d_resp_orig -= x_discrepancy
                         elif x_discrepancy > 0 and (x_u_resp_orig <= (orig_shape_dim[0] - x_discrepancy)):
@@ -558,7 +560,7 @@ class DartSkelSim(object):
 
                     y_discrepancy = (y_u_resp_new - y_d_resp_new) - (y_u_resp_orig - y_d_resp_orig)
                     if y_discrepancy != 0:
-                        print y_discrepancy
+                        #print y_discrepancy
                         if y_discrepancy > 0 and (y_d_resp_orig >= y_discrepancy):
                             y_d_resp_orig -= y_discrepancy
                         elif y_discrepancy > 0 and (y_u_resp_orig <= (orig_shape_dim[1] - y_discrepancy)):
@@ -586,7 +588,7 @@ class DartSkelSim(object):
 
                     z_discrepancy = (z_u_resp_new - z_d_resp_new) - (z_u_resp_orig - z_d_resp_orig)
                     if z_discrepancy != 0:
-                        print z_discrepancy
+                        #print z_discrepancy
                         if z_discrepancy > 0 and (z_d_resp_orig >= z_discrepancy):
                             z_d_resp_orig -= z_discrepancy
                         elif z_discrepancy > 0 and (z_u_resp_orig <= (orig_shape_dim[2] - z_discrepancy)):
@@ -596,9 +598,9 @@ class DartSkelSim(object):
                         elif z_discrepancy < 0 and (z_u_resp_new <= (new_shape_dim[2] + z_discrepancy)):
                             z_u_resp_new -= z_discrepancy
 
-                    print other_bn, x_d_resp_orig, x_u_resp_orig, "out of", orig_shape_dim[0], "  ", x_d_resp_new, x_u_resp_new, "out of", new_shape_dim[0]
-                    print ' ', y_d_resp_orig, y_u_resp_orig, "out of", orig_shape_dim[1], "  ", y_d_resp_new, y_u_resp_new, "out of", new_shape_dim[1]
-                    print ' ', z_d_resp_orig, z_u_resp_orig, "out of", orig_shape_dim[2], "  ", z_d_resp_new, z_u_resp_new, "out of", new_shape_dim[2]
+                    #print other_bn, x_d_resp_orig, x_u_resp_orig, "out of", orig_shape_dim[0], "  ", x_d_resp_new, x_u_resp_new, "out of", new_shape_dim[0]
+                    #print ' ', y_d_resp_orig, y_u_resp_orig, "out of", orig_shape_dim[1], "  ", y_d_resp_new, y_u_resp_new, "out of", new_shape_dim[1]
+                    #print ' ', z_d_resp_orig, z_u_resp_orig, "out of", orig_shape_dim[2], "  ", z_d_resp_new, z_u_resp_new, "out of", new_shape_dim[2]
 
                     #print capsule_centers_list[other_bn], np.shape(voxel_space_list[other_bn])
 
@@ -613,12 +615,16 @@ class DartSkelSim(object):
             voxel_space_mod = np.divide(voxel_space, voxel_space_mod)
 
 
-            volume_mod.append(np.sum(voxel_space_mod)/(res_multiplier*res_multiplier*res_multiplier))
 
-            volume_discret = np.sum(voxel_space) / (res_multiplier * res_multiplier * res_multiplier)
+            volume_analytic.append(self.volume[body_ct])
+
+            volume_discret.append(np.sum(voxel_space) / (res_multiplier * res_multiplier * res_multiplier))
+
+            volume_discret_mod.append(np.sum(voxel_space_mod)/(res_multiplier*res_multiplier*res_multiplier))
 
 
-            print body_ct,  self.volume[body_ct], volume_discret, volume_mod[-1]
+
+            print body_ct,  volume_analytic[-1], volume_discret[-1], volume_discret_mod[-1]
 
             #break
 
@@ -626,7 +632,7 @@ class DartSkelSim(object):
 
         #print contacts
 
-        return volume_mod
+        return volume_analytic, volume_discret, volume_discret_mod
 
     def get_sphere_mask(self, radius):
         radius -= 0.5
