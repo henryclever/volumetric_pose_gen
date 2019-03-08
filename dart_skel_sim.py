@@ -436,7 +436,7 @@ class DartSkelSim(object):
                 #get sphere
                 sphere = self.get_sphere_mask(radius = r)
                 voxel_space[0:int(r), :, :] = sphere[0:int(r), :, :]
-                voxel_space[int(r)+int(l):, :, :] = sphere[int(r):, :, :]
+                voxel_space[int(r)+int(l)-1:, :, :] = sphere[int(r):, :, :]
 
                 #get x-dir cylinder
                 cylinder = self.get_cylinder_mask(radius = r, length = l, axis = "x")
@@ -459,7 +459,7 @@ class DartSkelSim(object):
                 #get sphere
                 sphere = self.get_sphere_mask(radius = r)
                 voxel_space[:, 0:int(r), :] = sphere[:, 0:int(r), :]
-                voxel_space[:, int(r)+int(l):, :] = sphere[:, int(r):, :]
+                voxel_space[:, int(r)+int(l)-1:, :] = sphere[:, int(r):, :]
 
                 #get x-dir cylinder
                 cylinder = self.get_cylinder_mask(radius = r, length = l, axis = "y")
@@ -476,7 +476,7 @@ class DartSkelSim(object):
                 #get sphere
                 sphere = self.get_sphere_mask(radius = r)
                 voxel_space[:, :, 0:int(r)] = sphere[:, :, 0:int(r)]
-                voxel_space[:, :, int(r)+int(l):] = sphere[:, :, int(r):]
+                voxel_space[:, :, int(r)+int(l)-1:] = sphere[:, :, int(r):]
 
                 #get x-dir cylinder
                 cylinder = self.get_cylinder_mask(radius = r, length = l, axis = "z")
