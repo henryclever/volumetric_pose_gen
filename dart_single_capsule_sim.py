@@ -486,6 +486,7 @@ class DartSingleCapsuleSim(object):
 
         skel = self.world.skeletons[0]
         vel = np.linalg.norm(skel.bodynodes[0].com_linear_velocity())
+        acc = np.linalg.norm(skel.bodynodes[0].com_linear_acceleration())
 
 
         root_joint_pos = [skel.bodynodes[0].C[0] - self.cap_offsets[0][0]*np.cos(skel.q[2]) + self.cap_offsets[0][1]*np.sin(skel.q[2]),
@@ -493,7 +494,7 @@ class DartSingleCapsuleSim(object):
 
         #print skel.bodynodes[0]
 
-        return skel.q, skel.bodynodes, root_joint_pos, vel
+        return skel.q, skel.bodynodes, root_joint_pos, vel, acc
 
 
 
