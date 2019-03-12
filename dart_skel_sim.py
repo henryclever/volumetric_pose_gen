@@ -441,7 +441,13 @@ class DartSkelSim(object):
 
                 #get x-dir cylinder
                 cylinder = self.get_cylinder_mask(radius = r, length = l, axis = "x")
-                voxel_space[int(r):int(r)+int(l), :, :] = cylinder
+
+                try:
+                    voxel_space[int(r):int(r)+int(l), :, :] = cylinder
+                except:
+                    voxel_space[int(r):int(r)+int(l), :, :] = cylinder[1:, :, :]
+
+
                 if body_ct in [0, 3, 6, 9]:
                     capsule_centers_list.append((np.array(self.capsule_locs_abs[body_ct])*res_multiplier).astype(int))
                 elif body_ct in [11, 14, 16, 18]:
@@ -464,7 +470,11 @@ class DartSkelSim(object):
 
                 #get x-dir cylinder
                 cylinder = self.get_cylinder_mask(radius = r, length = l, axis = "y")
-                voxel_space[:, int(r):int(r)+int(l), :] = cylinder
+                try:
+                    voxel_space[:, int(r):int(r)+int(l), :] = cylinder
+                except:
+                    voxel_space[:, int(r):int(r)+int(l), :] = cylinder[:, 1:, :]
+
                 capsule_centers_list.append(((np.array(self.capsule_locs_abs[body_ct])-np.array([0, cap_len/2, 0]))*res_multiplier).astype(int))
 
             elif body_ct in [7, 8]:
@@ -481,7 +491,11 @@ class DartSkelSim(object):
 
                 #get x-dir cylinder
                 cylinder = self.get_cylinder_mask(radius = r, length = l, axis = "z")
-                voxel_space[:, :, int(r):int(r)+int(l)] = cylinder
+                try:
+                    voxel_space[:, :, int(r):int(r)+int(l)] = cylinder
+                except:
+                    voxel_space[:, :, int(r):int(r)+int(l)] = cylinder[:, :, 1:]
+
                 capsule_centers_list.append(((np.array(self.capsule_locs_abs[body_ct])+np.array([0, 0, cap_len/2]))*res_multiplier).astype(int))
 
 
