@@ -160,19 +160,50 @@ def visualize_pressure_map(p_map, targets_raw=None, scores_raw=None, p_map_val=N
 if __name__ == "__main__":
 
     gender = "m"
+    num_resting_poses = 95
+
+
     training_data_dict = {}
     training_data_dict['markers_xyz_m'] = []
+    training_data_dict['root_xyz_shift'] = []
     training_data_dict['joint_angles'] = []
     training_data_dict['body_shape'] = []
     training_data_dict['bed_angle_deg'] = []
     training_data_dict['images'] = []
 
+    #training_data_dict['v_template'] = []
+    #training_data_dict['shapedirs'] = []
 
     model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_'+gender+'_lbs_10_207_0_v1.0.0.pkl'
     m = load_model(model_path)
 
-    resting_pose_data_list = np.load('/home/henry/data/resting_poses/resting_pose_'+gender+'_sit_95_rightside_stiff.npy')
-    training_database_pmat_height_list = np.load('/home/henry/data/pmat_height/pmat_height_'+gender+'_sit_95_rightside_stiff.npy')
+    #m.betas = [0.29387146, -2.98438001, 2.66495728, -2.42446828, 1.01479387, -1.46582723, 0.14909998,
+    #                0.94134736, -1.21646106, 0.69998872]
+    #m.pose = [5.24451196e-01, 6.55976217e-03, 2.42505297e-02, -8.25246215e-01,
+    #               4.93589081e-02, 3.45132113e-01, -1.18632483e+00, -7.60989010e-01,
+    #               -3.11952025e-01, 7.02403903e-01, -7.65096024e-02, 8.40422511e-02,
+    #               4.51518774e-01, 0.00000000e+00, 0.00000000e+00, 1.18769133e+00,
+    #               0.00000000e+00, 0.00000000e+00, -1.77381076e-02, -2.51457542e-02,
+    #               4.84700985e-02, 7.76620656e-02, 1.21850977e-02, -6.55247131e-04,
+    #               2.12579081e-03, 1.08169392e-02, 4.29084338e-03, -6.83735982e-02,
+    #               -2.70453375e-02, 2.89300494e-02, 0.00000000e+00, 0.00000000e+00,
+    #               0.00000000e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00,
+    #               3.43895465e-01, -1.86359342e-02, 2.37760153e-02, -3.80625665e-01,
+    #               2.97152400e-01, -5.88579237e-01, -2.91799139e-02, 4.58059739e-03,
+    #               2.87017167e-01, 2.20573619e-01, 1.36713404e-02, -1.97675060e-02,
+    #               1.39153078e-01, 2.51184583e-01, -7.67209888e-01, -8.91691685e-01,
+    #               4.42599386e-01, 6.64221123e-02, 0.00000000e+00, -8.24406683e-01,
+    #               0.00000000e+00, 0.00000000e+00, 1.30042803e+00, 0.00000000e+00,
+    #               7.26327822e-02, -6.36567548e-02, -8.66599474e-03, -2.31130864e-03,
+    #               3.80610838e-03, 4.34149348e-04, 0.00000000e+00, 0.00000000e+00,
+    #               0.00000000e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00]
+
+    #print m.betas
+    #print m.pose
+    #print "J x trans", m.J_transformed[:, 0]
+
+    resting_pose_data_list = np.load('/home/henry/data/resting_poses/resting_pose_'+gender+'_sit_'+str(num_resting_poses)+'_rightside_stiff.npy')
+    training_database_pmat_height_list = np.load('/home/henry/data/pmat_height/pmat_height_'+gender+'_sit_'+str(num_resting_poses)+'_rightside_stiff.npy')
 
     for resting_pose_data_ct in range(len(resting_pose_data_list)):
         resting_pose_data = resting_pose_data_list[resting_pose_data_ct]
@@ -182,6 +213,8 @@ if __name__ == "__main__":
         capsule_angles = resting_pose_data[0].tolist()
         root_joint_pos_list = resting_pose_data[1]
         body_shape_list = resting_pose_data[2]
+
+        #print "shape", body_shape_list
 
         m.pose[0:3] = capsule_angles[0:3]
         m.pose[3:6] = capsule_angles[6:9]
@@ -207,22 +240,48 @@ if __name__ == "__main__":
         for shape_param in range(10):
             m.betas[shape_param] = float(body_shape_list[shape_param])
 
-        training_data_dict['joint_angles'].append(np.asarray(m.pose))
-        training_data_dict['body_shape'].append(np.asarray(m.betas))
+        training_data_dict['joint_angles'].append(np.array(m.pose).astype(float))
+        training_data_dict['body_shape'].append(np.array(m.betas).astype(float))
+        #print "dict", training_data_dict['body_shape'][-1]
 
-        x_positions = np.asarray(m.J_transformed)[:, 0] - np.asarray(m.J_transformed)[0, 0]+root_joint_pos_list[0]+0.374648 + 10*INTER_SENSOR_DISTANCE
-        y_positions = np.asarray(m.J_transformed)[:, 1] - np.asarray(m.J_transformed)[0, 1]+root_joint_pos_list[1]+0.927099 + 10*INTER_SENSOR_DISTANCE
-        z_positions = np.asarray(m.J_transformed)[:, 2] - np.asarray(m.J_transformed)[0, 2]+height
+        #training_data_dict['v_template'].append(np.asarray(m.v_template))
+        #training_data_dict['shapedirs'].append(np.asarray(m.shapedirs))
+
+        #print np.sum(np.array(m.v_template))
+        #print np.sum(np.array(m.shapedirs))
+        #print np.sum(np.zeros((np.shape(np.array(m.J_regressor)))) + np.array(m.J_regressor))
+
+        root_shift_x = root_joint_pos_list[0]+0.374648 + 10*INTER_SENSOR_DISTANCE
+        root_shift_y = root_joint_pos_list[1]+0.927099 + 10*INTER_SENSOR_DISTANCE
+        root_shift_z = height
+
+        x_positions = np.asarray(m.J_transformed)[:, 0] - np.asarray(m.J_transformed)[0, 0] + root_shift_x
+        y_positions = np.asarray(m.J_transformed)[:, 1] - np.asarray(m.J_transformed)[0, 1] + root_shift_y
+        z_positions = np.asarray(m.J_transformed)[:, 2] - np.asarray(m.J_transformed)[0, 2] + root_shift_z
+
+        if resting_pose_data_ct == 0:
+            print m.betas
+            print m.pose
+            print "J x trans", m.J_transformed[:, 0]
 
         xyz_positions = np.transpose([x_positions, y_positions, z_positions])
         xyz_positions_shape = np.shape(xyz_positions)
         xyz_positions = xyz_positions.reshape(xyz_positions_shape[0]*xyz_positions_shape[1])
         training_data_dict['markers_xyz_m'].append(xyz_positions)
-
+        training_data_dict['root_xyz_shift'].append([root_shift_x, root_shift_y, root_shift_z])
         training_data_dict['images'].append(pmat.reshape(64*27))
         training_data_dict['bed_angle_deg'].append(60.)
 
-    pickle.dump(training_data_dict, open(os.path.join('/home/henry/data/training/train_'+gender+'_sit_95_rightside_stiff.p'), 'wb'))
+
+    print training_data_dict['markers_xyz_m'][0]
+
+    print "RECHECKING!"
+    for entry in range(len(training_data_dict['markers_xyz_m'])):
+
+        print entry, training_data_dict['markers_xyz_m'][entry][0:2], training_data_dict['body_shape'][entry][0:2], training_data_dict['joint_angles'][entry][0:2]
+
+
+    pickle.dump(training_data_dict, open(os.path.join('/home/henry/data/training/train_'+gender+'_sit_'+str(num_resting_poses)+'_rightside_stiff.p'), 'wb'))
 
     for item in training_data_dict:
         print "item name: ", item
@@ -237,9 +296,11 @@ if __name__ == "__main__":
         print np.shape(test_database_file[item])
 
 
-    for i in range(95):
+    for i in range(len(training_data_dict['markers_xyz_m'])):
         #print training_data_dict['markers_xyz_m'][i].reshape(24, 3)
         #print test_database_file['markers_xyz_m'][i].reshape(10, 3)
+
+        print training_data_dict['markers_xyz_m'][i][0:2]
 
         training_pmat = np.array(training_data_dict['images'][i]).reshape(1, 64, 27)*3
         training_targets = np.array(training_data_dict['markers_xyz_m'][i])

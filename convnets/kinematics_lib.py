@@ -344,7 +344,7 @@ class KinematicsLib():
 
 
 
-    def forward_kinematics_pytorch(self, images_v, torso_lengths_angles_v, loss_vector_type, targets_v=None,  kincons_v = None, forward_only = False, subject = None, count = 500):
+    def forward_kinematics_pytorch_R(self, images_v, torso_lengths_angles_v, loss_vector_type, targets_v=None,  kincons_v = None, forward_only = False, count = 500):
 
         test_ground_truth = False
         pseudotargets = None

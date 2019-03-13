@@ -672,7 +672,6 @@ def dir_cos_angles_from_matrix(R):
 
 
 def matrix_from_dir_cos_angles(theta):
-
     angle = np.linalg.norm(theta)
     normalized = theta/angle
     angle = angle * 0.5
