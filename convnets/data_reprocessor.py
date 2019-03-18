@@ -159,8 +159,8 @@ def visualize_pressure_map(p_map, targets_raw=None, scores_raw=None, p_map_val=N
 
 if __name__ == "__main__":
 
-    gender = "m"
-    num_resting_poses = 95
+    gender = "f"
+    num_resting_poses = 90
 
 
     training_data_dict = {}

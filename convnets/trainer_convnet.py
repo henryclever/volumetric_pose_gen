@@ -30,7 +30,6 @@ def load_pickle(filename):
         return pickle.load(f)
 
 # Pose Estimation Libraries
-from synthetic_lib import SyntheticLib
 from visualization_lib import VisualizationLib
 from preprocessing_lib import PreprocessingLib
 
@@ -82,7 +81,7 @@ else:
 class PhysicalTrainer():
     '''Gets the dictionary of pressure maps from the training database,
     and will have API to do all sorts of training with it.'''
-    def __init__(self, training_database_file, test_file, opt):
+    def __init__(self, training_database_file_f, training_database_file_m, test_file, opt):
         '''Opens the specified pickle files to get the combined dataset:
         This dataset is a dictionary of pressure maps with the corresponding
         3d position and orientation of the markers associated with it.'''
@@ -97,7 +96,7 @@ class PhysicalTrainer():
 
         self.num_epochs = 200
         self.include_inter = True
-        self.shuffle = False#True
+        self.shuffle = True
 
 
         self.count = 0
@@ -123,76 +122,100 @@ class PhysicalTrainer():
 
 
         #load in the training files.  This may take a while.
-        for some_subject in training_database_file:
+        for some_subject in training_database_file_f:
             print some_subject
             dat_curr = load_pickle(some_subject)
             for key in dat_curr:
                 if np.array(dat_curr[key]).shape[0] != 0:
                     for inputgoalset in np.arange(len(dat_curr['markers_xyz_m'])):
                         try:
-                            dat[key].append(dat_curr[key][inputgoalset])
+                            dat_f[key].append(dat_curr[key][inputgoalset])
                         except:
                             try:
-                                dat[key] = []
-                                dat[key].append(dat_curr[key][inputgoalset])
+                                dat_f[key] = []
+                                dat_f[key].append(dat_curr[key][inputgoalset])
                             except:
-                                dat = {}
-                                dat[key] = []
-                                dat[key].append(dat_curr[key][inputgoalset])
+                                dat_f = {}
+                                dat_f[key] = []
+                                dat_f[key].append(dat_curr[key][inputgoalset])
 
+
+
+
+        #load in the training files.  This may take a while.
+        for some_subject in training_database_file_m:
+            print some_subject
+            dat_curr = load_pickle(some_subject)
+            for key in dat_curr:
+                if np.array(dat_curr[key]).shape[0] != 0:
+                    for inputgoalset in np.arange(len(dat_curr['markers_xyz_m'])):
+                        try:
+                            dat_m[key].append(dat_curr[key][inputgoalset])
+                        except:
+                            try:
+                                dat_m[key] = []
+                                dat_m[key].append(dat_curr[key][inputgoalset])
+                            except:
+                                dat_m = {}
+                                dat_m[key] = []
+                                dat_m[key].append(dat_curr[key][inputgoalset])
 
 
 
         #create a tensor for our training dataset.  First print out how many input/output sets we have and what data we have
-        for key in dat:
-            print 'training set: ', key, np.array(dat[key]).shape
+        for key in dat_f:
+            print 'training set: ', key, np.array(dat_f[key]).shape
+        for key in dat_m:
+            print 'training set: ', key, np.array(dat_m[key]).shape
 
 
         self.train_x_flat = []  # Initialize the testing pressure mat list
-        for entry in range(len(dat['images'])):
-            self.train_x_flat.append(dat['images'][entry] * 3)
+        for entry in range(len(dat_f['images'])):
+            self.train_x_flat.append(dat_f['images'][entry] * 3)
+        for entry in range(len(dat_m['images'])):
+            self.train_x_flat.append(dat_m['images'][entry] * 3)
 
         self.train_a_flat = []  # Initialize the testing pressure mat angle list
-        for entry in range(len(dat['images'])):
-            self.train_a_flat.append(dat['bed_angle_deg'][entry])
+        for entry in range(len(dat_f['images'])):
+            self.train_a_flat.append(dat_f['bed_angle_deg'][entry])
+        for entry in range(len(dat_m['images'])):
+            self.train_a_flat.append(dat_m['bed_angle_deg'][entry])
         train_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.train_x_flat, self.train_a_flat, self.include_inter, self.mat_size, self.verbose)
         train_xa = np.array(train_xa)
-
         self.train_x_tensor = torch.Tensor(train_xa)
 
-        
 
         print self.train_x_tensor.shape, 'tensor shape'
 
         self.train_y_flat = [] #Initialize the training ground truth list
-        for entry in range(len(dat['markers_xyz_m'])):
-            if self.loss_vector_type == 'anglesR':
+        for entry in range(len(dat_f['markers_xyz_m'])):
+            if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
                 #print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                c = np.concatenate((dat['markers_xyz_m'][entry][0:72] * 1000,
-                                    dat['body_shape'][entry][0:10],
-                                    dat['joint_angles'][entry][0:72],
-                                    dat['root_xyz_shift'][entry][0:3]), axis=0) # shapedirs (N, 6890, 3, 10)
+                c = np.concatenate((dat_f['markers_xyz_m'][entry][0:72] * 1000,
+                                    dat_f['body_shape'][entry][0:10],
+                                    dat_f['joint_angles'][entry][0:72],
+                                    dat_f['root_xyz_shift'][entry][0:3],
+                                    [1], [0]), axis=0) # shapedirs (N, 6890, 3, 10)
                 self.train_y_flat.append(c)
             else:
-                self.train_y_flat.append(dat['markers_xyz_m'][entry][0:72] * 1000)
+                self.train_y_flat.append(dat_f['markers_xyz_m'][entry][0:72] * 1000)
+
+        for entry in range(len(dat_m['markers_xyz_m'])):
+            if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
+                #print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
+                c = np.concatenate((dat_m['markers_xyz_m'][entry][0:72] * 1000,
+                                    dat_m['body_shape'][entry][0:10],
+                                    dat_m['joint_angles'][entry][0:72],
+                                    dat_m['root_xyz_shift'][entry][0:3],
+                                    [0], [1]), axis=0) # shapedirs (N, 6890, 3, 10)
+                self.train_y_flat.append(c)
+            else:
+                self.train_y_flat.append(dat_m['markers_xyz_m'][entry][0:72] * 1000)
 
 
 
-        if self.loss_vector_type == 'anglesR':
-            from smpl.smpl_webuser.serialization import load_model
-            model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
-            self.m = load_model(model_path)
 
-            self.v_template = torch.Tensor(np.array(self.m.v_template))
-            self.shapedirs = torch.Tensor(np.array(self.m.shapedirs)).permute(0, 2, 1)
-
-            self.J_regressor = np.zeros((self.m.J_regressor.shape)) + self.m.J_regressor
-            self.J_regressor = torch.Tensor(np.array(self.J_regressor).astype(float)).permute(1, 0)
-
-
-
-
-        print np.shape(self.train_y_flat), 'shape flat!'
+        print np.shape(self.train_y_flat), 'shape flat !'
         self.train_y_tensor = torch.Tensor(self.train_y_flat)
 
 
@@ -220,7 +243,6 @@ class PhysicalTrainer():
         for key in test_dat:
             print 'testing set: ', key, np.array(test_dat[key]).shape
 
-
         self.test_x_flat = []  # Initialize the testing pressure mat list
         for entry in range(len(test_dat['images'])):
             self.test_x_flat.append(test_dat['images'][entry])
@@ -235,7 +257,15 @@ class PhysicalTrainer():
 
         self.test_y_flat = []  # Initialize the ground truth list
         for entry in range(len(test_dat['markers_xyz_m'])):
-            self.test_y_flat.append(test_dat['markers_xyz_m'][entry] * 1000)
+            if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
+                #print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
+                c = np.concatenate((test_dat['markers_xyz_m'][entry] * 1000,
+                                    [0], [1]), axis=0) # shapedirs (N, 6890, 3, 10)
+                self.test_y_flat.append(c)
+            else:
+                self.test_y_flat.append(test_dat['markers_xyz_m'][entry] * 1000)
+
+
         self.test_y_tensor = torch.Tensor(self.test_y_flat)
 
         self.parents = np.array([4294967295, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9, 12, 13, 14, 16, 17, 18, 19, 20, 21]).astype(np.int32)
@@ -248,7 +278,8 @@ class PhysicalTrainer():
 
         if self.verbose: print self.train_x_tensor.size(), 'size of the training database'
         if self.verbose: print self.train_y_tensor.size(), 'size of the training database output'
-        print self.train_y_tensor
+
+
         if self.verbose: print self.test_x_tensor.size(), 'length of the testing dataset'
         if self.verbose: print self.test_y_tensor.size(), 'size of the training database output'
 
@@ -264,15 +295,20 @@ class PhysicalTrainer():
         self.train_dataset = torch.utils.data.TensorDataset(self.train_x_tensor, self.train_y_tensor)
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset, self.batch_size, shuffle=self.shuffle)
 
+
         #self.test_x_tensor = self.test_x_tensor.unsqueeze(1)
         self.test_dataset = torch.utils.data.TensorDataset(self.test_x_tensor, self.test_y_tensor)
         self.test_loader = torch.utils.data.DataLoader(self.test_dataset, self.batch_size, shuffle=self.shuffle)
 
 
 
-        if self.loss_vector_type == 'anglesK':
-            fc_output_size = 85#38 #18 angles for body, 17 lengths for body, 3 torso coordinates
-            self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type)
+        if self.loss_vector_type == 'direct':
+            fc_output_size = 72
+            self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type, self.batch_size)
+
+        elif self.loss_vector_type == 'anglesR':
+            fc_output_size = 229# 10 + 3 + 24*3*3 --- betas, root shift, rotations
+            self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type, self.batch_size)
             #self.model = torch.load('/home/ubuntu/Autobed_OFFICIAL_Trials' + '/subject_' + str(self.opt.leave_out) + '/convnets/convnet_9to18_'+str(self.loss_vector_type)+'_sTrue_128b_200e_' + str(self.opt.leave_out) + '.pt', map_location=lambda storage, loc: storage)
             print 'LOADED!!!!!!!!!!!!!!!!!1'
             pp = 0
@@ -283,9 +319,9 @@ class PhysicalTrainer():
                 pp += nn
             print pp, 'num params'
 
-        if self.loss_vector_type == 'anglesR':
-            fc_output_size = 229# 10 + 3 + 24*3*3 --- betas, root shift, rotations
-            self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type, self.m)
+        elif self.loss_vector_type == 'anglesDC':
+            fc_output_size = 85## 10 + 3 + 24*3 --- betas, root shift, rotations
+            self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type, self.batch_size)
             #self.model = torch.load('/home/ubuntu/Autobed_OFFICIAL_Trials' + '/subject_' + str(self.opt.leave_out) + '/convnets/convnet_9to18_'+str(self.loss_vector_type)+'_sTrue_128b_200e_' + str(self.opt.leave_out) + '.pt', map_location=lambda storage, loc: storage)
             print 'LOADED!!!!!!!!!!!!!!!!!1'
             pp = 0
@@ -295,9 +331,21 @@ class PhysicalTrainer():
                     nn = nn * s
                 pp += nn
             print pp, 'num params'
-        elif self.loss_vector_type == 'direct':
-            fc_output_size = 72
-            self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type)
+
+        elif self.loss_vector_type == 'anglesEU':
+            fc_output_size = 85## 10 + 3 + 24*3 --- betas, root shift, rotations
+            self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type, self.batch_size)
+            #self.model = torch.load('/home/ubuntu/Autobed_OFFICIAL_Trials' + '/subject_' + str(self.opt.leave_out) + '/convnets/convnet_9to18_'+str(self.loss_vector_type)+'_sTrue_128b_200e_' + str(self.opt.leave_out) + '.pt', map_location=lambda storage, loc: storage)
+            print 'LOADED!!!!!!!!!!!!!!!!!1'
+            pp = 0
+            for p in list(self.model.parameters()):
+                nn = 1
+                for s in list(p.size()):
+                    nn = nn * s
+                pp += nn
+            print pp, 'num params'
+
+
 
         # Run model on GPU if available
         if False:#torch.cuda.is_available():
@@ -310,7 +358,7 @@ class PhysicalTrainer():
 
         if self.loss_vector_type == None:
             self.optimizer2 = optim.Adam(self.model.parameters(), lr=0.00002, weight_decay=0.0005)
-        elif self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'direct':
+        elif self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'direct' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
             self.optimizer2 = optim.Adam(self.model.parameters(), lr=0.00002, weight_decay=0.0005)  #0.000002 does not converge even after 100 epochs on subjects 2-8 kin cons. use .00001
         #self.optimizer = optim.RMSprop(self.model.parameters(), lr=0.000001, momentum=0.7, weight_decay=0.0005)
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.000002, weight_decay=0.0005) #start with .00005
@@ -357,115 +405,78 @@ class PhysicalTrainer():
             #This will loop a total = training_images/batch_size times
             for batch_idx, batch in enumerate(self.train_loader):
 
-                if self.loss_vector_type == 'anglesR':
+                if self.loss_vector_type == 'direct':
 
-                    #0:72: positions. 72:82: betas. 82:154: angles.
-                    batch.append(batch[1][:, 72:82])
-                    batch.append(batch[1][:, 82:154])
-                    batch.append(batch[1][:, 154:157])
+                    images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy()[:, :, :, :], multiple = 2)))
+                    images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
+                    images, targets, scores_zeros = Variable(batch[0].type(dtype), requires_grad = False), Variable(batch[1].type(dtype), requires_grad = False), Variable(torch.Tensor(np.zeros((batch[1].shape[0], batch[1].shape[1]/3))).type(dtype), requires_grad = False)
 
-                    #print batch[1][10:22, 70:84]
-                    v_shaped = torch.matmul(batch[1][:, 72:82], self.shapedirs).permute(1, 0, 2) + self.v_template
+                    self.optimizer.zero_grad()
+                    scores, targets_est, _ = self.model.forward_direct(images_up, targets, is_training = True)
 
-                    Jx = torch.matmul(v_shaped[:, :, 0], self.J_regressor)
-                    Jy = torch.matmul(v_shaped[:, :, 1], self.J_regressor)
-                    Jz = torch.matmul(v_shaped[:, :, 2], self.J_regressor)
+                    self.criterion = nn.L1Loss()
+                    loss = self.criterion(scores, scores_zeros)
 
-                    J = torch.stack([Jx, Jy, Jz], dim=2) #these are the joint locations with home pose (pose is 0 degree on all angles)
+                elif self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
 
-                    J = J - J[:, 0:1, :] + batch[1][:, 154:157].unsqueeze(1)
-
-
-                    Rs = self.model.batch_rodrigues(batch[1][:, 82:154].view(-1, 24, 3)).view(-1, 24, 3, 3)
-
-                    #print Rs.shape #use beta on the end of the network to go through the model to get J. regress B. Also use Rs directly on the network.
-
-
-                    self.J_transformed, A = self.model.batch_global_rigid_transformation(Rs, J, self.parents, rotate_base = False)
-
-                    #batch.append(torch.cat((batch[1][:, 0:3], batch[1][:, 72:82], batch[1][:, 82:154]), dim = 1))
-
-                    #print (self.J_transformed[13, :, :])*1000# - self.J_transformed[13, 0, 0:3] + batch[1][13, 154:157])*1000 #forward through model
-                    #print (torch.Tensor(np.array(self.m.J_transformed)) - torch.Tensor(np.array(self.m.J_transformed[0, :])) + batch[1][1, 154:157])*1000
-
-
-                    #print batch[1][:, 0:72].view(-1, 24, 3)[13, :, :] #ground truth
-
+                    #0:72: positions.
+                    batch.append(batch[1][:, 72:82]) #betas
+                    batch.append(batch[1][:, 82:154]) #angles
+                    batch.append(batch[1][:, 154:157]) #root pos
+                    batch.append(batch[1][:, 157:159]) #gender switch
 
                     #cut it off so batch[2] is only the xyz marker targets
                     batch[1] = batch[1][:, 0:72]
 
-
                     images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple = 2)))
                     images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
 
-
-                    #print images_up.shape
-
-                    images, targets, betas = Variable(batch[0].type(dtype), requires_grad = False), Variable(batch[1].type(dtype), requires_grad = False), Variable(batch[2].type(dtype), requires_grad = False)
+                    images, targets, betas = Variable(batch[0].type(dtype), requires_grad = False), \
+                                             Variable(batch[1].type(dtype), requires_grad = False), \
+                                             Variable(batch[2].type(dtype), requires_grad = False)
 
 
                     angles_gt = Variable(batch[3].type(dtype), requires_grad = True)
                     root_shift = Variable(batch[4].type(dtype), requires_grad = True)
-
+                    gender_switch = Variable(batch[5].type(dtype), requires_grad = True)
 
                     self.optimizer.zero_grad()
-
                     ground_truth = np.zeros((batch[0].numpy().shape[0], 82)) #82 is 10 shape params and 72 joint locations x,y,z
                     ground_truth = Variable(torch.Tensor(ground_truth).type(dtype))
                     ground_truth[:, 0:10] = betas[:, 0:10]/100
                     ground_truth[:, 10:82] = targets[:, 0:72]/1000
 
-
                     scores_zeros = np.zeros((batch[0].numpy().shape[0], 34)) #34 is 10 shape params and 24 joint euclidean errors
                     scores_zeros = Variable(torch.Tensor(scores_zeros).type(dtype))
                     scores_zeros[:, 0:10] = betas[:, 0:10]
 
-                    scores, targets_est, _, betas_est = self.model.forward_kinematic_R(images_up, targets, is_training = True, betas = betas, angles_gt = angles_gt, root_shift = root_shift) # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
-                    #print lengths_est[0,0:10], 'lengths est'
-                    #print batch[0][0,2,10,10], 'angle'
-
-                    #print scores_zeros[0, :]
-                    #print scores_zeros[13, :]
-
-                    #print "targets output", targets_est[13, :]
-
-                    self.criterion = nn.L1Loss()
-
-                    loss = self.criterion(scores, scores_zeros)
-
-
-                elif self.loss_vector_type == 'direct':
-
-
-                    batch[0], batch[1], _ = SyntheticLib().synthetic_master(batch[0], batch[1], flip=True, shift=True,
-                                                                            scale=True, bedangle=True,
-                                                                            include_inter=self.include_inter,
-                                                                            loss_vector_type=self.loss_vector_type)
-
-
-                    images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy()[:, :, :, :], multiple = 2)))
-
-                    images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
-
-                    images, targets, scores_zeros = Variable(batch[0].type(dtype), requires_grad = False), Variable(batch[1].type(dtype), requires_grad = False), Variable(torch.Tensor(np.zeros((batch[1].shape[0], batch[1].shape[1]/3))).type(dtype), requires_grad = False)
-
-                    self.optimizer.zero_grad()
-
-                    scores, targets_est = self.model.forward_direct(images_up, targets, 'train')
+                    if self.loss_vector_type == 'anglesR':
+                        scores, targets_est, _, betas_est = self.model.forward_kinematic_R(images_up, gender_switch,
+                                                                                           targets, is_training = True,
+                                                                                           betas = betas,
+                                                                                           angles_gt = angles_gt,
+                                                                                           root_shift = root_shift) # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
+                    elif self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
+                        scores, targets_est, _, betas_est = self.model.forward_kinematic_angles(images_up, gender_switch,
+                                                                                           targets, is_training=True,
+                                                                                           betas=betas,
+                                                                                           angles_gt=angles_gt,
+                                                                                           root_shift=root_shift)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
 
                     self.criterion = nn.L1Loss()
-
                     loss = self.criterion(scores, scores_zeros)
 
                 #print loss.data.numpy() * 1000, 'loss'
+
 
                 loss.backward()
                 self.optimizer.step()
                 loss *= 1000
 
+                print "got here"
+                print batch_idx, opt.log_interval
 
-            if batch_idx % opt.log_interval == 0:
+            if True:#batch_idx % opt.log_interval == 0:
                 if self.loss_vector_type == 'anglesR':
                     print targets.data.size()
                     print targets_est.shape
@@ -487,14 +498,6 @@ class PhysicalTrainer():
                 self.sc_sample = targets_est.clone()
                 self.sc_sample = self.sc_sample[0, :].squeeze() / 1000
                 self.sc_sample = self.sc_sample.view(self.output_size_train)
-
-
-
-
-
-
-
-
 
 
                 val_loss = self.validate_convnet(n_batches=4)
@@ -524,17 +527,37 @@ class PhysicalTrainer():
 
             self.model.eval()
 
+            if self.loss_vector_type == 'direct':
 
-            if self.loss_vector_type == 'anglesR':
+
+                images_up_non_tensor = np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy()[:, :, :, :], multiple = 2))
+                images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
+                images, targets, scores_zeros = Variable(batch[0].type(dtype), requires_grad=False), Variable(batch[1].type(dtype), requires_grad=False), Variable(torch.Tensor(np.zeros((batch[1].shape[0], batch[1].shape[1] / 3))).type(dtype), requires_grad=False)
+
+                scores, targets_est, targets_est_reduced = self.model.forward_direct(images_up, targets, is_training = False)
+
+                self.criterion = nn.L1Loss()
+
+                loss = self.criterion(scores, scores_zeros)
+                loss = loss.data.item()
+
+
+
+            elif self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
 
                 #print batch[1].shape
 
                 #get the direct joint locations
+                batch.append(batch[1][:, 30:32])
                 batch[1] = batch[1][:, 0:30]
+
 
                 images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2)))
                 images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
                 images, targets = Variable(batch[0].type(dtype), volatile=True, requires_grad=False), Variable(batch[1].type(dtype), volatile=True,requires_grad=False),
+
+                gender_switch = Variable(batch[2].type(dtype), volatile=True, requires_grad=False)
+
 
                 self.optimizer.zero_grad()
 
@@ -546,28 +569,16 @@ class PhysicalTrainer():
                 scores_zeros = np.zeros((batch[0].numpy().shape[0], 10))
                 scores_zeros = Variable(torch.Tensor(scores_zeros).type(dtype))
 
-
-                scores, targets_est, targets_est_reduced, betas_est = self.model.forward_kinematic_R(images_up, targets, is_training=False)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
+                if self.loss_vector_type == 'anglesR':
+                    scores, targets_est, targets_est_reduced, betas_est = self.model.forward_kinematic_R(images_up, gender_switch, targets, is_training=False)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
+                elif self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
+                    scores, targets_est, targets_est_reduced, betas_est = self.model.forward_kinematic_angles(images_up, gender_switch, targets, is_training=False)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
 
                 self.criterion = nn.L1Loss()
                 loss = self.criterion(scores, scores_zeros)
                 loss = loss.data.item()
 
 
-
-            elif self.loss_vector_type == 'direct':
-
-
-                images_up_non_tensor = np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy()[:, :, :, :], multiple = 2))
-                images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
-                images, targets, scores_zeros = Variable(batch[0].type(dtype), requires_grad=False), Variable(batch[1].type(dtype), requires_grad=False), Variable(torch.Tensor(np.zeros((batch[1].shape[0], batch[1].shape[1] / 3))).type(dtype), requires_grad=False)
-
-                scores, targets_est = self.model.forward_direct(images_up, targets, 'val')
-
-                self.criterion = nn.L1Loss()
-
-                loss = self.criterion(scores, scores_zeros)
-                loss = loss.data.item()
 
 
             n_examples += self.batch_size
@@ -640,14 +651,17 @@ if __name__ == "__main__":
 
     filepath_prefix_qt = '/home/henry/data'
 
-    training_database_file = []
+    training_database_file_f = []
+    training_database_file_m = []
     test_database_file = []
 
-    training_database_file.append(filepath_prefix_qt+'/training/train_m_sit_95_rightside_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/training/train_f_sit_90_rightside_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/training/train_m_sit_95_rightside_stiff.p')
+
     test_database_file.append(filepath_prefix_qt+'/testing/trainval4_150rh1_sit120rh.p')
 
 
-    p = PhysicalTrainer(training_database_file, test_database_file, opt)
+    p = PhysicalTrainer(training_database_file_f, training_database_file_m, test_database_file, opt)
 
     p.init_convnet_train()
 
