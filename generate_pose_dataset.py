@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import copy
 from opendr.renderer import ColoredRenderer
 from opendr.lighting import LambertianPointLight
 from opendr.camera import ProjectPoints
@@ -11,6 +12,7 @@ import lib_visualization as libVisualization
 import lib_kinematics as libKinematics
 from process_yash_data import ProcessYashData
 import dart_skel_sim
+from time import sleep
 
 #ROS
 #import rospy
@@ -137,6 +139,8 @@ class GeneratePose():
                 pass
 
         return noisy_angle
+
+
 
 
 
@@ -339,13 +343,13 @@ class GeneratePose():
             shape_pose_vol[4] = shift_side
             shape_pose_vol[5] = shift_ud
 
-            generator.sample_body_shape(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
+            #generator.sample_body_shape(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
             in_collision = True
 
             self.m.pose[:] = np.random.rand(self.m.pose.size) * 0.
             dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None, check_only_distal = False, filepath_prefix=self.filepath_prefix, add_floor = False)
             print "dataset create type", DATASET_CREATE_TYPE
-            print self.m.pose
+            #print self.m.pose
             volumes = dss.getCapsuleVolumes(mm_resolution = 1., dataset_num = DATASET_CREATE_TYPE)
 
             #generator.standard_render()
@@ -359,9 +363,10 @@ class GeneratePose():
 
                 shape_pose_vol[0] = np.asarray(m.betas).tolist()
 
+                #print "stepping", m.pose
                 dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture = posture, stiffness=None, filepath_prefix=self.filepath_prefix, add_floor = False)
 
-                print "stepping"
+                #print "stepping", m.pose
                 invalid_pose = False
                 #run a step to check for collisions
                 dss.run_sim_step()
@@ -380,7 +385,7 @@ class GeneratePose():
 
                             else:
                                 #print "one of the limbs in contact"
-                                #print contact_set
+                                print contact_set
                                 #dss.run_simulation(1)
 
                                 print "resampling pose from the same shape, invalid pose"
@@ -424,7 +429,112 @@ class GeneratePose():
         #pickle.dump(shape_pose_vol_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_list1.pkl", "wb"))
         np.save(self.filepath_prefix+"/git/volumetric_pose_gen/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy", np.array(shape_pose_vol_list))
 
+    def fix_dataset(self, gender, posture, num_data, stiffness, filepath_prefix):
+
+
+        filename = filepath_prefix+"/data/init_poses_contactissue/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy"
+
+        old_pose_list = np.load(filename).tolist()
+
+
+        #NEED FOR DATASET: pose Nx72, shape Nx10
+        shape_pose_vol_list = []
+        #contact_check_bns = [1, 2, 4, 5, 7, 8, 14, 15, 16, 17, 18, 19]
+        contact_check_bns = [4, 5, 7, 8, 16, 17, 18, 19]
+        contact_exceptions = [[9, 14],[9, 15]]
+
+
+        for ct in range(len(old_pose_list)):
+            #if ct == 20: break
+
+
+            shape_pose_vol_old = old_pose_list[ct]
+            shape_pose_vol = []
+
+
+            in_collision = True
+            pose_shapes = shape_pose_vol_old[0]
+
+            for i in range(10):
+                self.m.betas[i] = pose_shapes[i]
+
+            shift_ud = shape_pose_vol_old[5]
+
+            while in_collision == True:
+
+                #m, capsules, joint2name, rots0 = generator.map_random_selection_to_smpl_angles(alter_angles = True)
+                m, capsules, joint2name, rots0 = generator.map_shuffled_yash_to_smpl_angles(posture, shift_ud, alter_angles = True)
+
+                #print "stepping", m.pose
+                dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture = posture, stiffness=None, filepath_prefix=self.filepath_prefix, add_floor = False)
+                #print "stepping", m.pose
+
+                invalid_pose = False
+                #run a step to check for collisions
+                dss.run_sim_step()
+
+                #dss.world.check_collision()
+
+                print dss.world.collision_result.contact_sets
+                if len(dss.world.collision_result.contacted_bodies) != 0:
+                    for contact_set in dss.world.collision_result.contact_sets:
+                        if contact_set[0] in contact_check_bns or contact_set[1] in contact_check_bns: #consider removing spine 3 and upper legs
+                            if contact_set in contact_exceptions:
+                                pass
+
+                            else:
+                                #print "one of the limbs in contact"
+                                print contact_set
+                                #dss.run_simulation(1)
+
+                                print "resampling pose from the same shape, invalid pose"
+                                #generator.standard_render()
+                                in_collision = True
+                                invalid_pose = True
+                            break
+
+                    if invalid_pose == False:
+                        print "resampling shape and pose, collision not important."
+
+
+                        #generator.standard_render()
+                        in_collision = False
+                else: # no contacts anywhere.
+
+                    print "resampling shape and pose, no collision."
+                    in_collision = False
+
+                dss.world.reset()
+                dss.world.destroy()
+
+            pose_indices = [0, 3, 4, 5, 6, 7, 8, 9, 12, 15, 18, 27, 36, 39, 40, 41, 42, 43, 44, 45, 48, 49, 50, 51, 52, 53, 55, 58]
+            pose_angles = []
+            for index in pose_indices:
+                pose_angles.append(float(m.pose[index]))
+
+
+            for item in shape_pose_vol_old:
+                shape_pose_vol.append(item)
+
+
+            shape_pose_vol[2] = pose_angles
+            #print shape_pose_vol[5:]
+
+
+            #for item in shape_pose_vol:
+            #    print item
+
+            shape_pose_vol_list.append(shape_pose_vol)
+
+        print "SAVING! "
+        #print shape_pose_vol_list
+        #pickle.dump(shape_pose_vol_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_list1.pkl", "wb"))
+        np.save(self.filepath_prefix+"/data/init_poses/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(len(old_pose_list))+"_"+stiffness+"_stiff.npy", np.array(shape_pose_vol_list))
+
+
     def generate_prechecked_pose(self, gender, posture, stiffness, filename):
+
+
         prechecked_pose_list = np.load(filename).tolist()
 
 
@@ -507,83 +617,139 @@ class GeneratePose():
             #print self.m.J_transformed[1, :], self.m.J_transformed[4, :]
             # self.m.pose[51] = selection_r
 
-            dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix)
+            dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix, add_floor = False)
             generator.standard_render()
             dss.run_simulation(10000)
 
 
             #break
 
+    def doublecheck_prechecked_list(self, gender, posture, stiffness, filename):
+        prechecked_pose_list = np.load(filename).tolist()
+        contact_check_bns = [4, 5, 7, 8, 16, 17, 18, 19]
+
+        left_abd, right_abd = [], []
+        for shape_pose_vol in prechecked_pose_list[0:100]:
+            for idx in range(len(shape_pose_vol[0])):
+                #print shape_pose_vol[0][idx]
+                self.m.betas[idx] = shape_pose_vol[0][idx]
 
 
+            for idx in range(len(shape_pose_vol[1])):
+                #print shape_pose_vol[1][idx]
+                #print self.m.pose[shape_pose_vol[1][idx]]
+                #print shape_pose_vol[2][idx]
 
+                self.m.pose[shape_pose_vol[1][idx]] = shape_pose_vol[2][idx]
+
+            left_abd.append(np.array(self.m.pose[5]))
+            right_abd.append(float(self.m.pose[8]))
+            #sleep(1)
+
+            dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=stiffness,
+                                            shiftSIDE=shape_pose_vol[4], shiftUD=shape_pose_vol[5],
+                                            filepath_prefix=self.filepath_prefix, add_floor = False)
+            dss.run_sim_step()
+            dss.world.destroy()
+        print np.mean(left_abd) #.15 .16
+        print np.mean(right_abd) #-.18 -.13
+
+                # print "one of the limbs in contact"
+            #print dss.world.collision_result.contact_sets
 
 if __name__ == "__main__":
 
-    gender = "f"
-    num_data = 20
+    gender = "m"
+    num_data = 2000
     posture = "sit"
-    stiffness = "leftside"
-    filepath_prefix = "/home/ubuntu"
+    stiffness = "rightside"
+    filepath_prefix = "/home/henry"
+
+
+
+    DATASET_CREATE_TYPE = 14
+
+
 
 
     if DATASET_CREATE_TYPE == None:
         generator = GeneratePose(gender, posture, filepath_prefix)
         #generator.generate_prechecked_pose(gender, posture, stiffness, filepath_prefix+"/git/volumetric_pose_gen/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
         generator.generate_dataset(gender = gender, posture = posture, num_data = num_data, stiffness = stiffness)
+        #generator.doublecheck_prechecked_list(gender, posture, stiffness, filepath_prefix+"/data/init_poses/valid_shape_pose_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
 
     if DATASET_CREATE_TYPE == 1:
         generator = GeneratePose("m",  "sit", filepath_prefix)
-        generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "rightside")
+        #generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "rightside")
+        generator.fix_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "rightside", filepath_prefix = filepath_prefix)
         generator = GeneratePose("f",  "sit", filepath_prefix)
-        generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "rightside")
+        #generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "rightside")
+        generator.fix_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "rightside", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 2:
         generator = GeneratePose("m",  "sit", filepath_prefix)
-        generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "leftside")
+        #generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "leftside")
+        generator.fix_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "leftside", filepath_prefix = filepath_prefix)
         generator = GeneratePose("f",  "sit", filepath_prefix)
-        generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "leftside")
+        #generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "leftside")
+        generator.fix_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "leftside", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 3:
         generator = GeneratePose("m",  "sit", filepath_prefix)
-        generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "upperbody")
+        #generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "upperbody")
+        generator.fix_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "upperbody", filepath_prefix = filepath_prefix)
         generator = GeneratePose("f",  "sit", filepath_prefix)
-        generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "upperbody")
+        #generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "upperbody")
+        generator.fix_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "upperbody", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 4:
         generator = GeneratePose("m",  "sit", filepath_prefix)
-        generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "lowerbody")
+        #generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "lowerbody")
+        generator.fix_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "lowerbody", filepath_prefix = filepath_prefix)
         generator = GeneratePose("f",  "sit", filepath_prefix)
-        generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "lowerbody")
+        #generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "lowerbody")
+        generator.fix_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "lowerbody", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 5:
         generator = GeneratePose("m",  "sit", filepath_prefix)
-        generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "none")
+        #generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "none")
+        generator.fix_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "none", filepath_prefix = filepath_prefix)
         generator = GeneratePose("f",  "sit", filepath_prefix)
-        generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "none")
+        #generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "none")
+        generator.fix_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "none", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 6:
         generator = GeneratePose("m",  "lay", filepath_prefix)
-        generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "rightside")
+        #generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "rightside")
+        generator.fix_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "rightside", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 7:
         generator = GeneratePose("f",  "lay", filepath_prefix)
-        generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "rightside")
+        #generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "rightside")
+        generator.fix_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "rightside", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 8:
         generator = GeneratePose("m",  "lay", filepath_prefix)
-        generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "leftside")
+        #generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "leftside")
+        generator.fix_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "leftside", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 9:
         generator = GeneratePose("f",  "lay", filepath_prefix)
-        generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "leftside")
+        #generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "leftside")
+        generator.fix_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "leftside", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 10:
         generator = GeneratePose("m",  "lay", filepath_prefix)
-        generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "upperbody")
+        #generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "upperbody")
+        generator.fix_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "upperbody", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 11:
         generator = GeneratePose("f",  "lay", filepath_prefix)
-        generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "upperbody")
+        #generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "upperbody")
+        generator.fix_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "upperbody", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 12:
         generator = GeneratePose("m",  "lay", filepath_prefix)
-        generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "lowerbody")
+        #generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "lowerbody")
+        generator.fix_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "lowerbody", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 13:
         generator = GeneratePose("f",  "lay", filepath_prefix)
-        generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "lowerbody")
+        #generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "lowerbody")
+        generator.fix_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "lowerbody", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 14:
         generator = GeneratePose("m",  "lay", filepath_prefix)
-        generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "none")
+        #generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "none")
+        generator.fix_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "none", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 15:
         generator = GeneratePose("f",  "lay", filepath_prefix)
-        generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "none")
+        #generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "none")
+        generator.fix_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "none", filepath_prefix = filepath_prefix)

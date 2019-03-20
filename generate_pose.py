@@ -43,7 +43,7 @@ class GeneratePose():
         self.m = load_model(model_path)
 
         ## Assign random pose and shape parameters
-        self.m.pose[:] = np.random.rand(self.m.pose.size) * 0.
+
         self.m.betas[:] = np.random.rand(self.m.betas.size) * .0
         #self.m.betas[5] = 20.
 

@@ -18,13 +18,15 @@ import sys
 from pydart2.gui.opengl.scene import OpenGLScene
 from time import time
 import scipy.signal as signal
+from time import sleep
 
 #import pymrt.geometry
 
 GRAVITY = -9.81
 STARTING_HEIGHT = 1.0
 
-K = 1269.0
+#K = 1269.0
+K = 1521.1
 B = K*2
 FRICTION_COEFF = 0.5
 
@@ -43,7 +45,7 @@ class DampingController(object):
         return damping
 
 class DartSkelSim(object):
-    def __init__(self, render, m, gender, posture, stiffness, shiftSIDE = 0.0, shiftUD = 0.0, check_only_distal = True, filepath_prefix = '/home/henry', add_floor = True):
+    def __init__(self, render, m, gender, posture, stiffness, shiftSIDE = 0.0, shiftUD = 0.0, check_only_distal = True, filepath_prefix = '/home/henry', add_floor = True, volume = None):
 
         if gender == "n":
             regs = np.load(filepath_prefix+'/git/smplify_public/code/models/regressors_locked_normalized_hybrid.npz')
@@ -72,7 +74,7 @@ class DartSkelSim(object):
         parent_ref[0] = -1
 
         self.capsules = capsules
-
+        self.step_num = 0
 
         pydart.init(verbose=True)
         print('pydart initialization OK')
@@ -248,21 +250,38 @@ class DartSkelSim(object):
 
 
 
+        if gender == "f":
+            volume_median = [0.015277643666666658, 0.007676252166666666, 0.007705970166666665, 0.007150662166666678, 0.004637961,
+                             0.0046260565, 0.006919925999999999, 0.0009656045, 0.000978959, 0.010161063749999996,
+                             0.0014945347499999992, 0.002064434, 0.002040836916666667, 0.003933601916666668, 0.00184907,
+                             0.0018632635, 0.0009073805, 0.0009390935, 0.000400365, 0.0004192055]
+        else:
+            volume_median = [0.014475041666666666, 0.007873465666666668, 0.007963612000000004, 0.009262944666666675, 0.0052877485,
+                             0.0052843175, 0.006637316166666669, 0.001300277, 0.001316104, 0.011297247333333335,
+                             0.002356231416666665, 0.003092792416666667, 0.0030801008333333343, 0.004614448, 0.0022653085,
+                             0.002294299, 0.0014234765, 0.001413545, 0.000390882, 0.000409517]
 
 
-        #weight the capsules appropriately
-        volume = []
-        volume_median = []
-        for body_ct in range(NUM_CAPSULES):
-            #give the capsules a weight propertional to their volume
-            cap_rad = np.abs(float(capsules[body_ct].rad[0]))
-            cap_len = np.abs(float(capsules[body_ct].length[0]))
+        if volume is None:
+            #weight the capsules appropriately
+            print "volume is none!!!"
+            volume = []
+            volume_median = []
+            for body_ct in range(NUM_CAPSULES):
+                #give the capsules a weight propertional to their volume
+                cap_rad = np.abs(float(capsules[body_ct].rad[0]))
+                cap_len = np.abs(float(capsules[body_ct].length[0]))
 
-            cap_rad_median = np.abs(float(capsules_median[body_ct].rad[0]))
-            cap_len_median = np.abs(float(capsules_median[body_ct].length[0]))
+                cap_rad_median = np.abs(float(capsules_median[body_ct].rad[0]))
+                cap_len_median = np.abs(float(capsules_median[body_ct].length[0]))
 
-            volume.append(np.pi*np.square(cap_rad)*(cap_rad*4/3 + cap_len))
-            volume_median.append(np.pi*np.square(cap_rad_median)*(cap_rad_median*4/3 + cap_len_median))
+                volume.append(np.pi*np.square(cap_rad)*(cap_rad*4/3 + cap_len))
+                volume_median.append(np.pi*np.square(cap_rad_median)*(cap_rad_median*4/3 + cap_len_median))
+
+        #print volume
+        #sleep(1)
+
+
 
         self.volume = volume
         self.volume_median = volume_median
@@ -275,7 +294,7 @@ class DartSkelSim(object):
         #Trunk(Chest, back and abdomen) Women- 50.80,  Head - 9.40, Thigh - 8.30 x 2, Lower leg - 5.50 x 2, Foot - 1.20 x 2, Upper arm - 2.7 x 2, Forearm - 1.60 x 2, Hand - 0.50 x 2,
         #Trunk(Chest, back and abdomen) Men - 48.30,  Head - 7.10, Thigh - 10.50 x 2, Lower leg - 4.50 x 2, Foot - 1.50 x 2, Upper arm - 3.3 x 2, Forearm - 1.90 x 2, Hand - 0.60 x 2,
         if gender == "f":
-            BODY_MASS = 54.4 #kg
+            BODY_MASS = 62.5 #kg median height: -1.658 or about 5 foot 5.3 in
             skel.bodynodes[0].set_mass(BODY_MASS * 0.5080 * (volume[0]/volume_torso) * (volume[0]/volume_median[0]))
             skel.bodynodes[1].set_mass(BODY_MASS * 0.0830 * (volume[1]/volume_median[1]))
             skel.bodynodes[2].set_mass(BODY_MASS * 0.0830 * (volume[2]/volume_median[2]))
@@ -297,7 +316,7 @@ class DartSkelSim(object):
             skel.bodynodes[18].set_mass(BODY_MASS * 0.0050 * (volume[18]/volume_median[18]))
             skel.bodynodes[19].set_mass(BODY_MASS * 0.0050 * (volume[19]/volume_median[19]))
         else:
-            BODY_MASS = 72.6 #kg
+            BODY_MASS = 78.4 #kg . median height: 1.791 or about 5 foot 10.5 in
             skel.bodynodes[0].set_mass(BODY_MASS * 0.4830 * (volume[0]/volume_torso) * (volume[0]/volume_median[0]))
             skel.bodynodes[1].set_mass(BODY_MASS * 0.1050 * (volume[1]/volume_median[1]))
             skel.bodynodes[2].set_mass(BODY_MASS * 0.1050 * (volume[2]/volume_median[2]))
@@ -366,7 +385,7 @@ class DartSkelSim(object):
         self.nearest_capsule_list_all = np.load(filepath_prefix+'/git/volumetric_pose_gen/data/nearest_capsule.npy').tolist()
 
 
-        print('init pose = %s' % skel.q)
+        #print('init pose = %s' % skel.q)
         skel.controller = DampingController(skel)
 
 
@@ -1002,6 +1021,17 @@ class DartSkelSim(object):
         self.force_dir_list_prev = force_dir_list
         self.pmat_idx_list_prev = pmat_idx_list
         self.force_loc_list_prev = force_loc_list
+
+        if self.step_num == 0:
+            self.world.check_collision()
+            contact_check_bns = [4, 5, 7, 8, 16, 17, 18, 19]
+            #for contact_set in self.world.collision_result.contact_sets:
+            #    if contact_set[0] in contact_check_bns or contact_set[1] in contact_check_bns:  # consider removing spine 3 and upper legs
+            print self.world.collision_result.contact_sets
+                    #sleep(1)
+
+        self.step_num += 1
+
 
 
         return skel.q, skel.bodynodes, root_joint_pos, max_vel, max_acc
