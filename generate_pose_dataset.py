@@ -2,6 +2,7 @@ import numpy as np
 import random
 import copy
 from opendr.renderer import ColoredRenderer
+from opendr.renderer import DepthRenderer
 from opendr.lighting import LambertianPointLight
 from opendr.camera import ProjectPoints
 from smpl.smpl_webuser.serialization import load_model
@@ -19,6 +20,7 @@ from time import sleep
 #import tf
 DATASET_CREATE_TYPE = 1
 
+import cv2
 
 import math
 from random import shuffle
@@ -118,7 +120,88 @@ class GeneratePose():
         # plt.show()
         # import pdb; pdb.set_trace()
 
+    def mesh_render(self):
+        ## Create OpenDR renderer
+        rn = ColoredRenderer()
 
+        ## Assign attributes to renderer
+        w, h = (1000, 1000)
+
+        #terms = 'f', 'frustum', 'background_image', 'overdraw', 'num_channels'
+        #dterms = 'vc', 'camera', 'bgcolor'
+
+
+        rn.camera = ProjectPoints(
+            v=self.m,
+            rt=np.array([np.pi, 0.0, 0.0]),
+            t=np.array([0, -0.3, 2.0]),
+            f=np.array([w,w])/2.,
+            c=np.array([w,h])/2.,
+            k=np.zeros(5))
+        rn.frustum = {'near': 1., 'far': 10., 'width': w, 'height': h}
+        rn.set(v=self.m, f=self.m.f, bgcolor=np.array([1.0, 1.0, 1.0]))
+
+        ## Construct point light source
+        rn.vc = LambertianPointLight(
+            f=self.m.f,
+            v=rn.v,
+            num_verts=len(self.m),
+            light_pos=np.array([1000,1000,2000]),
+            vc=np.ones_like(self.m)*.9,
+            light_color=np.array([1.0, 0.7, 0.65]))
+
+        print self.m.r
+        print np.max(self.m.f)
+
+        import trimesh
+        import pyrender
+        import pyglet
+
+        tm = trimesh.base.Trimesh(vertices=self.m.r,
+                                  faces=self.m.f)
+
+        #tm = trimesh.load('/home/henry/Downloads/fuze.obj')
+
+        pymesh = pyrender.Mesh.from_trimesh(tm)
+
+
+
+
+        print tm.vertices
+        print np.max(tm.faces)
+
+
+        from pyglet.window import Window
+        from pyglet.gl import Config;
+        w = Window(config=Config(major_version=4, minor_version=1))
+        print('{}.{}'.format(w.context.config.major_version, w.context.config.minor_version))
+
+
+
+        scene = pyrender.Scene()
+        scene.add(pymesh)
+        pyrender.Viewer(scene, use_raymond_lighting=True)
+
+
+        print np.shape(rn.r)
+        #sleep(5)
+
+        clipped_render = rn.r[h/8:7*h/8, w/4:3*w/4, :]
+
+
+        ## Show it using OpenCV
+        cv2.imshow('render_SMPL', clipped_render)
+        print ('..Print any key while on the display window')
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+
+        ## Could also use matplotlib to display
+        # import matplotlib.pyplot as plt
+        # plt.ion()
+        # plt.imshow(rn.r)
+        # plt.show()
+        # import pdb; pdb.set_trace()
 
     def get_noisy_angle(self, angle, angle_min, angle_max):
         not_within_bounds = True
@@ -540,7 +623,7 @@ class GeneratePose():
 
 
         print len(prechecked_pose_list)
-        #shuffle(prechecked_pose_list)
+        shuffle(prechecked_pose_list)
 
         for shape_pose_vol in prechecked_pose_list[6:]:
             #print shape_pose_vol
@@ -616,10 +699,12 @@ class GeneratePose():
 
             #print self.m.J_transformed[1, :], self.m.J_transformed[4, :]
             # self.m.pose[51] = selection_r
+            generator.mesh_render()
 
             dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix, add_floor = False)
-            generator.standard_render()
+
             dss.run_simulation(10000)
+            #generator.standard_render()
 
 
             #break
@@ -660,22 +745,22 @@ class GeneratePose():
 if __name__ == "__main__":
 
     gender = "m"
-    num_data = 2000
-    posture = "sit"
+    num_data = 4000
+    posture = "lay"
     stiffness = "rightside"
     filepath_prefix = "/home/henry"
 
 
 
-    DATASET_CREATE_TYPE = 14
+    DATASET_CREATE_TYPE = None
 
 
 
 
     if DATASET_CREATE_TYPE == None:
         generator = GeneratePose(gender, posture, filepath_prefix)
-        #generator.generate_prechecked_pose(gender, posture, stiffness, filepath_prefix+"/git/volumetric_pose_gen/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
-        generator.generate_dataset(gender = gender, posture = posture, num_data = num_data, stiffness = stiffness)
+        generator.generate_prechecked_pose(gender, posture, stiffness, filepath_prefix+"/data/init_poses/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
+        #generator.generate_dataset(gender = gender, posture = posture, num_data = num_data, stiffness = stiffness)
         #generator.doublecheck_prechecked_list(gender, posture, stiffness, filepath_prefix+"/data/init_poses/valid_shape_pose_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
 
     if DATASET_CREATE_TYPE == 1:
