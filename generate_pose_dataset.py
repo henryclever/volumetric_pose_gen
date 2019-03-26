@@ -171,12 +171,11 @@ class GeneratePose():
         print np.max(tm.faces)
 
 
-        from pyglet.window import Window
-        from pyglet.gl import Config;
-        w = Window(config=Config(major_version=4, minor_version=1))
-        print('{}.{}'.format(w.context.config.major_version, w.context.config.minor_version))
-
-
+        #from pyglet.window import Window
+        #from pyglet.gl import Config;
+        #w = Window(config=Config(major_version=4, minor_version=1))
+        #print w.context
+        #print('{}.{}'.format(w.context.config.major_version, w.context.config.minor_version))
 
         scene = pyrender.Scene()
         scene.add(pymesh)
