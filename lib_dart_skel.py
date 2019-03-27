@@ -95,7 +95,7 @@ class LibDartSkel():
         #bn = bodynode.BodyNode(skel, 8)
         return skel
 
-    def assign_joint_rest_and_stiffness(self, skel, m, STIFFNESS, posture):
+    def assign_joint_rest_and_stiffness(self, skel, m, STIFFNESS, posture, body_mass):
 
         ################################# ASSIGN JOINT REST POSITION AND SPRING COEFF ##################################
 
@@ -120,51 +120,55 @@ class LibDartSkel():
         #    leg_stiffness = 200.0
         #    knee_stiffness = 200.0
         #    torso_stiffness = 1000.0
+
+        bm_fraction = body_mass/70.45
+
+
         if posture == "sit":
-            torso_stiffness = 250.0
+            torso_stiffness = 300.0*bm_fraction
         else:
-            torso_stiffness = 250.0
+            torso_stiffness = 300.0*bm_fraction
 
         if STIFFNESS == "upperbody":
-            r_arm_stiffness = 50.0
-            l_arm_stiffness = 50.0
-            head_stiffness = 100.0
-            r_leg_stiffness = 10.0
-            l_leg_stiffness = 10.0
-            r_knee_stiffness = 10.0
-            l_knee_stiffness = 10.0
+            r_arm_stiffness = 50.0*bm_fraction
+            l_arm_stiffness = 50.0*bm_fraction
+            head_stiffness = 150.0*bm_fraction
+            r_leg_stiffness = 10.0*bm_fraction
+            l_leg_stiffness = 10.0*bm_fraction
+            r_knee_stiffness = 10.0*bm_fraction
+            l_knee_stiffness = 10.0*bm_fraction
         elif STIFFNESS == "lowerbody":
-            r_arm_stiffness = 2.0
-            l_arm_stiffness = 2.0
-            head_stiffness = 100.0
-            r_leg_stiffness = 100.0
-            l_leg_stiffness = 100.0
-            r_knee_stiffness = 100.0
-            l_knee_stiffness = 100.0
+            r_arm_stiffness = 2.0*bm_fraction
+            l_arm_stiffness = 2.0*bm_fraction
+            head_stiffness = 150.0*bm_fraction
+            r_leg_stiffness = 150.0*bm_fraction
+            l_leg_stiffness = 150.0*bm_fraction
+            r_knee_stiffness = 150.0*bm_fraction
+            l_knee_stiffness = 150.0*bm_fraction
         elif STIFFNESS == "rightside":
-            r_arm_stiffness = 50.0
-            l_arm_stiffness = 2.0
-            head_stiffness = 100.0
-            r_leg_stiffness = 100.0
-            l_leg_stiffness = 10.0
-            r_knee_stiffness = 100.0
-            l_knee_stiffness = 10.0
+            r_arm_stiffness = 50.0*bm_fraction
+            l_arm_stiffness = 2.0*bm_fraction
+            head_stiffness = 150.0*bm_fraction
+            r_leg_stiffness = 150.0*bm_fraction
+            l_leg_stiffness = 10.0*bm_fraction
+            r_knee_stiffness = 150.0*bm_fraction
+            l_knee_stiffness = 10.0*bm_fraction
         elif STIFFNESS == "leftside":
-            r_arm_stiffness = 2.0
-            l_arm_stiffness = 50.0
-            head_stiffness = 100.0
-            r_leg_stiffness = 10.0
-            l_leg_stiffness = 100.0
-            r_knee_stiffness = 10.0
-            l_knee_stiffness = 100.0
+            r_arm_stiffness = 2.0*bm_fraction
+            l_arm_stiffness = 50.0*bm_fraction
+            head_stiffness = 150.0*bm_fraction
+            r_leg_stiffness = 10.0*bm_fraction
+            l_leg_stiffness = 150.0*bm_fraction
+            r_knee_stiffness = 10.0*bm_fraction
+            l_knee_stiffness = 150.0*bm_fraction
         else: #not stiff
-            r_arm_stiffness = 2.0
-            l_arm_stiffness = 2.0
-            head_stiffness = 100.0
-            r_leg_stiffness = 10.0
-            l_leg_stiffness = 10.0
-            r_knee_stiffness = 10.0
-            l_knee_stiffness = 10.0
+            r_arm_stiffness = 2.0*bm_fraction
+            l_arm_stiffness = 2.0*bm_fraction
+            head_stiffness = 150.0*bm_fraction
+            r_leg_stiffness = 10.0*bm_fraction
+            l_leg_stiffness = 10.0*bm_fraction
+            r_knee_stiffness = 10.0*bm_fraction
+            l_knee_stiffness = 10.0*bm_fraction
 
 
         for joint in skel.joints:
