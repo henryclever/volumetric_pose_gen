@@ -13,8 +13,8 @@ from scipy import ndimage
 import scipy.stats as ss
 from scipy.misc import imresize
 from scipy.ndimage.interpolation import zoom
-from skimage.feature import hog
-from skimage import data, color, exposure, feature
+#from skimage.feature import hog
+#from skimage import data, color, exposure, feature
 
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import scale

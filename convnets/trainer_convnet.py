@@ -40,8 +40,8 @@ from scipy import ndimage
 import scipy.stats as ss
 from scipy.misc import imresize
 from scipy.ndimage.interpolation import zoom
-from skimage.feature import hog
-from skimage import data, color, exposure
+#from skimage.feature import hog
+#from skimage import data, color, exposure
 
 
 from sklearn.cluster import KMeans
@@ -52,7 +52,7 @@ from sklearn import metrics
 from sklearn.utils import shuffle
 from sklearn.multioutput import MultiOutputRegressor
 
-np.set_printoptions(threshold='nan')
+np.set_printoptions(threshold=sys.maxsize)
 
 MAT_WIDTH = 0.762 #metres
 MAT_HEIGHT = 1.854 #metres
@@ -123,6 +123,7 @@ class PhysicalTrainer():
 
         #load in the training files.  This may take a while.
         for some_subject in training_database_file_f:
+
             print some_subject
             dat_curr = load_pickle(some_subject)
             for key in dat_curr:
@@ -655,7 +656,7 @@ if __name__ == "__main__":
     training_database_file_m = []
     test_database_file = []
 
-    training_database_file_f.append(filepath_prefix_qt+'/training/train_f_sit_90_rightside_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/training/train_f_lay_3552_upperbody_stiff.p')
     training_database_file_m.append(filepath_prefix_qt+'/training/train_m_sit_95_rightside_stiff.p')
 
     test_database_file.append(filepath_prefix_qt+'/testing/trainval4_150rh1_sit120rh.p')

@@ -39,7 +39,7 @@ import cPickle as pkl
 import random
 from scipy import ndimage
 
-np.set_printoptions(threshold='nan')
+np.set_printoptions(threshold=sys.maxsize)
 
 MAT_WIDTH = 0.762 #metres
 MAT_HEIGHT = 1.854 #metres
@@ -159,8 +159,10 @@ def visualize_pressure_map(p_map, targets_raw=None, scores_raw=None, p_map_val=N
 
 if __name__ == "__main__":
 
-    gender = "f"
-    num_resting_poses = 90
+    gender = "m"
+    posture = "lay"
+    stiffness = "upperbody"
+    num_resting_poses = 3572
 
 
     training_data_dict = {}
@@ -202,19 +204,23 @@ if __name__ == "__main__":
     #print m.pose
     #print "J x trans", m.J_transformed[:, 0]
 
-    resting_pose_data_list = np.load('/home/henry/data/resting_poses/resting_pose_'+gender+'_sit_'+str(num_resting_poses)+'_rightside_stiff.npy')
-    training_database_pmat_height_list = np.load('/home/henry/data/pmat_height/pmat_height_'+gender+'_sit_'+str(num_resting_poses)+'_rightside_stiff.npy')
+    resting_pose_data_list = np.load('/home/henry/data/resting_poses/resting_pose_'+gender+'_'+posture+'_'+str(num_resting_poses)+'_'+stiffness+'_stiff.npy')
+    training_database_pmat_height_list = np.load('/home/henry/data/pmat_height/pmat_height_'+gender+'_'+posture+'_'+str(num_resting_poses)+'_'+stiffness+'_stiff.npy')
 
-    for resting_pose_data_ct in range(len(resting_pose_data_list)):
+    print len(resting_pose_data_list), len(training_database_pmat_height_list[0])
+
+    for resting_pose_data_ct in range(len(resting_pose_data_list)-1):
         resting_pose_data = resting_pose_data_list[resting_pose_data_ct]
-        pmat = training_database_pmat_height_list[0, resting_pose_data_ct]
-        height = training_database_pmat_height_list[1, resting_pose_data_ct]
+        pmat = training_database_pmat_height_list[0, resting_pose_data_ct+1]
+        height = training_database_pmat_height_list[1, resting_pose_data_ct+1]
 
         capsule_angles = resting_pose_data[0].tolist()
         root_joint_pos_list = resting_pose_data[1]
         body_shape_list = resting_pose_data[2]
 
         #print "shape", body_shape_list
+
+        print np.shape(resting_pose_data), np.shape(pmat), np.shape(height), np.shape(capsule_angles), np.shape(root_joint_pos_list), np.shape(body_shape_list)
 
         m.pose[0:3] = capsule_angles[0:3]
         m.pose[3:6] = capsule_angles[6:9]
@@ -281,7 +287,7 @@ if __name__ == "__main__":
         print entry, training_data_dict['markers_xyz_m'][entry][0:2], training_data_dict['body_shape'][entry][0:2], training_data_dict['joint_angles'][entry][0:2]
 
 
-    pickle.dump(training_data_dict, open(os.path.join('/home/henry/data/training/train_'+gender+'_sit_'+str(num_resting_poses)+'_rightside_stiff.p'), 'wb'))
+    pickle.dump(training_data_dict, open(os.path.join('/home/henry/data/training/train_'+gender+'_'+posture+'_'+str(num_resting_poses)+'_'+stiffness+'_stiff.p'), 'wb'))
 
     for item in training_data_dict:
         print "item name: ", item
