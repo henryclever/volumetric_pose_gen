@@ -26,8 +26,10 @@ GRAVITY = -9.81
 STARTING_HEIGHT = 1.0
 
 #K = 1269.0
-K = 1521.1
-B = K*2
+#K = 1521.1
+K = 1196.5
+#K = 1042.05
+B = K*3
 FRICTION_COEFF = 0.5
 
 NUM_CAPSULES = 20
@@ -239,14 +241,6 @@ class DartSkelSim(object):
 
 
 
-        skel = LibDartSkel().assign_init_joint_angles(skel, m, root_joint_type)
-
-        skel = LibDartSkel().assign_joint_rest_and_stiffness(skel, m, STIFFNESS = stiffness, posture = posture)
-
-        #skel = LibDartSkel().assign_joint_limits_and_damping(skel)
-
-        #skel = LibDartSkel().assign_capsule_friction(skel, friction = 1000.0)
-
 
 
 
@@ -369,6 +363,16 @@ class DartSkelSim(object):
             skel.bodynodes[body_ct].set_inertia_entries(Ixx, Iyy, Izz)
 
             body_mass += skel.bodynodes[body_ct].m
+
+
+
+
+        skel = LibDartSkel().assign_init_joint_angles(skel, m, root_joint_type)
+        skel = LibDartSkel().assign_joint_rest_and_stiffness(skel, m, STIFFNESS = stiffness, posture = posture, body_mass = body_mass)
+
+        #skel = LibDartSkel().assign_joint_limits_and_damping(skel)
+
+        #skel = LibDartSkel().assign_capsule_friction(skel, friction = 1000.0)
 
 
         print "Body mass is: ", body_mass, "kg"
