@@ -15,6 +15,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import transforms
 from torch.autograd import Variable
+GPU = True
 
 import chumpy as ch
 
@@ -69,7 +70,8 @@ HIGH_TAXEL_THRESH_X = (NUMOFTAXELS_X - 1)
 HIGH_TAXEL_THRESH_Y = (NUMOFTAXELS_Y - 1)
 
 torch.set_num_threads(1)
-if False:#torch.cuda.is_available():
+#if torch.cuda.is_available():
+if GPU == True:
     # Use for GPU
     dtype = torch.cuda.FloatTensor
     print '######################### CUDA is available! #############################'
@@ -81,7 +83,7 @@ else:
 class PhysicalTrainer():
     '''Gets the dictionary of pressure maps from the training database,
     and will have API to do all sorts of training with it.'''
-    def __init__(self, training_database_file_f, training_database_file_m, test_file, opt):
+    def __init__(self, training_database_file_f, training_database_file_m, test_file_f, test_file_m, opt):
         '''Opens the specified pickle files to get the combined dataset:
         This dataset is a dictionary of pressure maps with the corresponding
         3d position and orientation of the markers associated with it.'''
@@ -94,7 +96,7 @@ class PhysicalTrainer():
         self.opt = opt
         self.batch_size = 128
 
-        self.num_epochs = 200
+        self.num_epochs = 400
         self.include_inter = True
         self.shuffle = True
 
@@ -102,7 +104,7 @@ class PhysicalTrainer():
         self.count = 0
 
 
-        print test_file
+        print test_file_f
         print self.num_epochs, 'NUM EPOCHS!'
         #Entire pressure dataset with coordinates in world frame
 
@@ -124,8 +126,8 @@ class PhysicalTrainer():
         #load in the training files.  This may take a while.
         for some_subject in training_database_file_f:
 
-            print some_subject
             dat_curr = load_pickle(some_subject)
+            print some_subject, dat_curr['bed_angle_deg'][0]
             for key in dat_curr:
                 if np.array(dat_curr[key]).shape[0] != 0:
                     for inputgoalset in np.arange(len(dat_curr['markers_xyz_m'])):
@@ -145,8 +147,8 @@ class PhysicalTrainer():
 
         #load in the training files.  This may take a while.
         for some_subject in training_database_file_m:
-            print some_subject
             dat_curr = load_pickle(some_subject)
+            print some_subject, dat_curr['bed_angle_deg'][0]
             for key in dat_curr:
                 if np.array(dat_curr[key]).shape[0] != 0:
                     for inputgoalset in np.arange(len(dat_curr['markers_xyz_m'])):
@@ -221,50 +223,83 @@ class PhysicalTrainer():
 
 
         #load in the test file
-        for some_subject in test_file:
+        for some_subject in test_file_f:
             print some_subject
             dat_curr = load_pickle(some_subject)
             for key in dat_curr:
                 if np.array(dat_curr[key]).shape[0] != 0:
                     for inputgoalset in np.arange(len(dat_curr['markers_xyz_m'])):
                         try:
-                            test_dat[key].append(dat_curr[key][inputgoalset])
+                            test_dat_f[key].append(dat_curr[key][inputgoalset])
                         except:
                             try:
-                                test_dat[key] = []
-                                test_dat[key].append(dat_curr[key][inputgoalset])
+                                test_dat_f[key] = []
+                                test_dat_f[key].append(dat_curr[key][inputgoalset])
                             except:
-                                test_dat = {}
-                                test_dat[key] = []
-                                test_dat[key].append(dat_curr[key][inputgoalset])
+                                test_dat_f = {}
+                                test_dat_f[key] = []
+                                test_dat_f[key].append(dat_curr[key][inputgoalset])
+
+        #load in the test file
+        for some_subject in test_file_m:
+            print some_subject
+            dat_curr = load_pickle(some_subject)
+            for key in dat_curr:
+                if np.array(dat_curr[key]).shape[0] != 0:
+                    for inputgoalset in np.arange(len(dat_curr['markers_xyz_m'])):
+                        try:
+                            test_dat_m[key].append(dat_curr[key][inputgoalset])
+                        except:
+                            try:
+                                test_dat_m[key] = []
+                                test_dat_m[key].append(dat_curr[key][inputgoalset])
+                            except:
+                                test_dat_m = {}
+                                test_dat_m[key] = []
+                                test_dat_m[key].append(dat_curr[key][inputgoalset])
 
 
 
         # create a tensor for our testing dataset.  First print out how many input/output sets we have and what data we have
-        for key in test_dat:
-            print 'testing set: ', key, np.array(test_dat[key]).shape
+        for key in test_dat_f:
+            print 'testing set: ', key, np.array(test_dat_f[key]).shape
+        for key in test_dat_m:
+            print 'testing set: ', key, np.array(test_dat_m[key]).shape
 
         self.test_x_flat = []  # Initialize the testing pressure mat list
-        for entry in range(len(test_dat['images'])):
-            self.test_x_flat.append(test_dat['images'][entry])
+        for entry in range(len(test_dat_f['images'])):
+            self.test_x_flat.append(test_dat_f['images'][entry])
+        for entry in range(len(test_dat_m['images'])):
+            self.test_x_flat.append(test_dat_m['images'][entry])
 
         self.test_a_flat = []  # Initialize the testing pressure mat angle list
-        for entry in range(len(test_dat['images'])):
-            self.test_a_flat.append(test_dat['bed_angle_deg'][entry])
+        for entry in range(len(test_dat_f['images'])):
+            self.test_a_flat.append(test_dat_f['bed_angle_deg'][entry])
+        for entry in range(len(test_dat_m['images'])):
+            self.test_a_flat.append(test_dat_m['bed_angle_deg'][entry])
         test_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.test_x_flat, self.test_a_flat, self.include_inter, (84, 47), self.verbose)
         test_xa = np.array(test_xa)
         self.test_x_tensor = torch.Tensor(test_xa)
 
 
         self.test_y_flat = []  # Initialize the ground truth list
-        for entry in range(len(test_dat['markers_xyz_m'])):
+        for entry in range(len(test_dat_f['markers_xyz_m'])):
             if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
                 #print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                c = np.concatenate((test_dat['markers_xyz_m'][entry] * 1000,
+                c = np.concatenate((test_dat_f['markers_xyz_m'][entry] * 1000,
+                                    [1], [0]), axis=0) # shapedirs (N, 6890, 3, 10)
+                self.test_y_flat.append(c)
+            else:
+                self.test_y_flat.append(test_dat_f['markers_xyz_m'][entry] * 1000)
+
+        for entry in range(len(test_dat_m['markers_xyz_m'])):
+            if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
+                #print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
+                c = np.concatenate((test_dat_m['markers_xyz_m'][entry] * 1000,
                                     [0], [1]), axis=0) # shapedirs (N, 6890, 3, 10)
                 self.test_y_flat.append(c)
             else:
-                self.test_y_flat.append(test_dat['markers_xyz_m'][entry] * 1000)
+                self.test_y_flat.append(test_dat_m['markers_xyz_m'][entry] * 1000)
 
 
         self.test_y_tensor = torch.Tensor(self.test_y_flat)
@@ -349,8 +384,10 @@ class PhysicalTrainer():
 
 
         # Run model on GPU if available
-        if False:#torch.cuda.is_available():
+        #if torch.cuda.is_available():
+        if GPU == True:
             self.model = self.model.cuda()
+            #self.model = torch.load('/home/henry/data/training/convnet_direct_True128b_400e.pt')
 
 
         self.criterion = F.cross_entropy
@@ -378,6 +415,9 @@ class PhysicalTrainer():
             except:
                 self.t2 = 0
             print 'Time taken by epoch',epoch,':',self.t2,' seconds'
+
+            if epoch == 200: torch.save(self.model, '/home/henry/data/training/convnet'+self.save_name+'.pt')
+            if epoch == 300: torch.save(self.model, '/home/henry/data/training/convnet'+self.save_name+'.pt')
 
 
 
@@ -419,6 +459,7 @@ class PhysicalTrainer():
                     loss = self.criterion(scores, scores_zeros)
 
                 elif self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
+
 
                     #0:72: positions.
                     batch.append(batch[1][:, 72:82]) #betas
@@ -474,8 +515,8 @@ class PhysicalTrainer():
                 self.optimizer.step()
                 loss *= 1000
 
-                print "got here"
-                print batch_idx, opt.log_interval
+                #print "got here"
+                #print batch_idx, opt.log_interval
 
             if True:#batch_idx % opt.log_interval == 0:
                 if self.loss_vector_type == 'anglesR':
@@ -489,7 +530,10 @@ class PhysicalTrainer():
                 elif self.loss_vector_type == 'direct':
                     pass
 
-                VisualizationLib().print_error_train(targets.data, targets_est, self.output_size_train, self.loss_vector_type, data='train')
+                if GPU == True:
+                    VisualizationLib().print_error_train(targets.data.cpu(), targets_est.cpu(), self.output_size_train, self.loss_vector_type, data='train')
+                else:
+                    VisualizationLib().print_error_train(targets.data, targets_est, self.output_size_train, self.loss_vector_type, data='train')
 
                 self.im_sample = images.data
                 #self.im_sample = self.im_sample[:,1, :, :]
@@ -592,8 +636,10 @@ class PhysicalTrainer():
         loss *= 100
         loss *= 1000
 
-
-        VisualizationLib().print_error_val(targets.data, targets_est_reduced, self.output_size_val, self.loss_vector_type, data='validate')
+        if GPU == True:
+            VisualizationLib().print_error_val(targets.data.cpu(), targets_est_reduced.cpu(), self.output_size_val, self.loss_vector_type, data='validate')
+        else:
+            VisualizationLib().print_error_val(targets.data, targets_est_reduced, self.output_size_val, self.loss_vector_type, data='validate')
 
         if self.loss_vector_type == 'anglesR':
             #print angles_est[0, :], 'validation angles'
@@ -611,7 +657,10 @@ class PhysicalTrainer():
         self.sc_sampleval = self.sc_sampleval.view(24, 3)
 
         if self.opt.visualize == True:
-            VisualizationLib().visualize_pressure_map(self.im_sample, self.tar_sample, self.sc_sample,self.im_sampleval, self.tar_sampleval, self.sc_sampleval, block=False)
+            if GPU == True:
+                VisualizationLib().visualize_pressure_map(self.im_sample.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),self.im_sampleval.cpu(), self.tar_sampleval.cpu(), self.sc_sampleval.cpu(), block=False)
+            else:
+                VisualizationLib().visualize_pressure_map(self.im_sample, self.tar_sample, self.sc_sample,self.im_sampleval, self.tar_sampleval, self.sc_sampleval, block=False)
 
 
         return loss
@@ -654,15 +703,42 @@ if __name__ == "__main__":
 
     training_database_file_f = []
     training_database_file_m = []
-    test_database_file = []
+    test_database_file_f = []
+    test_database_file_m = []
 
     training_database_file_f.append(filepath_prefix_qt+'/training/train_f_lay_3552_upperbody_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'/training/train_m_sit_95_rightside_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/training/train_f_lay_3701_rightside_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/training/train_f_lay_3737_leftside_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/training/train_f_lay_3822_lowerbody_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/training/train_f_lay_3850_none_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/training/train_f_sit_1504_upperbody_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/training/train_f_sit_1528_rightside_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/training/train_f_sit_1502_leftside_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/training/train_f_sit_1500_lowerbody_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/training/train_f_sit_1632_none_stiff.p')
 
-    test_database_file.append(filepath_prefix_qt+'/testing/trainval4_150rh1_sit120rh.p')
+    training_database_file_m.append(filepath_prefix_qt+'/training/train_m_lay_3572_upperbody_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/training/train_m_lay_3642_rightside_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/training/train_m_lay_3667_leftside_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/training/train_m_lay_3869_lowerbody_stiff.p')
+    #training_database_file_m.append(filepath_prefix_qt+'/training/train_m_lay_3850_none_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/training/train_m_sit_1267_upperbody_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/training/train_m_sit_1245_rightside_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/training/train_m_sit_1296_leftside_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/training/train_m_sit_1251_lowerbody_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/training/train_m_sit_1408_none_stiff.p')
+    #training_database_file_m.append(filepath_prefix_qt+'/training/train_m_sit_95_rightside_stiff.p')
 
+    #test_database_file.append(filepath_prefix_qt+'/testing/trainval4_150rh1_sit120rh.p')
+    #test_database_file_f.append(filepath_prefix_qt + '/testing/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    #test_database_file_m.append(filepath_prefix_qt + '/testing/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    test_database_file_m.append(filepath_prefix_qt + '/testing/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    #test_database_file_m.append(filepath_prefix_qt + '/testing/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    #test_database_file_m.append(filepath_prefix_qt + '/testing/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    #test_database_file_m.append(filepath_prefix_qt + '/testing/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    test_database_file_f.append(filepath_prefix_qt + '/testing/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
 
-    p = PhysicalTrainer(training_database_file_f, training_database_file_m, test_database_file, opt)
+    p = PhysicalTrainer(training_database_file_f, training_database_file_m, test_database_file_f, test_database_file_m, opt)
 
     p.init_convnet_train()
 

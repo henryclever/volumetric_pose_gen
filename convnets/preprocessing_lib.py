@@ -98,6 +98,8 @@ class PreprocessingLib():
     def preprocessing_create_pressure_angle_stack_realtime(self, p_map, bedangle, mat_size):
         '''This is for creating a 2-channel input using the height of the bed. '''
         p_map = np.reshape(p_map, mat_size)
+
+
         print np.shape(p_map)
         print p_map.shape
         print np.shape(bedangle), 'angle dat'
@@ -126,8 +128,13 @@ class PreprocessingLib():
 
     def preprocessing_create_pressure_angle_stack(self,x_data, a_data, include_inter, mat_size, verbose):
         '''This is for creating a 2-channel input using the height of the bed. '''
+        print np.max(x_data)
+        x_data = np.clip(x_data, 0, 100)
+        print np.max(x_data)
+
         print np.shape(x_data)
         print np.shape(a_data), 'angle dat'
+        #print a_data
 
         print 'calculating height matrix and sobel filter'
         p_map_dataset = []

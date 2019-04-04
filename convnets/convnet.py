@@ -331,6 +331,18 @@ class CNN(nn.Module):
 
         print 'Out size:', out_size
 
+        GPU = True
+        if GPU == True:
+            # Use for GPU
+            dtype = torch.cuda.FloatTensor
+            print
+            '######################### CUDA is available! #############################'
+        else:
+            # Use for CPU
+            dtype = torch.FloatTensor
+            print
+            '############################## USING CPU #################################'
+
         if loss_vector_type == 'anglesR' or loss_vector_type == 'anglesDC' or loss_vector_type == 'anglesEU':
 
 
@@ -338,18 +350,18 @@ class CNN(nn.Module):
 
             model_path_f = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_f_lbs_10_207_0_v1.0.0.pkl'
             human_f = load_model(model_path_f)
-            self.v_template_f = torch.Tensor(np.array(human_f.v_template))
-            self.shapedirs_f = torch.Tensor(np.array(human_f.shapedirs)).permute(0, 2, 1)
+            self.v_template_f = torch.Tensor(np.array(human_f.v_template)).type(dtype)
+            self.shapedirs_f = torch.Tensor(np.array(human_f.shapedirs)).permute(0, 2, 1).type(dtype)
             self.J_regressor_f = np.zeros((human_f.J_regressor.shape)) + human_f.J_regressor
-            self.J_regressor_f = torch.Tensor(np.array(self.J_regressor_f).astype(float)).permute(1, 0)
+            self.J_regressor_f = torch.Tensor(np.array(self.J_regressor_f).astype(float)).permute(1, 0).type(dtype)
 
 
             model_path_m = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
             human_m = load_model(model_path_m)
-            self.v_template_m = torch.Tensor(np.array(human_m.v_template))
-            self.shapedirs_m = torch.Tensor(np.array(human_m.shapedirs)).permute(0, 2, 1)
+            self.v_template_m = torch.Tensor(np.array(human_m.v_template)).type(dtype)
+            self.shapedirs_m = torch.Tensor(np.array(human_m.shapedirs)).permute(0, 2, 1).type(dtype)
             self.J_regressor_m = np.zeros((human_m.J_regressor.shape)) + human_m.J_regressor
-            self.J_regressor_m = torch.Tensor(np.array(self.J_regressor_m).astype(float)).permute(1, 0)
+            self.J_regressor_m = torch.Tensor(np.array(self.J_regressor_m).astype(float)).permute(1, 0).type(dtype)
 
             self.parents = np.array([4294967295, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9, 12, 13, 14, 16, 17, 18, 19, 20, 21]).astype(np.int32)
 
@@ -374,8 +386,8 @@ class CNN(nn.Module):
             self.J_regressor_repeat = torch.cat((self.J_regressor_repeat_f, self.J_regressor_repeat_m), 0)#this is 2 x N x R x 24
             self.J_regressor_repeat = self.J_regressor_repeat.permute(1,0,2,3).view(self.N, 2, self.R*24)
 
-            self.zeros_cartesian = torch.zeros([self.N, 24])
-            self.ones_cartesian = torch.ones([self.N, 24])
+            self.zeros_cartesian = torch.zeros([self.N, 24]).type(dtype)
+            self.ones_cartesian = torch.ones([self.N, 24]).type(dtype)
 
 
 
@@ -442,7 +454,7 @@ class CNN(nn.Module):
             targets_est_reduced_np = 0
 
 
-        print scores.size(), 'scores fc2'
+        #print scores.size(), 'scores fc2'
 
         #here we want to compute our score as the Euclidean distance between the estimated x,y,z points and the target.
         scores = targets/1000. - scores
@@ -857,8 +869,8 @@ class CNN(nn.Module):
         if rotate_base:
             np_rot_x = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]], dtype=np.float)
             np_rot_x = np.reshape(np.tile(np_rot_x, [N, 1]), [N, 3, 3])
-            #rot_x = Variable(torch.from_numpy(np_rot_x).float()).cuda()
-            rot_x = Variable(torch.from_numpy(np_rot_x).float())
+            rot_x = Variable(torch.from_numpy(np_rot_x).float()).cuda()
+            #rot_x = Variable(torch.from_numpy(np_rot_x).float())
             root_rotation = torch.matmul(Rs[:, 0, :, :], rot_x)
         else:
             root_rotation = Rs[:, 0, :, :]
@@ -866,8 +878,8 @@ class CNN(nn.Module):
 
         def make_A(R, t):
             R_homo = F.pad(R, [0, 0, 0, 1, 0, 0])
-            #t_homo = torch.cat([t, Variable(torch.ones(N, 1, 1)).cuda()], dim=1)
-            t_homo = torch.cat([t, Variable(torch.ones(N, 1, 1))], dim=1)
+            t_homo = torch.cat([t, Variable(torch.ones(N, 1, 1)).cuda()], dim=1)
+            #t_homo = torch.cat([t, Variable(torch.ones(N, 1, 1))], dim=1)
             return torch.cat([R_homo, t_homo], 2)
 
         A0 = make_A(root_rotation, Js[:, 0])
@@ -882,8 +894,8 @@ class CNN(nn.Module):
         results = torch.stack(results, dim=1)
 
         new_J = results[:, :, :3, 3]
-        #Js_w0 = torch.cat([Js, Variable(torch.zeros(N, 24, 1, 1)).cuda()], dim=2)
-        Js_w0 = torch.cat([Js, Variable(torch.zeros(N, 24, 1, 1))], dim=2)
+        Js_w0 = torch.cat([Js, Variable(torch.zeros(N, 24, 1, 1)).cuda()], dim=2)
+        #Js_w0 = torch.cat([Js, Variable(torch.zeros(N, 24, 1, 1))], dim=2)
         init_bone = torch.matmul(results, Js_w0)
         init_bone = F.pad(init_bone, [3, 0, 0, 0, 0, 0, 0, 0])
         A = results - init_bone

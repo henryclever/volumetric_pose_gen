@@ -24,7 +24,7 @@ from torchvision import transforms
 from torch.autograd import Variable
 
 
-import tf.transformations as tft
+#import tf.transformations as tft
 from smpl.smpl_webuser.serialization import load_model
 
 # import hrl_lib.util as ut
@@ -157,12 +157,34 @@ def visualize_pressure_map(p_map, targets_raw=None, scores_raw=None, p_map_val=N
 
     plt.show(block=block)
 
+
+
+def fix_angles_in_dataset():
+
+    filename = '/home/henry/data/training/train_f_lay_3850_none_stiff.p'
+
+    laying_data = load_pickle(filename)
+    print np.shape(laying_data['bed_angle_deg'])
+    print laying_data['bed_angle_deg']
+
+    laying_data['bed_angle_deg'] = list(np.array(laying_data['bed_angle_deg'])*0.)
+
+    print laying_data['bed_angle_deg']
+
+    pickle.dump(laying_data, open(os.path.join(filename), 'wb'))
+
+
+
+
+
 if __name__ == "__main__":
 
+    fix_angles_in_dataset()
+
     gender = "m"
-    posture = "lay"
-    stiffness = "upperbody"
-    num_resting_poses = 3572
+    posture = "sit"
+    stiffness = "leftside"
+    num_resting_poses = 1296
 
 
     training_data_dict = {}
