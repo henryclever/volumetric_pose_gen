@@ -23,7 +23,7 @@ from sklearn.utils import shuffle
 
 
 import pickle
-import tf.transformations as tft
+#import tf.transformations as tft
 
 
 # PyTorch libraries

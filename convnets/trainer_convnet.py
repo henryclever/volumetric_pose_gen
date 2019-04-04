@@ -21,7 +21,7 @@ import chumpy as ch
 
 
 import convnet as convnet
-import tf.transformations as tft
+#import tf.transformations as tft
 
 # import hrl_lib.util as ut
 import cPickle as pickle

@@ -26,7 +26,7 @@ from sklearn import metrics
 from sklearn.utils import shuffle
 
 #ROS
-import rospy
+#import rospy
 from visualization_msgs.msg import Marker
 from visualization_msgs.msg import MarkerArray
 import tf
