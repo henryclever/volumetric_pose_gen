@@ -128,17 +128,17 @@ class CNN(nn.Module):
             # nn.Dropout(p = 0.1, inplace=False),
 
             # 7
-            nn.Conv2d(3, 64, kernel_size = 7, stride = 2, padding = 3),
+            nn.Conv2d(3, 96, kernel_size = 7, stride = 2, padding = 3),
             nn.ReLU(inplace = True),
             nn.Dropout(p = 0.1, inplace=False),
             nn.MaxPool2d(3, stride=2),
-            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding= 0),
+            nn.Conv2d(96, 96, kernel_size=3, stride=1, padding= 0),
             nn.ReLU(inplace=True),
             nn.Dropout(p = 0.1, inplace=False),
-            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding= 0),
+            nn.Conv2d(96, 192, kernel_size=3, stride=1, padding= 0),
             nn.ReLU(inplace=True),
             nn.Dropout(p = 0.1, inplace=False),
-            nn.Conv2d(128, 128, kernel_size=3, stride=1, padding= 0),
+            nn.Conv2d(192, 192, kernel_size=3, stride=1, padding= 0),
             nn.ReLU(inplace=True),
             nn.Dropout(p = 0.1, inplace=False),
 
@@ -284,6 +284,7 @@ class CNN(nn.Module):
         )
 
         self.VGG_fc1 = nn.Sequential(
+            #nn.Linear(12288, 2048),
             nn.Linear(12288, 2048),
             nn.ReLU(inplace=True),
             nn.Linear(2048, 512),
@@ -313,7 +314,7 @@ class CNN(nn.Module):
             # 6
             # nn.Linear(9216, out_size),
             # 7
-            nn.Linear(22400, out_size),
+            nn.Linear(33600, out_size),
             
             # 8
             # nn.Linear(5120, out_size),
