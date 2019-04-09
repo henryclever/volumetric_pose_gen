@@ -19,11 +19,12 @@ from pydart2.gui.opengl.scene import OpenGLScene
 from time import time
 import scipy.signal as signal
 from time import sleep
+import lib_kinematics
 
 #import pymrt.geometry
 
 GRAVITY = -9.81
-STARTING_HEIGHT = 1.0
+STARTING_HEIGHT = 1.3
 
 #K = 1269.0
 #K = 1521.1
@@ -123,7 +124,7 @@ class DartSkelSim(object):
 
         self.red_joint_ref = red_joint_ref
         self.red_parent_ref = red_parent_ref
-
+        self.root_capsule_rad = np.abs(float(capsules[0].rad[0]))
 
         #make lists of the locations of the joint locations and the smplify capsule initial ends
         for i in range(np.shape(mJ)[0]):
@@ -1011,12 +1012,23 @@ class DartSkelSim(object):
 
 
 
-        root_joint_pos = [skel.bodynodes[0].C[0] - self.cap_offsets[0][0]*np.cos(skel.q[2]) + self.cap_offsets[0][1]*np.sin(skel.q[2]),
-                          skel.bodynodes[0].C[1] - self.cap_offsets[0][0]*np.sin(skel.q[2]) - self.cap_offsets[0][1]*np.cos(skel.q[2])]
+        #root_joint_pos = [skel.bodynodes[0].C[0] - self.cap_offsets[0][0]*np.cos(skel.q[2]) + self.cap_offsets[0][1]*np.sin(skel.q[2]),
+        #                  skel.bodynodes[0].C[1] - self.cap_offsets[0][0]*np.sin(skel.q[2]) - self.cap_offsets[0][1]*np.cos(skel.q[2])]
+
 
         #print skel.bodynodes[0].C
-        #print root_joint_pos
-        #print self.cap_offsets[0]
+        #print skel.q[0:3], "FIRST 3 ANGLES"
+        #print root_joint_pos, 'old root pos'
+
+
+        Trans1 = lib_kinematics.matrix_from_dir_cos_angles(skel.q[0:3])
+        dist = np.matmul(Trans1, np.array([0.0, -0.04, 0.0]))
+
+
+        #print skel.bodynodes[0].C - dist, 'new root pos'
+        root_joint_pos = skel.bodynodes[0].C - dist
+        root_joint_pos[2] += self.STARTING_HEIGHT / DART_TO_FLEX_CONV
+        print root_joint_pos, 'radius: ', self.root_capsule_rad
 
         #print "appending time", time() - time_orig
 
