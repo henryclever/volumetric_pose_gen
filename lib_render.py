@@ -43,7 +43,9 @@ import matplotlib.pyplot as plt
 #hmr
 from hmr.src.tf_smpl.batch_smpl import SMPL
 
-
+import trimesh
+import pyrender
+import pyglet
 
 
 
@@ -85,84 +87,111 @@ def standard_render(m):
     # plt.show()
     # import pdb; pdb.set_trace()
 
-def mesh_render(m):
-    ## Create OpenDR renderer
-    rn = ColoredRenderer()
-
-    ## Assign attributes to renderer
-    w, h = (1000, 1000)
-
-    #terms = 'f', 'frustum', 'background_image', 'overdraw', 'num_channels'
-    #dterms = 'vc', 'camera', 'bgcolor'
+class pyRenderMesh():
+    def __init__(self):
+        ## Create OpenDR renderer
+        self.rn = ColoredRenderer()
 
 
-    rn.camera = ProjectPoints(
-        v=m,
-        rt=np.array([np.pi, 0.0, 0.0]),
-        t=np.array([0, -0.3, 2.0]),
-        f=np.array([w,w])/2.,
-        c=np.array([w,h])/2.,
-        k=np.zeros(5))
-    rn.frustum = {'near': 1., 'far': 10., 'width': w, 'height': h}
-    rn.set(v=m, f=m.f, bgcolor=np.array([1.0, 1.0, 1.0]))
+        # terms = 'f', 'frustum', 'background_image', 'overdraw', 'num_channels'
+        # dterms = 'vc', 'camera', 'bgcolor'
+        self.first_pass = True
+        self.scene = pyrender.Scene()
 
-    ## Construct point light source
-    rn.vc = LambertianPointLight(
-        f=m.f,
-        v=rn.v,
-        num_verts=len(m),
-        light_pos=np.array([1000,1000,2000]),
-        vc=np.ones_like(m)*.9,
-        light_color=np.array([1.0, 0.7, 0.65]))
 
-    print m.r
-    print np.max(m.f)
+    def mesh_render(self,m):
 
-    import trimesh
-    import pyrender
-    import pyglet
+        #print m.r
+        #print np.max(m.f)
 
-    tm = trimesh.base.Trimesh(vertices=m.r,
-                              faces=m.f)
+        tm = trimesh.base.Trimesh(vertices=m.r, faces=m.f)
 
-    #tm = trimesh.load('/home/henry/Downloads/fuze.obj')
+        #tm = trimesh.load('/home/henry/Downloads/fuze.obj')
 
-    pymesh = pyrender.Mesh.from_trimesh(tm)
+        human_mat = pyrender.MetallicRoughnessMaterial(baseColorFactor=[0.3, 0.3, 1.0 ,0.5])
+        pymesh = pyrender.Mesh.from_trimesh(tm, material=human_mat, wireframe = True)
 
 
 
 
-    print tm.vertices
-    print np.max(tm.faces)
+        #print tm.vertices
+        #print np.max(tm.faces)
 
 
-    #from pyglet.window import Window
-    #from pyglet.gl import Config;
-    #w = Window(config=Config(major_version=4, minor_version=1))
-    #print w.context
-    #print('{}.{}'.format(w.context.config.major_version, w.context.config.minor_version))
+        #from pyglet.window import Window
+        #from pyglet.gl import Config;
+        #w = Window(config=Config(major_version=4, minor_version=1))
+        #print w.context
+        #print('{}.{}'.format(w.context.config.major_version, w.context.config.minor_version))
 
-    scene = pyrender.Scene()
-    scene.add(pymesh)
-    pyrender.Viewer(scene, use_raymond_lighting=True)
-
-
-    print np.shape(rn.r)
-    #sleep(5)
-
-    clipped_render = rn.r[h/8:7*h/8, w/4:3*w/4, :]
+        #print self.scene
+        #print self.pymesh
 
 
-    ## Show it using OpenCV
-    cv2.imshow('render_SMPL', clipped_render)
-    print ('..Print any key while on the display window')
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+
+        #print "Viewing"
+        if self.first_pass == True:
+
+            ## Assign attributes to renderer
+            w, h = (1000, 1000)
+            self.rn.camera = ProjectPoints(
+                v=m,
+                rt=np.array([np.pi, 0.0, 0.0]),
+                t=np.array([0, -0.3, 2.0]),
+                f=np.array([w, w]) / 2.,
+                c=np.array([w, h]) / 2.,
+                k=np.zeros(5))
+            self.rn.frustum = {'near': 1., 'far': 10., 'width': w, 'height': h}
+            self.rn.set(v=m, f=m.f, bgcolor=np.array([1.0, 1.0, 1.0]))
+
+            ## Construct point light source
+            self.rn.vc = LambertianPointLight(
+                f=m.f,
+                v=self.rn.v,
+                num_verts=len(m),
+                light_pos=np.array([1000, 1000, 2000]),
+                vc=np.ones_like(m) * .9,
+                light_color=np.array([1.0, 0.7, 0.65]))
+
+            self.scene.add(pymesh)
+            self.viewer = pyrender.Viewer(self.scene, use_raymond_lighting=True, run_in_thread=True)
+            self.first_pass = False
+            for node in self.scene.get_nodes(obj=pymesh):
+                # print node
+                self.human_obj_node = node
 
 
-    ## Could also use matplotlib to display
-    # import matplotlib.pyplot as plt
-    # plt.ion()
-    # plt.imshow(rn.r)
-    # plt.show()
-    # import pdb; pdb.set_trace()
+        else:
+            self.viewer.render_lock.acquire()
+            self.scene.remove_node(self.human_obj_node)
+
+            self.scene.add(pymesh)
+
+
+            for node in self.scene.get_nodes(obj=pymesh):
+                # print node
+                self.human_obj_node = node
+            self.viewer.render_lock.release()
+
+        sleep(0.01)
+        print "BLAH"
+
+        #print np.shape(rn.r)
+        #sleep(5)
+
+        #clipped_render = rn.r[h/8:7*h/8, w/4:3*w/4, :]
+
+
+        ## Show it using OpenCV
+        #cv2.imshow('render_SMPL', clipped_render)
+        #print ('..Print any key while on the display window')
+        #cv2.waitKey(0)
+        #cv2.destroyAllWindows()
+
+
+        ## Could also use matplotlib to display
+        # import matplotlib.pyplot as plt
+        # plt.ion()
+        # plt.imshow(rn.r)
+        # plt.show()
+        # import pdb; pdb.set_trace()

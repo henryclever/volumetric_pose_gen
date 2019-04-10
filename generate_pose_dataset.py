@@ -502,6 +502,8 @@ class GeneratePose():
         print len(prechecked_pose_list)
         shuffle(prechecked_pose_list)
 
+        pyRender = libRender.pyRenderMesh()
+
         for shape_pose_vol in prechecked_pose_list[6:]:
             #print shape_pose_vol
             #print shape_pose_vol[0]
@@ -576,11 +578,11 @@ class GeneratePose():
 
             #print self.m.J_transformed[1, :], self.m.J_transformed[4, :]
             # self.m.pose[51] = selection_r
-            libRender.mesh_render(self.m)
+            pyRender.mesh_render(self.m)
 
-            dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix, add_floor = False)
+            #dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix, add_floor = False)
 
-            dss.run_simulation(10000)
+            #dss.run_simulation(10000)
             #generator.standard_render()
 
 
