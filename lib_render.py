@@ -38,6 +38,7 @@ from ikpy.link import OriginLink, URDFLink
 #MISC
 import time as time
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm #use cm.jet(list)
 #from mpl_toolkits.mplot3d import Axes3D
 
 #hmr
@@ -97,6 +98,18 @@ class pyRenderMesh():
         # dterms = 'vc', 'camera', 'bgcolor'
         self.first_pass = True
         self.scene = pyrender.Scene()
+        self.human_mat = pyrender.MetallicRoughnessMaterial(baseColorFactor=[0.3, 0.3, 1.0 ,0.5])
+
+
+
+        self.artag_mat = pyrender.MetallicRoughnessMaterial(baseColorFactor=[0.3, 1.0, 0.3, 0.5])
+        self.artag_mat_other = pyrender.MetallicRoughnessMaterial(baseColorFactor=[0.1, 0.1, 0.1, 0.0])
+        self.artag_r = np.array([[-0.055, -0.055, 0.0], [-0.055, 0.055, 0.0], [0.055, -0.055, 0.0], [0.055, 0.055, 0.0]])
+        self.artag_f = np.array([[0, 1, 3], [3, 1, 0], [0, 2, 3], [3, 2, 0], [1, 3, 2]])
+        self.artag_facecolors_root = np.array([[0.0, 1.0, 0.0],[0.0, 1.0, 0.0],[0.0, 1.0, 0.0],[0.0, 1.0, 0.0],[0.0, 1.0, 0.0]])
+        self.artag_facecolors = np.array([[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],])
+
+
 
 
     def mesh_render(self,m):
@@ -104,13 +117,13 @@ class pyRenderMesh():
         #print m.r
         #print np.max(m.f)
 
+
+
         tm = trimesh.base.Trimesh(vertices=m.r, faces=m.f)
 
         #tm = trimesh.load('/home/henry/Downloads/fuze.obj')
 
-        human_mat = pyrender.MetallicRoughnessMaterial(baseColorFactor=[0.3, 0.3, 1.0 ,0.5])
-        pymesh = pyrender.Mesh.from_trimesh(tm, material=human_mat, wireframe = True)
-
+        smpl_mesh = pyrender.Mesh.from_trimesh(tm, material=self.human_mat, wireframe = True)#, smooth = True) smoothing doesn't do anything to wireframe
 
 
 
@@ -125,7 +138,7 @@ class pyRenderMesh():
         #print('{}.{}'.format(w.context.config.major_version, w.context.config.minor_version))
 
         #print self.scene
-        #print self.pymesh
+        #print self.smpl_mesh
 
 
 
@@ -153,10 +166,10 @@ class pyRenderMesh():
                 vc=np.ones_like(m) * .9,
                 light_color=np.array([1.0, 0.7, 0.65]))
 
-            self.scene.add(pymesh)
+            self.scene.add(smpl_mesh)
             self.viewer = pyrender.Viewer(self.scene, use_raymond_lighting=True, run_in_thread=True)
             self.first_pass = False
-            for node in self.scene.get_nodes(obj=pymesh):
+            for node in self.scene.get_nodes(obj=smpl_mesh):
                 # print node
                 self.human_obj_node = node
 
@@ -164,11 +177,9 @@ class pyRenderMesh():
         else:
             self.viewer.render_lock.acquire()
             self.scene.remove_node(self.human_obj_node)
+            self.scene.add(smpl_mesh)
 
-            self.scene.add(pymesh)
-
-
-            for node in self.scene.get_nodes(obj=pymesh):
+            for node in self.scene.get_nodes(obj=smpl_mesh):
                 # print node
                 self.human_obj_node = node
             self.viewer.render_lock.release()
@@ -176,22 +187,173 @@ class pyRenderMesh():
         sleep(0.01)
         print "BLAH"
 
-        #print np.shape(rn.r)
-        #sleep(5)
-
-        #clipped_render = rn.r[h/8:7*h/8, w/4:3*w/4, :]
 
 
-        ## Show it using OpenCV
-        #cv2.imshow('render_SMPL', clipped_render)
-        #print ('..Print any key while on the display window')
-        #cv2.waitKey(0)
-        #cv2.destroyAllWindows()
+
+    def get_3D_pmat_markers(self, pmat, angle = 30.0):
+
+        pmat_reshaped = pmat.reshape(64, 27)
+
+        pmat_colors = np.flipud(np.fliplr(cm.jet(pmat_reshaped/100)))
+        print pmat_colors.shape
+
+        pmat_xyz = np.zeros((64, 27, 3))
+        pmat_faces = []
+        pmat_facecolors = []
+
+        for j in range(64):
+            for i in range(27):
+
+                pmat_xyz[j, i, 1] = i * 0.0286
+                if j > 23:
+                    pmat_xyz[j, i, 0] = (64 - j) * 0.0286 - 0.0286 * 3 * np.sin(np.deg2rad(angle))
+                    pmat_xyz[j, i, 2] = 0.1
+                    # print marker.pose.position.x, 'x'
+                else:
+
+                    pmat_xyz[j, i, 0] = (41) * 0.0286 + (23 - j) * 0.0286 * np.cos(np.deg2rad(angle)) \
+                                        - (0.0286 * 3 * np.sin(np.deg2rad(angle))) * 0.85
+                    pmat_xyz[j, i, 2] = -((23 - j) * 0.0286 * np.sin(np.deg2rad(angle))) * 0.85 + 0.1
+                    # print j, marker.pose.position.z, marker.pose.position.y, 'head'
+
+                if j < 63 and i < 26:
+                    coord1 = j * 27 + i
+                    coord2 = j * 27 + i + 1
+                    coord3 = (j + 1) * 27 + i
+                    coord4 = (j + 1) * 27 + i + 1
+
+                    pmat_faces.append([coord1, coord2, coord3]) #bottom surface
+                    pmat_faces.append([coord1, coord3, coord2]) #top surface
+                    pmat_faces.append([coord4, coord3, coord2]) #bottom surface
+                    pmat_faces.append([coord2, coord3, coord4]) #top surface
+                    pmat_facecolors.append(pmat_colors[j, i, :])
+                    pmat_facecolors.append(pmat_colors[j, i, :])
+                    pmat_facecolors.append(pmat_colors[j, i, :])
+                    pmat_facecolors.append(pmat_colors[j, i, :])
+
+        pmat_verts = list(pmat_xyz.reshape(1728, 3))
+
+        print "len faces: ", len(pmat_faces)
+        print "len verts: ", len(pmat_verts)
+        print len(pmat_faces), len(pmat_facecolors)
+
+        return pmat_verts, pmat_faces, pmat_facecolors
 
 
-        ## Could also use matplotlib to display
-        # import matplotlib.pyplot as plt
-        # plt.ion()
-        # plt.imshow(rn.r)
-        # plt.show()
-        # import pdb; pdb.set_trace()
+
+
+    def mesh_render_pose_bed(self, m, pc, pc_isnew, pmat, markers):
+
+        #get SMPL mesh
+        smpl_verts = m.r - m.J_transformed[0, :]
+        smpl_tm = trimesh.base.Trimesh(vertices=smpl_verts, faces=m.f)
+        smpl_mesh = pyrender.Mesh.from_trimesh(smpl_tm, material=self.human_mat, wireframe = True)
+
+        #get Point cloud mesh
+        if pc is not None:
+            pc_mesh = pyrender.Mesh.from_points(pc)
+        else:
+            pc_mesh = None
+
+
+        #print m.r
+        #print artag_r
+
+        #create mini meshes for AR tags
+        artag_meshes = []
+        for marker in markers:
+            if markers[2] is None:
+                artag_meshes.append(None)
+            elif marker is None:
+                artag_meshes.append(None)
+            else:
+                if marker is markers[2]:
+                    artag_tm = trimesh.base.Trimesh(vertices=self.artag_r+marker-markers[2], faces=self.artag_f, face_colors = self.artag_facecolors_root)
+                    artag_meshes.append(pyrender.Mesh.from_trimesh(artag_tm, smooth = False))
+                else:
+                    artag_tm = trimesh.base.Trimesh(vertices=self.artag_r+marker-markers[2], faces=self.artag_f, face_colors = self.artag_facecolors)
+                    artag_meshes.append(pyrender.Mesh.from_trimesh(artag_tm, smooth = False))
+
+
+
+
+        pmat_verts, pmat_faces, pmat_facecolors = self.get_3D_pmat_markers(pmat)
+        pmat_tm = trimesh.base.Trimesh(vertices=pmat_verts, faces=pmat_faces, face_colors = pmat_facecolors)
+        pmat_mesh = pyrender.Mesh.from_trimesh(pmat_tm, smooth = False)
+
+
+        #print "Viewing"
+        if self.first_pass == True:
+
+
+            self.scene.add(smpl_mesh)
+            self.scene.add(pc_mesh)
+            self.scene.add(pmat_mesh)
+
+            for artag_mesh in artag_meshes:
+                if artag_mesh is not None:
+                    self.scene.add(artag_mesh)
+
+
+            self.viewer = pyrender.Viewer(self.scene, use_raymond_lighting=True, run_in_thread=True)
+            self.first_pass = False
+
+            for node in self.scene.get_nodes(obj=smpl_mesh):
+                self.human_obj_node = node
+
+            for node in self.scene.get_nodes(obj=pc_mesh):
+                self.point_cloud_node = node
+
+            self.artag_nodes = []
+            for artag_mesh in artag_meshes:
+                if artag_mesh is not None:
+                    for node in self.scene.get_nodes(obj=artag_mesh):
+                        self.artag_nodes.append(node)
+
+            for node in self.scene.get_nodes(obj=pmat_mesh):
+                self.pmat_node = node
+
+        else:
+            self.viewer.render_lock.acquire()
+
+            #reset the human mesh
+            self.scene.remove_node(self.human_obj_node)
+            self.scene.add(smpl_mesh)
+            for node in self.scene.get_nodes(obj=smpl_mesh):
+                self.human_obj_node = node
+
+
+            #reset the point cloud mesh
+            if pc_mesh is not None:
+                self.scene.remove_node(self.point_cloud_node)
+                self.scene.add(pc_mesh)
+                for node in self.scene.get_nodes(obj=pc_mesh):
+                    self.point_cloud_node = node
+
+            #reset the artag meshes
+            for artag_node in self.artag_nodes:
+                self.scene.remove_node(artag_node)
+            for artag_mesh in artag_meshes:
+                if artag_mesh is not None:
+                    self.scene.add(artag_mesh)
+            self.artag_nodes = []
+            for artag_mesh in artag_meshes:
+                if artag_mesh is not None:
+                    for node in self.scene.get_nodes(obj=artag_mesh):
+                        self.artag_nodes.append(node)
+
+
+            #reset the pmat mesh
+            self.scene.remove_node(self.pmat_node)
+            self.scene.add(pmat_mesh)
+            for node in self.scene.get_nodes(obj=pmat_mesh):
+                self.pmat_node = node
+
+
+
+            #print self.scene.get_nodes()
+            self.viewer.render_lock.release()
+
+
+        sleep(0.01)
+        print "BLAH"
