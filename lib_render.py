@@ -190,7 +190,7 @@ class pyRenderMesh():
 
 
 
-    def get_3D_pmat_markers(self, pmat, angle = 30.0):
+    def get_3D_pmat_markers(self, pmat, angle = 0.0):
 
         pmat_reshaped = pmat.reshape(64, 27)
 
@@ -204,15 +204,15 @@ class pyRenderMesh():
         for j in range(64):
             for i in range(27):
 
-                pmat_xyz[j, i, 1] = i * 0.0286
+                pmat_xyz[j, i, 1] = i * 0.0286 * 1.0926 + 0.02
                 if j > 23:
-                    pmat_xyz[j, i, 0] = (64 - j) * 0.0286 - 0.0286 * 3 * np.sin(np.deg2rad(angle))
+                    pmat_xyz[j, i, 0] = ((64 - j) * 0.0286 - 0.0286 * 3 * np.sin(np.deg2rad(angle)))*1.1406 + 0.05
                     pmat_xyz[j, i, 2] = 0.1
                     # print marker.pose.position.x, 'x'
                 else:
 
-                    pmat_xyz[j, i, 0] = (41) * 0.0286 + (23 - j) * 0.0286 * np.cos(np.deg2rad(angle)) \
-                                        - (0.0286 * 3 * np.sin(np.deg2rad(angle))) * 0.85
+                    pmat_xyz[j, i, 0] = ((41) * 0.0286 + (23 - j) * 0.0286 * np.cos(np.deg2rad(angle)) \
+                                        - (0.0286 * 3 * np.sin(np.deg2rad(angle))) * 0.85)*1.1406 + 0.06
                     pmat_xyz[j, i, 2] = -((23 - j) * 0.0286 * np.sin(np.deg2rad(angle))) * 0.85 + 0.1
                     # print j, marker.pose.position.z, marker.pose.position.y, 'head'
 
@@ -231,7 +231,9 @@ class pyRenderMesh():
                     pmat_facecolors.append(pmat_colors[j, i, :])
                     pmat_facecolors.append(pmat_colors[j, i, :])
 
-        pmat_verts = list(pmat_xyz.reshape(1728, 3))
+
+
+        pmat_verts = list((pmat_xyz).reshape(1728, 3))
 
         print "len faces: ", len(pmat_faces)
         print "len verts: ", len(pmat_verts)
@@ -245,7 +247,7 @@ class pyRenderMesh():
     def mesh_render_pose_bed(self, m, pc, pc_isnew, pmat, markers):
 
         #get SMPL mesh
-        smpl_verts = m.r - m.J_transformed[0, :]
+        smpl_verts = (m.r - m.J_transformed[0, :])#*228./214.
         smpl_tm = trimesh.base.Trimesh(vertices=smpl_verts, faces=m.f)
         smpl_mesh = pyrender.Mesh.from_trimesh(smpl_tm, material=self.human_mat, wireframe = True)
 
@@ -258,7 +260,6 @@ class pyRenderMesh():
 
         #print m.r
         #print artag_r
-
         #create mini meshes for AR tags
         artag_meshes = []
         for marker in markers:
@@ -267,6 +268,7 @@ class pyRenderMesh():
             elif marker is None:
                 artag_meshes.append(None)
             else:
+                print marker - markers[2]
                 if marker is markers[2]:
                     artag_tm = trimesh.base.Trimesh(vertices=self.artag_r+marker-markers[2], faces=self.artag_f, face_colors = self.artag_facecolors_root)
                     artag_meshes.append(pyrender.Mesh.from_trimesh(artag_tm, smooth = False))
