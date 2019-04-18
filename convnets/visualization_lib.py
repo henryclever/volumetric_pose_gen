@@ -26,7 +26,7 @@ from sklearn import metrics
 from sklearn.utils import shuffle
 
 #ROS
-#import rospy
+import rospy
 from visualization_msgs.msg import Marker
 from visualization_msgs.msg import MarkerArray
 import tf
@@ -303,11 +303,10 @@ class VisualizationLib():
     def rviz_publish_input(self, image, angle):
         mat_size = (NUMOFTAXELS_X, NUMOFTAXELS_Y)
 
-        image = np.reshape(image, mat_size)
 
         markerArray = MarkerArray()
-        for j in range(10, image.shape[0]-10):
-            for i in range(10, image.shape[1]-10):
+        for j in range(image.shape[0]):
+            for i in range(image.shape[1]):
                 imagePublisher = rospy.Publisher("/pressure_image", MarkerArray)
 
                 marker = Marker()
@@ -329,14 +328,14 @@ class VisualizationLib():
                 marker.pose.orientation.w = 1.0
 
                 marker.pose.position.x = i*0.0286
-                if j > 33:
-                    marker.pose.position.y = (84-j)*0.0286 - 0.0286*3*np.sin(np.deg2rad(angle))
-                    marker.pose.position.z = -0.1
+                if j > 23:
+                    marker.pose.position.y = (64-j)*0.0286 - 0.0286*3*np.sin(np.deg2rad(angle))
+                    marker.pose.position.z = 0.0#-0.1
                     #print marker.pose.position.x, 'x'
                 else:
 
-                    marker.pose.position.y = (51) * 0.0286 + (33 - j) * 0.0286 * np.cos(np.deg2rad(angle)) - (0.0286*3*np.sin(np.deg2rad(angle)))*0.85
-                    marker.pose.position.z = ((33-j)*0.0286*np.sin(np.deg2rad(angle)))*0.85 -0.1
+                    marker.pose.position.y = (41) * 0.0286 + (23 - j) * 0.0286 * np.cos(np.deg2rad(angle)) - (0.0286*3*np.sin(np.deg2rad(angle)))*0.85
+                    marker.pose.position.z = ((23-j)*0.0286*np.sin(np.deg2rad(angle)))*0.85 #-0.1
                     #print j, marker.pose.position.z, marker.pose.position.y, 'head'
 
                 # We add the new marker to the MarkerArray, removing the oldest
@@ -356,9 +355,10 @@ class VisualizationLib():
         imagePublisher.publish(markerArray)
 
 
-    def rviz_publish_output(self, targets, scores, pseudotargets = None, scores_std = None, pseudotarget_scores_std = None):
-        TargetArray = MarkerArray()
+    def rviz_publish_output(self, targets, scores = None):
+
         if targets is not None:
+            TargetArray = MarkerArray()
             for joint in range(0, targets.shape[0]):
                 targetPublisher = rospy.Publisher("/targets", MarkerArray)
                 Tmarker = Marker()
@@ -373,86 +373,55 @@ class VisualizationLib():
                 Tmarker.color.g = 0.69
                 Tmarker.color.b = 0.0
                 Tmarker.pose.orientation.w = 1.0
-                Tmarker.pose.position.x = targets[joint, 0]
-                Tmarker.pose.position.y = targets[joint, 1]
+                Tmarker.pose.position.x = targets[joint, 0] - INTER_SENSOR_DISTANCE*10
+                Tmarker.pose.position.y = targets[joint, 1] - INTER_SENSOR_DISTANCE*10
                 Tmarker.pose.position.z = targets[joint, 2]
                 TargetArray.markers.append(Tmarker)
                 tid = 0
                 for m in TargetArray.markers:
                     m.id = tid
                     tid += 1
+            #print TargetArray
             targetPublisher.publish(TargetArray)
 
-        ScoresArray = MarkerArray()
-        for joint in range(0, scores.shape[0]):
-            scoresPublisher = rospy.Publisher("/scores", MarkerArray)
-            Smarker = Marker()
-            Smarker.header.frame_id = "autobed/base_link"
-            Smarker.type = Smarker.SPHERE
-            Smarker.action = Smarker.ADD
-            Smarker.scale.x = 0.06
-            Smarker.scale.y = 0.06
-            Smarker.scale.z = 0.06
-            Smarker.color.a = 1.0
-            if scores_std is not None:
-                #print scores_std[joint], 'std of joint ', joint
-                #std of 3 is really uncertain
-                Smarker.color.r = 1.0
-                Smarker.color.g = 1.0 - scores_std[joint]/0.05
-                Smarker.color.b = scores_std[joint]/0.05
-
-            else:
-                if joint == 1:
-                    Smarker.color.r = 1.0
-                    Smarker.color.g = 1.0
-                else:
-                    Smarker.color.r = 1.0
-                    Smarker.color.g = 1.0
-                Smarker.color.b = 0.0
-
-            Smarker.pose.orientation.w = 1.0
-            Smarker.pose.position.x = scores[joint, 0]
-            Smarker.pose.position.y = scores[joint, 1]
-            Smarker.pose.position.z = scores[joint, 2]
-            ScoresArray.markers.append(Smarker)
-            sid = 0
-            for m in ScoresArray.markers:
-                m.id = sid
-                sid += 1
-        scoresPublisher.publish(ScoresArray)
-
-        if pseudotargets is not None:
-            PTargetArray = MarkerArray()
-            for joint in range(0, pseudotargets.shape[0]):
-                ptargetPublisher = rospy.Publisher("/pseudotargets", MarkerArray)
-                PTmarker = Marker()
-                PTmarker.header.frame_id = "autobed/base_link"
-                PTmarker.type = PTmarker.SPHERE
-                PTmarker.action = PTmarker.ADD
-                PTmarker.scale.x = 0.03
-                PTmarker.scale.y = 0.03
-                PTmarker.scale.z = 0.03
-                PTmarker.color.a = 1.0
-                if pseudotarget_scores_std is not None:
+        if scores is not None:
+            ScoresArray = MarkerArray()
+            for joint in range(0, scores.shape[0]):
+                scoresPublisher = rospy.Publisher("/scores", MarkerArray)
+                Smarker = Marker()
+                Smarker.header.frame_id = "autobed/base_link"
+                Smarker.type = Smarker.SPHERE
+                Smarker.action = Smarker.ADD
+                Smarker.scale.x = 0.06
+                Smarker.scale.y = 0.06
+                Smarker.scale.z = 0.06
+                Smarker.color.a = 1.0
+                if scores_std is not None:
                     #print scores_std[joint], 'std of joint ', joint
                     #std of 3 is really uncertain
-                    PTmarker.color.r = 1.0
-                    PTmarker.color.g = 1.0 - pseudotarget_scores_std[joint]/0.03
-                    PTmarker.color.b = pseudotarget_scores_std[joint]/0.03
+                    Smarker.color.r = 1.0
+                    Smarker.color.g = 1.0 - scores_std[joint]/0.05
+                    Smarker.color.b = scores_std[joint]/0.05
+
                 else:
-                    PTmarker.color.r = 1.0
-                    PTmarker.color.g = 1.0
-                    PTmarker.color.b = 0.0
-                PTmarker.pose.orientation.w = 1.0
-                PTmarker.pose.position.x = pseudotargets[joint, 0]
-                PTmarker.pose.position.y = pseudotargets[joint, 1]
-                PTmarker.pose.position.z = pseudotargets[joint, 2]
-                PTargetArray.markers.append(PTmarker)
-                ptid = 0
-                for m in PTargetArray.markers:
-                    m.id = ptid
-                    ptid += 1
-            ptargetPublisher.publish(PTargetArray)
+                    if joint == 1:
+                        Smarker.color.r = 1.0
+                        Smarker.color.g = 1.0
+                    else:
+                        Smarker.color.r = 1.0
+                        Smarker.color.g = 1.0
+                    Smarker.color.b = 0.0
+
+                Smarker.pose.orientation.w = 1.0
+                Smarker.pose.position.x = scores[joint, 0]
+                Smarker.pose.position.y = scores[joint, 1]
+                Smarker.pose.position.z = scores[joint, 2]
+                ScoresArray.markers.append(Smarker)
+                sid = 0
+                for m in ScoresArray.markers:
+                    m.id = sid
+                    sid += 1
+            scoresPublisher.publish(ScoresArray)
 
 
 

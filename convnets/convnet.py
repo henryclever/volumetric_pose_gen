@@ -332,9 +332,9 @@ class CNN(nn.Module):
 
         print 'Out size:', out_size
 
-        GPU = True
-        if GPU == True:
-            # Use for GPU
+        self.GPU = True
+        if self.GPU == True:
+            # Use for self.GPU
             dtype = torch.cuda.FloatTensor
             print
             '######################### CUDA is available! #############################'
@@ -625,7 +625,7 @@ class CNN(nn.Module):
         return  scores, targets_est_np, targets_est_reduced_np, betas_est_np
 
 
-    def forward_kinematic_angles(self, images, gender_switch, targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None):
+    def forward_kinematic_angles(self, images, gender_switch, synth_real_switch, targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None):
 
         scores_cnn = self.CNN_pack1(images)
         scores_size = scores_cnn.size()
@@ -658,7 +658,6 @@ class CNN(nn.Module):
             if self.loss_vector_type == 'anglesDC':
                 Rs_est = self.batch_rodrigues(scores[:, 13:85].view(-1, 24, 3).clone()).view(-1, 24, 3, 3)
             elif self.loss_vector_type == 'anglesEU':
-                print self.N
                 Rs_est = self.batch_euler_to_R(scores[:, 13:85].view(-1, 24, 3).clone()).view(-1, 24, 3, 3)
 
         else:
@@ -696,6 +695,13 @@ class CNN(nn.Module):
         Jy = torch.bmm(v_shaped[:, :, 1].unsqueeze(1), J_regressor_repeat).squeeze(1)
         Jz = torch.bmm(v_shaped[:, :, 2].unsqueeze(1), J_regressor_repeat).squeeze(1)
 
+        print Jx.size()
+
+        #Jy[:, 15] = torch.add(Jy[:, 15], 0.2)
+        #Jz[:, 15] = torch.add(Jz[:, 15], 0.2)
+        #print Jx[0, :]
+        #print Jy[0, :]
+        #print Jz[0, :]
 
         #v_shaped = torch.matmul(betas_est, self.shapedirs_f).permute(1, 0, 2) + self.v_template_f
         #Jx = torch.matmul(v_shaped[:, :, 0], self.J_regressor_f)
@@ -710,6 +716,8 @@ class CNN(nn.Module):
         targets_est = targets_est.contiguous().view(-1, 72)
 
         targets_est_np = targets_est.data*1000. #after it comes out of the forward kinematics
+
+
         betas_est_np = betas_est.data*1000.
 
         scores = scores.unsqueeze(0)
@@ -726,7 +734,21 @@ class CNN(nn.Module):
 
         #print scores[13, 34:106]
 
+
+
         if is_training == True:
+
+            #print targets_est_np.size()
+            for joint_num in range(24):
+                if joint_num in [0, 1, 2, 3, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]:
+                    targets_est_np[:, joint_num * 3] = targets_est_np[:, joint_num * 3] * synth_real_switch.data
+                    targets_est_np[:, joint_num * 3 + 1] = targets_est_np[:, joint_num * 3 + 1] * synth_real_switch.data
+                    targets_est_np[:, joint_num * 3 + 2] = targets_est_np[:, joint_num * 3 + 2] * synth_real_switch.data
+
+
+            scores[:, 0:10] = torch.mul(synth_real_switch.unsqueeze(1),
+                                        torch.sub(scores[:, 0:10], betas))
+
             scores[:, 34:106] = targets[:, 0:72]/1000 - scores[:, 34:106]
             scores[:, 106:178] = ((scores[:, 34:106].clone())*1.).pow(2)
 
@@ -744,7 +766,20 @@ class CNN(nn.Module):
                 if joint_num == 1:
                     pass
                 else:
-                    scores[:, 10+joint_num] = (scores[:, 106+joint_num*3] + scores[:, 107+joint_num*3] + scores[:, 108+joint_num*3]).sqrt()
+                    #print scores[:, 10+joint_num].size(), 'score size'
+                    #print synth_real_switch.size(), 'switch size'
+                    if joint_num in [0, 1, 2, 3, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]: #torso is 3 but forget training it
+                        scores[:, 10+joint_num] = torch.mul(synth_real_switch,
+                                                            (scores[:, 106+joint_num*3] +
+                                                             scores[:, 107+joint_num*3] +
+                                                             scores[:, 108+joint_num*3]).sqrt())
+                    else:
+                        scores[:, 10 + joint_num] = (scores[:, 106+joint_num*3] +
+                                                     scores[:, 107+joint_num*3] +
+                                                     scores[:, 108+joint_num*3]).sqrt()
+
+                    #print scores[:, 10+joint_num], 'score size'
+                    #print synth_real_switch, 'switch size'
 
             scores = scores.unsqueeze(0)
             scores = scores.unsqueeze(0)
@@ -752,9 +787,22 @@ class CNN(nn.Module):
             scores = scores.squeeze(0)
             scores = scores.squeeze(0)
 
+            #print scores.size()
+
+            #print scores[7, :]
+
+            #here multiply by 24/10 when you are regressing to real data so it balances with the synthetic data
+            scores = torch.mul(torch.add(1.0, torch.mul(1.4, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
+
+
+            #print scores[7, :]
+
             targets_est_reduced_np = 0
+
         else:
             targets_est_reduced = torch.empty(targets_est.size()[0], 30, dtype=torch.float)
+            #scores[:, 80] = torch.add(scores[:, 80], 0.2)
+            #scores[:, 81] = torch.add(scores[:, 81], 0.2)
             targets_est_reduced[:, 0:3] = scores[:, 79:82] #head 34 + 3*15 = 79
             targets_est_reduced[:, 3:6] = scores[:, 43:46] #torso 34 + 3*3 = 45
             targets_est_reduced[:, 6:9] = scores[:, 91:94] #right elbow 34 + 19*3 = 91
@@ -780,6 +828,7 @@ class CNN(nn.Module):
             scores = F.pad(scores, (0, -175, 0, 0))
             scores = scores.squeeze(0)
             scores = scores.squeeze(0)
+
 
         return  scores, targets_est_np, targets_est_reduced_np, betas_est_np
 
@@ -870,8 +919,10 @@ class CNN(nn.Module):
         if rotate_base:
             np_rot_x = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]], dtype=np.float)
             np_rot_x = np.reshape(np.tile(np_rot_x, [N, 1]), [N, 3, 3])
-            rot_x = Variable(torch.from_numpy(np_rot_x).float()).cuda()
-            #rot_x = Variable(torch.from_numpy(np_rot_x).float())
+            if self.GPU == True:
+                rot_x = Variable(torch.from_numpy(np_rot_x).float()).cuda()
+            else:
+                rot_x = Variable(torch.from_numpy(np_rot_x).float())
             root_rotation = torch.matmul(Rs[:, 0, :, :], rot_x)
         else:
             root_rotation = Rs[:, 0, :, :]
@@ -879,8 +930,10 @@ class CNN(nn.Module):
 
         def make_A(R, t):
             R_homo = F.pad(R, [0, 0, 0, 1, 0, 0])
-            t_homo = torch.cat([t, Variable(torch.ones(N, 1, 1)).cuda()], dim=1)
-            #t_homo = torch.cat([t, Variable(torch.ones(N, 1, 1))], dim=1)
+            if self.GPU == True:
+                t_homo = torch.cat([t, Variable(torch.ones(N, 1, 1)).cuda()], dim=1)
+            else:
+                t_homo = torch.cat([t, Variable(torch.ones(N, 1, 1))], dim=1)
             return torch.cat([R_homo, t_homo], 2)
 
         A0 = make_A(root_rotation, Js[:, 0])
@@ -895,8 +948,10 @@ class CNN(nn.Module):
         results = torch.stack(results, dim=1)
 
         new_J = results[:, :, :3, 3]
-        Js_w0 = torch.cat([Js, Variable(torch.zeros(N, 24, 1, 1)).cuda()], dim=2)
-        #Js_w0 = torch.cat([Js, Variable(torch.zeros(N, 24, 1, 1))], dim=2)
+        if self.GPU == True:
+            Js_w0 = torch.cat([Js, Variable(torch.zeros(N, 24, 1, 1)).cuda()], dim=2)
+        else:
+            Js_w0 = torch.cat([Js, Variable(torch.zeros(N, 24, 1, 1))], dim=2)
         init_bone = torch.matmul(results, Js_w0)
         init_bone = F.pad(init_bone, [3, 0, 0, 0, 0, 0, 0, 0])
         A = results - init_bone

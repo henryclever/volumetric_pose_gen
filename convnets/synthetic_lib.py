@@ -12,8 +12,8 @@ from scipy import ndimage
 import scipy.stats as ss
 from scipy.misc import imresize
 from scipy.ndimage.interpolation import zoom
-from skimage.feature import hog
-from skimage import data, color, exposure
+#from skimage.feature import hog
+#from skimage import data, color, exposure
 
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import scale
@@ -48,7 +48,8 @@ HIGH_TAXEL_THRESH_Y = (NUMOFTAXELS_Y - 1)
 
 class SyntheticLib():
 
-    def synthetic_scale(self, images, targets, bedangles, pcons = None):
+    def synthetic_scale(self, images, targets, bedangles, synth_real_switch):
+
 
         x = np.arange(-10 ,11)
         xU, xL = x + 0.5, x - 0.05
@@ -56,23 +57,33 @@ class SyntheticLib():
         prob = prob / prob.sum()  # normalize the probabilities so their sum is 1
         multiplier = np.random.choice(x, size=images.shape[0], p=prob)
         multiplier = (multiplier *0.020) +1
+
+        multiplier[synth_real_switch == 1] = 1
+
         #plt.hist(multiplier)
         #plt.show()
         #multiplier[:] = 1.2
         if self.include_inter == True:
             multiplier[bedangles[:,0,0] > 10] = 1 #we have to cut out the scaling where the bed isn't flat
 
+        #print targets.shape
+        #print multiplier.shape
+        #print multiplier
+        #print targets
+        #print synth_real_switch
+        #multiplier[synth_real_switch == 1] = 1
+        #print multiplier
+
+
+
         # print multiplier
         tar_mod = np.reshape(targets, (targets.shape[0], targets.shape[1] / 3, 3) ) /1000
 
-        #print tar_mod[0,:,:], 'prior'
+
         for i in np.arange(images.shape[0]):
             if self.include_inter == True:
                 resized = zoom(images[i, :, :, :], multiplier[i])
                 resized = np.clip(resized, 0, 100)
-
-                if pcons is not None:
-                    pcons[i,18:35] *= multiplier[i]
 
 
                 rl_diff = resized.shape[2] - images[i, :, :, :].shape[2]
@@ -134,23 +145,29 @@ class SyntheticLib():
             # print resized_tar.shape/
             resized_tar = (resized_tar + INTER_SENSOR_DISTANCE ) * multiplier[i]
 
+
             resized_tar[:, 0] = resized_tar[:, 0] + shift_factor_x  - INTER_SENSOR_DISTANCE #- 10 * INTER_SENSOR_DISTANCE * (1 - multiplier[i])
+
             # resized_tar2 = np.copy(resized_tar)
             resized_tar[:, 1] = resized_tar[:, 1] + NUMOFTAXELS_X * (1 - multiplier[i]) * INTER_SENSOR_DISTANCE + shift_factor_y  - INTER_SENSOR_DISTANCE #- 10 * INTER_SENSOR_DISTANCE * (1 - multiplier[i])
+
             # resized_tar[7,:] = [-0.286,0,0]
             resized_tar[:, 2] = np.copy(tar_mod[i, :, 2]) * multiplier[i]
 
 
+            #print resized_root, multiplier[i]
+
 
             tar_mod[i, :, :] = resized_tar
 
+        #print root_mod
         #print tar_mod[0,:,:], 'post'
         targets = np.reshape(tar_mod, (targets.shape[0], targets.shape[1])) * 1000
 
-        return images, targets, pcons
+        return images, targets
 
 
-    def synthetic_shiftxy(self, images, targets, bedangles):
+    def synthetic_shiftxy(self, images, targets, bedangles, synth_real_switch):
 
         #use bed angles to keep it from shifting in the x and y directions
 
@@ -159,6 +176,8 @@ class SyntheticLib():
         prob = ss.norm.cdf(xU, scale=2) - ss.norm.cdf(xL, scale=2) #scale is the standard deviation using a cumulative density function
         prob = prob / prob.sum()  # normalize the probabilities so their sum is 1
         modified_x = np.random.choice(x, size=images.shape[0], p=prob)
+        modified_x[synth_real_switch == 1] = 0
+
         #plt.hist(modified_x)
         #plt.show()
 
@@ -168,6 +187,9 @@ class SyntheticLib():
         prob = prob / prob.sum()  # normalize the probabilities so their sum is 1
         modified_y = np.random.choice(y, size=images.shape[0], p=prob)
         modified_y[bedangles[:,0,0] > 10] = 0 #we have to cut out the vertical shifts where the bed is not flat
+
+        modified_y[synth_real_switch == 1] = 0
+
         #plt.hist(modified_y)
         #plt.show()
 
@@ -179,24 +201,32 @@ class SyntheticLib():
             if self.include_inter == True:
                 if modified_x[i] > 0:
                     images[i, :, :, modified_x[i]:] = images[i, :, :, 0:-modified_x[i]]
+                    images[i, :, :, 0:modified_x[i]] = 0
                 elif modified_x[i] < 0:
                     images[i, :, :, 0:modified_x[i]] = images[i, :, :, -modified_x[i]:]
+                    images[i, :, :, modified_x[i]:] = 0
 
                 if modified_y[i] > 0:
                     images[i, :, modified_y[i]:, :] = images[i, :, 0:-modified_y[i], :]
+                    images[i, :, 0:modified_y[i], :] = 0
                 elif modified_y[i] < 0:
                     images[i, :, 0:modified_y[i], :] = images[i, :, -modified_y[i]:, :]
+                    images[i, :, modified_y[i]:, :] = 0
 
             else:
                 if modified_x[i] > 0:
                     images[i, :, modified_x[i]:] = images[i, :, 0:-modified_x[i]]
+                    images[i, :, 0:modified_x[i]] = 0
                 elif modified_x[i] < 0:
                     images[i, :, 0:modified_x[i]] = images[i, :, -modified_x[i]:]
+                    images[i, :, modified_x[i]:] = 0
 
                 if modified_y[i] > 0:
                     images[i, modified_y[i]:, :] = images[i, 0:-modified_y[i], :]
+                    images[i, 0:modified_y[i], :] = 0
                 elif modified_y[i] < 0:
                     images[i, 0:modified_y[i], :] = images[i, -modified_y[i]:, :]
+                    images[i, modified_y[i]:, :] = 0
 
             tar_mod[i, :, 0] += modified_x[i] * INTER_SENSOR_DISTANCE * 1000
             tar_mod[i, :, 1] -= modified_y[i] * INTER_SENSOR_DISTANCE * 1000
@@ -207,8 +237,10 @@ class SyntheticLib():
         return images, targets
 
 
-    def synthetic_fliplr(self, images, targets, pcons = None):
+    def synthetic_fliplr(self, images, targets, synth_real_switch):
         coin = np.random.randint(2, size=images.shape[0])
+        coin[synth_real_switch == 1] = 0
+
         modified = coin
         original = 1 - coin
 
@@ -236,41 +268,28 @@ class SyntheticLib():
         # flip the x left to right
         tar_mod[:, :, 0] = (tar_mod[:, :, 0] - 657.8) * -1 + 657.8
 
+        #print tar_mod.shape
+        #print tar_mod[0, :, :]
+
         # swap in the z
         dummy = zeros((tar_mod.shape))
 
-        if self.loss_vector_type == 'anglesCL' or self.loss_vector_type == 'anglesVL' or self.loss_vector_type == 'anglesSTVL':
 
-            dummy[:, [2, 4, 6, 8], :] = tar_mod[:, [2, 4, 6, 8], :]
-            tar_mod[:, [2, 4, 6, 8], :] = tar_mod[:, [3, 5, 7, 9], :]
-            tar_mod[:, [3, 5, 7, 9], :] = dummy[:, [2, 4, 6, 8], :]
-            if pcons is not None:
-                pcons_orig = np.multiply(pcons, original[:, np.newaxis])
-                pcons_mod = np.multiply(pcons, modified[:, np.newaxis])
-                dummy2 = zeros((pcons_mod.shape))
-
-                dummy2[:, [0, 2, 4, 6, 10, 12, 14, 16, 22, 24, 31, 33]] = pcons_mod[:, [0, 2, 4, 6, 10, 12, 14, 16, 22, 24, 31, 33]]
-                pcons_mod[:, [0, 2, 4, 6, 10, 12, 14, 16, 22, 24, 31, 33]] = pcons_mod[:, [1, 3, 5, 7, 11, 13, 15, 17, 23, 25, 32, 34]]
-                pcons_mod[:, [1, 3, 5, 7, 11, 13, 15, 17, 23, 25, 32, 34]] = dummy2[:, [0, 2, 4, 6, 10, 12, 14, 16, 22, 24, 31, 33]]
-                pcons_mod = np.multiply(pcons_mod, modified[:, np.newaxis])
-                pcons = pcons_orig + pcons_mod
+        dummy[:, [4, 7, 18, 20], :] = tar_mod[:, [4, 7, 18, 20], :]
+        tar_mod[:, [4, 7, 18, 20], :] = tar_mod[:, [5, 8, 19, 21], :]
+        tar_mod[:, [5, 8, 19, 21], :] = dummy[:, [4, 7, 18, 20], :]
 
 
-        elif self.loss_vector_type == 'direct':
-            dummy[:, [2, 4, 6, 8], :] = tar_mod[:, [2, 4, 6, 8], :]
-            tar_mod[:, [2, 4, 6, 8], :] = tar_mod[:, [3, 5, 7, 9], :]
-            tar_mod[:, [3, 5, 7, 9], :] = dummy[:, [2, 4, 6, 8], :]
-        # print dummy[0,:,2], tar_mod[0,:,2]
 
         tar_mod = np.reshape(tar_mod, (tar_mod.shape[0], tar_orig.shape[1]))
         tar_mod = np.multiply(tar_mod, modified[:, np.newaxis])
 
         images = im_orig + im_mod
         targets = tar_orig + tar_mod
-        return images, targets, pcons
+        return images, targets
 
 
-    def synthetic_master(self, images_tensor, targets_tensor, pcons_tensor = None, flip=False, shift=False, scale=False, bedangle = False, include_inter = False, loss_vector_type = False):
+    def synthetic_master(self, images_tensor, targets_tensor, synth_real_switch_tensor, flip=False, shift=False, scale=False, bedangle = False, include_inter = False, loss_vector_type = False):
         self.loss_vector_type = loss_vector_type
         self.include_inter = include_inter
         self.t1 = time.time()
@@ -278,9 +297,9 @@ class SyntheticLib():
         # images_tensor.torch.Tensor.permute(1,2,0)
         imagesangles = images_tensor.numpy()
         targets = targets_tensor.numpy()
+        synth_real_switch = synth_real_switch_tensor.numpy()
 
-        if pcons_tensor is not None: pcons = pcons_tensor.numpy()
-        else: pcons = None
+
         if len(imagesangles.shape) < 4:
             imagesangles = np.expand_dims(imagesangles, 0)
 
@@ -301,13 +320,20 @@ class SyntheticLib():
 
 
         if scale == True:
-            images, targets, pcons = self.synthetic_scale(images, targets, bedangles, pcons)
+            images, targets = self.synthetic_scale(images, targets, bedangles, synth_real_switch)
         if flip == True:
-            images, targets, pcons = self.synthetic_fliplr(images, targets, pcons)
+            images, targets = self.synthetic_fliplr(images, targets, synth_real_switch)
         if shift == True:
-            images, targets = self.synthetic_shiftxy(images, targets, bedangles)
+            images, targets = self.synthetic_shiftxy(images, targets, bedangles, synth_real_switch)
 
         # print images[0, 10:15, 20:25]
+
+        #print targets.shape
+        for joint_num in range(24):
+            if joint_num in [0, 1, 2, 3, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]:
+                targets[:, joint_num * 3] = targets[:, joint_num * 3] * synth_real_switch
+                targets[:, joint_num * 3 + 1] = targets[:, joint_num * 3 + 1] * synth_real_switch
+                targets[:, joint_num * 3 + 2] = targets[:, joint_num * 3 + 2] * synth_real_switch
 
         if bedangle == True:
             if include_inter == True:
@@ -320,7 +346,7 @@ class SyntheticLib():
             images_tensor = torch.Tensor(imagesangles)
             images_tensor = images_tensor.unsqueeze(1)
 
-        if pcons is not None: pcons_tensor = torch.Tensor(pcons)
+
         targets_tensor = torch.Tensor(targets)
         # images_tensor.torch.Tensor.permute(2, 0, 1)
         try:
@@ -328,5 +354,5 @@ class SyntheticLib():
         except:
             self.t2 = 0
         # print self.t2, 'elapsed time'
-        return images_tensor, targets_tensor, pcons_tensor
+        return images_tensor, targets_tensor
 
