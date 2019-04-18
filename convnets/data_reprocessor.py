@@ -179,12 +179,15 @@ def fix_angles_in_dataset():
 
 if __name__ == "__main__":
 
-    fix_angles_in_dataset()
+    #fix_angles_in_dataset()
 
-    gender = "m"
-    posture = "sit"
-    stiffness = "leftside"
-    num_resting_poses = 1296
+
+
+
+    gender = "f"
+    posture = "lay"
+    stiffness = "lowerbody"
+    num_resting_poses = 3808
 
 
     training_data_dict = {}
@@ -231,11 +234,10 @@ if __name__ == "__main__":
 
     print len(resting_pose_data_list), len(training_database_pmat_height_list[0])
 
-    for resting_pose_data_ct in range(len(resting_pose_data_list)-1):
+    for resting_pose_data_ct in range(len(resting_pose_data_list)):
         resting_pose_data = resting_pose_data_list[resting_pose_data_ct]
-        pmat = training_database_pmat_height_list[0, resting_pose_data_ct+1]
-        height = training_database_pmat_height_list[1, resting_pose_data_ct+1]
-
+        pmat = training_database_pmat_height_list[0, resting_pose_data_ct]
+        height = training_database_pmat_height_list[1, resting_pose_data_ct]
         capsule_angles = resting_pose_data[0].tolist()
         root_joint_pos_list = resting_pose_data[1]
         body_shape_list = resting_pose_data[2]
@@ -298,7 +300,11 @@ if __name__ == "__main__":
         training_data_dict['markers_xyz_m'].append(xyz_positions)
         training_data_dict['root_xyz_shift'].append([root_shift_x, root_shift_y, root_shift_z])
         training_data_dict['images'].append(pmat.reshape(64*27))
-        training_data_dict['bed_angle_deg'].append(60.)
+        if posture == "sit":
+            training_data_dict['bed_angle_deg'].append(60.)
+        elif posture == "lay":
+            training_data_dict['bed_angle_deg'].append(0.)
+
 
 
     print training_data_dict['markers_xyz_m'][0]
@@ -309,13 +315,13 @@ if __name__ == "__main__":
         print entry, training_data_dict['markers_xyz_m'][entry][0:2], training_data_dict['body_shape'][entry][0:2], training_data_dict['joint_angles'][entry][0:2]
 
 
-    pickle.dump(training_data_dict, open(os.path.join('/home/henry/data/training/train_'+gender+'_'+posture+'_'+str(num_resting_poses)+'_'+stiffness+'_stiff.p'), 'wb'))
+    pickle.dump(training_data_dict, open(os.path.join('/home/henry/data/synth/train_'+gender+'_'+posture+'_'+str(num_resting_poses)+'_'+stiffness+'_stiff.p'), 'wb'))
 
     for item in training_data_dict:
         print "item name: ", item
         print np.shape(training_data_dict[item])
 
-    test_database_file = load_pickle('/home/henry/data/testing/trainval4_150rh1_sit120rh.p')
+    test_database_file = load_pickle('/home/henry/data/real/trainval4_150rh1_sit120rh.p')
     #training_database_file.append(filepath_prefix_qt+'/trainval8_150rh1_sit120rh.p')
 
 
@@ -328,7 +334,7 @@ if __name__ == "__main__":
         #print training_data_dict['markers_xyz_m'][i].reshape(24, 3)
         #print test_database_file['markers_xyz_m'][i].reshape(10, 3)
 
-        print training_data_dict['markers_xyz_m'][i][0:2]
+        print training_data_dict['markers_xyz_m'][i][0:2], training_data_dict['root_xyz_shift'][i]
 
         training_pmat = np.array(training_data_dict['images'][i]).reshape(1, 64, 27)*3
         training_targets = np.array(training_data_dict['markers_xyz_m'][i])
