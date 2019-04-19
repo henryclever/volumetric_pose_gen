@@ -439,7 +439,7 @@ class PhysicalTrainer():
                 pp += nn
             print pp, 'num params'
 
-        elif self.loss_vector_type == 'anglesDC':
+        elif self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
             fc_output_size = 85## 10 + 3 + 24*3 --- betas, root shift, rotations
             self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type, self.batch_size)
             #self.model = torch.load('/home/ubuntu/Autobed_OFFICIAL_Trials' + '/subject_' + str(self.opt.leave_out) + '/convnets/convnet_9to18_'+str(self.loss_vector_type)+'_sTrue_128b_200e_' + str(self.opt.leave_out) + '.pt', map_location=lambda storage, loc: storage)
@@ -451,20 +451,6 @@ class PhysicalTrainer():
                     nn = nn * s
                 pp += nn
             print pp, 'num params'
-
-        elif self.loss_vector_type == 'anglesEU':
-            fc_output_size = 85## 10 + 3 + 24*3 --- betas, root shift, rotations
-            self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type, self.batch_size)
-            #self.model = torch.load('/home/ubuntu/Autobed_OFFICIAL_Trials' + '/subject_' + str(self.opt.leave_out) + '/convnets/convnet_9to18_'+str(self.loss_vector_type)+'_sTrue_128b_200e_' + str(self.opt.leave_out) + '.pt', map_location=lambda storage, loc: storage)
-            print 'LOADED!!!!!!!!!!!!!!!!!1'
-            pp = 0
-            for p in list(self.model.parameters()):
-                nn = 1
-                for s in list(p.size()):
-                    nn = nn * s
-                pp += nn
-            print pp, 'num params'
-
 
 
         # Run model on GPU if available

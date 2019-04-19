@@ -480,161 +480,12 @@ class CNN(nn.Module):
         #print "scores: ", scores[0, :]
         #print "targets est np: ", targets_est_np[0, :]
 
-
+        if is_training == True: scores = torch.mul(torch.add(1.0, torch.mul(1.4, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
         return scores, targets_est_np, targets_est_reduced_np
 
-
-    def forward_kinematic_R(self, images, gender_switch, targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None):
-
-        scores_cnn = self.CNN_pack1(images)
-        scores_size = scores_cnn.size()
-        # print scores_size, 'scores conv1'
-
-        # ''' # NOTE: Uncomment
-        # This combines the height, width, and filters into a single dimension
-        scores_cnn = scores_cnn.view(images.size(0),scores_size[1] *scores_size[2]*scores_size[3] )
-        #print 'size for fc layer:', scores_cnn.size()
-
-
-        scores = self.CNN_fc1(scores_cnn) #this is N x 229: betas, root shift, Rotation matrices
-
-        scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), 0.1)
-        scores[:, 10:] = torch.mul(scores[:, 10:].clone(), 0.01)
-
-
-        scores[:, 10] = torch.add(scores[:, 10].clone(), 0.6)
-        scores[:, 11] = torch.add(scores[:, 11].clone(), 1.2)
-        scores[:, 12] = torch.add(scores[:, 12].clone(), 0.1)
-
-        #print scores[34, :]
-
-        for rotation_matrix_num in range(24):
-            scores[:, 13+rotation_matrix_num*9+0] += 1
-            scores[:, 13+rotation_matrix_num*9+4] += 1
-            scores[:, 13+rotation_matrix_num*9+8] += 1
-
-
-        test_ground_truth = False
-
-        if test_ground_truth == False:
-            betas_est = scores[:, 0:10].clone()
-            root_shift_est = scores[:, 10:13].clone()
-            Rs_est = scores[:, 13:229].view(-1, 24, 3, 3).clone()
-        else:
-            #print betas[13, :], 'betas'
-            betas_est = betas
-            scores[:, 0:10] = betas
-            root_shift_est = root_shift
-            Rs_est = self.batch_rodrigues(angles_gt.view(-1, 24, 3)).view(-1, 24, 3, 3)
-
-
-
-        gender_switch = gender_switch.unsqueeze(1)
-        current_batch_size = gender_switch.size()[0]
-
-
-        shapedirs = torch.bmm(gender_switch, self.shapedirs_repeat[0:current_batch_size, :, :])\
-                         .view(current_batch_size, self.B, self.R*self.D)
-
-        betas_shapedirs_mult = torch.bmm(betas_est.unsqueeze(1), shapedirs) \
-                                    .squeeze(1)\
-                                    .view(current_batch_size, self.R, self.D) #NxRxD
-
-        v_template = torch.bmm(gender_switch, self.v_template_repeat[0:current_batch_size, :, :])\
-                          .view(current_batch_size, self.R, self.D)
-
-        v_shaped = betas_shapedirs_mult + v_template
-
-        J_regressor_repeat = torch.bmm(gender_switch, self.J_regressor_repeat[0:current_batch_size, :, :])\
-                                  .view(current_batch_size, self. R, 24)
-
-        Jx = torch.bmm(v_shaped[:, :, 0].unsqueeze(1), J_regressor_repeat).squeeze(1)
-        Jy = torch.bmm(v_shaped[:, :, 1].unsqueeze(1), J_regressor_repeat).squeeze(1)
-        Jz = torch.bmm(v_shaped[:, :, 2].unsqueeze(1), J_regressor_repeat).squeeze(1)
-
-
-
-        #v_shaped = torch.matmul(betas_est, self.shapedirs_f).permute(1, 0, 2) + self.v_template_f
-
-        #Jx = torch.matmul(v_shaped[:, :, 0], self.J_regressor_f)
-        #Jy = torch.matmul(v_shaped[:, :, 1], self.J_regressor_f)
-        #Jz = torch.matmul(v_shaped[:, :, 2], self.J_regressor_f)
-
-
-        J_est = torch.stack([Jx, Jy, Jz], dim=2)  # these are the joint locations with home pose (pose is 0 degree on all angles)
-        J_est = J_est - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
-
-        targets_est, A_est = self.batch_global_rigid_transformation(Rs_est, J_est, self.parents, rotate_base=False)
-
-        targets_est = targets_est.contiguous().view(-1, 72)
-
-        targets_est_np = targets_est.data*1000. #after it comes out of the forward kinematics
-        betas_est_np = betas_est.data*1000.
-
-        #tweak this to change the lengths vector
-        scores[:, 34:106] = torch.mul(targets_est[:, 0:72], 1.)
-
-        #print scores[13, 34:106]
-
-        if is_training == True:
-            scores[:, 34:106] = targets[:, 0:72]/1000 - scores[:, 34:106]
-            scores[:, 106:178] = ((scores[:, 34:106].clone())*1.).pow(2)
-
-            #print scores[13, 106:178]
-
-            self.count += 1
-            if self.count < 300:
-                scores[:, 10] = (scores[:, 106] + scores[:, 107] + scores[:, 108]).sqrt()*2# consider weighting the torso by a >1 factor because it's very important to root the other joints #bad idea, increases error
-            elif self.count < 1000:
-                scores[:, 10] = (scores[:, 106] + scores[:, 107] + scores[:, 108]).sqrt()*2# consider weighting the torso by a >1 factor because it's very important to root the other joints #bad idea, increases error
-            else:
-                scores[:, 10] = (scores[:, 106] + scores[:, 107] + scores[:, 108]).sqrt()*2
-
-            for joint_num in range(24):
-                if joint_num == 1:
-                    pass
-                else:
-                    scores[:, 10+joint_num] = (scores[:, 106+joint_num*3] + scores[:, 107+joint_num*3] + scores[:, 108+joint_num*3]).sqrt()
-
-            scores = scores.unsqueeze(0)
-            scores = scores.unsqueeze(0)
-            scores = F.pad(scores, (0, -195, 0, 0))
-            scores = scores.squeeze(0)
-            scores = scores.squeeze(0)
-
-            targets_est_reduced_np = 0
-        else:
-            targets_est_reduced = torch.empty(targets_est.size()[0], 30, dtype=torch.float)
-            targets_est_reduced[:, 0:3] = scores[:, 79:82] #head 34 + 3*15 = 79
-            targets_est_reduced[:, 3:6] = scores[:, 43:46] #torso 34 + 3*3 = 45
-            targets_est_reduced[:, 6:9] = scores[:, 91:94] #right elbow 34 + 19*3 = 91
-            targets_est_reduced[:, 9:12] = scores[:, 88:91] #left elbow 34 + 18*3 = 88
-            targets_est_reduced[:, 12:15] = scores[:, 97:100] #right wrist 34 + 21*3 = 97
-            targets_est_reduced[:, 15:18] = scores[:, 94:97] #left wrist 34 + 20*3 = 94
-            targets_est_reduced[:, 18:21] = scores[:, 49:52] #right knee 34 + 3*5
-            targets_est_reduced[:, 21:24] = scores[:, 46:49] #left knee 34 + 3*4
-            targets_est_reduced[:, 24:27] = scores[:, 58:61] #right ankle 34 + 3*8
-            targets_est_reduced[:, 27:30] = scores[:, 55:58] #left ankle 34 + 3*7
-
-            targets_est_reduced_np = targets_est_reduced.data*1000.
-
-            scores[:, 10:40] = targets_est_reduced[:, 0:30].pow(2)
-
-
-            for joint_num in range(10):
-                    scores[:, joint_num] = (scores[:, 10+joint_num*3] + scores[:, 11+joint_num*3] + scores[:, 12+joint_num*3]).sqrt()
-
-
-            scores = scores.unsqueeze(0)
-            scores = scores.unsqueeze(0)
-            scores = F.pad(scores, (0, -219, 0, 0))
-            scores = scores.squeeze(0)
-            scores = scores.squeeze(0)
-
-        return  scores, targets_est_np, targets_est_reduced_np, betas_est_np
 
 
     def forward_kinematic_angles(self, images, gender_switch, synth_real_switch, targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None):
@@ -832,6 +683,155 @@ class CNN(nn.Module):
 
         return  scores, targets_est_np, targets_est_reduced_np, betas_est_np
 
+
+    def forward_kinematic_R(self, images, gender_switch, targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None):
+
+        scores_cnn = self.CNN_pack1(images)
+        scores_size = scores_cnn.size()
+        # print scores_size, 'scores conv1'
+
+        # ''' # NOTE: Uncomment
+        # This combines the height, width, and filters into a single dimension
+        scores_cnn = scores_cnn.view(images.size(0),scores_size[1] *scores_size[2]*scores_size[3] )
+        #print 'size for fc layer:', scores_cnn.size()
+
+
+        scores = self.CNN_fc1(scores_cnn) #this is N x 229: betas, root shift, Rotation matrices
+
+        scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), 0.1)
+        scores[:, 10:] = torch.mul(scores[:, 10:].clone(), 0.01)
+
+
+        scores[:, 10] = torch.add(scores[:, 10].clone(), 0.6)
+        scores[:, 11] = torch.add(scores[:, 11].clone(), 1.2)
+        scores[:, 12] = torch.add(scores[:, 12].clone(), 0.1)
+
+        #print scores[34, :]
+
+        for rotation_matrix_num in range(24):
+            scores[:, 13+rotation_matrix_num*9+0] += 1
+            scores[:, 13+rotation_matrix_num*9+4] += 1
+            scores[:, 13+rotation_matrix_num*9+8] += 1
+
+
+        test_ground_truth = False
+
+        if test_ground_truth == False:
+            betas_est = scores[:, 0:10].clone()
+            root_shift_est = scores[:, 10:13].clone()
+            Rs_est = scores[:, 13:229].view(-1, 24, 3, 3).clone()
+        else:
+            #print betas[13, :], 'betas'
+            betas_est = betas
+            scores[:, 0:10] = betas
+            root_shift_est = root_shift
+            Rs_est = self.batch_rodrigues(angles_gt.view(-1, 24, 3)).view(-1, 24, 3, 3)
+
+
+
+        gender_switch = gender_switch.unsqueeze(1)
+        current_batch_size = gender_switch.size()[0]
+
+
+        shapedirs = torch.bmm(gender_switch, self.shapedirs_repeat[0:current_batch_size, :, :])\
+                         .view(current_batch_size, self.B, self.R*self.D)
+
+        betas_shapedirs_mult = torch.bmm(betas_est.unsqueeze(1), shapedirs) \
+                                    .squeeze(1)\
+                                    .view(current_batch_size, self.R, self.D) #NxRxD
+
+        v_template = torch.bmm(gender_switch, self.v_template_repeat[0:current_batch_size, :, :])\
+                          .view(current_batch_size, self.R, self.D)
+
+        v_shaped = betas_shapedirs_mult + v_template
+
+        J_regressor_repeat = torch.bmm(gender_switch, self.J_regressor_repeat[0:current_batch_size, :, :])\
+                                  .view(current_batch_size, self. R, 24)
+
+        Jx = torch.bmm(v_shaped[:, :, 0].unsqueeze(1), J_regressor_repeat).squeeze(1)
+        Jy = torch.bmm(v_shaped[:, :, 1].unsqueeze(1), J_regressor_repeat).squeeze(1)
+        Jz = torch.bmm(v_shaped[:, :, 2].unsqueeze(1), J_regressor_repeat).squeeze(1)
+
+
+
+        #v_shaped = torch.matmul(betas_est, self.shapedirs_f).permute(1, 0, 2) + self.v_template_f
+
+        #Jx = torch.matmul(v_shaped[:, :, 0], self.J_regressor_f)
+        #Jy = torch.matmul(v_shaped[:, :, 1], self.J_regressor_f)
+        #Jz = torch.matmul(v_shaped[:, :, 2], self.J_regressor_f)
+
+
+        J_est = torch.stack([Jx, Jy, Jz], dim=2)  # these are the joint locations with home pose (pose is 0 degree on all angles)
+        J_est = J_est - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
+
+        targets_est, A_est = self.batch_global_rigid_transformation(Rs_est, J_est, self.parents, rotate_base=False)
+
+        targets_est = targets_est.contiguous().view(-1, 72)
+
+        targets_est_np = targets_est.data*1000. #after it comes out of the forward kinematics
+        betas_est_np = betas_est.data*1000.
+
+        #tweak this to change the lengths vector
+        scores[:, 34:106] = torch.mul(targets_est[:, 0:72], 1.)
+
+        #print scores[13, 34:106]
+
+        if is_training == True:
+            scores[:, 34:106] = targets[:, 0:72]/1000 - scores[:, 34:106]
+            scores[:, 106:178] = ((scores[:, 34:106].clone())*1.).pow(2)
+
+            #print scores[13, 106:178]
+
+            self.count += 1
+            if self.count < 300:
+                scores[:, 10] = (scores[:, 106] + scores[:, 107] + scores[:, 108]).sqrt()*2# consider weighting the torso by a >1 factor because it's very important to root the other joints #bad idea, increases error
+            elif self.count < 1000:
+                scores[:, 10] = (scores[:, 106] + scores[:, 107] + scores[:, 108]).sqrt()*2# consider weighting the torso by a >1 factor because it's very important to root the other joints #bad idea, increases error
+            else:
+                scores[:, 10] = (scores[:, 106] + scores[:, 107] + scores[:, 108]).sqrt()*2
+
+            for joint_num in range(24):
+                if joint_num == 1:
+                    pass
+                else:
+                    scores[:, 10+joint_num] = (scores[:, 106+joint_num*3] + scores[:, 107+joint_num*3] + scores[:, 108+joint_num*3]).sqrt()
+
+            scores = scores.unsqueeze(0)
+            scores = scores.unsqueeze(0)
+            scores = F.pad(scores, (0, -195, 0, 0))
+            scores = scores.squeeze(0)
+            scores = scores.squeeze(0)
+
+            targets_est_reduced_np = 0
+        else:
+            targets_est_reduced = torch.empty(targets_est.size()[0], 30, dtype=torch.float)
+            targets_est_reduced[:, 0:3] = scores[:, 79:82] #head 34 + 3*15 = 79
+            targets_est_reduced[:, 3:6] = scores[:, 43:46] #torso 34 + 3*3 = 45
+            targets_est_reduced[:, 6:9] = scores[:, 91:94] #right elbow 34 + 19*3 = 91
+            targets_est_reduced[:, 9:12] = scores[:, 88:91] #left elbow 34 + 18*3 = 88
+            targets_est_reduced[:, 12:15] = scores[:, 97:100] #right wrist 34 + 21*3 = 97
+            targets_est_reduced[:, 15:18] = scores[:, 94:97] #left wrist 34 + 20*3 = 94
+            targets_est_reduced[:, 18:21] = scores[:, 49:52] #right knee 34 + 3*5
+            targets_est_reduced[:, 21:24] = scores[:, 46:49] #left knee 34 + 3*4
+            targets_est_reduced[:, 24:27] = scores[:, 58:61] #right ankle 34 + 3*8
+            targets_est_reduced[:, 27:30] = scores[:, 55:58] #left ankle 34 + 3*7
+
+            targets_est_reduced_np = targets_est_reduced.data*1000.
+
+            scores[:, 10:40] = targets_est_reduced[:, 0:30].pow(2)
+
+
+            for joint_num in range(10):
+                    scores[:, joint_num] = (scores[:, 10+joint_num*3] + scores[:, 11+joint_num*3] + scores[:, 12+joint_num*3]).sqrt()
+
+
+            scores = scores.unsqueeze(0)
+            scores = scores.unsqueeze(0)
+            scores = F.pad(scores, (0, -219, 0, 0))
+            scores = scores.squeeze(0)
+            scores = scores.squeeze(0)
+
+        return  scores, targets_est_np, targets_est_reduced_np, betas_est_np
 
 
     def batch_rodrigues(self, theta):
