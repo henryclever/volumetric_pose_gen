@@ -393,7 +393,7 @@ class CNN(nn.Module):
 
 
 
-    def forward_direct(self, images, targets, is_training = True):
+    def forward_direct(self, images, synth_real_switch, targets, is_training = True):
 
         '''
         Take a batch of images and run them through the CNN to
@@ -452,6 +452,14 @@ class CNN(nn.Module):
             targets_est_reduced_np = scores.clone().data*1000.
 
         else:
+            #print synth_real_switch
+            #print targets_est_np.size()
+            for joint_num in range(24):
+                if joint_num in [0, 1, 2, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]:
+                    targets_est_np[:, joint_num * 3] = targets_est_np[:, joint_num * 3] * synth_real_switch.data
+                    targets_est_np[:, joint_num * 3 + 1] = targets_est_np[:, joint_num * 3 + 1] * synth_real_switch.data
+                    targets_est_np[:, joint_num * 3 + 2] = targets_est_np[:, joint_num * 3 + 2] * synth_real_switch.data
+
             targets_est_reduced_np = 0
 
 
@@ -467,6 +475,10 @@ class CNN(nn.Module):
 
         scores = scores[:, 0:num_joints]
         scores = scores.sqrt()
+
+        #print "targets: ", targets[0, :]
+        #print "scores: ", scores[0, :]
+        #print "targets est np: ", targets_est_np[0, :]
 
 
         #############################################################################
@@ -695,18 +707,6 @@ class CNN(nn.Module):
         Jy = torch.bmm(v_shaped[:, :, 1].unsqueeze(1), J_regressor_repeat).squeeze(1)
         Jz = torch.bmm(v_shaped[:, :, 2].unsqueeze(1), J_regressor_repeat).squeeze(1)
 
-        print Jx.size()
-
-        #Jy[:, 15] = torch.add(Jy[:, 15], 0.2)
-        #Jz[:, 15] = torch.add(Jz[:, 15], 0.2)
-        #print Jx[0, :]
-        #print Jy[0, :]
-        #print Jz[0, :]
-
-        #v_shaped = torch.matmul(betas_est, self.shapedirs_f).permute(1, 0, 2) + self.v_template_f
-        #Jx = torch.matmul(v_shaped[:, :, 0], self.J_regressor_f)
-        #Jy = torch.matmul(v_shaped[:, :, 1], self.J_regressor_f)
-        #Jz = torch.matmul(v_shaped[:, :, 2], self.J_regressor_f)
 
         J_est = torch.stack([Jx, Jy, Jz], dim=2)  # these are the joint locations with home pose (pose is 0 degree on all angles)
         J_est = J_est - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
@@ -740,7 +740,7 @@ class CNN(nn.Module):
 
             #print targets_est_np.size()
             for joint_num in range(24):
-                if joint_num in [0, 1, 2, 3, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]:
+                if joint_num in [0, 1, 2, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]:
                     targets_est_np[:, joint_num * 3] = targets_est_np[:, joint_num * 3] * synth_real_switch.data
                     targets_est_np[:, joint_num * 3 + 1] = targets_est_np[:, joint_num * 3 + 1] * synth_real_switch.data
                     targets_est_np[:, joint_num * 3 + 2] = targets_est_np[:, joint_num * 3 + 2] * synth_real_switch.data
@@ -768,7 +768,7 @@ class CNN(nn.Module):
                 else:
                     #print scores[:, 10+joint_num].size(), 'score size'
                     #print synth_real_switch.size(), 'switch size'
-                    if joint_num in [0, 1, 2, 3, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]: #torso is 3 but forget training it
+                    if joint_num in [0, 1, 2, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]: #torso is 3 but forget training it
                         scores[:, 10+joint_num] = torch.mul(synth_real_switch,
                                                             (scores[:, 106+joint_num*3] +
                                                              scores[:, 107+joint_num*3] +

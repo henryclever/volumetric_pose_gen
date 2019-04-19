@@ -330,7 +330,7 @@ class SyntheticLib():
 
         #print targets.shape
         for joint_num in range(24):
-            if joint_num in [0, 1, 2, 3, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]:
+            if joint_num in [0, 1, 2, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]:
                 targets[:, joint_num * 3] = targets[:, joint_num * 3] * synth_real_switch
                 targets[:, joint_num * 3 + 1] = targets[:, joint_num * 3 + 1] * synth_real_switch
                 targets[:, joint_num * 3 + 2] = targets[:, joint_num * 3 + 2] * synth_real_switch
