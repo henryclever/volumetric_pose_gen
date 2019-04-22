@@ -84,7 +84,7 @@ class CNN(nn.Module):
 
         print 'Out size:', out_size
 
-        self.GPU = False
+        self.GPU = True
         if self.GPU == True:
             # Use for self.GPU
             dtype = torch.cuda.FloatTensor
