@@ -9,7 +9,7 @@ import torchvision
 
 
 class CNN(nn.Module):
-    def __init__(self, mat_size, out_size, hidden_dim, kernel_size, loss_vector_type, batch_size):
+    def __init__(self, mat_size, out_size, hidden_dim, kernel_size, loss_vector_type, batch_size, split = False):
         '''
         Create components of a CNN classifier and initialize their weights.
 
@@ -28,321 +28,71 @@ class CNN(nn.Module):
         self.loss_vector_type = loss_vector_type
         print '$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$'
 
-        hidden_dim1= 32
-        hidden_dim2 = 48
-        hidden_dim3 = 96
-        hidden_dim4 = 96
-
         self.count = 0
+        self.split = split
+
 
         self.CNN_pack1 = nn.Sequential(
-            # Vanilla
-            # nn.Conv2d(3, hidden_dim1, kernel_size = 5, stride = 2, padding = 1),
-            # nn.ReLU(inplace = True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(hidden_dim1, hidden_dim2, kernel_size=5, stride=2, padding= 1),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(hidden_dim2, hidden_dim3, kernel_size=5, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(hidden_dim3, hidden_dim4, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Conv2d(hidden_dim3, hidden_dim4, kernel_size=3, stride=1, padding= 0),
-            # nn.Dropout(p=0.1, inplace=False),
 
-            # 2
-            # nn.Conv2d(3, hidden_dim1, kernel_size = 5, stride = 2, padding = 1),
-            # nn.ReLU(inplace = True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(hidden_dim1, hidden_dim2, kernel_size=5, stride=2, padding= 1),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(hidden_dim2, hidden_dim3, kernel_size=5, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(hidden_dim3, hidden_dim4, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(hidden_dim3, hidden_dim4, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p=0.1, inplace=False),
-
-            # 3
-            # nn.Conv2d(3, hidden_dim1, kernel_size = 5, stride = 2, padding = 1),
-            # nn.ReLU(inplace = True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(hidden_dim1, hidden_dim2, kernel_size=5, stride=2, padding= 1),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(hidden_dim2, hidden_dim3, kernel_size=5, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(hidden_dim3, hidden_dim4, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-
-            # 4
-            # nn.Conv2d(3, hidden_dim1, kernel_size = 7, stride = 2, padding = 1),
-            # nn.ReLU(inplace = True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.MaxPool2d(3, stride=2),
-            # nn.Conv2d(hidden_dim1, hidden_dim2, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(hidden_dim2, hidden_dim3, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(hidden_dim3, hidden_dim4, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-
-            # 5
-            # nn.Conv2d(3, 32, kernel_size = 7, stride = 2, padding = 1),
-            # nn.ReLU(inplace = True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.MaxPool2d(3, stride=2),
-            # nn.Conv2d(32, 64, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(64, 128, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(128, 256, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-
-            # 6
-            # nn.Conv2d(3, 32, kernel_size = 7, stride = 2, padding = 1),
-            # nn.ReLU(inplace = True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.MaxPool2d(3, stride=2),
-            # nn.Conv2d(32, 32, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(32, 64, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(64, 64, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-
-            # 7
-            nn.Conv2d(3, 96, kernel_size = 7, stride = 2, padding = 3),
-            nn.ReLU(inplace = True),
-            nn.Dropout(p = 0.1, inplace=False),
+            nn.Conv2d(3, 96, kernel_size=7, stride=2, padding=3),
+            nn.ReLU(inplace=True),
+            nn.Dropout(p=0.1, inplace=False),
             nn.MaxPool2d(3, stride=2),
-            nn.Conv2d(96, 96, kernel_size=3, stride=1, padding= 0),
+            nn.Conv2d(96, 96, kernel_size=3, stride=1, padding=0),
             nn.ReLU(inplace=True),
-            nn.Dropout(p = 0.1, inplace=False),
-            nn.Conv2d(96, 192, kernel_size=3, stride=1, padding= 0),
+            nn.Dropout(p=0.1, inplace=False),
+            nn.Conv2d(96, 192, kernel_size=3, stride=1, padding=0),
             nn.ReLU(inplace=True),
-            nn.Dropout(p = 0.1, inplace=False),
-            nn.Conv2d(192, 192, kernel_size=3, stride=1, padding= 0),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p = 0.1, inplace=False),
-
-            # 8
-            # nn.Conv2d(3, 32, kernel_size = 7, stride = 2, padding = 1),
-            # nn.ReLU(inplace = True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.MaxPool2d(3, stride=2),
-            # nn.Conv2d(32, 32, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),/home/henryclever/catkin_ws/src/hrl-assistive/hrl_pose_estimation/src/hrl_pose_estimation/create_dataset.py
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(32, 64, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(64, 64, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(64, 128, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(128, 128, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-
-            # 9
-            # nn.Conv2d(3, 64, kernel_size = 7, stride = 2, padding = 1),
-            # nn.ReLU(inplace = True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.MaxPool2d(3, stride=2),
-            # nn.Conv2d(64, 64, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(64, 128, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(128, 128, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(128, 256, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(256, 256, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-
-            # 10
-            # nn.Conv2d(3, 64, kernel_size = 7, stride = 2, padding = 1),
-            # nn.ReLU(inplace = True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.MaxPool2d(3, stride=2),
-            # nn.Conv2d(64, 64, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(64, 64, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(64, 128, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(128, 128, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(128, 128, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-
-            # 11
-            # nn.Conv2d(3, 64, kernel_size = 5, stride = 2, padding = 1),
-            # nn.ReLU(inplace = True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(64, 64, kernel_size=3, stride=2, padding= 1),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(64, 128, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(128, 128, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-
-            # 12
-            # nn.Conv2d(3, 64, kernel_size = 5, stride = 2, padding = 1),
-            # nn.ReLU(inplace = True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(64, 64, kernel_size=3, stride=2, padding= 1),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(64, 128, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(128, 128, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(128, 256, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(256, 256, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-
-            # 13
-            # nn.Conv2d(3, 64, kernel_size = 5, stride = 2, padding = 1),
-            # nn.ReLU(inplace = True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(64, 64, kernel_size=3, stride=2, padding= 1),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(64, 64, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(64, 128, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(128, 128, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-            # nn.Conv2d(128, 128, kernel_size=3, stride=1, padding= 0),
-            # nn.ReLU(inplace=True),
-            # nn.Dropout(p = 0.1, inplace=False),
-        )
-
-        self.CNN_pack2 = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size = 7, stride = 2, padding = 3),
-            nn.ReLU(inplace = True),
-            #nn.Dropout(p = 0.1, inplace=False),
-            #nn.MaxPool2d(3, stride=2),
-            #nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=0),
-            #nn.ReLU(inplace=True),
-            #nn.Dropout(p=0.1, inplace=False),
-            #nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=0),
-            #nn.ReLU(inplace=True),
-            #nn.Dropout(p=0.1, inplace=False),
-
-        )
-
-
-
-        self.CNN_pack3 = nn.Sequential(
-            nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=0),
+            nn.Dropout(p=0.1, inplace=False),
+            nn.Conv2d(192, 192, kernel_size=3, stride=1, padding=0),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.1, inplace=False),
 
         )
 
-        self.VGG_fc1 = nn.Sequential(
-            #nn.Linear(12288, 2048),
-            nn.Linear(12288, 2048),
+        self.CNN_pack2 = nn.Sequential(
+
+            nn.Conv2d(3, 32, kernel_size = 7, stride = 2, padding = 3),
+            nn.ReLU(inplace = True),
+            nn.Dropout(p = 0.1, inplace=False),
+            nn.MaxPool2d(3, stride=2),
+            nn.Conv2d(32, 32, kernel_size=3, stride=1, padding= 0),
             nn.ReLU(inplace=True),
-            nn.Linear(2048, 512),
+            nn.Dropout(p = 0.1, inplace=False),
+            nn.Conv2d(32, 64, kernel_size=3, stride=1, padding= 0),
             nn.ReLU(inplace=True),
-            nn.Linear(512, out_size),
+            nn.Dropout(p = 0.1, inplace=False),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding= 0),
+            nn.ReLU(inplace=True),
+            nn.Dropout(p = 0.1, inplace=False),
+
         )
 
 
-        print 'x'
-        self.CNN_fc1 = nn.Sequential(
-            # Vanilla
-            # nn.Linear(8832, 2048), #4096 for when we only pad the sides by 5 each instead of 10
-            # #nn.ReLU(inplace = True),
-            # #nn.Linear(5760, 3000),
-            # nn.Linear(2048, 2048),
-            # #nn.ReLU(inplace = True),
-            # nn.Linear(2048, 256),
-            # nn.Linear(256, out_size),
+        if self.split == False:
+            self.CNN_fc1 = nn.Sequential(
+                nn.Linear(33600, out_size),
+            )
+        if self.split == True:
+            self.CNN_fc1 = nn.Sequential(
+                nn.Linear(33600, out_size-10),
+            )
 
-            # nn.Linear(8832, out_size),
-            # 3
-            # nn.Linear(14400, out_size),
-            # 4
-            # nn.Linear(13824, out_size),
-            # 5
-            # nn.Linear(36864, out_size),
-            # 6
-            # nn.Linear(9216, out_size),
-            # 7
-            nn.Linear(33600, out_size),
-            
-            # 8
-            # nn.Linear(5120, out_size),
-            # 9
-            # nn.Linear(10240, out_size),
-            # 10
-            # nn.Linear(5120, out_size),
-            # 11
-            # nn.Linear(32256, out_size),
-            # 12
-            # nn.Linear(30720, out_size),
-            # 13
-            # nn.Linear(15360, out_size),
+        self.CNN_fc2 = nn.Sequential(
+            nn.Linear(11200, 10),
         )
 
         print 'Out size:', out_size
 
-        self.GPU = True
+        self.GPU = False
         if self.GPU == True:
             # Use for self.GPU
             dtype = torch.cuda.FloatTensor
-            print
-            '######################### CUDA is available! #############################'
+            print('######################### CUDA is available! #############################')
         else:
             # Use for CPU
             dtype = torch.FloatTensor
-            print
-            '############################## USING CPU #################################'
+            print('############################## USING CPU #################################')
 
         if loss_vector_type == 'anglesR' or loss_vector_type == 'anglesDC' or loss_vector_type == 'anglesEU':
 
@@ -365,7 +115,6 @@ class CNN(nn.Module):
             self.J_regressor_m = torch.Tensor(np.array(self.J_regressor_m).astype(float)).permute(1, 0).type(dtype)
 
             self.parents = np.array([4294967295, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9, 12, 13, 14, 16, 17, 18, 19, 20, 21]).astype(np.int32)
-
 
             #print batch_size
             self.N = batch_size
@@ -395,35 +144,16 @@ class CNN(nn.Module):
 
     def forward_direct(self, images, synth_real_switch, targets, is_training = True):
 
-        '''
-        Take a batch of images and run them through the CNN to
-        produce a scores for each class.
-
-        Arguments:
-            images (Variable): A tensor of size (N, C, H, W) where
-                N is the batch size
-                C is the number of channels
-                H is the image height
-                W is the image width
-
-        Returns:
-            A torch Variable of size (N, out_size) specifying the scores
-            for each example and category.
-        '''
-        scores = None
-        #############################################################################
-        # TODO: Implement the forward pass. This should take few lines of code.
-        #############################################################################
-        #print images.size(), 'CNN input size'
-
-
+        #pass through convnet for feature extraction
         scores = self.CNN_pack1(images)
         scores_size = scores.size()
-
         scores = scores.view(images.size(0),scores_size[1]*scores_size[2]*scores_size[3])
 
+        #collect in linear layer
         scores = self.CNN_fc1(scores)
 
+
+        #scale things so the model starts close to the home position. Has nothing to do with weighting.
         scores = torch.mul(scores.clone(), 0.01)
 
         num_joints = scores.shape[1]/3
@@ -434,10 +164,57 @@ class CNN(nn.Module):
             scores[:, fc_output_ct*3 + 1] = torch.add(scores[:, fc_output_ct*3 + 1], 1.2)
             scores[:, fc_output_ct*3 + 2] = torch.add(scores[:, fc_output_ct*3 + 2], 0.1)
 
-        targets_est_np = scores.clone().data*1000.
+        #print scores.size(), 'SCORE SIZE', targets.size()
+
 
         #print scores.shape
-        if is_training == False:
+        if is_training == True:
+
+            targets_est_np = scores.clone().data * 1000.
+            #print synth_real_switch
+            #print targets_est_np.size()
+            for joint_num in range(24):
+                if joint_num in [0, 1, 2, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]:
+                    targets_est_np[:, joint_num * 3] = targets_est_np[:, joint_num * 3] * synth_real_switch.data
+                    targets_est_np[:, joint_num * 3 + 1] = targets_est_np[:, joint_num * 3 + 1] * synth_real_switch.data
+                    targets_est_np[:, joint_num * 3 + 2] = targets_est_np[:, joint_num * 3 + 2] * synth_real_switch.data
+
+            targets_est_reduced_np = 0
+
+            # here we want to compute our score as the Euclidean distance between the estimated x,y,z points and the target.
+            scores = targets / 1000. - scores
+            scores = scores.pow(2)
+
+            num_joints = scores.shape[1] / 3
+            for fc_output_ct in range(num_joints):
+                scores[:, fc_output_ct] = scores[:, fc_output_ct * 3 + 0] + scores[:, fc_output_ct * 3 + 1] + scores[:,fc_output_ct * 3 + 2]
+
+
+
+            for joint_num in range(24):
+                #print scores[:, 10+joint_num].size(), 'score size'
+                #print synth_real_switch.size(), 'switch size'
+                if joint_num in [0, 1, 2, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]: #torso is 3 but forget training it
+                    scores[:, 10+joint_num] = torch.mul(synth_real_switch,
+                                                        (scores[:, joint_num*3 + 0] +
+                                                         scores[:, joint_num*3 + 1] +
+                                                         scores[:, joint_num*3 + 2]).sqrt())
+
+                else:
+                    scores[:, 10+joint_num] = (scores[:, 106+joint_num*3] +
+                                                 scores[:, 107+joint_num*3] +
+                                                 scores[:, 108+joint_num*3]).sqrt()
+
+
+
+            scores = scores[:, 0:24]
+
+
+
+        else:
+
+            targets_est_np = scores.clone().data*1000.
+
             scores = torch.cat((scores[:, 45:48],
                                scores[:, 9:12],
                                scores[:, 57:60],
@@ -451,30 +228,17 @@ class CNN(nn.Module):
 
             targets_est_reduced_np = scores.clone().data*1000.
 
-        else:
-            #print synth_real_switch
-            #print targets_est_np.size()
-            for joint_num in range(24):
-                if joint_num in [0, 1, 2, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]:
-                    targets_est_np[:, joint_num * 3] = targets_est_np[:, joint_num * 3] * synth_real_switch.data
-                    targets_est_np[:, joint_num * 3 + 1] = targets_est_np[:, joint_num * 3 + 1] * synth_real_switch.data
-                    targets_est_np[:, joint_num * 3 + 2] = targets_est_np[:, joint_num * 3 + 2] * synth_real_switch.data
-
-            targets_est_reduced_np = 0
+            #here we want to compute our score as the Euclidean distance between the estimated x,y,z points and the target.
+            scores = targets/1000. - scores
+            scores = scores.pow(2)
 
 
-        #print scores.size(), 'scores fc2'
+            num_joints = scores.shape[1] / 3
+            for fc_output_ct in range(num_joints):
+                scores[:, fc_output_ct] = scores[:, fc_output_ct*3 + 0] +  scores[:, fc_output_ct*3 + 1] +  scores[:, fc_output_ct*3 + 2]
 
-        #here we want to compute our score as the Euclidean distance between the estimated x,y,z points and the target.
-        scores = targets/1000. - scores
-        scores = scores.pow(2)
-
-        num_joints = scores.shape[1] / 3
-        for fc_output_ct in range(num_joints):
-            scores[:, fc_output_ct] = scores[:, fc_output_ct*3 + 0] +  scores[:, fc_output_ct*3 + 1] +  scores[:, fc_output_ct*3 + 2]
-
-        scores = scores[:, 0:num_joints]
-        scores = scores.sqrt()
+            scores = scores[:, 0:num_joints]
+            scores = scores.sqrt()
 
         #print "targets: ", targets[0, :]
         #print "scores: ", scores[0, :]
@@ -484,6 +248,9 @@ class CNN(nn.Module):
         #############################################################################
         #                             END OF YOUR CODE                              #
         #############################################################################
+
+        print scores.size(), scores[0, :]
+
         return scores, targets_est_np, targets_est_reduced_np
 
 
@@ -502,9 +269,10 @@ class CNN(nn.Module):
 
         scores = self.CNN_fc1(scores_cnn) #this is N x 229: betas, root shift, Rotation matrices
 
+
+        #scale things so the model starts close to the home position. Has nothing to do with weighting.
         scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), 0.1)
         scores[:, 10:] = torch.mul(scores[:, 10:].clone(), 0.01)
-
 
         scores[:, 10] = torch.add(scores[:, 10].clone(), 0.6)
         scores[:, 11] = torch.add(scores[:, 11].clone(), 1.2)
@@ -512,10 +280,10 @@ class CNN(nn.Module):
 
         #print scores[34, :]
 
-        test_ground_truth = False
+        test_ground_truth = False #can only use True when the dataset is entirely synthetic
 
         if test_ground_truth == False:
-            betas_est = scores[:, 0:10].clone()
+            betas_est = scores[:, 0:10].clone().detach() #make sure to detach so the gradient flow of joints doesn't corrupt the betas
             root_shift_est = scores[:, 10:13].clone()
 
             if self.loss_vector_type == 'anglesDC':
@@ -532,7 +300,7 @@ class CNN(nn.Module):
             if self.loss_vector_type == 'anglesDC':
                 Rs_est = self.batch_rodrigues(angles_gt.view(-1, 24, 3)).view(-1, 24, 3, 3)
             elif self.loss_vector_type == 'anglesEU':
-                Rs_est = self.batch_euler_to_R(scores[:, 13:85].view(-1, 24, 3).clone()).view(-1, 24, 3, 3)
+                Rs_est = self.batch_euler_to_R(angles_gt.view(-1, 24, 3)).view(-1, 24, 3, 3)
 
 
         gender_switch = gender_switch.unsqueeze(1)
@@ -598,36 +366,26 @@ class CNN(nn.Module):
 
 
             scores[:, 0:10] = torch.mul(synth_real_switch.unsqueeze(1),
-                                        torch.sub(scores[:, 0:10], betas))
+                                        torch.sub(scores[:, 0:10], betas))*.2
 
             scores[:, 34:106] = targets[:, 0:72]/1000 - scores[:, 34:106]
             scores[:, 106:178] = ((scores[:, 34:106].clone())*1.).pow(2)
 
             #print scores[13, 106:178]
 
-            self.count += 1
-            if self.count < 300:
-                scores[:, 10] = (scores[:, 106] + scores[:, 107] + scores[:, 108]).sqrt()*2# consider weighting the torso by a >1 factor because it's very important to root the other joints #bad idea, increases error
-            elif self.count < 1000:
-                scores[:, 10] = (scores[:, 106] + scores[:, 107] + scores[:, 108]).sqrt()*2# consider weighting the torso by a >1 factor because it's very important to root the other joints #bad idea, increases error
-            else:
-                scores[:, 10] = (scores[:, 106] + scores[:, 107] + scores[:, 108]).sqrt()*2
-
             for joint_num in range(24):
-                if joint_num == 1:
-                    pass
+                #print scores[:, 10+joint_num].size(), 'score size'
+                #print synth_real_switch.size(), 'switch size'
+                if joint_num in [0, 1, 2, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]: #torso is 3 but forget training it
+                    scores[:, 10+joint_num] = torch.mul(synth_real_switch,
+                                                        (scores[:, 106+joint_num*3] +
+                                                         scores[:, 107+joint_num*3] +
+                                                         scores[:, 108+joint_num*3]).sqrt())
+
                 else:
-                    #print scores[:, 10+joint_num].size(), 'score size'
-                    #print synth_real_switch.size(), 'switch size'
-                    if joint_num in [0, 1, 2, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]: #torso is 3 but forget training it
-                        scores[:, 10+joint_num] = torch.mul(synth_real_switch,
-                                                            (scores[:, 106+joint_num*3] +
-                                                             scores[:, 107+joint_num*3] +
-                                                             scores[:, 108+joint_num*3]).sqrt())
-                    else:
-                        scores[:, 10 + joint_num] = (scores[:, 106+joint_num*3] +
-                                                     scores[:, 107+joint_num*3] +
-                                                     scores[:, 108+joint_num*3]).sqrt()
+                    scores[:, 10+joint_num] = (scores[:, 106+joint_num*3] +
+                                                 scores[:, 107+joint_num*3] +
+                                                 scores[:, 108+joint_num*3]).sqrt()
 
                     #print scores[:, 10+joint_num], 'score size'
                     #print synth_real_switch, 'switch size'
@@ -638,15 +396,12 @@ class CNN(nn.Module):
             scores = scores.squeeze(0)
             scores = scores.squeeze(0)
 
-            #print scores.size()
-
-            #print scores[7, :]
 
             #here multiply by 24/10 when you are regressing to real data so it balances with the synthetic data
             scores = torch.mul(torch.add(1.0, torch.mul(1.4, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
 
-
             #print scores[7, :]
+
 
             targets_est_reduced_np = 0
 
@@ -667,7 +422,11 @@ class CNN(nn.Module):
 
             targets_est_reduced_np = targets_est_reduced.data*1000.
 
-            scores[:, 10:40] = targets_est_reduced[:, 0:30].pow(2)
+            #print(targets.size(), targets[0, :])
+
+            scores[:, 10:40] = (targets/1000. - targets_est_reduced[:, 0:30]).pow(2)
+
+            #print(scores.size(), scores[0, 10:40])
 
 
             for joint_num in range(10):
@@ -681,7 +440,14 @@ class CNN(nn.Module):
             scores = scores.squeeze(0)
 
 
+            scores = torch.mul(2.4, scores)
+
+        #print(scores[0, :], scores.size(), np.sum(np.abs(scores.data.numpy())))
+
         return  scores, targets_est_np, targets_est_reduced_np, betas_est_np
+
+
+
 
 
     def forward_kinematic_R(self, images, gender_switch, targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None):
@@ -782,19 +548,8 @@ class CNN(nn.Module):
 
             #print scores[13, 106:178]
 
-            self.count += 1
-            if self.count < 300:
-                scores[:, 10] = (scores[:, 106] + scores[:, 107] + scores[:, 108]).sqrt()*2# consider weighting the torso by a >1 factor because it's very important to root the other joints #bad idea, increases error
-            elif self.count < 1000:
-                scores[:, 10] = (scores[:, 106] + scores[:, 107] + scores[:, 108]).sqrt()*2# consider weighting the torso by a >1 factor because it's very important to root the other joints #bad idea, increases error
-            else:
-                scores[:, 10] = (scores[:, 106] + scores[:, 107] + scores[:, 108]).sqrt()*2
-
             for joint_num in range(24):
-                if joint_num == 1:
-                    pass
-                else:
-                    scores[:, 10+joint_num] = (scores[:, 106+joint_num*3] + scores[:, 107+joint_num*3] + scores[:, 108+joint_num*3]).sqrt()
+                scores[:, 10+joint_num] = (scores[:, 106+joint_num*3] + scores[:, 107+joint_num*3] + scores[:, 108+joint_num*3]).sqrt()
 
             scores = scores.unsqueeze(0)
             scores = scores.unsqueeze(0)
@@ -872,7 +627,7 @@ class CNN(nn.Module):
                               2 * wz + 2 * xy, w2 - x2 + y2 - z2, 2 * yz - 2 * wx,
                               2 * xz - 2 * wy, 2 * wx + 2 * yz, w2 - x2 - y2 + z2], dim=2)
 
-        print "got R"
+        #print "got R"
         return rotMat
 
     def batch_euler_to_R(self, theta):
@@ -957,99 +712,3 @@ class CNN(nn.Module):
         A = results - init_bone
 
         return new_J, A
-
-    def forward_kinematic_jacobian(self, images, targets=None, kincons=None, forward_only = False, loss_vector_type = None):
-        scores = None
-        targets_est = None
-        lengths_est = None
-
-
-
-        scores_cnn = self.CNN_pack1(images)
-        scores_size = scores_cnn.size()
-        # print scores_size, 'scores conv1'
-
-        # ''' # NOTE: Uncomment
-        # This combines the height, width, and filters into a single dimension
-        scores_cnn = scores_cnn.view(images.size(0),scores_size[1] *scores_size[2]*scores_size[3] )
-        #print 'size for fc layer:', scores_cnn.size()
-
-
-        scores = self.CNN_fc1(scores_cnn)
-        # ''' # NOTE: Uncomment
-
-
-        #kincons_est = Variable(torch.Tensor(np.copy(scores.data.numpy())))
-
-        #torso_scores = scores[:, 0:3]
-
-
-        #angles_scores = scores[:, 11:19]
-
-        if kincons is not None:
-            kincons = kincons / 100
-
-        print loss_vector_type, 'LOSS VECT'
-
-        scores, angles_est, pseudotargets_est = KinematicsLib().forward_kinematics_pytorch(images, scores, loss_vector_type, kincons, forward_only = forward_only, count = self.count)
-
-        #print scores.size(), ''
-
-        targets_est = scores[:, 17:47].data*1000. #after it comes out of the forward kinematics
-        targets_est[:, 0:3] = scores[:, 20:23].data*1000. #after it comes out of the forward kinematics
-        targets_est[:, 3:6] = scores[:, 17:20].data*1000. #after it comes out of the forward kinematics
-        lengths_est = scores[:, 0:17].data
-
-        #tweak this to change the lengths vector
-        scores[:, 0:17] = torch.mul(scores[:, 0:17], 1)
-
-        if forward_only == False:
-            scores = scores.unsqueeze(0)
-            scores = scores.unsqueeze(0)
-            scores = F.pad(scores, (10, 30, 0, 0))
-            scores = scores.squeeze(0)
-            scores = scores.squeeze(0)
-
-            #print scores.size()
-            #print targets.size()
-
-            scores[:, 27:30] = targets[:, 3:6]/1000 - scores[:, 27:30]
-            scores[:, 30:33] = targets[:, 0:3]/1000 - scores[:, 30:33]
-            scores[:, 33:57] = targets[:, 6:30]/1000 - scores[:, 33:57]
-            scores[:, 57:87] = ((scores[:, 27:57])*1.).pow(2)
-            self.count += 1
-            if self.count < 300:
-                scores[:, 0] = (scores[:, 57] + scores[:, 58] + scores[:, 59]).sqrt()*2# consider weighting the torso by a >1 factor because it's very important to root the other joints #bad idea, increases error
-            elif self.count < 1000:
-                scores[:, 0] = (scores[:, 57] + scores[:, 58] + scores[:, 59]).sqrt()*2# consider weighting the torso by a >1 factor because it's very important to root the other joints #bad idea, increases error
-            else:
-                scores[:, 0] = (scores[:, 57] + scores[:, 58] + scores[:, 59]).sqrt()*2
-            scores[:, 1] = (scores[:, 60] + scores[:, 61] + scores[:, 62]).sqrt()
-            scores[:, 2] = (scores[:, 63] + scores[:, 64] + scores[:, 65]).sqrt()
-            scores[:, 3] = (scores[:, 66] + scores[:, 67] + scores[:, 68]).sqrt()
-            scores[:, 6] = (scores[:, 75] + scores[:, 76] + scores[:, 77]).sqrt()
-            scores[:, 7] = (scores[:, 78] + scores[:, 79] + scores[:, 80]).sqrt()
-            #if self.count < 1500:
-            #    scores[:, 4] = (scores[:, 69] + scores[:, 70] + scores[:, 71]).sqrt()*0.5
-            #    scores[:, 5] = (scores[:, 72] + scores[:, 73] + scores[:, 74]).sqrt()*0.5
-            #    scores[:, 8] = (scores[:, 81] + scores[:, 82] + scores[:, 83]).sqrt()*0.5
-            #    scores[:, 9] = (scores[:, 84] + scores[:, 85] + scores[:, 86]).sqrt()*0.5
-            #else:
-            scores[:, 4] = (scores[:, 69] + scores[:, 70] + scores[:, 71]).sqrt()
-            scores[:, 5] = (scores[:, 72] + scores[:, 73] + scores[:, 74]).sqrt()
-            scores[:, 8] = (scores[:, 81] + scores[:, 82] + scores[:, 83]).sqrt()
-            scores[:, 9] = (scores[:, 84] + scores[:, 85] + scores[:, 86]).sqrt()
-
-            print self.count
-
-
-            scores = scores.unsqueeze(0)
-            scores = scores.unsqueeze(0)
-            scores = F.pad(scores, (0, -60, 0, 0))
-            scores = scores.squeeze(0)
-            scores = scores.squeeze(0)
-
-        #############################################################################
-        #                             END OF YOUR CODE                              #
-        #############################################################################
-        return  scores, targets_est, angles_est, lengths_est, pseudotargets_est, #, lengths_scores

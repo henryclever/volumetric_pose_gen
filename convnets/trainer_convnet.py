@@ -15,7 +15,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import transforms
 from torch.autograd import Variable
-GPU = True
+GPU = False
 
 import chumpy as ch
 
@@ -534,7 +534,10 @@ class PhysicalTrainer():
 
                     images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy()[:, :, :, :], multiple = 2)))
                     images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
-                    images, targets, scores_zeros = Variable(batch[0].type(dtype), requires_grad = False), Variable(batch[1].type(dtype), requires_grad = False), Variable(torch.Tensor(np.zeros((batch[1].shape[0], batch[1].shape[1]/3))).type(dtype), requires_grad = False)
+                    images, targets = Variable(batch[0].type(dtype), requires_grad = False), Variable(batch[1].type(dtype), requires_grad = False)
+
+                    scores_zeros = np.zeros((batch[0].numpy().shape[0], 24))  # 24 is joint euclidean errors
+                    scores_zeros = Variable(torch.Tensor(scores_zeros).type(dtype))
 
                     self.optimizer.zero_grad()
                     scores, targets_est, _ = self.model.forward_direct(images_up, synth_real_switch, targets, is_training = True)
@@ -585,7 +588,6 @@ class PhysicalTrainer():
 
                     scores_zeros = np.zeros((batch[0].numpy().shape[0], 34)) #34 is 10 shape params and 24 joint euclidean errors
                     scores_zeros = Variable(torch.Tensor(scores_zeros).type(dtype))
-                    #scores_zeros[:, 0:10] = betas[:, 0:10]
 
                     if self.loss_vector_type == 'anglesR':
                         scores, targets_est, _, betas_est = self.model.forward_kinematic_R(images_up, gender_switch,
@@ -601,8 +603,18 @@ class PhysicalTrainer():
                                                                                            angles_gt=angles_gt,
                                                                                            root_shift=root_shift)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
 
+
                     self.criterion = nn.L1Loss()
                     loss = self.criterion(scores, scores_zeros)
+                    #print(scores.size())
+                    #print("TRAIN SCORES",
+                    #      np.sum(np.abs(scores.data.numpy())),
+                    #      np.sum(np.abs(scores[:, 10:].data.numpy())),
+                    #      np.sum(np.abs(scores[:, 10:].data.numpy()))/(scores[:, 10:].size()[0] * scores[:, 10:].size()[1]))
+
+                    loss_breakdown = [1000*np.sum(np.abs(scores[:, 0:10].data.numpy()))/(scores.size()[0] * scores.size()[1]),
+                                      1000*np.sum(np.abs(scores[:, 10:].data.numpy()))/(scores.size()[0] * scores.size()[1])]
+
 
                 #print loss.data.numpy() * 1000, 'loss'
 
@@ -629,9 +641,9 @@ class PhysicalTrainer():
 
                     #print targets.data.shape
                     if GPU == True:
-                        if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC':
+                        #if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC':
                             # print angles_est[0, :], 'validation angles'
-                            print betas_est.cpu()[0, :]/1000, 'training betas'
+                            #print betas_est.cpu()[0, :]/1000, 'training betas'
                         VisualizationLib().print_error_train(targets.data.cpu(), targets_est.cpu(), self.output_size_train, self.loss_vector_type, data='train')
                     else:
                         VisualizationLib().print_error_train(targets.data, targets_est, self.output_size_train, self.loss_vector_type, data='train')
@@ -652,10 +664,18 @@ class PhysicalTrainer():
                     train_loss = loss.data.item()
                     examples_this_epoch = batch_idx * len(images)
                     epoch_progress = 100. * batch_idx / len(self.train_loader)
-                    print('Train Epoch: {} [{}/{} ({:.0f}%)]\t'
-                          'Train Loss: {:.6f}\tVal Loss: {:.6f}'.format(
-                        epoch, examples_this_epoch, len(self.train_loader.dataset),
-                        epoch_progress, train_loss, val_loss))
+                    if self.loss_vector_type == 'direct':
+                        print('Train Epoch: {} [{}/{} ({:.0f}%)]\t'
+                              'Total Loss: {:.2f}\n\t\t\t\t'
+                              '   Val Loss: {:.2f}'.format(
+                            epoch, examples_this_epoch, len(self.train_loader.dataset),
+                            epoch_progress, train_loss, val_loss))
+                    else:
+                        print('Train Epoch: {} [{}/{} ({:.0f}%)]\t'
+                              'Train Loss Joints: {:.2f}, Betas Loss: {:.2f}, Total Loss: {:.2f}\n\t\t\t\t'
+                              '   Val Loss Total: {:.2f}'.format(
+                            epoch, examples_this_epoch, len(self.train_loader.dataset),
+                            epoch_progress, loss_breakdown[1], loss_breakdown[0], train_loss, val_loss))
 
 
                     print 'appending to alldata losses'
@@ -671,6 +691,7 @@ class PhysicalTrainer():
         self.model.eval()
         loss = 0.
         n_examples = 0
+        batch_ct = 0
         for batch_i, batch in enumerate(self.test_loader):
 
             self.model.eval()
@@ -725,21 +746,35 @@ class PhysicalTrainer():
                                                                                                               0, targets, is_training=False)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
 
                 self.criterion = nn.L1Loss()
-                loss = self.criterion(scores, scores_zeros)
-                loss = loss.data.item()
+
+
+                loss += self.criterion(scores, scores_zeros).data.item()
+
+                #print("VAL SCORES",
+                #      np.sum(np.abs(scores.data.numpy())),
+                #      np.sum(np.abs(scores.data.numpy())),
+                #      np.sum(np.abs(scores.data.numpy()))/(scores.size()[0] * scores.size()[1]),
+                #      np.sum(np.abs(scores.data.numpy()))/(scores.size()[0] * 24))
 
 
 
 
             n_examples += self.batch_size
-            #print n_examples
 
             if n_batches and (batch_i >= n_batches):
                 break
 
-        loss /= n_examples
-        loss *= 100
+            batch_ct += 1
+
+        #print(loss)
+
+        #loss /= n_examples
+        loss /= batch_ct
+        #print(loss)
         loss *= 1000
+        #print(loss)
+        loss *= 10./34
+        #print(loss)
 
         if GPU == True:
             if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC':
@@ -812,7 +847,7 @@ if __name__ == "__main__":
     test_database_file_m = []
 
     #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3555_upperbody_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3681_rightside_stiff.p')
+    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3681_rightside_stiff.p')
     #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3722_leftside_stiff.p')
     #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3808_lowerbody_stiff.p')
     #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3829_none_stiff.p')
