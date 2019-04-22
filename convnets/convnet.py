@@ -283,7 +283,7 @@ class CNN(nn.Module):
         test_ground_truth = False #can only use True when the dataset is entirely synthetic
 
         if test_ground_truth == False:
-            betas_est = scores[:, 0:10].clone().detach() #make sure to detach so the gradient flow of joints doesn't corrupt the betas
+            betas_est = scores[:, 0:10].clone()#.detach() #make sure to detach so the gradient flow of joints doesn't corrupt the betas
             root_shift_est = scores[:, 10:13].clone()
 
             if self.loss_vector_type == 'anglesDC':
@@ -406,7 +406,7 @@ class CNN(nn.Module):
             targets_est_reduced_np = 0
 
         else:
-            targets_est_reduced = torch.empty(targets_est.size()[0], 30, dtype=torch.float)
+            targets_est_reduced = torch.empty(targets_est.size()[0], 30, dtype=torch.float).cuda()
             #scores[:, 80] = torch.add(scores[:, 80], 0.2)
             #scores[:, 81] = torch.add(scores[:, 81], 0.2)
             targets_est_reduced[:, 0:3] = scores[:, 79:82] #head 34 + 3*15 = 79
