@@ -108,7 +108,7 @@ class PhysicalTrainer():
         print self.num_epochs, 'NUM EPOCHS!'
         #Entire pressure dataset with coordinates in world frame
 
-        self.save_name = '_' + opt.losstype+'_real_' + str(self.batch_size) + 'b_' + str(self.num_epochs) + 'e'
+        self.save_name = '_' + opt.losstype+'_synth_' + str(self.batch_size) + 'b_' + str(self.num_epochs) + 'e'
 
 
 
@@ -123,34 +123,41 @@ class PhysicalTrainer():
         self.output_size_val = (NUMOFOUTPUTNODES_TEST, NUMOFOUTPUTDIMS)
 
         dat_f_synth = self.load_files_to_database(training_database_file_f, 'synth', 'training f synth')
-        dat_f_real = self.load_files_to_database(training_database_file_f, 'real', 'training f real')
         dat_m_synth = self.load_files_to_database(training_database_file_m, 'synth', 'training m synth')
+        dat_f_real = self.load_files_to_database(training_database_file_f, 'real', 'training f real')
         dat_m_real = self.load_files_to_database(training_database_file_m, 'real', 'training m real')
 
         self.train_x_flat = []  # Initialize the testing pressure mat list
         if dat_f_synth is not None:
             for entry in range(len(dat_f_synth['images'])):
                 self.train_x_flat.append(dat_f_synth['images'][entry] * 3)
-        if dat_f_real is not None:
-            for entry in range(len(dat_f_real['images'])):
-                self.train_x_flat.append(dat_f_real['images'][entry])
         if dat_m_synth is not None:
             for entry in range(len(dat_m_synth['images'])):
                 self.train_x_flat.append(dat_m_synth['images'][entry] * 3)
+
+
+        self.train_x_flat = PreprocessingLib().preprocessing_blur_images(self.train_x_flat, self.mat_size, sigma=1.2)
+
+        if dat_f_real is not None:
+            for entry in range(len(dat_f_real['images'])):
+                self.train_x_flat.append(dat_f_real['images'][entry])
         if dat_m_real is not None:
             for entry in range(len(dat_m_real['images'])):
                 self.train_x_flat.append(dat_m_real['images'][entry])
+
+
 
         self.train_a_flat = []  # Initialize the testing pressure mat angle list
         if dat_f_synth is not None:
             for entry in range(len(dat_f_synth['images'])):
                 self.train_a_flat.append(dat_f_synth['bed_angle_deg'][entry])
-        if dat_f_real is not None:
-            for entry in range(len(dat_f_real['images'])):
-                self.train_a_flat.append(dat_f_real['bed_angle_deg'][entry])
         if dat_m_synth is not None:
             for entry in range(len(dat_m_synth['images'])):
                 self.train_a_flat.append(dat_m_synth['bed_angle_deg'][entry])
+
+        if dat_f_real is not None:
+            for entry in range(len(dat_f_real['images'])):
+                self.train_a_flat.append(dat_f_real['bed_angle_deg'][entry])
         if dat_m_real is not None:
             for entry in range(len(dat_m_real['images'])):
                 self.train_a_flat.append(dat_m_real['bed_angle_deg'][entry])
@@ -186,6 +193,25 @@ class PhysicalTrainer():
                     self.train_y_flat.append(c)
 
         
+        if dat_m_synth is not None:
+            for entry in range(len(dat_m_synth['markers_xyz_m'])):
+                if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
+                    # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
+                    c = np.concatenate((dat_m_synth['markers_xyz_m'][entry][0:72] * 1000,
+                                        dat_m_synth['body_shape'][entry][0:10],
+                                        dat_m_synth['joint_angles'][entry][0:72],
+                                        dat_m_synth['root_xyz_shift'][entry][0:3],
+                                        [0], [1], [1]), axis=0)  # [x1], [x2], [x3]: male synth: 0, 1, 1.
+                    self.train_y_flat.append(c)
+                else:
+                    # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
+                    c = np.concatenate((dat_m_synth['markers_xyz_m'][entry][0:72] * 1000,
+                                        np.array(10 * [0]),
+                                        np.array(72 * [0]),
+                                        np.array(3 * [0]),
+                                        [1], [0], [1]), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
+                    self.train_y_flat.append(c)
+
         if dat_f_real is not None:
             for entry in range(len(dat_f_real['markers_xyz_m'])):  ######FIX THIS!!!!######
                 # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
@@ -218,25 +244,6 @@ class PhysicalTrainer():
                                     np.array(85 * [0]),
                                     [1], [0], [0]), axis=0)  # [x1], [x2], [x3]: female real: 1, 0, 0.
                 self.train_y_flat.append(c)
-
-        if dat_m_synth is not None:
-            for entry in range(len(dat_m_synth['markers_xyz_m'])):
-                if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
-                    # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                    c = np.concatenate((dat_m_synth['markers_xyz_m'][entry][0:72] * 1000,
-                                        dat_m_synth['body_shape'][entry][0:10],
-                                        dat_m_synth['joint_angles'][entry][0:72],
-                                        dat_m_synth['root_xyz_shift'][entry][0:3],
-                                        [0], [1], [1]), axis=0)  # [x1], [x2], [x3]: male synth: 0, 1, 1.
-                    self.train_y_flat.append(c)
-                else:
-                    # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                    c = np.concatenate((dat_m_synth['markers_xyz_m'][entry][0:72] * 1000,
-                                        np.array(10 * [0]),
-                                        np.array(72 * [0]),
-                                        np.array(3 * [0]),
-                                        [1], [0], [1]), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
-                    self.train_y_flat.append(c)
 
         if dat_m_real is not None:
             for entry in range(len(dat_m_real['markers_xyz_m'])):  ######FIX THIS!!!!######
@@ -851,34 +858,34 @@ if __name__ == "__main__":
     test_database_file_f = []
     test_database_file_m = [] #141 total training loss at epoch 9
 
-    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3555_upperbody_stiff.p')
-    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3681_rightside_stiff.p')
-    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3722_leftside_stiff.p')
-    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3808_lowerbody_stiff.p')
-    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3829_none_stiff.p')
-    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1508_upperbody_stiff.p')
-    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1534_rightside_stiff.p')
-    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1513_leftside_stiff.p')
-    #raining_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1494_lowerbody_stiff.p')
-    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1649_none_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    training_database_file_f.append(filepath_prefix_qt+'/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3555_upperbody_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3681_rightside_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3722_leftside_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3808_lowerbody_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3829_none_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1508_upperbody_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1534_rightside_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1513_leftside_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1494_lowerbody_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1649_none_stiff.p')
+    #training_database_file_f.append(filepath_prefix_qt+'/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    #training_database_file_f.append(filepath_prefix_qt+'/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #training_database_file_f.append(filepath_prefix_qt+'/real/trainval8_150rh1_sit120rh.p')
 
-    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3573_upperbody_stiff.p')
-    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3628_rightside_stiff.p')
-    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3646_leftside_stiff.p')
-    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3735_lowerbody_stiff.p')
-    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3841_none_stiff.p')
-    #raining_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1302_upperbody_stiff.p')
-    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1259_rightside_stiff.p')
-    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1302_leftside_stiff.p')
-    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1275_lowerbody_stiff.p')
-    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1414_none_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    training_database_file_m.append(filepath_prefix_qt+'/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    training_database_file_m.append(filepath_prefix_qt+'/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    training_database_file_m.append(filepath_prefix_qt+'/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3573_upperbody_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3628_rightside_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3646_leftside_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3735_lowerbody_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3841_none_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1302_upperbody_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1259_rightside_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1302_leftside_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1275_lowerbody_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1414_none_stiff.p')
+    #training_database_file_m.append(filepath_prefix_qt+'/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    #training_database_file_m.append(filepath_prefix_qt+'/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    #training_database_file_m.append(filepath_prefix_qt+'/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    #training_database_file_m.append(filepath_prefix_qt+'/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #training_database_file_m.append(filepath_prefix_qt+'/real/trainval4_150rh1_sit120rh.p')
     #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_95_rightside_stiff.p')
 
