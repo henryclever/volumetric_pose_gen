@@ -16,6 +16,8 @@ from scipy.ndimage.interpolation import zoom
 #from skimage.feature import hog
 #from skimage import data, color, exposure, feature
 
+from scipy.ndimage.filters import gaussian_filter
+
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import scale
 from sklearn import svm, linear_model, decomposition, kernel_ridge, neighbors
@@ -124,6 +126,21 @@ class PreprocessingLib():
 
 
         return p_map_dataset
+
+
+    def preprocessing_blur_images(self, x_data, mat_size, sigma):
+
+        x_data_return = []
+        for map_index in range(len(x_data)):
+            p_map = np.reshape(x_data[map_index], mat_size)
+
+            p_map = gaussian_filter(p_map, sigma= sigma)
+
+            x_data_return.append(p_map.flatten())
+
+        return x_data_return
+
+
 
 
     def preprocessing_create_pressure_angle_stack(self,x_data, a_data, include_inter, mat_size, verbose):
