@@ -84,7 +84,7 @@ class CNN(nn.Module):
 
         print 'Out size:', out_size
 
-        self.GPU = False
+        self.GPU = True
         if self.GPU == True:
             # Use for self.GPU
             dtype = torch.cuda.FloatTensor
@@ -406,7 +406,10 @@ class CNN(nn.Module):
             targets_est_reduced_np = 0
 
         else:
-            targets_est_reduced = torch.empty(targets_est.size()[0], 30, dtype=torch.float)
+            if self.GPU == True:
+                targets_est_reduced = torch.empty(targets_est.size()[0], 30, dtype=torch.float).cuda()
+            else:    
+                targets_est_reduced = torch.empty(targets_est.size()[0], 30, dtype=torch.float)
             #scores[:, 80] = torch.add(scores[:, 80], 0.2)
             #scores[:, 81] = torch.add(scores[:, 81], 0.2)
             targets_est_reduced[:, 0:3] = scores[:, 79:82] #head 34 + 3*15 = 79

@@ -15,7 +15,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import transforms
 from torch.autograd import Variable
-GPU = False
+GPU = True
 
 import chumpy as ch
 
@@ -108,7 +108,7 @@ class PhysicalTrainer():
         print self.num_epochs, 'NUM EPOCHS!'
         #Entire pressure dataset with coordinates in world frame
 
-        self.save_name = '_' + opt.losstype+'_' +str(self.shuffle)+'s_' + str(self.batch_size) + 'b_' + str(self.num_epochs) + 'e'
+        self.save_name = '_' + opt.losstype+'_synth_' + str(self.batch_size) + 'b_' + str(self.num_epochs) + 'e'
 
 
 
@@ -486,8 +486,8 @@ class PhysicalTrainer():
                 self.t2 = 0
             print 'Time taken by epoch',epoch,':',self.t2,' seconds'
 
-            if epoch == 200: torch.save(self.model, '/home/henry/data/dat_synth/convnet'+self.save_name+'.pt')
-            if epoch == 300: torch.save(self.model, '/home/henry/data/dat_synth/convnet'+self.save_name+'.pt')
+            if epoch == 200: torch.save(self.model, '/home/henry/data/synth/convnet'+self.save_name+'.pt')
+            if epoch == 300: torch.save(self.model, '/home/henry/data/synth/convnet'+self.save_name+'.pt')
 
 
 
@@ -498,8 +498,8 @@ class PhysicalTrainer():
         # Save the model (architecture and weights)
 
 
-        torch.save(self.model, '/home/henry/data/dat_synth/convnet'+self.save_name+'.pt')
-        pkl.dump(self.train_val_losses,open('/home/henry/data/dat_synth/convnet_losses'+self.save_name+'.p', 'wb'))
+        torch.save(self.model, '/home/henry/data/synth/convnet'+self.save_name+'.pt')
+        pkl.dump(self.train_val_losses,open('/home/henry/data/synth/convnet_losses'+self.save_name+'.p', 'wb'))
 
 
     def train_convnet(self, epoch):
@@ -612,8 +612,13 @@ class PhysicalTrainer():
                     #      np.sum(np.abs(scores[:, 10:].data.numpy())),
                     #      np.sum(np.abs(scores[:, 10:].data.numpy()))/(scores[:, 10:].size()[0] * scores[:, 10:].size()[1]))
 
-                    loss_breakdown = [1000*np.sum(np.abs(scores[:, 0:10].data.numpy()))/(scores.size()[0] * scores.size()[1]),
-                                      1000*np.sum(np.abs(scores[:, 10:].data.numpy()))/(scores.size()[0] * scores.size()[1])]
+                    if GPU == True:
+                        loss_breakdown = [1000*np.sum(np.abs(scores[:, 0:10].data.cpu().numpy()))/(scores.size()[0] * scores.size()[1]),
+                                      1000*np.sum(np.abs(scores[:, 10:].data.cpu().numpy()))/(scores.size()[0] * scores.size()[1])]
+
+                    else:
+                        loss_breakdown = [1000*np.sum(np.abs(scores[:, 0:10].data.cpu().numpy()))/(scores.size()[0] * scores.size()[1]),
+                                      1000*np.sum(np.abs(scores[:, 10:].data.cpu().numpy()))/(scores.size()[0] * scores.size()[1])]
 
 
                 #print loss.data.numpy() * 1000, 'loss'
@@ -846,30 +851,30 @@ if __name__ == "__main__":
     test_database_file_f = []
     test_database_file_m = []
 
-    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3555_upperbody_stiff.p')
-    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3681_rightside_stiff.p')
-    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3722_leftside_stiff.p')
-    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3808_lowerbody_stiff.p')
-    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3829_none_stiff.p')
-    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1508_upperbody_stiff.p')
-    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1534_rightside_stiff.p')
-    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1513_leftside_stiff.p')
-    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1494_lowerbody_stiff.p')
-    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1649_none_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3555_upperbody_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3681_rightside_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3722_leftside_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3808_lowerbody_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3829_none_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1508_upperbody_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1534_rightside_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1513_leftside_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1494_lowerbody_stiff.p')
+    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1649_none_stiff.p')
     #training_database_file_f.append(filepath_prefix_qt+'/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #training_database_file_f.append(filepath_prefix_qt+'/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    training_database_file_f.append(filepath_prefix_qt+'/real/trainval8_150rh1_sit120rh.p')
+    #training_database_file_f.append(filepath_prefix_qt+'/real/trainval8_150rh1_sit120rh.p')
 
-    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3573_upperbody_stiff.p')
-    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3628_rightside_stiff.p')
-    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3646_leftside_stiff.p')
-    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3735_lowerbody_stiff.p')
-    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3841_none_stiff.p')
-    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1302_upperbody_stiff.p')
-    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1259_rightside_stiff.p')
-    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1302_leftside_stiff.p')
-    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1275_lowerbody_stiff.p')
-    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1414_none_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3573_upperbody_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3628_rightside_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3646_leftside_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3735_lowerbody_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3841_none_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1302_upperbody_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1259_rightside_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1302_leftside_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1275_lowerbody_stiff.p')
+    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1414_none_stiff.p')
     #training_database_file_m.append(filepath_prefix_qt+'/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #training_database_file_m.append(filepath_prefix_qt+'/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #training_database_file_m.append(filepath_prefix_qt+'/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
@@ -878,10 +883,10 @@ if __name__ == "__main__":
     #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_95_rightside_stiff.p')
 
     #test_database_file_f.append(filepath_prefix_qt+'/real/trainval4_150rh1_sit120rh.p')
-    test_database_file_m.append(filepath_prefix_qt+'/real/trainval8_150rh1_sit120rh.p')
+    #test_database_file_m.append(filepath_prefix_qt+'/real/trainval8_150rh1_sit120rh.p')
     #test_database_file_f.append(filepath_prefix_qt + '/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + '/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    #test_database_file_m.append(filepath_prefix_qt + '/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    test_database_file_m.append(filepath_prefix_qt + '/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + '/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + '/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + '/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
