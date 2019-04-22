@@ -365,8 +365,7 @@ class CNN(nn.Module):
                     targets_est_np[:, joint_num * 3 + 2] = targets_est_np[:, joint_num * 3 + 2] * synth_real_switch.data
 
 
-            scores[:, 0:10] = torch.mul(synth_real_switch.unsqueeze(1),
-                                        torch.sub(scores[:, 0:10], betas))*.2
+            scores[:, 0:10] = torch.mul(synth_real_switch.unsqueeze(1), torch.sub(scores[:, 0:10], betas))*.2
 
             scores[:, 34:106] = targets[:, 0:72]/1000 - scores[:, 34:106]
             scores[:, 106:178] = ((scores[:, 34:106].clone())*1.).pow(2)
@@ -405,6 +404,9 @@ class CNN(nn.Module):
 
             targets_est_reduced_np = 0
 
+            scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1/1.7312621950698526)) #weight the betas by std
+            scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), (1/0.1282715100608753)) #weight the 24 joints by std
+
         else:
             if self.GPU == True:
                 targets_est_reduced = torch.empty(targets_est.size()[0], 30, dtype=torch.float).cuda()
@@ -442,10 +444,11 @@ class CNN(nn.Module):
             scores = scores.squeeze(0)
             scores = scores.squeeze(0)
 
+            scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1/0.1282715100608753)) #weight the 10 joints by std
 
+            #here multiply by 24/10 when you are regressing to real data so it balances with the synthetic data
             scores = torch.mul(2.4, scores)
 
-        #print(scores[0, :], scores.size(), np.sum(np.abs(scores.data.numpy())))
 
         return  scores, targets_est_np, targets_est_reduced_np, betas_est_np
 
