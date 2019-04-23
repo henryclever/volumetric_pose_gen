@@ -84,7 +84,7 @@ class CNN(nn.Module):
 
         print 'Out size:', out_size
 
-        self.GPU = False
+        self.GPU = True
         if self.GPU == True:
             # Use for self.GPU
             dtype = torch.cuda.FloatTensor
@@ -139,8 +139,30 @@ class CNN(nn.Module):
             self.zeros_cartesian = torch.zeros([self.N, 24]).type(dtype)
             self.ones_cartesian = torch.ones([self.N, 24]).type(dtype)
 
-
-
+            self.bounds = torch.Tensor(np.array([[-1.57, 1.57], [-1.57, 1.57], [-1.57, 1.57],
+                                   [-2.047187297216041, 0.0008725992352640336], [-1.0056561780573234, 0.9792596381050885], [-0.83127128871961, 0.9840833280290882],
+                                   [-2.0467908364949654, 0.005041331594134009], [-0.9477521700520728, 1.0038579032816006],  [-0.8767199629302654, 0.35738032396710084],
+                                   [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
+                                   [0.0, 2.307862756803765], [-0.01, 0.01], [-0.01, 0.01],  # knee
+                                   [0.0, 2.320752282574325], [-0.01, 0.01], [-0.01, 0.01],
+                                   [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
+                                   [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # ankle, pi/36 or 5 deg
+                                   [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # ankle, pi/36 or 5 deg
+                                   [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
+                                   [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01],  # foot
+                                   [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01],  # foot
+                                   [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],  # neck
+                                   [-1.7636153960682888 * 1 / 3, 1.5740500958475525 * 1 / 3], [-1.5168279883317557 * 1 / 3, 1.6123857573735045 * 1 / 3], [-1.7656139149798185 * 1 / 3, 1.9844820788036448 * 1 / 3],
+                                   [-1.8819412381973686 * 1 / 3, 1.5386423137579994 * 1 / 3], [-1.6424506514942065 * 1 / 3, 2.452871806175492 * 1 / 3], [-1.9397148210114974 * 1 / 3, 1.8997886932520462 * 1 / 3],
+                                   [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],  # head
+                                   [-1.7636153960682888 * 2 / 3, 1.5740500958475525 * 2 / 3], [-1.5168279883317557 * 2 / 3, 1.6123857573735045 * 2 / 3], [-1.7656139149798185 * 2 / 3, 1.9844820788036448 * 2 / 3],
+                                   [-1.8819412381973686 * 2 / 3, 1.5386423137579994 * 2 / 3], [-1.6424506514942065 * 2 / 3, 2.452871806175492 * 2 / 3], [-1.9397148210114974 * 2 / 3, 1.8997886932520462 * 2 / 3],
+                                   [-0.01, 0.01], [-2.146677709782182, 0.0], [-0.01, 0.01],  # elbow
+                                   [-0.01, 0.01], [0.0, 2.136934895040784],  [-0.01, 0.01],  # elbow
+                                   [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # wrist, pi/36 or 5 deg
+                                   [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # wrist, pi/36 or 5 deg
+                                   [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01],  # hand
+                                   [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01]])).type(dtype)
 
     def forward_direct(self, images, synth_real_switch, targets, is_training = True):
 
@@ -261,7 +283,7 @@ class CNN(nn.Module):
 
         # ''' # NOTE: Uncomment
         # This combines the height, width, and filters into a single dimension
-        scores_cnn = scores_cnn.view(images.size(0),scores_size[1] *scores_size[2]*scores_size[3] )
+        scores_cnn = scores_cnn.view(images.size(0),scores_size[1] *scores_size[2]*scores_size[3])
         #print 'size for fc layer:', scores_cnn.size()
 
 
@@ -278,13 +300,24 @@ class CNN(nn.Module):
 
         #print scores[34, :]
 
-        test_ground_truth = False #can only use True when the dataset is entirely synthetic
 
-        if test_ground_truth == False:
+
+
+        test_ground_truth = False #can only use True when the dataset is entirely synthetic AND when we use anglesDC
+
+        if test_ground_truth == False or is_training == False:
             betas_est = scores[:, 0:10].clone().detach() #make sure to detach so the gradient flow of joints doesn't corrupt the betas
             root_shift_est = scores[:, 10:13].clone()
 
             if self.loss_vector_type == 'anglesDC':
+
+                #normalize for tan activation function
+                scores[:, 13:85] -= torch.mean(self.bounds[0:72,0:2], dim = 1)
+                scores[:, 13:85] *= (2. / torch.abs(self.bounds[0:72, 0] - self.bounds[0:72, 1]))
+                scores[:, 13:85] = scores[:, 13:85].tanh()
+                scores[:, 13:85] /= (2. / torch.abs(self.bounds[0:72, 0] - self.bounds[0:72, 1]))
+                scores[:, 13:85] += torch.mean(self.bounds[0:72,0:2], dim = 1)
+
                 Rs_est = self.batch_rodrigues(scores[:, 13:85].view(-1, 24, 3).clone()).view(-1, 24, 3, 3)
             elif self.loss_vector_type == 'anglesEU':
                 Rs_est = self.batch_euler_to_R(scores[:, 13:85].view(-1, 24, 3).clone()).view(-1, 24, 3, 3)
@@ -292,14 +325,25 @@ class CNN(nn.Module):
         else:
             #print betas[13, :], 'betas'
             betas_est = betas
-            scores[:, 0:10] = betas
+            scores[:, 0:10] = betas.clone()
+            scores[:, 13:85] = angles_gt.clone()
             root_shift_est = root_shift
 
             if self.loss_vector_type == 'anglesDC':
-                Rs_est = self.batch_rodrigues(angles_gt.view(-1, 24, 3)).view(-1, 24, 3, 3)
-            elif self.loss_vector_type == 'anglesEU':
-                Rs_est = self.batch_euler_to_R(angles_gt.view(-1, 24, 3)).view(-1, 24, 3, 3)
 
+                #normalize for tan activation function
+                scores[:, 13:85] -= torch.mean(self.bounds[0:72,0:2], dim = 1)
+                scores[:, 13:85] *= (2. / torch.abs(self.bounds[0:72, 0] - self.bounds[0:72, 1]))
+                scores[:, 13:85] = scores[:, 13:85].tanh()
+                scores[:, 13:85] /= (2. / torch.abs(self.bounds[0:72, 0] - self.bounds[0:72, 1]))
+                scores[:, 13:85] += torch.mean(self.bounds[0:72,0:2], dim = 1)
+
+
+                Rs_est = self.batch_rodrigues(scores[:, 13:85].view(-1, 24, 3).clone()).view(-1, 24, 3, 3)
+            elif self.loss_vector_type == 'anglesEU':
+                Rs_est = self.batch_euler_to_R(scores[:, 13:85].view(-1, 24, 3).clone()).view(-1, 24, 3, 3)
+
+        #print Rs_est[0, :]
 
         gender_switch = gender_switch.unsqueeze(1)
         current_batch_size = gender_switch.size()[0]
@@ -366,7 +410,10 @@ class CNN(nn.Module):
             scores[:, 0:10] = torch.mul(synth_real_switch.unsqueeze(1), torch.sub(scores[:, 0:10], betas))*.2
 
             scores[:, 34:106] = targets[:, 0:72]/1000 - scores[:, 34:106]
-            scores[:, 106:178] = ((scores[:, 34:106].clone())*1.).pow(2)
+
+            #print scores[0, :]
+
+            scores[:, 106:178] = ((scores[:, 34:106].clone())+0.0000001).pow(2)
 
             #print scores[13, 106:178]
 
@@ -448,7 +495,7 @@ class CNN(nn.Module):
 
             scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1/0.1282715100608753)) #weight the 10 joints by std
 
-
+        #print scores[0, :]
         return  scores, targets_est_np, targets_est_reduced_np, betas_est_np
 
 
