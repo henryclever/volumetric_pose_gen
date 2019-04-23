@@ -15,7 +15,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import transforms
 from torch.autograd import Variable
-GPU = True
+GPU = False
 
 import chumpy as ch
 
@@ -552,7 +552,9 @@ class PhysicalTrainer():
                     #print targets_est[0, :]
 
                     self.criterion = nn.L1Loss()
-                    loss = self.criterion(scores, scores_zeros)
+                    loss = self.criterion(scores, scores_zeros)*24./34
+
+
 
                 elif self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
 
@@ -614,7 +616,7 @@ class PhysicalTrainer():
                     self.criterion = nn.L1Loss()
                     loss = self.criterion(scores, scores_zeros)
                     #print(scores.size())
-                    #print("TRAIN SCORES",
+                    #print("TRAIN SCORES", loss,
                     #      np.sum(np.abs(scores.data.numpy())),
                     #      np.sum(np.abs(scores[:, 10:].data.numpy())),
                     #      np.sum(np.abs(scores[:, 10:].data.numpy()))/(scores[:, 10:].size()[0] * scores[:, 10:].size()[1]))
@@ -653,9 +655,6 @@ class PhysicalTrainer():
 
                     #print targets.data.shape
                     if GPU == True:
-                        #if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC':
-                            # print angles_est[0, :], 'validation angles'
-                            #print betas_est.cpu()[0, :]/1000, 'training betas'
                         VisualizationLib().print_error_train(targets.data.cpu(), targets_est.cpu(), self.output_size_train, self.loss_vector_type, data='train')
                     else:
                         VisualizationLib().print_error_train(targets.data, targets_est, self.output_size_train, self.loss_vector_type, data='train')
@@ -713,14 +712,16 @@ class PhysicalTrainer():
 
                 images_up_non_tensor = np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy()[:, :, :, :], multiple = 2))
                 images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
-                images, targets, scores_zeros = Variable(batch[0].type(dtype), requires_grad=False), Variable(batch[1].type(dtype), requires_grad=False), Variable(torch.Tensor(np.zeros((batch[1].shape[0], batch[1].shape[1] / 3))).type(dtype), requires_grad=False)
+                images, targets = Variable(batch[0].type(dtype), requires_grad=False), Variable(batch[1].type(dtype), requires_grad=False)
+
+                scores_zeros = Variable(torch.Tensor(np.zeros((batch[1].shape[0], 10))).type(dtype), requires_grad=False)
+
 
                 scores, targets_est, targets_est_reduced = self.model.forward_direct(images_up, 0, targets, is_training = False)
 
                 self.criterion = nn.L1Loss()
 
-                loss = self.criterion(scores, scores_zeros)
-                loss = loss.data.item()
+                loss += self.criterion(scores, scores_zeros).data.item()
 
 
 
@@ -735,9 +736,9 @@ class PhysicalTrainer():
 
                 images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2)))
                 images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
-                images, targets = Variable(batch[0].type(dtype), volatile=True, requires_grad=False), Variable(batch[1].type(dtype), volatile=True,requires_grad=False),
+                images, targets = Variable(batch[0].type(dtype), requires_grad=False), Variable(batch[1].type(dtype), requires_grad=False),
 
-                gender_switch = Variable(batch[2].type(dtype), volatile=True, requires_grad=False)
+                gender_switch = Variable(batch[2].type(dtype), requires_grad=False)
 
 
                 self.optimizer.zero_grad()
@@ -747,8 +748,7 @@ class PhysicalTrainer():
                 ground_truth = Variable(torch.Tensor(ground_truth).type(dtype))
                 ground_truth[:, 0:30] = targets[:, 0:30]/1000
 
-                scores_zeros = np.zeros((batch[0].numpy().shape[0], 10))
-                scores_zeros = Variable(torch.Tensor(scores_zeros).type(dtype))
+                scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].numpy().shape[0], 10))).type(dtype))
 
                 if self.loss_vector_type == 'anglesR':
                     scores, targets_est, targets_est_reduced, betas_est = self.model.forward_kinematic_R(images_up, gender_switch,
@@ -859,29 +859,29 @@ if __name__ == "__main__":
     test_database_file_m = [] #141 total training loss at epoch 9
 
     training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3555_upperbody_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3681_rightside_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3722_leftside_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3808_lowerbody_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3829_none_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1508_upperbody_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1534_rightside_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1513_leftside_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1494_lowerbody_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1649_none_stiff.p')
+    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3681_rightside_stiff.p')
+    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3722_leftside_stiff.p')
+    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3808_lowerbody_stiff.p')
+    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3829_none_stiff.p')
+    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1508_upperbody_stiff.p')
+    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1534_rightside_stiff.p')
+    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1513_leftside_stiff.p')
+    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1494_lowerbody_stiff.p')
+    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1649_none_stiff.p')
     #training_database_file_f.append(filepath_prefix_qt+'/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #training_database_file_f.append(filepath_prefix_qt+'/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #training_database_file_f.append(filepath_prefix_qt+'/real/trainval8_150rh1_sit120rh.p')
 
-    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3573_upperbody_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3628_rightside_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3646_leftside_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3735_lowerbody_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3841_none_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1302_upperbody_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1259_rightside_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1302_leftside_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1275_lowerbody_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1414_none_stiff.p')
+    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3573_upperbody_stiff.p')
+    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3628_rightside_stiff.p')
+    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3646_leftside_stiff.p')
+    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3735_lowerbody_stiff.p')
+    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3841_none_stiff.p')
+    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1302_upperbody_stiff.p')
+    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1259_rightside_stiff.p')
+    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1302_leftside_stiff.p')
+    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1275_lowerbody_stiff.p')
+    #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_1414_none_stiff.p')
     #training_database_file_m.append(filepath_prefix_qt+'/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #training_database_file_m.append(filepath_prefix_qt+'/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #training_database_file_m.append(filepath_prefix_qt+'/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
@@ -890,10 +890,10 @@ if __name__ == "__main__":
     #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_sit_95_rightside_stiff.p')
 
     #test_database_file_f.append(filepath_prefix_qt+'/real/trainval4_150rh1_sit120rh.p')
-    #test_database_file_m.append(filepath_prefix_qt+'/real/trainval8_150rh1_sit120rh.p')
+    test_database_file_m.append(filepath_prefix_qt+'/real/trainval8_150rh1_sit120rh.p')
     #test_database_file_f.append(filepath_prefix_qt + '/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + '/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    test_database_file_m.append(filepath_prefix_qt + '/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    #test_database_file_m.append(filepath_prefix_qt + '/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + '/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + '/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + '/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')

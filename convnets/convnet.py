@@ -84,7 +84,7 @@ class CNN(nn.Module):
 
         print 'Out size:', out_size
 
-        self.GPU = True
+        self.GPU = False
         if self.GPU == True:
             # Use for self.GPU
             dtype = torch.cuda.FloatTensor
@@ -175,7 +175,7 @@ class CNN(nn.Module):
             #print targets_est_np.size()
             for joint_num in range(24):
                 if joint_num in [0, 1, 2, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]:
-                    targets_est_np[:, joint_num * 3] = targets_est_np[:, joint_num * 3] * synth_real_switch.data
+                    targets_est_np[:, joint_num * 3 + 0] = targets_est_np[:, joint_num * 3 + 0] * synth_real_switch.data
                     targets_est_np[:, joint_num * 3 + 1] = targets_est_np[:, joint_num * 3 + 1] * synth_real_switch.data
                     targets_est_np[:, joint_num * 3 + 2] = targets_est_np[:, joint_num * 3 + 2] * synth_real_switch.data
 
@@ -185,31 +185,32 @@ class CNN(nn.Module):
             scores = targets / 1000. - scores
             scores = scores.pow(2)
 
-            num_joints = scores.shape[1] / 3
-            for fc_output_ct in range(num_joints):
-                scores[:, fc_output_ct] = scores[:, fc_output_ct * 3 + 0] + scores[:, fc_output_ct * 3 + 1] + scores[:,fc_output_ct * 3 + 2]
-
-
 
             for joint_num in range(24):
                 #print scores[:, 10+joint_num].size(), 'score size'
                 #print synth_real_switch.size(), 'switch size'
                 if joint_num in [0, 1, 2, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]: #torso is 3 but forget training it
-                    scores[:, 10+joint_num] = torch.mul(synth_real_switch,
+                    scores[:, joint_num] = torch.mul(synth_real_switch,
                                                         (scores[:, joint_num*3 + 0] +
                                                          scores[:, joint_num*3 + 1] +
                                                          scores[:, joint_num*3 + 2]).sqrt())
 
                 else:
-                    scores[:, 10+joint_num] = (scores[:, 106+joint_num*3] +
-                                                 scores[:, 107+joint_num*3] +
-                                                 scores[:, 108+joint_num*3]).sqrt()
+                    scores[:, joint_num] = (scores[:, joint_num*3 + 0] +
+                                            scores[:, joint_num*3 + 1] +
+                                            scores[:, joint_num*3 + 2]).sqrt()
 
 
+            #print scores.size(), scores[0, :]
 
             scores = scores[:, 0:24]
 
+            #print scores.size(), scores[0, :]
+            scores = torch.mul(torch.add(1.0, torch.mul(1.4, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
+            #print scores.size(), scores[0, :]
+            scores[:, 0:24] = torch.mul(scores[:, 0:24].clone(), (1/0.1282715100608753)) #weight the 24 joints by std
 
+            #print scores.size(), scores[0, :]
 
         else:
 
@@ -237,19 +238,16 @@ class CNN(nn.Module):
             for fc_output_ct in range(num_joints):
                 scores[:, fc_output_ct] = scores[:, fc_output_ct*3 + 0] +  scores[:, fc_output_ct*3 + 1] +  scores[:, fc_output_ct*3 + 2]
 
-            scores = scores[:, 0:num_joints]
+            scores = scores[:, 0:10]
             scores = scores.sqrt()
 
-        #print "targets: ", targets[0, :]
-        #print "scores: ", scores[0, :]
-        #print "targets est np: ", targets_est_np[0, :]
 
-        if is_training == True: scores = torch.mul(torch.add(1.0, torch.mul(1.4, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
-        #############################################################################
-        #                             END OF YOUR CODE                              #
-        #############################################################################
+            #here multiply by 24/10 when you are regressing to real data so it balances with the synthetic data
+            scores = torch.mul(2.4, scores)
+            scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1/0.1282715100608753)) #weight the 10 joints by std
 
-        print scores.size(), scores[0, :]
+
+        #print scores.size(), scores[0, :]
 
         return scores, targets_est_np, targets_est_reduced_np
 
@@ -444,10 +442,11 @@ class CNN(nn.Module):
             scores = scores.squeeze(0)
             scores = scores.squeeze(0)
 
-            scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1/0.1282715100608753)) #weight the 10 joints by std
 
             #here multiply by 24/10 when you are regressing to real data so it balances with the synthetic data
             scores = torch.mul(2.4, scores)
+
+            scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1/0.1282715100608753)) #weight the 10 joints by std
 
 
         return  scores, targets_est_np, targets_est_reduced_np, betas_est_np
