@@ -9,7 +9,7 @@ import torchvision
 
 
 class CNN(nn.Module):
-    def __init__(self, mat_size, out_size, hidden_dim, kernel_size, loss_vector_type, batch_size, split = False):
+    def __init__(self, mat_size, out_size, hidden_dim, kernel_size, loss_vector_type, batch_size, split = False, filepath = '/home/henry/'):
         '''
         Create components of a CNN classifier and initialize their weights.
 
@@ -100,7 +100,7 @@ class CNN(nn.Module):
 
             from smpl.smpl_webuser.serialization import load_model
 
-            model_path_f = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_f_lbs_10_207_0_v1.0.0.pkl'
+            model_path_f = filepath+'git/SMPL_python_v.1.0.0/smpl/models/basicModel_f_lbs_10_207_0_v1.0.0.pkl'
             human_f = load_model(model_path_f)
             self.v_template_f = torch.Tensor(np.array(human_f.v_template)).type(dtype)
             self.shapedirs_f = torch.Tensor(np.array(human_f.shapedirs)).permute(0, 2, 1).type(dtype)
@@ -108,7 +108,7 @@ class CNN(nn.Module):
             self.J_regressor_f = torch.Tensor(np.array(self.J_regressor_f).astype(float)).permute(1, 0).type(dtype)
 
 
-            model_path_m = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
+            model_path_m = filepath+'/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
             human_m = load_model(model_path_m)
             self.v_template_m = torch.Tensor(np.array(human_m.v_template)).type(dtype)
             self.shapedirs_m = torch.Tensor(np.array(human_m.shapedirs)).permute(0, 2, 1).type(dtype)
