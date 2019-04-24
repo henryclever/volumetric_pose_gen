@@ -1,3 +1,8 @@
+
+import trimesh
+import pyrender
+import pyglet
+
 import numpy as np
 import random
 import copy
@@ -12,7 +17,7 @@ from util import batch_global_rigid_transformation, batch_rodrigues, batch_lrotm
 import lib_visualization as libVisualization
 import lib_kinematics as libKinematics
 from process_yash_data import ProcessYashData
-import dart_skel_sim
+#import dart_skel_sim
 from time import sleep
 
 #ROS
@@ -44,9 +49,6 @@ import matplotlib.cm as cm #use cm.jet(list)
 #hmr
 from hmr.src.tf_smpl.batch_smpl import SMPL
 
-import trimesh
-import pyrender
-import pyglet
 
 
 
@@ -117,8 +119,6 @@ class pyRenderMesh():
         #print m.r
         #print np.max(m.f)
 
-
-
         tm = trimesh.base.Trimesh(vertices=m.r, faces=m.f)
 
         #tm = trimesh.load('/home/henry/Downloads/fuze.obj')
@@ -175,15 +175,16 @@ class pyRenderMesh():
 
 
         else:
-            self.viewer.render_lock.acquire()
-            self.scene.remove_node(self.human_obj_node)
-            self.scene.add(smpl_mesh)
+            #self.viewer.render_lock.acquire()
+            #self.scene.remove_node(self.human_obj_node)
+            #self.scene.add(smpl_mesh)
 
-            for node in self.scene.get_nodes(obj=smpl_mesh):
+            #for node in self.scene.get_nodes(obj=smpl_mesh):
                 # print node
-                self.human_obj_node = node
-            self.viewer.render_lock.release()
+            #    self.human_obj_node = node
+            #self.viewer.render_lock.release()
 
+            pass
         sleep(0.01)
         print "BLAH"
 

@@ -84,12 +84,13 @@ class CNN(nn.Module):
 
         print 'Out size:', out_size
 
-        self.GPU = True
-        if self.GPU == True:
+        if torch.cuda.is_available():
+            self.GPU = True
             # Use for self.GPU
             dtype = torch.cuda.FloatTensor
             print('######################### CUDA is available! #############################')
         else:
+            self.GPU = False
             # Use for CPU
             dtype = torch.FloatTensor
             print('############################## USING CPU #################################')
@@ -139,30 +140,59 @@ class CNN(nn.Module):
             self.zeros_cartesian = torch.zeros([self.N, 24]).type(dtype)
             self.ones_cartesian = torch.ones([self.N, 24]).type(dtype)
 
-            self.bounds = torch.Tensor(np.array([[-1.57, 1.57], [-1.57, 1.57], [-1.57, 1.57],
-                                   [-2.047187297216041, 0.0008725992352640336], [-1.0056561780573234, 0.9792596381050885], [-0.83127128871961, 0.9840833280290882],
-                                   [-2.0467908364949654, 0.005041331594134009], [-0.9477521700520728, 1.0038579032816006],  [-0.8767199629302654, 0.35738032396710084],
-                                   [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
-                                   [0.0, 2.307862756803765], [-0.01, 0.01], [-0.01, 0.01],  # knee
-                                   [0.0, 2.320752282574325], [-0.01, 0.01], [-0.01, 0.01],
-                                   [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
-                                   [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # ankle, pi/36 or 5 deg
-                                   [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # ankle, pi/36 or 5 deg
-                                   [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
-                                   [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01],  # foot
-                                   [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01],  # foot
-                                   [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],  # neck
-                                   [-1.7636153960682888 * 1 / 3, 1.5740500958475525 * 1 / 3], [-1.5168279883317557 * 1 / 3, 1.6123857573735045 * 1 / 3], [-1.7656139149798185 * 1 / 3, 1.9844820788036448 * 1 / 3],
-                                   [-1.8819412381973686 * 1 / 3, 1.5386423137579994 * 1 / 3], [-1.6424506514942065 * 1 / 3, 2.452871806175492 * 1 / 3], [-1.9397148210114974 * 1 / 3, 1.8997886932520462 * 1 / 3],
-                                   [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],  # head
-                                   [-1.7636153960682888 * 2 / 3, 1.5740500958475525 * 2 / 3], [-1.5168279883317557 * 2 / 3, 1.6123857573735045 * 2 / 3], [-1.7656139149798185 * 2 / 3, 1.9844820788036448 * 2 / 3],
-                                   [-1.8819412381973686 * 2 / 3, 1.5386423137579994 * 2 / 3], [-1.6424506514942065 * 2 / 3, 2.452871806175492 * 2 / 3], [-1.9397148210114974 * 2 / 3, 1.8997886932520462 * 2 / 3],
-                                   [-0.01, 0.01], [-2.146677709782182, 0.0], [-0.01, 0.01],  # elbow
-                                   [-0.01, 0.01], [0.0, 2.136934895040784],  [-0.01, 0.01],  # elbow
-                                   [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # wrist, pi/36 or 5 deg
-                                   [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # wrist, pi/36 or 5 deg
-                                   [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01],  # hand
-                                   [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01]])).type(dtype)
+            if self.loss_vector_type == 'anglesDC':
+                self.bounds = torch.Tensor(np.array([[-1.57, 1.57], [-1.57, 1.57], [-1.57, 1.57],
+                                       [-2.047187297216041, 0.0008725992352640336], [-1.0056561780573234, 0.9792596381050885], [-0.83127128871961, 0.9840833280290882],
+                                       [-2.0467908364949654, 0.005041331594134009], [-0.9477521700520728, 1.0038579032816006],  [-0.8767199629302654, 0.35738032396710084],
+                                       [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
+                                       [0.0, 2.307862756803765], [-0.01, 0.01], [-0.01, 0.01],  # knee
+                                       [0.0, 2.320752282574325], [-0.01, 0.01], [-0.01, 0.01],
+                                       [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
+                                       [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # ankle, pi/36 or 5 deg
+                                       [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # ankle, pi/36 or 5 deg
+                                       [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
+                                       [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01],  # foot
+                                       [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01],  # foot
+                                       [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],  # neck
+                                       [-1.7636153960682888 * 1 / 3, 1.5740500958475525 * 1 / 3], [-1.5168279883317557 * 1 / 3, 1.6123857573735045 * 1 / 3], [-1.7656139149798185 * 1 / 3, 1.9844820788036448 * 1 / 3],
+                                       [-1.8819412381973686 * 1 / 3, 1.5386423137579994 * 1 / 3], [-1.6424506514942065 * 1 / 3, 2.452871806175492 * 1 / 3], [-1.9397148210114974 * 1 / 3, 1.8997886932520462 * 1 / 3],
+                                       [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],  # head
+                                       [-1.7636153960682888 * 2 / 3, 1.5740500958475525 * 2 / 3], [-1.5168279883317557 * 2 / 3, 1.6123857573735045 * 2 / 3], [-1.7656139149798185 * 2 / 3, 1.9844820788036448 * 2 / 3],
+                                       [-1.8819412381973686 * 2 / 3, 1.5386423137579994 * 2 / 3], [-1.6424506514942065 * 2 / 3, 2.452871806175492 * 2 / 3], [-1.9397148210114974 * 2 / 3, 1.8997886932520462 * 2 / 3],
+                                       [-0.01, 0.01], [-2.146677709782182, 0.0], [-0.01, 0.01],  # elbow
+                                       [-0.01, 0.01], [0.0, 2.136934895040784],  [-0.01, 0.01],  # elbow
+                                       [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # wrist, pi/36 or 5 deg
+                                       [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # wrist, pi/36 or 5 deg
+                                       [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01],  # hand
+                                       [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01]])).type(dtype)
+
+            elif self.loss_vector_type == 'anglesEU':
+                self.bounds = torch.Tensor(np.array([[-1.57, 1.57], [-1.57, 1.57], [-1.57, 1.57],
+                                       [-2.0471621484033693, 0.14541260028988837], [-0.9814085437863385, 0.9483742180716594], [-0.9551477728226021, 0.9023028022585552],
+                                       [-2.0471621484033693, 0.14541260028988837], [-0.9483742180716594, 0.9814085437863385],  [-0.9023028022585552, 0.9551477728226021],
+                                       [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
+                                       [0.0, 2.5258688514821652], [-0.01, 0.01], [-0.01, 0.01],  # knee
+                                       [0.0, 2.5258688514821652], [-0.01, 0.01], [-0.01, 0.01],
+                                       [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
+                                       [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # ankle, pi/36 or 5 deg
+                                       [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # ankle, pi/36 or 5 deg
+                                       [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
+                                       [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01],  # foot
+                                       [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01],  # foot
+                                       [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],  # neck
+                                       [-3.0658366049018433 * 1 / 3, 2.9600533326144673 * 1 / 3], [-1.560494979483153 * 1 / 3, 1.3128987757338355 * 1 / 3], [-3.0791303575784177 * 1 / 3, 2.9736205674342973  * 1 / 3],
+                                       [-3.0658366049018433 * 1 / 3, 2.9600533326144673 * 1 / 3], [-1.3128987757338355 * 1 / 3, 1.560494979483153 * 1 / 3], [-2.9736205674342973  * 1 / 3, 3.0791303575784177 * 1 / 3],
+                                       [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],  # head
+                                       [-3.0658366049018433 * 2 / 3, 2.9600533326144673 * 2 / 3], [-1.560494979483153 * 2 / 3, 1.3128987757338355 * 2 / 3], [-3.0791303575784177 * 2 / 3, 2.9736205674342973  * 2 / 3],
+                                       [-3.0658366049018433 * 2 / 3, 2.9600533326144673 * 2 / 3], [-1.3128987757338355 * 2 / 3, 1.560494979483153 * 2 / 3], [-2.9736205674342973  * 2 / 3, 3.0791303575784177 * 2 / 3],
+                                       [-0.01, 0.01], [-2.4008490143808765, 0.0], [-0.01, 0.01],  # elbow
+                                       [-0.01, 0.01], [0.0, 2.4008490143808765],  [-0.01, 0.01],  # elbow
+                                       [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # wrist, pi/36 or 5 deg
+                                       [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # wrist, pi/36 or 5 deg
+                                       [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01],  # hand
+                                       [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01]])).type(dtype)
+
+
 
     def forward_direct(self, images, synth_real_switch, targets, is_training = True):
 
@@ -309,18 +339,20 @@ class CNN(nn.Module):
             betas_est = scores[:, 0:10].clone().detach() #make sure to detach so the gradient flow of joints doesn't corrupt the betas
             root_shift_est = scores[:, 10:13].clone()
 
+            # normalize for tan activation function
+            scores[:, 13:85] -= torch.mean(self.bounds[0:72, 0:2], dim=1)
+            scores[:, 13:85] *= (2. / torch.abs(self.bounds[0:72, 0] - self.bounds[0:72, 1]))
+            scores[:, 13:85] = scores[:, 13:85].tanh()
+            scores[:, 13:85] /= (2. / torch.abs(self.bounds[0:72, 0] - self.bounds[0:72, 1]))
+            scores[:, 13:85] += torch.mean(self.bounds[0:72, 0:2], dim=1)
+
             if self.loss_vector_type == 'anglesDC':
 
-                #normalize for tan activation function
-                scores[:, 13:85] -= torch.mean(self.bounds[0:72,0:2], dim = 1)
-                scores[:, 13:85] *= (2. / torch.abs(self.bounds[0:72, 0] - self.bounds[0:72, 1]))
-                scores[:, 13:85] = scores[:, 13:85].tanh()
-                scores[:, 13:85] /= (2. / torch.abs(self.bounds[0:72, 0] - self.bounds[0:72, 1]))
-                scores[:, 13:85] += torch.mean(self.bounds[0:72,0:2], dim = 1)
+                Rs_est = KinematicsLib().batch_rodrigues(scores[:, 13:85].view(-1, 24, 3).clone()).view(-1, 24, 3, 3)
 
-                Rs_est = self.batch_rodrigues(scores[:, 13:85].view(-1, 24, 3).clone()).view(-1, 24, 3, 3)
             elif self.loss_vector_type == 'anglesEU':
-                Rs_est = self.batch_euler_to_R(scores[:, 13:85].view(-1, 24, 3).clone()).view(-1, 24, 3, 3)
+
+                Rs_est = KinematicsLib().batch_euler_to_R(scores[:, 13:85].view(-1, 24, 3).clone(), self.zeros_cartesian, self.ones_cartesian).view(-1, 24, 3, 3)
 
         else:
             #print betas[13, :], 'betas'
@@ -339,9 +371,20 @@ class CNN(nn.Module):
                 scores[:, 13:85] += torch.mean(self.bounds[0:72,0:2], dim = 1)
 
 
-                Rs_est = self.batch_rodrigues(scores[:, 13:85].view(-1, 24, 3).clone()).view(-1, 24, 3, 3)
+                Rs_est = KinematicsLib().batch_rodrigues(scores[:, 13:85].view(-1, 24, 3).clone()).view(-1, 24, 3, 3)
             elif self.loss_vector_type == 'anglesEU':
-                Rs_est = self.batch_euler_to_R(scores[:, 13:85].view(-1, 24, 3).clone()).view(-1, 24, 3, 3)
+
+                #convert angles DC to EU
+                scores[:, 13:85] = KinematicsLib().batch_euler_angles_from_dir_cos_angles(scores[:, 13:85].view(-1, 24, 3).clone()).contiguous().view(-1, 72)
+
+                #normalize for tan activation function
+                scores[:, 13:85] -= torch.mean(self.bounds[0:72,0:2], dim = 1)
+                scores[:, 13:85] *= (2. / torch.abs(self.bounds[0:72, 0] - self.bounds[0:72, 1]))
+                scores[:, 13:85] = scores[:, 13:85].tanh()
+                scores[:, 13:85] /= (2. / torch.abs(self.bounds[0:72, 0] - self.bounds[0:72, 1]))
+                scores[:, 13:85] += torch.mean(self.bounds[0:72,0:2], dim = 1)
+
+                Rs_est = KinematicsLib().batch_euler_to_R(scores[:, 13:85].view(-1, 24, 3).clone(), self.zeros_cartesian, self.ones_cartesian).view(-1, 24, 3, 3)
 
         #print Rs_est[0, :]
 
@@ -372,7 +415,7 @@ class CNN(nn.Module):
         J_est = torch.stack([Jx, Jy, Jz], dim=2)  # these are the joint locations with home pose (pose is 0 degree on all angles)
         J_est = J_est - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
 
-        targets_est, A_est = self.batch_global_rigid_transformation(Rs_est, J_est, self.parents, rotate_base=False)
+        targets_est, A_est = KinematicsLib().batch_global_rigid_transformation(Rs_est, J_est, self.parents, self.GPU, rotate_base=False)
 
         targets_est = targets_est.contiguous().view(-1, 72)
 
@@ -543,7 +586,7 @@ class CNN(nn.Module):
             betas_est = betas
             scores[:, 0:10] = betas
             root_shift_est = root_shift
-            Rs_est = self.batch_rodrigues(angles_gt.view(-1, 24, 3)).view(-1, 24, 3, 3)
+            Rs_est = KinematicsLib().batch_rodrigues(angles_gt.view(-1, 24, 3)).view(-1, 24, 3, 3)
 
 
 
@@ -582,7 +625,7 @@ class CNN(nn.Module):
         J_est = torch.stack([Jx, Jy, Jz], dim=2)  # these are the joint locations with home pose (pose is 0 degree on all angles)
         J_est = J_est - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
 
-        targets_est, A_est = self.batch_global_rigid_transformation(Rs_est, J_est, self.parents, rotate_base=False)
+        targets_est, A_est = KinematicsLib().batch_global_rigid_transformation(Rs_est, J_est, self.parents, self.GPU, rotate_base=False)
 
         targets_est = targets_est.contiguous().view(-1, 72)
 
@@ -641,126 +684,3 @@ class CNN(nn.Module):
         return  scores, targets_est_np, targets_est_reduced_np, betas_est_np
 
 
-    def batch_rodrigues(self, theta):
-        # theta N x 3
-        batch_size = theta.shape[0]
-
-        #print theta[0, :], 'THETA'
-        l1norm = torch.norm(theta + 1e-8, p=2, dim=2)
-        angle = torch.unsqueeze(l1norm, -1)
-        #print angle[0, :], 'ANGLE'
-        normalized = torch.div(theta, angle)
-        #print normalized[0, :], 'NORM'
-        angle = angle * 0.5
-        v_cos = torch.cos(angle)
-        v_sin = torch.sin(angle)
-        quat = torch.cat([v_cos, v_sin * normalized], dim=2)
-        #print quat[0, :]
-
-        """Convert quaternion coefficients to rotation matrix.
-        Args:
-            quat: size = [B, 4] 4 <===>(w, x, y, z)
-        Returns:
-            Rotation matrix corresponding to the quaternion -- size = [B, 3, 3]
-        """
-        norm_quat = quat
-        norm_quat = norm_quat / norm_quat.norm(p=2, dim=2, keepdim=True)
-
-        #print norm_quat.shape
-
-        w, x, y, z = norm_quat[:, :, 0], norm_quat[:, :, 1], norm_quat[:, :, 2], norm_quat[:, :, 3]
-#
-        w2, x2, y2, z2 = w.pow(2), x.pow(2), y.pow(2), z.pow(2)
-        wx, wy, wz = w * x, w * y, w * z
-        xy, xz, yz = x * y, x * z, y * z
-
-
-        rotMat = torch.stack([w2 + x2 - y2 - z2, 2 * xy - 2 * wz, 2 * wy + 2 * xz,
-                              2 * wz + 2 * xy, w2 - x2 + y2 - z2, 2 * yz - 2 * wx,
-                              2 * xz - 2 * wy, 2 * wx + 2 * yz, w2 - x2 - y2 + z2], dim=2)
-
-        #print "got R"
-        return rotMat
-
-    def batch_euler_to_R(self, theta):
-        batch_size_current = theta.size()[0]
-
-        cosx = torch.cos(theta[:, :, 0])
-        sinx = torch.sin(theta[:, :, 0])
-        cosy = torch.cos(theta[:, :, 1])
-        siny = torch.sin(theta[:, :, 1])
-        cosz = torch.cos(theta[:, :, 2])
-        sinz = torch.sin(theta[:, :, 2])
-
-        b_zeros = self.zeros_cartesian[:batch_size_current, :]
-        b_ones = self.ones_cartesian[:batch_size_current, :]
-
-        R_x = torch.stack([b_ones, b_zeros, b_zeros,
-                           b_zeros, cosx, -sinx,
-                           b_zeros, sinx, cosx], dim=2)\
-                    .view(batch_size_current, 24, 3, 3)
-
-
-        R_y = torch.stack([cosy, b_zeros, siny,
-                           b_zeros, b_ones, b_zeros,
-                           -siny, b_zeros, cosy], dim=2)\
-                    .view(batch_size_current, 24, 3, 3)
-
-
-        R_z = torch.stack([cosz, -sinz, b_zeros,
-                           sinz, cosz, b_zeros,
-                           b_zeros, b_zeros, b_ones], dim=2)\
-                    .view(batch_size_current, 24, 3, 3)
-
-        R_x = R_x.view(batch_size_current*24, 3, 3)
-        R_y = R_y.view(batch_size_current*24, 3, 3)
-        R_z = R_z.view(batch_size_current*24, 3, 3)
-
-        R = torch.bmm(torch.bmm(R_z, R_y), R_x).view(batch_size_current, 24, 3, 3)
-        return R
-
-
-
-    def batch_global_rigid_transformation(self, Rs, Js, parent, rotate_base=False):
-        N = Rs.shape[0]
-        if rotate_base:
-            np_rot_x = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]], dtype=np.float)
-            np_rot_x = np.reshape(np.tile(np_rot_x, [N, 1]), [N, 3, 3])
-            if self.GPU == True:
-                rot_x = Variable(torch.from_numpy(np_rot_x).float()).cuda()
-            else:
-                rot_x = Variable(torch.from_numpy(np_rot_x).float())
-            root_rotation = torch.matmul(Rs[:, 0, :, :], rot_x)
-        else:
-            root_rotation = Rs[:, 0, :, :]
-        Js = torch.unsqueeze(Js, -1)
-
-        def make_A(R, t):
-            R_homo = F.pad(R, [0, 0, 0, 1, 0, 0])
-            if self.GPU == True:
-                t_homo = torch.cat([t, Variable(torch.ones(N, 1, 1)).cuda()], dim=1)
-            else:
-                t_homo = torch.cat([t, Variable(torch.ones(N, 1, 1))], dim=1)
-            return torch.cat([R_homo, t_homo], 2)
-
-        A0 = make_A(root_rotation, Js[:, 0])
-        results = [A0]
-
-        for i in range(1, parent.shape[0]):
-            j_here = Js[:, i] - Js[:, parent[i]]
-            A_here = make_A(Rs[:, i], j_here)
-            res_here = torch.matmul(results[parent[i]], A_here)
-            results.append(res_here)
-
-        results = torch.stack(results, dim=1)
-
-        new_J = results[:, :, :3, 3]
-        if self.GPU == True:
-            Js_w0 = torch.cat([Js, Variable(torch.zeros(N, 24, 1, 1)).cuda()], dim=2)
-        else:
-            Js_w0 = torch.cat([Js, Variable(torch.zeros(N, 24, 1, 1))], dim=2)
-        init_bone = torch.matmul(results, Js_w0)
-        init_bone = F.pad(init_bone, [3, 0, 0, 0, 0, 0, 0, 0])
-        A = results - init_bone
-
-        return new_J, A
