@@ -493,6 +493,9 @@ class GeneratePose():
 
 
     def generate_prechecked_pose(self, gender, posture, stiffness, filename):
+        import multiprocessing
+
+        pool = multiprocessing.Pool(processes=(multiprocessing.cpu_count() - 3))
 
 
         prechecked_pose_list = np.load(filename).tolist()
