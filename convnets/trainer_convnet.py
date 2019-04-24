@@ -163,6 +163,9 @@ class PhysicalTrainer():
             for entry in range(len(dat_m_real['images'])):
                 self.train_a_flat.append(dat_m_real['bed_angle_deg'][entry])
 
+
+        if len(self.train_x_flat) == 0: print("NO TRAINING DATA INCLUDED")
+
         train_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.train_x_flat,
                                                                                 self.train_a_flat,
                                                                                 self.include_inter, self.mat_size,
@@ -312,6 +315,11 @@ class PhysicalTrainer():
         if test_dat_m is not None:
             for entry in range(len(test_dat_m['images'])):
                 self.test_a_flat.append(test_dat_m['bed_angle_deg'][entry])
+
+
+
+        if len(self.test_x_flat) == 0: print("NO TESTING DATA INCLUDED")
+
         test_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.test_x_flat, self.test_a_flat, self.include_inter, self.mat_size, self.verbose)
         test_xa = np.array(test_xa)
         self.test_x_tensor = torch.Tensor(test_xa)
@@ -494,9 +502,14 @@ class PhysicalTrainer():
                 self.t2 = 0
             print 'Time taken by epoch',epoch,':',self.t2,' seconds'
 
-            if epoch == 200: torch.save(self.model, '/home/henry/data/synth/convnet'+self.save_name+'.pt')
-            if epoch == 300: torch.save(self.model, '/home/henry/data/synth/convnet'+self.save_name+'.pt')
+            if self.opt.aws == True:
+                if epoch == 200: torch.save(self.model, '/home/ubuntu/data/synth/convnet'+self.save_name+'.pt')
+                if epoch == 300: torch.save(self.model, '/home/ubuntu/data/synth/convnet'+self.save_name+'.pt')
 
+            else:
+
+                if epoch == 200: torch.save(self.model, '/home/henry/data/synth/convnet'+self.save_name+'.pt')
+                if epoch == 300: torch.save(self.model, '/home/henry/data/synth/convnet'+self.save_name+'.pt')
 
 
         print 'done with epochs, now evaluating'
@@ -505,9 +518,13 @@ class PhysicalTrainer():
         print self.train_val_losses, 'trainval'
         # Save the model (architecture and weights)
 
+        if self.opt.aws == True:
+            torch.save(self.model, '/home/ubuntu/data/synth/convnet'+self.save_name+'.pt')
+            pkl.dump(self.train_val_losses,open('/home/ubuntu/data/synth/convnet_losses'+self.save_name+'.p', 'wb'))
 
-        torch.save(self.model, '/home/henry/data/synth/convnet'+self.save_name+'.pt')
-        pkl.dump(self.train_val_losses,open('/home/henry/data/synth/convnet_losses'+self.save_name+'.p', 'wb'))
+        else:
+            torch.save(self.model, '/home/henry/data/synth/convnet'+self.save_name+'.pt')
+            pkl.dump(self.train_val_losses,open('/home/henry/data/synth/convnet_losses'+self.save_name+'.p', 'wb'))
 
 
     def train_convnet(self, epoch):
@@ -844,6 +861,10 @@ if __name__ == "__main__":
                  dest='visualize', \
                  default=False, \
                  help='Visualize.')
+    p.add_option('--aws', action='store_true',
+                 dest='aws', \
+                 default=False, \
+                 help='Use ubuntu user dir instead of henry.')
     p.add_option('--verbose', '--v',  action='store_true', dest='verbose',
                  default=True, help='Printout everything (under construction).')
 
@@ -852,7 +873,11 @@ if __name__ == "__main__":
 
     opt, args = p.parse_args()
 
-    filepath_prefix_qt = '/home/henry/data'
+
+    if opt.aws == True:
+        filepath_prefix_qt = '/home/ubuntu/data'
+    else:
+        filepath_prefix_qt = '/home/henry/data'
 
     training_database_file_f = []
     training_database_file_m = []
