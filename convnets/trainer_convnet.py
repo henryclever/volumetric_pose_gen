@@ -619,7 +619,10 @@ class PhysicalTrainer():
                     ground_truth[:, 0:10] = betas[:, 0:10]/100
                     ground_truth[:, 10:82] = targets[:, 0:72]/1000
 
-                    scores_zeros = np.zeros((batch[0].numpy().shape[0], 106)) #34 is 10 shape params and 24 joint euclidean errors
+                    if self.opt.reg_angles == True:
+                        scores_zeros = np.zeros((batch[0].numpy().shape[0], 106)) #34 is 10 shape params and 24 joint euclidean errors
+                    else:
+                        scores_zeros = np.zeros((batch[0].numpy().shape[0], 34)) #34 is 10 shape params and 24 joint euclidean errors
                     scores_zeros = Variable(torch.Tensor(scores_zeros).type(dtype))
 
                     if self.loss_vector_type == 'anglesR':
@@ -634,7 +637,8 @@ class PhysicalTrainer():
                                                                                            targets, is_training=True,
                                                                                            betas=betas,
                                                                                            angles_gt=angles_gt,
-                                                                                           root_shift=root_shift)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
+                                                                                           root_shift=root_shift,
+                                                                                           reg_angles = self.opt.reg_angles)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
 
 
                     self.criterion = nn.L1Loss()
@@ -646,14 +650,22 @@ class PhysicalTrainer():
                     #      np.sum(np.abs(scores[:, 10:].data.numpy()))/(scores[:, 10:].size()[0] * scores[:, 10:].size()[1]))
 
                     if GPU == True:
-                        loss_breakdown = [1000*np.sum(np.abs(scores[:, 0:10].data.cpu().numpy()))/(scores.size()[0] * 34),
-                                          1000*np.sum(np.abs(scores[:, 10:34].data.cpu().numpy()))/(scores.size()[0] * 34),
-                                          1000*np.sum(np.abs(scores[:, 34:106].data.cpu().numpy()))/(scores.size()[0] * 34)]
+                        if self.opt.reg_angles == True:
+                            loss_breakdown = [1000*np.sum(np.abs(scores[:, 0:10].data.cpu().numpy()))/(scores.size()[0] * 34),
+                                              1000*np.sum(np.abs(scores[:, 10:34].data.cpu().numpy()))/(scores.size()[0] * 34),
+                                              1000*np.sum(np.abs(scores[:, 34:106].data.cpu().numpy()))/(scores.size()[0] * 34)]
+                        else:
+                            loss_breakdown = [1000*np.sum(np.abs(scores[:, 0:10].data.cpu().numpy()))/(scores.size()[0] * 34),
+                                              1000*np.sum(np.abs(scores[:, 10:34].data.cpu().numpy()))/(scores.size()[0] * 34)]
 
                     else:
-                        loss_breakdown = [1000*np.sum(np.abs(scores[:, 0:10].data.cpu().numpy()))/(scores.size()[0] * 34),
-                                          1000*np.sum(np.abs(scores[:, 10:34].data.cpu().numpy()))/(scores.size()[0] * 34),
-                                          1000*np.sum(np.abs(scores[:, 34:106].data.cpu().numpy()))/(scores.size()[0] * 34)]
+                        if self.opt.reg_angles == True:
+                            loss_breakdown = [1000*np.sum(np.abs(scores[:, 0:10].data.numpy()))/(scores.size()[0] * 34),
+                                              1000*np.sum(np.abs(scores[:, 10:34].data.numpy()))/(scores.size()[0] * 34),
+                                              1000*np.sum(np.abs(scores[:, 34:106].data.numpy()))/(scores.size()[0] * 34)]
+                        else:
+                            loss_breakdown = [1000*np.sum(np.abs(scores[:, 0:10].data.numpy()))/(scores.size()[0] * 34),
+                                              1000*np.sum(np.abs(scores[:, 10:34].data.numpy()))/(scores.size()[0] * 34)]
 
 
                 #print loss.data.numpy() * 1000, 'loss'
@@ -708,11 +720,18 @@ class PhysicalTrainer():
                             epoch, examples_this_epoch, len(self.train_loader.dataset),
                             epoch_progress, train_loss, val_loss))
                     else:
-                        print('Train Epoch: {} [{}/{} ({:.0f}%)]\t'
-                              'Train Loss Joints: {:.2f}, Betas Loss: {:.2f}, Angles Loss: {:.2f}, Total Loss: {:.2f}\n\t\t\t\t'
-                              '   Val Loss Total: {:.2f}'.format(
-                            epoch, examples_this_epoch, len(self.train_loader.dataset),
-                            epoch_progress, loss_breakdown[1], loss_breakdown[0], loss_breakdown[2], train_loss*106/34., val_loss))
+                        if self.opt.reg_angles == True:
+                            print('Train Epoch: {} [{}/{} ({:.0f}%)]\t'
+                                  'Train Loss Joints: {:.2f}, Betas Loss: {:.2f}, Angles Loss: {:.2f}, Total Loss: {:.2f}\n\t\t\t\t'
+                                  '   Val Loss Total: {:.2f}'.format(
+                                epoch, examples_this_epoch, len(self.train_loader.dataset),
+                                epoch_progress, loss_breakdown[1], loss_breakdown[0], loss_breakdown[2], train_loss*106/34., val_loss))
+                        else:
+                            print('Train Epoch: {} [{}/{} ({:.0f}%)]\t'
+                                  'Train Loss Joints: {:.2f}, Betas Loss: {:.2f}, Total Loss: {:.2f}\n\t\t\t\t'
+                                  '   Val Loss Total: {:.2f}'.format(
+                                epoch, examples_this_epoch, len(self.train_loader.dataset),
+                                epoch_progress, loss_breakdown[1], loss_breakdown[0], train_loss, val_loss))
 
 
                     print 'appending to alldata losses'
@@ -781,7 +800,8 @@ class PhysicalTrainer():
                                                                                                          0, targets, is_training=False)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
                 elif self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
                     scores, targets_est, targets_est_reduced, betas_est = self.model.forward_kinematic_angles(images_up, gender_switch,
-                                                                                                              0, targets, is_training=False)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
+                                                                                                              0, targets, is_training=False,
+                                                                                                              reg_angles = self.opt.reg_angles)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
 
                 self.criterion = nn.L1Loss()
 
@@ -864,7 +884,7 @@ if __name__ == "__main__":
     p.add_option('--qt', action='store_true',
                  dest='quick_test', \
                  default=False, \
-                 help='Train only on data from the arms, both sitting and laying.')
+                 help='Do a quick test.')
     p.add_option('--viz', action='store_true',
                  dest='visualize', \
                  default=False, \
@@ -873,6 +893,10 @@ if __name__ == "__main__":
                  dest='aws', \
                  default=False, \
                  help='Use ubuntu user dir instead of henry.')
+    p.add_option('--rgangs', action='store_true',
+                 dest='reg_angles', \
+                 default=False, \
+                 help='Regress the angles as well as betas and joint pos.')
     p.add_option('--verbose', '--v',  action='store_true', dest='verbose',
                  default=True, help='Printout everything (under construction).')
 
@@ -892,47 +916,52 @@ if __name__ == "__main__":
     test_database_file_f = []
     test_database_file_m = [] #141 total training loss at epoch 9
 
-    training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3555_upperbody_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3681_rightside_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3722_leftside_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3808_lowerbody_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3829_none_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1508_upperbody_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1534_rightside_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1513_leftside_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1494_lowerbody_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1649_none_stiff.p')
-    training_database_file_f.append(filepath_prefix_qt+'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    training_database_file_f.append(filepath_prefix_qt+'data/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval8_150rh1_sit120rh.p')
+    if opt.quick_test == True:
+        #training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3555_upperbody_stiff.p')
+        training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
+        test_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
+    else:
+        training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3555_upperbody_stiff.p')
+        training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3681_rightside_stiff.p')
+        training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3722_leftside_stiff.p')
+        training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3808_lowerbody_stiff.p')
+        training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3829_none_stiff.p')
+        training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1508_upperbody_stiff.p')
+        training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1534_rightside_stiff.p')
+        training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1513_leftside_stiff.p')
+        training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1494_lowerbody_stiff.p')
+        training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1649_none_stiff.p')
+        training_database_file_f.append(filepath_prefix_qt+'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        training_database_file_f.append(filepath_prefix_qt+'data/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval8_150rh1_sit120rh.p')
 
-    training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_3573_upperbody_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_3628_rightside_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_3646_leftside_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_3735_lowerbody_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_3841_none_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1302_upperbody_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1259_rightside_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1302_leftside_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1275_lowerbody_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1414_none_stiff.p')
-    training_database_file_m.append(filepath_prefix_qt+'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    #training_database_file_m.append(filepath_prefix_qt+'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    training_database_file_m.append(filepath_prefix_qt+'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    training_database_file_m.append(filepath_prefix_qt+'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    training_database_file_m.append(filepath_prefix_qt+'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    #training_database_file_m.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
-    #training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_95_rightside_stiff.p')
+        training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_3573_upperbody_stiff.p')
+        training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_3628_rightside_stiff.p')
+        training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_3646_leftside_stiff.p')
+        training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_3735_lowerbody_stiff.p')
+        training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_3841_none_stiff.p')
+        training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1302_upperbody_stiff.p')
+        training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1259_rightside_stiff.p')
+        training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1302_leftside_stiff.p')
+        training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1275_lowerbody_stiff.p')
+        training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1414_none_stiff.p')
+        training_database_file_m.append(filepath_prefix_qt+'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #training_database_file_m.append(filepath_prefix_qt+'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        training_database_file_m.append(filepath_prefix_qt+'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        training_database_file_m.append(filepath_prefix_qt+'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        training_database_file_m.append(filepath_prefix_qt+'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #training_database_file_m.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
+        #training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_95_rightside_stiff.p')
 
-    #test_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
-    #test_database_file_m.append(filepath_prefix_qt+'data/real/trainval8_150rh1_sit120rh.p')
-    #test_database_file_f.append(filepath_prefix_qt + 'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    #test_database_file_m.append(filepath_prefix_qt + 'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    test_database_file_m.append(filepath_prefix_qt + 'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    #test_database_file_m.append(filepath_prefix_qt + 'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    #test_database_file_m.append(filepath_prefix_qt + 'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    #test_database_file_m.append(filepath_prefix_qt + 'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    #test_database_file_f.append(filepath_prefix_qt + 'data/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #test_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
+        #test_database_file_m.append(filepath_prefix_qt+'data/real/trainval8_150rh1_sit120rh.p')
+        #test_database_file_f.append(filepath_prefix_qt + 'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #test_database_file_m.append(filepath_prefix_qt + 'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        test_database_file_m.append(filepath_prefix_qt + 'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #test_database_file_m.append(filepath_prefix_qt + 'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #test_database_file_m.append(filepath_prefix_qt + 'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #test_database_file_m.append(filepath_prefix_qt + 'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #test_database_file_f.append(filepath_prefix_qt + 'data/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
 
     p = PhysicalTrainer(training_database_file_f, training_database_file_m, test_database_file_f, test_database_file_m, opt)
 
