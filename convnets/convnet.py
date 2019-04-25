@@ -478,12 +478,22 @@ class CNN(nn.Module):
             if reg_angles == True:
                 if self.loss_vector_type == 'anglesDC':
                     scores[:, 34:106] = angles_gt.clone().view(-1, 72) - scores[:, 13:85]
+
+                    scores[:, 34:106] = torch.mul(synth_real_switch.unsqueeze(1), torch.sub(scores[:, 34:106], angles_gt.clone().view(-1, 72)))
+
+
                 elif self.loss_vector_type == 'anglesEU':
                     scores[:, 34:106] = KinematicsLib().batch_euler_angles_from_dir_cos_angles(angles_gt.view(-1, 24, 3).clone()).contiguous().view(-1, 72) - scores[:, 13:85]
+
+                scores[:, 34:106] = torch.mul(synth_real_switch.unsqueeze(1), scores[:, 34:106].clone())
+
+
+
 
             #compare the output joints to the target values
             scores[:, 34+add_idx:106+add_idx] = targets[:, 0:72]/1000 - scores[:, 34+add_idx:106+add_idx]
             scores[:, 106+add_idx:178+add_idx] = ((scores[:, 34+add_idx:106+add_idx].clone())+0.0000001).pow(2)
+
 
             #print scores[13, 106:178]
 
