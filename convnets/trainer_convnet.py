@@ -109,7 +109,7 @@ class PhysicalTrainer():
         print self.num_epochs, 'NUM EPOCHS!'
         #Entire pressure dataset with coordinates in world frame
 
-        self.save_name = '_' + opt.losstype+'_synthreal_tanh_sig0p5_' + str(self.batch_size) + 'b_' + str(self.num_epochs) + 'e'
+        self.save_name = '_' + opt.losstype+'_synthreal_tanh_s4ang_sig0p5_' + str(self.batch_size) + 'b_' + str(self.num_epochs) + 'e'
 
 
 
@@ -619,7 +619,7 @@ class PhysicalTrainer():
                     ground_truth[:, 0:10] = betas[:, 0:10]/100
                     ground_truth[:, 10:82] = targets[:, 0:72]/1000
 
-                    scores_zeros = np.zeros((batch[0].numpy().shape[0], 34)) #34 is 10 shape params and 24 joint euclidean errors
+                    scores_zeros = np.zeros((batch[0].numpy().shape[0], 106)) #34 is 10 shape params and 24 joint euclidean errors
                     scores_zeros = Variable(torch.Tensor(scores_zeros).type(dtype))
 
                     if self.loss_vector_type == 'anglesR':
@@ -646,12 +646,14 @@ class PhysicalTrainer():
                     #      np.sum(np.abs(scores[:, 10:].data.numpy()))/(scores[:, 10:].size()[0] * scores[:, 10:].size()[1]))
 
                     if GPU == True:
-                        loss_breakdown = [1000*np.sum(np.abs(scores[:, 0:10].data.cpu().numpy()))/(scores.size()[0] * scores.size()[1]),
-                                      1000*np.sum(np.abs(scores[:, 10:].data.cpu().numpy()))/(scores.size()[0] * scores.size()[1])]
+                        loss_breakdown = [1000*np.sum(np.abs(scores[:, 0:10].data.cpu().numpy()))/(scores.size()[0] * 34),
+                                          1000*np.sum(np.abs(scores[:, 10:34].data.cpu().numpy()))/(scores.size()[0] * 34),
+                                          1000*np.sum(np.abs(scores[:, 34:106].data.cpu().numpy()))/(scores.size()[0] * 34)]
 
                     else:
-                        loss_breakdown = [1000*np.sum(np.abs(scores[:, 0:10].data.cpu().numpy()))/(scores.size()[0] * scores.size()[1]),
-                                      1000*np.sum(np.abs(scores[:, 10:].data.cpu().numpy()))/(scores.size()[0] * scores.size()[1])]
+                        loss_breakdown = [1000*np.sum(np.abs(scores[:, 0:10].data.cpu().numpy()))/(scores.size()[0] * 34),
+                                          1000*np.sum(np.abs(scores[:, 10:34].data.cpu().numpy()))/(scores.size()[0] * 34),
+                                          1000*np.sum(np.abs(scores[:, 34:106].data.cpu().numpy()))/(scores.size()[0] * 34)]
 
 
                 #print loss.data.numpy() * 1000, 'loss'
@@ -707,10 +709,10 @@ class PhysicalTrainer():
                             epoch_progress, train_loss, val_loss))
                     else:
                         print('Train Epoch: {} [{}/{} ({:.0f}%)]\t'
-                              'Train Loss Joints: {:.2f}, Betas Loss: {:.2f}, Total Loss: {:.2f}\n\t\t\t\t'
+                              'Train Loss Joints: {:.2f}, Betas Loss: {:.2f}, Angles Loss: {:.2f}, Total Loss: {:.2f}\n\t\t\t\t'
                               '   Val Loss Total: {:.2f}'.format(
                             epoch, examples_this_epoch, len(self.train_loader.dataset),
-                            epoch_progress, loss_breakdown[1], loss_breakdown[0], train_loss, val_loss))
+                            epoch_progress, loss_breakdown[1], loss_breakdown[0], loss_breakdown[2], train_loss*106/34., val_loss))
 
 
                     print 'appending to alldata losses'
@@ -915,7 +917,7 @@ if __name__ == "__main__":
     training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1275_lowerbody_stiff.p')
     training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1414_none_stiff.p')
     training_database_file_m.append(filepath_prefix_qt+'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    training_database_file_m.append(filepath_prefix_qt+'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    #training_database_file_m.append(filepath_prefix_qt+'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     training_database_file_m.append(filepath_prefix_qt+'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     training_database_file_m.append(filepath_prefix_qt+'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     training_database_file_m.append(filepath_prefix_qt+'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
@@ -926,7 +928,7 @@ if __name__ == "__main__":
     #test_database_file_m.append(filepath_prefix_qt+'data/real/trainval8_150rh1_sit120rh.p')
     #test_database_file_f.append(filepath_prefix_qt + 'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + 'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    #test_database_file_m.append(filepath_prefix_qt + 'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    test_database_file_m.append(filepath_prefix_qt + 'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + 'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + 'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + 'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')

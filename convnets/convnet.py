@@ -388,6 +388,7 @@ class CNN(nn.Module):
 
                 Rs_est = KinematicsLib().batch_euler_to_R(scores[:, 13:85].view(-1, 24, 3).clone(), self.zeros_cartesian, self.ones_cartesian).view(-1, 24, 3, 3)
 
+
         #print Rs_est[0, :]
 
         gender_switch = gender_switch.unsqueeze(1)
@@ -442,7 +443,7 @@ class CNN(nn.Module):
 
         scores = scores.unsqueeze(0)
         scores = scores.unsqueeze(0)
-        scores = F.pad(scores, (0, 100, 0, 0))
+        scores = F.pad(scores, (0, 172, 0, 0))
         scores = scores.squeeze(0)
         scores = scores.squeeze(0)
 
@@ -450,7 +451,7 @@ class CNN(nn.Module):
         #print scores.size()
 
         #tweak this to change the lengths vector
-        scores[:, 34:106] = torch.mul(targets_est[:, 0:72], 1.)
+        scores[:, 106:178] = torch.mul(targets_est[:, 0:72], 1.)
 
         #print scores[13, 34:106]
 
@@ -468,11 +469,14 @@ class CNN(nn.Module):
 
 
 
-            scores[:, 0:10] = torch.mul(synth_real_switch.unsqueeze(1), torch.sub(scores[:, 0:10], betas))*.2
+            scores[:, 0:10] = torch.mul(synth_real_switch.unsqueeze(1), torch.sub(scores[:, 0:10], betas))#*.2
 
-            scores[:, 34:106] = targets[:, 0:72]/1000 - scores[:, 34:106]
+            #compare the output angles to the target values
+            scores[:, 34:106] = KinematicsLib().batch_euler_angles_from_dir_cos_angles(angles_gt.view(-1, 24, 3).clone()).contiguous().view(-1, 72) - scores[:, 13:85]
 
-            scores[:, 106:178] = ((scores[:, 34:106].clone())+0.0000001).pow(2)
+            #compare the output joints to the target values
+            scores[:, 106:178] = targets[:, 0:72]/1000 - scores[:, 106:178]
+            scores[:, 178:250] = ((scores[:, 106:178].clone())+0.0000001).pow(2)
 
             #print scores[13, 106:178]
 
@@ -481,14 +485,14 @@ class CNN(nn.Module):
                 #print synth_real_switch.size(), 'switch size'
                 if joint_num in [0, 1, 2, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]: #torso is 3 but forget training it
                     scores[:, 10+joint_num] = torch.mul(synth_real_switch,
-                                                        (scores[:, 106+joint_num*3] +
-                                                         scores[:, 107+joint_num*3] +
-                                                         scores[:, 108+joint_num*3]).sqrt())
+                                                        (scores[:, 178+joint_num*3] +
+                                                         scores[:, 179+joint_num*3] +
+                                                         scores[:, 180+joint_num*3]).sqrt())
 
                 else:
-                    scores[:, 10+joint_num] = (scores[:, 106+joint_num*3] +
-                                                 scores[:, 107+joint_num*3] +
-                                                 scores[:, 108+joint_num*3]).sqrt()
+                    scores[:, 10+joint_num] = (scores[:, 178+joint_num*3] +
+                                               scores[:, 179+joint_num*3] +
+                                               scores[:, 180+joint_num*3]).sqrt()
 
                     #print scores[:, 10+joint_num], 'score size'
                     #print synth_real_switch, 'switch size'
@@ -512,9 +516,11 @@ class CNN(nn.Module):
 
             scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1/1.7312621950698526)) #weight the betas by std
             scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), (1/0.1282715100608753)) #weight the 24 joints by std
+            scores[:, 34:106] = torch.mul(scores[:, 34:106].clone(), (1/0.2130542427733348)) #weight the angles by how many there are
 
             scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1./10)) #weight the betas by how many betas there are
             scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), (1./24)) #weight the joints by how many there are
+            scores[:, 34:106] = torch.mul(scores[:, 34:106].clone(), (1./72)) #weight the angles by how many there are
 
         else:
             if self.GPU == True:
@@ -523,16 +529,16 @@ class CNN(nn.Module):
                 targets_est_reduced = torch.empty(targets_est.size()[0], 30, dtype=torch.float)
             #scores[:, 80] = torch.add(scores[:, 80], 0.2)
             #scores[:, 81] = torch.add(scores[:, 81], 0.2)
-            targets_est_reduced[:, 0:3] = scores[:, 79:82] #head 34 + 3*15 = 79
-            targets_est_reduced[:, 3:6] = scores[:, 43:46] #torso 34 + 3*3 = 45
-            targets_est_reduced[:, 6:9] = scores[:, 91:94] #right elbow 34 + 19*3 = 91
-            targets_est_reduced[:, 9:12] = scores[:, 88:91] #left elbow 34 + 18*3 = 88
-            targets_est_reduced[:, 12:15] = scores[:, 97:100] #right wrist 34 + 21*3 = 97
-            targets_est_reduced[:, 15:18] = scores[:, 94:97] #left wrist 34 + 20*3 = 94
-            targets_est_reduced[:, 18:21] = scores[:, 49:52] #right knee 34 + 3*5
-            targets_est_reduced[:, 21:24] = scores[:, 46:49] #left knee 34 + 3*4
-            targets_est_reduced[:, 24:27] = scores[:, 58:61] #right ankle 34 + 3*8
-            targets_est_reduced[:, 27:30] = scores[:, 55:58] #left ankle 34 + 3*7
+            targets_est_reduced[:, 0:3] = scores[:, 79+72:82+72] #head 34 + 3*15 = 79
+            targets_est_reduced[:, 3:6] = scores[:, 43+72:46+72] #torso 34 + 3*3 = 45
+            targets_est_reduced[:, 6:9] = scores[:, 91+72:94+72] #right elbow 34 + 19*3 = 91
+            targets_est_reduced[:, 9:12] = scores[:, 88+72:91+72] #left elbow 34 + 18*3 = 88
+            targets_est_reduced[:, 12:15] = scores[:, 97+72:100+72] #right wrist 34 + 21*3 = 97
+            targets_est_reduced[:, 15:18] = scores[:, 94+72:97+72] #left wrist 34 + 20*3 = 94
+            targets_est_reduced[:, 18:21] = scores[:, 49+72:52+72] #right knee 34 + 3*5
+            targets_est_reduced[:, 21:24] = scores[:, 46+72:49+72] #left knee 34 + 3*4
+            targets_est_reduced[:, 24:27] = scores[:, 58+72:61+72] #right ankle 34 + 3*8
+            targets_est_reduced[:, 27:30] = scores[:, 55+72:58+72] #left ankle 34 + 3*7
 
             targets_est_reduced_np = targets_est_reduced.data*1000.
 
@@ -549,7 +555,7 @@ class CNN(nn.Module):
 
             scores = scores.unsqueeze(0)
             scores = scores.unsqueeze(0)
-            scores = F.pad(scores, (0, -175, 0, 0))
+            scores = F.pad(scores, (0, -247, 0, 0))
             scores = scores.squeeze(0)
             scores = scores.squeeze(0)
 
