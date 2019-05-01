@@ -106,6 +106,8 @@ class CNN(nn.Module):
             self.shapedirs_f = torch.Tensor(np.array(human_f.shapedirs)).permute(0, 2, 1).type(dtype)
             self.J_regressor_f = np.zeros((human_f.J_regressor.shape)) + human_f.J_regressor
             self.J_regressor_f = torch.Tensor(np.array(self.J_regressor_f).astype(float)).permute(1, 0).type(dtype)
+            self.posedirs_f = torch.Tensor(np.array(human_f.posedirs))
+            self.weights_f = torch.Tensor(np.array(human_f.weights))
 
 
             model_path_m = filepath+'/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
@@ -114,6 +116,9 @@ class CNN(nn.Module):
             self.shapedirs_m = torch.Tensor(np.array(human_m.shapedirs)).permute(0, 2, 1).type(dtype)
             self.J_regressor_m = np.zeros((human_m.J_regressor.shape)) + human_m.J_regressor
             self.J_regressor_m = torch.Tensor(np.array(self.J_regressor_m).astype(float)).permute(1, 0).type(dtype)
+            self.posedirs_m = torch.Tensor(np.array(human_m.posedirs))
+            self.weights_m = torch.Tensor(np.array(human_m.weights))
+
 
             self.parents = np.array([4294967295, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9, 12, 13, 14, 16, 17, 18, 19, 20, 21]).astype(np.int32)
 
@@ -136,6 +141,41 @@ class CNN(nn.Module):
             self.J_regressor_repeat_m = self.J_regressor_m.unsqueeze(0).repeat(self.N, 1, 1).unsqueeze(0)
             self.J_regressor_repeat = torch.cat((self.J_regressor_repeat_f, self.J_regressor_repeat_m), 0)#this is 2 x N x R x 24
             self.J_regressor_repeat = self.J_regressor_repeat.permute(1,0,2,3).view(self.N, 2, self.R*24)
+
+            self.posedirs_repeat_f = self.posedirs_f.unsqueeze(0).repeat(self.N, 1, 1, 1).unsqueeze(0)
+            self.posedirs_repeat_m = self.posedirs_m.unsqueeze(0).repeat(self.N, 1, 1, 1).unsqueeze(0)
+            self.posedirs_repeat = torch.cat((self.posedirs_repeat_f, self.posedirs_repeat_m), 0)
+            # self.posedirs_repeat = self.posedirs_repeat.permute(1, 0, 2, 3, 4).view(self.N, 2, self.R*self.D*207)
+            self.posedirs_repeat = self.posedirs_repeat.permute(1, 0, 2, 3, 4).view(self.N, 2, self.R, self.D * 207)
+            self.posedirs_repeat = torch.stack([self.posedirs_repeat[:, :, 1325, :],
+                                                self.posedirs_repeat[:, :, 336, :],
+                                                self.posedirs_repeat[:, :, 1046, :],
+                                                self.posedirs_repeat[:, :, 4530, :],
+                                                self.posedirs_repeat[:, :, 3333, :],
+                                                self.posedirs_repeat[:, :, 6732, :],
+                                                self.posedirs_repeat[:, :, 1664, :],
+                                                self.posedirs_repeat[:, :, 5121, :],
+                                                self.posedirs_repeat[:, :, 2208, :],
+                                                self.posedirs_repeat[:, :, 5669, :]])
+            self.posedirs_repeat = self.posedirs_repeat.permute(1, 2, 0, 3).contiguous().view(self.N, 2,
+                                                                                              10 * self.D * 207)
+
+            self.weights_repeat_f = self.weights_f.unsqueeze(0).repeat(self.N, 1, 1).unsqueeze(0)
+            self.weights_repeat_m = self.weights_m.unsqueeze(0).repeat(self.N, 1, 1).unsqueeze(0)
+            self.weights_repeat = torch.cat((self.weights_repeat_f, self.weights_repeat_m), 0)
+            # self.weights_repeat = self.weights_repeat.permute(1, 0, 2, 3).view(self.N, 2, self.R * 24)
+            self.weights_repeat = self.weights_repeat.permute(1, 0, 2, 3).view(self.N, 2, self.R, 24)
+            self.weights_repeat = torch.stack([self.weights_repeat[:, :, 1325, :],
+                                               self.weights_repeat[:, :, 336, :],
+                                               self.weights_repeat[:, :, 1046, :],
+                                               self.weights_repeat[:, :, 4530, :],
+                                               self.weights_repeat[:, :, 3333, :],
+                                               self.weights_repeat[:, :, 6732, :],
+                                               self.weights_repeat[:, :, 1664, :],
+                                               self.weights_repeat[:, :, 5121, :],
+                                               self.weights_repeat[:, :, 2208, :],
+                                               self.weights_repeat[:, :, 5669, :]])
+            self.weights_repeat = self.weights_repeat.permute(1, 2, 0, 3).contiguous().view(self.N, 2, 10 * 24)
 
             self.zeros_cartesian = torch.zeros([self.N, 24]).type(dtype)
             self.ones_cartesian = torch.ones([self.N, 24]).type(dtype)
@@ -411,7 +451,7 @@ class CNN(nn.Module):
         v_shaped = betas_shapedirs_mult + v_template
 
         J_regressor_repeat = torch.bmm(gender_switch, self.J_regressor_repeat[0:current_batch_size, :, :])\
-                                  .view(current_batch_size, self. R, 24)
+                                  .view(current_batch_size, self.R, 24)
 
         Jx = torch.bmm(v_shaped[:, :, 0].unsqueeze(1), J_regressor_repeat).squeeze(1)
         Jy = torch.bmm(v_shaped[:, :, 1].unsqueeze(1), J_regressor_repeat).squeeze(1)
@@ -419,22 +459,65 @@ class CNN(nn.Module):
 
 
         J_est = torch.stack([Jx, Jy, Jz], dim=2)  # these are the joint locations with home pose (pose is 0 degree on all angles)
-        J_est = J_est - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
+        #J_est = J_est - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
 
         targets_est, A_est = KinematicsLib().batch_global_rigid_transformation(Rs_est, J_est, self.parents, self.GPU, rotate_base=False)
 
+        targets_est = targets_est - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
 
 
-        #here we need to alter the spine 1 for the real data and make it the average of the spine 1 and 2
+        # assemble a reduced form of the transformed mesh
+        v_shaped_red = torch.stack([v_shaped[:, 1325, :],
+                                    v_shaped[:, 336, :],  # head
+                                    v_shaped[:, 1046, :],  # l knee
+                                    v_shaped[:, 4530, :],  # r knee
+                                    v_shaped[:, 3333, :],  # l ankle
+                                    v_shaped[:, 6732, :],  # r ankle
+                                    v_shaped[:, 1664, :],  # l elbow
+                                    v_shaped[:, 5121, :],  # r elbow
+                                    v_shaped[:, 2208, :],  # l wrist
+                                    v_shaped[:, 5669, :]]).permute(1, 0, 2)  # r wrist
+        pose_feature = (Rs_est[:, 1:, :, :]).sub(1.0, torch.eye(3).float()).view(-1, 207)
+        posedirs_repeat = torch.bmm(gender_switch, self.posedirs_repeat[0:current_batch_size, :, :]) \
+            .view(current_batch_size, 10 * self.D, 207) \
+            .permute(0, 2, 1)
+        v_posed = torch.bmm(pose_feature.unsqueeze(1), posedirs_repeat).view(-1, 10, self.D)
+        v_posed = v_posed.clone() + v_shaped_red
+        weights_repeat = torch.bmm(gender_switch, self.weights_repeat[0:current_batch_size, :, :]) \
+            .squeeze(1) \
+            .view(current_batch_size, 10, 24)
+        T = torch.bmm(weights_repeat, A_est.view(current_batch_size, 24, 16)).view(current_batch_size, -1, 4, 4)
+        v_posed_homo = torch.cat([v_posed, torch.ones(current_batch_size, v_posed.shape[1], 1)], dim=2)
+        v_homo = torch.matmul(T, torch.unsqueeze(v_posed_homo, -1))
+        verts = v_homo[:, :, :3, 0] - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
+
+
+        #here we need to the ground truth to make it a surface point for the mocap markers
         if is_training == True:
             synth_real_switch_repeated = synth_real_switch.unsqueeze(1).repeat(1, 3)
-            targets_est[:, 3, :] = torch.mean(torch.stack([targets_est[:, 3, :].clone(),
-                                          synth_real_switch_repeated*targets_est[:, 3, :].clone()+
-                                          torch.add(-synth_real_switch_repeated, 1)*targets_est[:, 6, :].clone()])
-                             .permute(1, 0, 2), dim = 1)
+            targets_est[:, 3, :] = synth_real_switch_repeated*targets_est[:, 3, :].clone()+ torch.add(-synth_real_switch_repeated, 1)*verts[:, 0, :].clone()
+            targets_est[:, 15, :] = synth_real_switch_repeated*targets_est[:, 15, :].clone()+ torch.add(-synth_real_switch_repeated, 1)*verts[:, 1, :].clone()
+            targets_est[:, 4, :] = synth_real_switch_repeated*targets_est[:, 4, :].clone()+ torch.add(-synth_real_switch_repeated, 1)*verts[:, 2, :].clone()
+            targets_est[:, 5, :] = synth_real_switch_repeated*targets_est[:, 5, :].clone()+ torch.add(-synth_real_switch_repeated, 1)*verts[:, 3, :].clone()
+            targets_est[:, 7, :] = synth_real_switch_repeated*targets_est[:, 7, :].clone()+ torch.add(-synth_real_switch_repeated, 1)*verts[:, 4, :].clone()
+            targets_est[:, 8, :] = synth_real_switch_repeated*targets_est[:, 8, :].clone()+ torch.add(-synth_real_switch_repeated, 1)*verts[:, 5, :].clone()
+            targets_est[:, 18, :] = synth_real_switch_repeated*targets_est[:, 18, :].clone()+ torch.add(-synth_real_switch_repeated, 1)*verts[:, 6, :].clone()
+            targets_est[:, 19, :] = synth_real_switch_repeated*targets_est[:, 19, :].clone()+ torch.add(-synth_real_switch_repeated, 1)*verts[:, 7, :].clone()
+            targets_est[:, 20, :] = synth_real_switch_repeated*targets_est[:, 20, :].clone()+ torch.add(-synth_real_switch_repeated, 1)*verts[:, 8, :].clone()
+            targets_est[:, 21, :] = synth_real_switch_repeated*targets_est[:, 21, :].clone()+ torch.add(-synth_real_switch_repeated, 1)*verts[:, 9, :].clone()
         else:
-            targets_est[:, 3, :] = torch.mean(torch.stack([targets_est[:, 3, :].clone(), targets_est[:, 6, :].clone()])
-                             .permute(1, 0, 2), dim = 1)
+            targets_est[:, 3, :] = verts[:, 0, :].clone()
+            targets_est[:, 15, :] = verts[:, 1, :].clone()
+            targets_est[:, 4, :] = verts[:, 2, :].clone()
+            targets_est[:, 5, :] = verts[:, 3, :].clone()
+            targets_est[:, 7, :] = verts[:, 4, :].clone()
+            targets_est[:, 8, :] = verts[:, 5, :].clone()
+            targets_est[:, 18, :] = verts[:, 6, :].clone()
+            targets_est[:, 19, :] = verts[:, 7, :].clone()
+            targets_est[:, 20, :] = verts[:, 8, :].clone()
+            targets_est[:, 21, :] = verts[:, 9, :].clone()
+
+
 
 
 

@@ -500,9 +500,9 @@ class GeneratePose():
 
         prechecked_pose_list = np.load(filename).tolist()
 
-        import trimesh
-        import pyrender
-        self.human_mat = pyrender.MetallicRoughnessMaterial(baseColorFactor=[0.3, 0.3, 1.0 ,0.5])
+        #import trimesh
+        #import pyrender
+        #self.human_mat = pyrender.MetallicRoughnessMaterial(baseColorFactor=[0.3, 0.3, 1.0 ,0.5])
 
         print len(prechecked_pose_list)
         shuffle(prechecked_pose_list)
@@ -585,15 +585,15 @@ class GeneratePose():
             # self.m.pose[51] = selection_r
 
 
-            #pyRender.mesh_render(self.m)
+            pyRender.mesh_render(self.m)
 
 
-            verts = np.array(self.m.r)
-            faces = np.array(self.m.f)
-            tm = trimesh.base.Trimesh(vertices=verts, faces=faces)
+            #verts = np.array(self.m.r)
+            #faces = np.array(self.m.f)
+            #tm = trimesh.base.Trimesh(vertices=verts, faces=faces)
 
 
-            smpl_mesh = pyrender.Mesh.from_trimesh(tm, material=self.human_mat, wireframe=True , smooth = False)# smoothing doesn't do anything to wireframe
+            #smpl_mesh = pyrender.Mesh.from_trimesh(tm, material=self.human_mat, wireframe=True , smooth = False)# smoothing doesn't do anything to wireframe
 
             #dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix, add_floor = False)
 

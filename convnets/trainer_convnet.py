@@ -78,7 +78,6 @@ if torch.cuda.is_available():
 else:
     # Use for CPU
     GPU = False
-    GPU = False
     dtype = torch.FloatTensor
     print '############################## USING CPU #################################'
 
@@ -177,19 +176,21 @@ class PhysicalTrainer():
 
         self.train_y_flat = []  # Initialize the training ground truth list
 
+        z_subt = np.array(24 * [0.0, 0.0, -75.])
+
         if dat_f_synth is not None:
             for entry in range(len(dat_f_synth['markers_xyz_m'])):
                 if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
                     # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                    c = np.concatenate((dat_f_synth['markers_xyz_m'][entry][0:72] * 1000,
+                    c = np.concatenate((dat_f_synth['markers_xyz_m'][entry][0:72] * 1000 + z_subt,
                                         dat_f_synth['body_shape'][entry][0:10],
                                         dat_f_synth['joint_angles'][entry][0:72],
-                                        dat_f_synth['root_xyz_shift'][entry][0:3],
+                                        dat_f_synth['root_xyz_shift'][entry][0:3] + np.array([0.0, 0.0, -0.075]),
                                         [1], [0], [1]), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
                     self.train_y_flat.append(c)
                 else:
                     # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                    c = np.concatenate((dat_f_synth['markers_xyz_m'][entry][0:72] * 1000,
+                    c = np.concatenate((dat_f_synth['markers_xyz_m'][entry][0:72] * 1000 + z_subt,
                                         np.array(10 * [0]),
                                         np.array(72 * [0]),
                                         np.array(3 * [0]),
@@ -201,15 +202,15 @@ class PhysicalTrainer():
             for entry in range(len(dat_m_synth['markers_xyz_m'])):
                 if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
                     # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                    c = np.concatenate((dat_m_synth['markers_xyz_m'][entry][0:72] * 1000,
+                    c = np.concatenate((dat_m_synth['markers_xyz_m'][entry][0:72] * 1000 + z_subt,
                                         dat_m_synth['body_shape'][entry][0:10],
                                         dat_m_synth['joint_angles'][entry][0:72],
-                                        dat_m_synth['root_xyz_shift'][entry][0:3],
+                                        dat_m_synth['root_xyz_shift'][entry][0:3] + np.array([0.0, 0.0, -0.075]),
                                         [0], [1], [1]), axis=0)  # [x1], [x2], [x3]: male synth: 0, 1, 1.
                     self.train_y_flat.append(c)
                 else:
                     # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                    c = np.concatenate((dat_m_synth['markers_xyz_m'][entry][0:72] * 1000,
+                    c = np.concatenate((dat_m_synth['markers_xyz_m'][entry][0:72] * 1000 + z_subt,
                                         np.array(10 * [0]),
                                         np.array(72 * [0]),
                                         np.array(3 * [0]),
@@ -229,16 +230,16 @@ class PhysicalTrainer():
                 fixed_torso_markers = dat_f_real['markers_xyz_m'][entry][3:6] * 1000 + [0.0, 0.0, -100.0]
 
                 c = np.concatenate((np.array(9 * [0]),
-                                    #dat_f_real['markers_xyz_m'][entry][3:6] * 1000,  # TORSO
-                                    fixed_torso_markers,  # TORSO
+                                    dat_f_real['markers_xyz_m'][entry][3:6] * 1000,  # TORSO
+                                    #fixed_torso_markers,  # TORSO
                                     dat_f_real['markers_xyz_m'][entry][21:24] * 1000,  # L KNEE
                                     dat_f_real['markers_xyz_m'][entry][18:21] * 1000,  # R KNEE
                                     np.array(3 * [0]),
                                     dat_f_real['markers_xyz_m'][entry][27:30] * 1000,  # L ANKLE
                                     dat_f_real['markers_xyz_m'][entry][24:27] * 1000,  # R ANKLE
                                     np.array(18 * [0]),
-                                    #dat_f_real['markers_xyz_m'][entry][0:3] * 1000,  # HEAD
-                                    fixed_head_markers,
+                                    dat_f_real['markers_xyz_m'][entry][0:3] * 1000,  # HEAD
+                                    #fixed_head_markers,
                                     np.array(6 * [0]),
                                     dat_f_real['markers_xyz_m'][entry][9:12] * 1000,  # L ELBOW
                                     dat_f_real['markers_xyz_m'][entry][6:9] * 1000,  # R ELBOW
@@ -260,16 +261,16 @@ class PhysicalTrainer():
                 fixed_torso_markers = dat_m_real['markers_xyz_m'][entry][3:6] * 1000 + [0.0, 0.0, -100.0]
 
                 c = np.concatenate((np.array(9 * [0]),
-                                    #dat_m_real['markers_xyz_m'][entry][3:6] * 1000,  # TORSO
-                                    fixed_torso_markers,
+                                    dat_m_real['markers_xyz_m'][entry][3:6] * 1000,  # TORSO
+                                    #fixed_torso_markers,
                                     dat_m_real['markers_xyz_m'][entry][21:24] * 1000,  # L KNEE
                                     dat_m_real['markers_xyz_m'][entry][18:21] * 1000,  # R KNEE
                                     np.array(3 * [0]),
                                     dat_m_real['markers_xyz_m'][entry][27:30] * 1000,  # L ANKLE
                                     dat_m_real['markers_xyz_m'][entry][24:27] * 1000,  # R ANKLE
                                     np.array(18 * [0]),
-                                    #dat_m_real['markers_xyz_m'][entry][0:3] * 1000,  # HEAD
-                                    fixed_head_markers,
+                                    dat_m_real['markers_xyz_m'][entry][0:3] * 1000,  # HEAD
+                                    #fixed_head_markers,
                                     np.array(6 * [0]),
                                     dat_m_real['markers_xyz_m'][entry][9:12] * 1000,  # L ELBOW
                                     dat_m_real['markers_xyz_m'][entry][6:9] * 1000,  # R ELBOW
@@ -330,12 +331,12 @@ class PhysicalTrainer():
             for entry in range(len(test_dat_f['markers_xyz_m'])):
                 if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
                     #print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                    fixed_head_markers = test_dat_f['markers_xyz_m'][entry][0:3] * 1000 + \
-                                         [0.0,
-                                          -141.4*np.cos(np.deg2rad(test_dat_f['bed_angle_deg'][entry]+45)),
-                                          -141.4*np.sin(np.deg2rad(test_dat_f['bed_angle_deg'][entry]+45))]
+                    fixed_head_markers = test_dat_f['markers_xyz_m'][entry][0:3] * 1000# + \
+                                         #[0.0,
+                                         # -141.4*np.cos(np.deg2rad(test_dat_f['bed_angle_deg'][entry]+45)),
+                                         # -141.4*np.sin(np.deg2rad(test_dat_f['bed_angle_deg'][entry]+45))]
 
-                    fixed_torso_markers = test_dat_f['markers_xyz_m'][entry][3:6] * 1000 + [0.0, 0.0, -100.0]
+                    fixed_torso_markers = test_dat_f['markers_xyz_m'][entry][3:6] * 1000# + [0.0, 0.0, -100.0]
 
                     c = np.concatenate((fixed_head_markers,
                                         fixed_torso_markers,
@@ -349,12 +350,12 @@ class PhysicalTrainer():
             for entry in range(len(test_dat_m['markers_xyz_m'])):
                 if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
                     #print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                    fixed_head_markers = test_dat_m['markers_xyz_m'][entry][0:3] * 1000 + \
-                                         [0.0,
-                                          -141.4*np.cos(np.deg2rad(test_dat_m['bed_angle_deg'][entry]+45)),
-                                          -141.4*np.sin(np.deg2rad(test_dat_m['bed_angle_deg'][entry]+45))]
+                    fixed_head_markers = test_dat_m['markers_xyz_m'][entry][0:3] * 1000# + \
+                                         #[0.0,
+                                         # -141.4*np.cos(np.deg2rad(test_dat_m['bed_angle_deg'][entry]+45)),
+                                         # -141.4*np.sin(np.deg2rad(test_dat_m['bed_angle_deg'][entry]+45))]
 
-                    fixed_torso_markers = test_dat_m['markers_xyz_m'][entry][3:6] * 1000 + [0.0, 0.0, -100.0]
+                    fixed_torso_markers = test_dat_m['markers_xyz_m'][entry][3:6] * 1000# + [0.0, 0.0, -100.0]
 
                     c = np.concatenate((fixed_head_markers,
                                         fixed_torso_markers,
@@ -918,7 +919,11 @@ if __name__ == "__main__":
 
     if opt.quick_test == True:
         training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3555_upperbody_stiff.p')
+<<<<<<< HEAD
+        training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
+=======
         #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
+>>>>>>> 8d86e4385f702b58487cd40f91505cfc5ce084ce
         test_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
     else:
         training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3555_upperbody_stiff.p')

@@ -53,11 +53,11 @@ class GeneratePose():
 
         self.m.pose[3] = 0#-np.pi/4 #left hip extension (i.e. leg bends back for np.pi/2)
         self.m.pose[4] = 0#np.pi/8 #left leg yaw about hip, where np.pi/2 makes bowed leg
-        self.m.pose[5] = np.pi/4 #left leg abduction (POS) /adduction (NEG)
+        self.m.pose[5] = 0.#np.pi/4 #left leg abduction (POS) /adduction (NEG)
 
         self.m.pose[6] = 0#-np.pi/4 #right hip extension (i.e. leg bends back for np.pi/2)
         self.m.pose[7] = 0#-np.pi/8
-        self.m.pose[8] = -np.pi/4 #right leg abduction (NEG) /adduction (POS)
+        self.m.pose[8] = 0.#-np.pi/4 #right leg abduction (NEG) /adduction (POS)
 
         self.m.pose[9] = 0 #bending of spine at hips. np.pi/2 means person bends down to touch the ground
         self.m.pose[10] = 0 #twisting of spine at hips. body above spine yaws normal to the ground
@@ -95,11 +95,11 @@ class GeneratePose():
 
         self.m.pose[39] = 0 #left inner shoulder roll
         self.m.pose[40] = 0 #left inner shoulder yaw, negative moves forward
-        self.m.pose[41] = np.pi/4 #left inner shoulder pitch, positive moves up
+        self.m.pose[41] = 0.#np.pi/4 #left inner shoulder pitch, positive moves up
 
         self.m.pose[42] = 0
         self.m.pose[43] = 0 #right inner shoulder yaw, positive moves forward
-        self.m.pose[44] = -np.pi/4 #right inner shoulder pitch, positive moves down
+        self.m.pose[44] = 0.#-np.pi/4 #right inner shoulder pitch, positive moves down
 
         self.m.pose[45] = 0 #flexion/extension of head 15
 
@@ -760,15 +760,139 @@ class GeneratePose():
         return self.m, capsules, joint2name, rots0
 
 
+    def get_volumetric_surface_points_closest(self):
+        print self.m.pose
+        print self.m.betas
+        print self.m.J_transformed
+        vertices = np.array(self.m.r)
+        print vertices[0:5, :]
+
+        Torso_mid_joint = np.mean([np.array(self.m.J_transformed[3, :]), np.array(self.m.J_transformed[6, :])], axis = 0)
+        #print np.array(self.m.J_transformed[3, :]), np.array(self.m.J_transformed[6, :])
+        #find closest point to x and y positions i.e. the first two columns. Find higher of the z position i.e. the 3rd.
+        print "TORSO: ", Torso_mid_joint
+        dist_from_torso = list(vertices - Torso_mid_joint)
+        euclid_dist_from_torso = np.square(dist_from_torso)
+        euclid_dist_from_torso = list(np.sqrt(euclid_dist_from_torso[:, 0] + euclid_dist_from_torso[:, 1]))
+        for i in range(10):
+            print np.argmin(euclid_dist_from_torso), dist_from_torso[np.argmin(euclid_dist_from_torso)] + Torso_mid_joint
+            euclid_dist_from_torso[np.argmin(euclid_dist_from_torso)] += 100.
+            #torso is 1325
+
+
+        head_mid_joint = np.array(self.m.J_transformed[15, :]) + np.array([0.0, 0.123, 0.0])
+        #measure of man and woman, Dreyfuss:
+        #50% male distance from top spine joint to top of head: 185
+        #50% male distance from top of head to eyes: 112 (thus forehead is 56)
+        #50% female distance from top spine joint to top of head: 173
+        #50% female distance from top of head to eyes: 112 (thus forehead is 56)
+        #average distance from spine to forehead: np.mean(185-56, 173-56) = 123 or 12.3 cm
+
+
+        #print np.array(self.m.J_transformed[3, :]), np.array(self.m.J_transformed[6, :])
+        #find closest point to x and y positions i.e. the first two columns. Find higher of the z position i.e. the 3rd.
+        print "head: ", head_mid_joint
+        dist_from_head = list(vertices - head_mid_joint)
+        euclid_dist_from_head = np.square(dist_from_head)
+        euclid_dist_from_head = list(np.sqrt(euclid_dist_from_head[:, 0] + euclid_dist_from_head[:, 1]))
+        for i in range(10):
+            print np.argmin(euclid_dist_from_head), dist_from_head[np.argmin(euclid_dist_from_head)] + head_mid_joint
+            euclid_dist_from_head[np.argmin(euclid_dist_from_head)] += 100.
+            #head is 336
+
+        L_knee_joint = np.array(self.m.J_transformed[4, :])
+        print "L KNEE: ", L_knee_joint
+        dist_from_L_knee = list(vertices - L_knee_joint)
+        euclid_dist_from_L_knee = np.square(dist_from_L_knee)
+        euclid_dist_from_L_knee = list(np.sqrt(euclid_dist_from_L_knee[:, 0] + euclid_dist_from_L_knee[:, 1]))
+        for i in range(10):
+            print np.argmin(euclid_dist_from_L_knee), dist_from_L_knee[np.argmin(euclid_dist_from_L_knee)] + L_knee_joint
+            euclid_dist_from_L_knee[np.argmin(euclid_dist_from_L_knee)] += 100.
+            #L knee is 1046
+
+        R_knee_joint = np.array(self.m.J_transformed[5, :])
+        print "R KNEE: ", R_knee_joint
+        dist_from_R_knee = list(vertices - R_knee_joint)
+        euclid_dist_from_R_knee = np.square(dist_from_R_knee)
+        euclid_dist_from_R_knee = list(np.sqrt(euclid_dist_from_R_knee[:, 0] + euclid_dist_from_R_knee[:, 1]))
+        for i in range(10):
+            print np.argmin(euclid_dist_from_R_knee), dist_from_R_knee[np.argmin(euclid_dist_from_R_knee)] + R_knee_joint
+            euclid_dist_from_R_knee[np.argmin(euclid_dist_from_R_knee)] += 100.
+            #R knee is 4530
+
+        L_ankle_joint = np.array(self.m.J_transformed[7, :])
+        print "L ankle: ", L_ankle_joint
+        dist_from_L_ankle = list(vertices - L_ankle_joint)
+        euclid_dist_from_L_ankle = np.square(dist_from_L_ankle)
+        euclid_dist_from_L_ankle = list(np.sqrt(euclid_dist_from_L_ankle[:, 0] + euclid_dist_from_L_ankle[:, 1]))
+        for i in range(10):
+            print np.argmin(euclid_dist_from_L_ankle), dist_from_L_ankle[np.argmin(euclid_dist_from_L_ankle)] + L_ankle_joint
+            euclid_dist_from_L_ankle[np.argmin(euclid_dist_from_L_ankle)] += 100.
+            #L ankle is 3333
+
+        R_ankle_joint = np.array(self.m.J_transformed[8, :])
+        print "R ankle: ", R_ankle_joint
+        dist_from_R_ankle = list(vertices - R_ankle_joint)
+        euclid_dist_from_R_ankle = np.square(dist_from_R_ankle)
+        euclid_dist_from_R_ankle = list(np.sqrt(euclid_dist_from_R_ankle[:, 0] + euclid_dist_from_R_ankle[:, 1]))
+        for i in range(10):
+            print np.argmin(euclid_dist_from_R_ankle), dist_from_R_ankle[np.argmin(euclid_dist_from_R_ankle)] + R_ankle_joint
+            euclid_dist_from_R_ankle[np.argmin(euclid_dist_from_R_ankle)] += 100.
+            #R knee is 6732
+
+
+        L_elbow_joint = np.array(self.m.J_transformed[18, :])
+        print "L elbow: ", L_elbow_joint
+        dist_from_L_elbow = list(vertices - L_elbow_joint)
+        euclid_dist_from_L_elbow = np.square(dist_from_L_elbow)
+        euclid_dist_from_L_elbow = list(np.sqrt(euclid_dist_from_L_elbow[:, 0] + euclid_dist_from_L_elbow[:, 1]))
+        for i in range(10):
+            print np.argmin(euclid_dist_from_L_elbow), dist_from_L_elbow[np.argmin(euclid_dist_from_L_elbow)] + L_elbow_joint
+            euclid_dist_from_L_elbow[np.argmin(euclid_dist_from_L_elbow)] += 100.
+            #L elbow is 1664
+
+        R_elbow_joint = np.array(self.m.J_transformed[19, :])
+        print "R elbow: ", R_elbow_joint
+        dist_from_R_elbow = list(vertices - R_elbow_joint)
+        euclid_dist_from_R_elbow = np.square(dist_from_R_elbow)
+        euclid_dist_from_R_elbow = list(np.sqrt(euclid_dist_from_R_elbow[:, 0] + euclid_dist_from_R_elbow[:, 1]))
+        for i in range(10):
+            print np.argmin(euclid_dist_from_R_elbow), dist_from_R_elbow[np.argmin(euclid_dist_from_R_elbow)] + R_elbow_joint
+            euclid_dist_from_R_elbow[np.argmin(euclid_dist_from_R_elbow)] += 100.
+            #R elbow is 5121
+
+
+        L_wrist_joint = np.array(self.m.J_transformed[20, :])
+        print "L wrist: ", L_wrist_joint
+        dist_from_L_wrist = list(vertices - L_wrist_joint)
+        euclid_dist_from_L_wrist = np.square(dist_from_L_wrist)
+        euclid_dist_from_L_wrist = list(np.sqrt(euclid_dist_from_L_wrist[:, 0] + euclid_dist_from_L_wrist[:, 2]))
+        for i in range(10):
+            print np.argmin(euclid_dist_from_L_wrist), dist_from_L_wrist[np.argmin(euclid_dist_from_L_wrist)] + L_wrist_joint
+            euclid_dist_from_L_wrist[np.argmin(euclid_dist_from_L_wrist)] += 100.
+            # L wrist is 2208
+
+        R_wrist_joint = np.array(self.m.J_transformed[21, :])
+        print "R wrist: ", R_wrist_joint
+        dist_from_R_wrist = list(vertices - R_wrist_joint)
+        euclid_dist_from_R_wrist = np.square(dist_from_R_wrist)
+        euclid_dist_from_R_wrist = list(np.sqrt(euclid_dist_from_R_wrist[:, 0] + euclid_dist_from_R_wrist[:, 2]))
+        for i in range(10):
+            print np.argmin(euclid_dist_from_R_wrist), dist_from_R_wrist[np.argmin(euclid_dist_from_R_wrist)] + R_wrist_joint
+            euclid_dist_from_R_wrist[np.argmin(euclid_dist_from_R_wrist)] += 100.
+            #R wrist is 5669
+
+
 
 if __name__ == "__main__":
-    generator = GeneratePose(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
-    generator.standard_render()
-    generator.ax = plt.figure().add_subplot(111, projection='3d')
+    generator = GeneratePose(sampling = "UNIFORM", sigma = 0, one_side_range = 0)
+    generator.get_volumetric_surface_points_closest()
+    #generator.standard_render()
+    #generator.ax = plt.figure().add_subplot(111, projection='3d')
     #generator.solve_ik_tree_smpl()
 
-    posture = "sit"
-    generator.save_yash_data_with_angles(posture)
+    #posture = "sit"
+    #generator.save_yash_data_with_angles(posture)
     #generator.map_euler_angles_to_axis_angle()
     #generator.check_found_limits()
 

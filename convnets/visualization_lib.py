@@ -310,7 +310,7 @@ class VisualizationLib():
                 imagePublisher = rospy.Publisher("/pressure_image", MarkerArray)
 
                 marker = Marker()
-                marker.header.frame_id = "autobed/base_link"
+                marker.header.frame_id = "map"
                 marker.type = marker.SPHERE
                 marker.action = marker.ADD
                 marker.scale.x = 0.05
@@ -362,7 +362,7 @@ class VisualizationLib():
             for joint in range(0, targets.shape[0]):
                 targetPublisher = rospy.Publisher("/targets", MarkerArray)
                 Tmarker = Marker()
-                Tmarker.header.frame_id = "autobed/base_link"
+                Tmarker.header.frame_id = "map"
                 Tmarker.type = Tmarker.SPHERE
                 Tmarker.action = Tmarker.ADD
                 Tmarker.scale.x = 0.07
@@ -422,6 +422,64 @@ class VisualizationLib():
                     m.id = sid
                     sid += 1
             scoresPublisher.publish(ScoresArray)
+
+
+    def rviz_publish_output_mesh(self, targets, scores = None):
+
+        if targets is not None:
+            TargetArray = MarkerArray()
+            for joint in range(0, targets.shape[0]):
+                targetPublisher = rospy.Publisher("/mesh", MarkerArray)
+                Tmarker = Marker()
+                Tmarker.header.frame_id = "map"
+                Tmarker.type = Tmarker.SPHERE
+                Tmarker.action = Tmarker.ADD
+                Tmarker.scale.x = 0.01
+                Tmarker.scale.y = 0.01
+                Tmarker.scale.z = 0.01
+                Tmarker.color.a = 0.5
+                Tmarker.color.r = 0.8
+                Tmarker.color.g = 0.8
+                Tmarker.color.b = 0.8
+                Tmarker.pose.orientation.w = 1.0
+                Tmarker.pose.position.x = targets[joint, 0] - INTER_SENSOR_DISTANCE*10
+                Tmarker.pose.position.y = targets[joint, 1] - INTER_SENSOR_DISTANCE*10
+                Tmarker.pose.position.z = targets[joint, 2]
+                TargetArray.markers.append(Tmarker)
+                tid = 0
+                for m in TargetArray.markers:
+                    m.id = tid
+                    tid += 1
+            #print TargetArray
+            targetPublisher.publish(TargetArray)
+
+        if scores is not None:
+            ScoreArray = MarkerArray()
+            for joint in range(0, scores.shape[0]):
+                scorePublisher = rospy.Publisher("/mesh", MarkerArray)
+                Tmarker = Marker()
+                Tmarker.header.frame_id = "map"
+                Tmarker.type = Tmarker.SPHERE
+                Tmarker.action = Tmarker.ADD
+                Tmarker.scale.x = 0.07
+                Tmarker.scale.y = 0.07
+                Tmarker.scale.z = 0.07
+                Tmarker.color.a = 1.0
+                Tmarker.color.r = 0.8
+                Tmarker.color.g = 0.8
+                Tmarker.color.b = 0.8
+                Tmarker.pose.orientation.w = 1.0
+                Tmarker.pose.position.x = scores[joint, 0] - INTER_SENSOR_DISTANCE*10
+                Tmarker.pose.position.y = scores[joint, 1] - INTER_SENSOR_DISTANCE*10
+                Tmarker.pose.position.z = scores[joint, 2]
+                ScoreArray.markers.append(Tmarker)
+                tid = 0
+                for m in ScoreArray.markers:
+                    m.id = tid
+                    tid += 1
+            #print scoreArray
+            scorePublisher.publish(ScoreArray)
+
 
 
 

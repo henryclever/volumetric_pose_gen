@@ -131,18 +131,18 @@ class pyRenderMesh():
         #print np.max(tm.faces)
 
 
-        #from pyglet.window import Window
-        #from pyglet.gl import Config;
-        #w = Window(config=Config(major_version=4, minor_version=1))
-        #print w.context
-        #print('{}.{}'.format(w.context.config.major_version, w.context.config.minor_version))
+        from pyglet.window import Window
+        from pyglet.gl import Config;
+        w = Window(config=Config(major_version=4, minor_version=1))
+        print w.context
+        print('{}.{}'.format(w.context.config.major_version, w.context.config.minor_version))
 
         #print self.scene
         #print self.smpl_mesh
 
 
 
-        #print "Viewing"
+        print "Viewing"
         if self.first_pass == True:
 
             ## Assign attributes to renderer
