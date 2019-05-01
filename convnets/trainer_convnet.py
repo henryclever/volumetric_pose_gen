@@ -98,7 +98,7 @@ class PhysicalTrainer():
         self.batch_size = 128
         self.num_epochs = 300
         self.include_inter = True
-        self.shuffle = True
+        self.shuffle = False
 
 
         self.count = 0
@@ -919,7 +919,8 @@ if __name__ == "__main__":
 
     if opt.quick_test == True:
         training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3555_upperbody_stiff.p')
-        training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
+        #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
+        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
         #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
         test_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
     else:

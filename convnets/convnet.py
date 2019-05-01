@@ -178,6 +178,7 @@ class CNN(nn.Module):
             self.J_regressor_repeat = torch.cat((self.J_regressor_repeat_f, self.J_regressor_repeat_m), 0)#this is 2 x N x R x 24
             self.J_regressor_repeat = self.J_regressor_repeat.permute(1,0,2,3).view(self.N, 2, self.R*24)
 
+
             self.posedirs_repeat_f = self.posedirs_f.unsqueeze(0).repeat(self.N, 1, 1, 1).unsqueeze(0)
             self.posedirs_repeat_m = self.posedirs_m.unsqueeze(0).repeat(self.N, 1, 1, 1).unsqueeze(0)
             self.posedirs_repeat = torch.cat((self.posedirs_repeat_f, self.posedirs_repeat_m), 0)
@@ -192,6 +193,7 @@ class CNN(nn.Module):
             # self.weights_repeat = self.weights_repeat.permute(1, 0, 2, 3).view(self.N, 2, self.R * 24)
             self.weights_repeat = self.weights_repeat.permute(1, 0, 2, 3).view(self.N, 2, 10, 24)
             self.weights_repeat = self.weights_repeat.permute(1, 2, 0, 3).contiguous().view(self.N, 2, 10 * 24)
+
 
             self.zeros_cartesian = torch.zeros([self.N, 24]).type(dtype)
             self.ones_cartesian = torch.ones([self.N, 24]).type(dtype)
@@ -508,30 +510,24 @@ class CNN(nn.Module):
         verts = v_homo[:, :, :3, 0] - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
 
 
+        verts_offset = torch.Tensor(verts.clone().detach().cpu().numpy()).type(self.dtype)
+        targets_est_detached = torch.Tensor(targets_est.clone().detach().cpu().numpy()).type(self.dtype)
+        synth_joint_addressed = [3, 15, 4, 5, 7, 8, 18, 19, 20, 21]
+        for real_joint in range(10):
+            verts_offset[:, real_joint, :] = verts_offset[:, real_joint, :] - targets_est_detached[:, synth_joint_addressed[real_joint], :]
+
+        print verts_offset[0, :], 'verts offset', betas_est[0, :]
+
         #here we need to the ground truth to make it a surface point for the mocap markers
         if is_training == True:
             synth_real_switch_repeated = synth_real_switch.unsqueeze(1).repeat(1, 3)
-            targets_est[:, 3, :] = synth_real_switch_repeated*targets_est[:, 3, :].clone()+ torch.add(-synth_real_switch_repeated, 1)*verts[:, 0, :].clone()
-            targets_est[:, 15, :] = synth_real_switch_repeated*targets_est[:, 15, :].clone()+ torch.add(-synth_real_switch_repeated, 1)*verts[:, 1, :].clone()
-            targets_est[:, 4, :] = synth_real_switch_repeated*targets_est[:, 4, :].clone()+ torch.add(-synth_real_switch_repeated, 1)*verts[:, 2, :].clone()
-            targets_est[:, 5, :] = synth_real_switch_repeated*targets_est[:, 5, :].clone()+ torch.add(-synth_real_switch_repeated, 1)*verts[:, 3, :].clone()
-            targets_est[:, 7, :] = synth_real_switch_repeated*targets_est[:, 7, :].clone()+ torch.add(-synth_real_switch_repeated, 1)*verts[:, 4, :].clone()
-            targets_est[:, 8, :] = synth_real_switch_repeated*targets_est[:, 8, :].clone()+ torch.add(-synth_real_switch_repeated, 1)*verts[:, 5, :].clone()
-            targets_est[:, 18, :] = synth_real_switch_repeated*targets_est[:, 18, :].clone()+ torch.add(-synth_real_switch_repeated, 1)*verts[:, 6, :].clone()
-            targets_est[:, 19, :] = synth_real_switch_repeated*targets_est[:, 19, :].clone()+ torch.add(-synth_real_switch_repeated, 1)*verts[:, 7, :].clone()
-            targets_est[:, 20, :] = synth_real_switch_repeated*targets_est[:, 20, :].clone()+ torch.add(-synth_real_switch_repeated, 1)*verts[:, 8, :].clone()
-            targets_est[:, 21, :] = synth_real_switch_repeated*targets_est[:, 21, :].clone()+ torch.add(-synth_real_switch_repeated, 1)*verts[:, 9, :].clone()
+            for real_joint in range(10):
+                targets_est[:, synth_joint_addressed[real_joint], :] = synth_real_switch_repeated * targets_est[:, synth_joint_addressed[real_joint], :].clone() \
+                                       + torch.add(-synth_real_switch_repeated, 1) * (targets_est[:, synth_joint_addressed[real_joint], :].clone() + verts_offset[:, real_joint, :])
+
         else:
-            targets_est[:, 3, :] = verts[:, 0, :].clone()
-            targets_est[:, 15, :] = verts[:, 1, :].clone()
-            targets_est[:, 4, :] = verts[:, 2, :].clone()
-            targets_est[:, 5, :] = verts[:, 3, :].clone()
-            targets_est[:, 7, :] = verts[:, 4, :].clone()
-            targets_est[:, 8, :] = verts[:, 5, :].clone()
-            targets_est[:, 18, :] = verts[:, 6, :].clone()
-            targets_est[:, 19, :] = verts[:, 7, :].clone()
-            targets_est[:, 20, :] = verts[:, 8, :].clone()
-            targets_est[:, 21, :] = verts[:, 9, :].clone()
+            for real_joint in range(10):
+                targets_est[:, synth_joint_addressed[real_joint], :] = targets_est[:, synth_joint_addressed[real_joint], :] + verts_offset[:, real_joint, :]
 
 
 
