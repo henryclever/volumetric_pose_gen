@@ -492,7 +492,7 @@ class CNN(nn.Module):
                                     v_shaped[:, 5121, :],  # r elbow
                                     v_shaped[:, 2208, :],  # l wrist
                                     v_shaped[:, 5669, :]]).permute(1, 0, 2)  # r wrist
-        pose_feature = (Rs_est[:, 1:, :, :]).sub(1.0, torch.eye(3).float()).view(-1, 207)
+        pose_feature = (Rs_est[:, 1:, :, :]).sub(1.0, torch.eye(3).type(dtype)).view(-1, 207)
         posedirs_repeat = torch.bmm(gender_switch, self.posedirs_repeat[0:current_batch_size, :, :]) \
             .view(current_batch_size, 10 * self.D, 207) \
             .permute(0, 2, 1)
