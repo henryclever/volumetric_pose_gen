@@ -106,9 +106,26 @@ class CNN(nn.Module):
             self.shapedirs_f = torch.Tensor(np.array(human_f.shapedirs)).permute(0, 2, 1).type(dtype)
             self.J_regressor_f = np.zeros((human_f.J_regressor.shape)) + human_f.J_regressor
             self.J_regressor_f = torch.Tensor(np.array(self.J_regressor_f).astype(float)).permute(1, 0).type(dtype)
-            self.posedirs_f = torch.Tensor(np.array(human_f.posedirs))
-            self.weights_f = torch.Tensor(np.array(human_f.weights))
-
+            self.posedirs_f = torch.Tensor(np.stack([human_f.posedirs[1325, :, :],
+                                                    human_f.posedirs[336, :, :],
+                                                    human_f.posedirs[1046, :, :],
+                                                    human_f.posedirs[4530, :, :],
+                                                    human_f.posedirs[3333, :, :],
+                                                    human_f.posedirs[6732, :, :],
+                                                    human_f.posedirs[1664, :, :],
+                                                    human_f.posedirs[5121, :, :],
+                                                    human_f.posedirs[2208, :, :],
+                                                    human_f.posedirs[5669, :, :]]))
+            self.weights_f = torch.Tensor(np.stack([human_f.weights[1325, :],
+                                                    human_f.weights[336, :],
+                                                    human_f.weights[1046, :],
+                                                    human_f.weights[4530, :],
+                                                    human_f.weights[3333, :],
+                                                    human_f.weights[6732, :],
+                                                    human_f.weights[1664, :],
+                                                    human_f.weights[5121, :],
+                                                    human_f.weights[2208, :],
+                                                    human_f.weights[5669, :]]))
 
             model_path_m = filepath+'/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
             human_m = load_model(model_path_m)
@@ -116,8 +133,26 @@ class CNN(nn.Module):
             self.shapedirs_m = torch.Tensor(np.array(human_m.shapedirs)).permute(0, 2, 1).type(dtype)
             self.J_regressor_m = np.zeros((human_m.J_regressor.shape)) + human_m.J_regressor
             self.J_regressor_m = torch.Tensor(np.array(self.J_regressor_m).astype(float)).permute(1, 0).type(dtype)
-            self.posedirs_m = torch.Tensor(np.array(human_m.posedirs))
-            self.weights_m = torch.Tensor(np.array(human_m.weights))
+            self.posedirs_m = torch.Tensor(np.stack([human_m.posedirs[1325, :, :],
+                                                    human_m.posedirs[336, :, :],
+                                                    human_m.posedirs[1046, :, :],
+                                                    human_m.posedirs[4530, :, :],
+                                                    human_m.posedirs[3333, :, :],
+                                                    human_m.posedirs[6732, :, :],
+                                                    human_m.posedirs[1664, :, :],
+                                                    human_m.posedirs[5121, :, :],
+                                                    human_m.posedirs[2208, :, :],
+                                                    human_m.posedirs[5669, :, :]]))
+            self.weights_m = torch.Tensor(np.stack([human_m.weights[1325, :],
+                                                    human_m.weights[336, :],
+                                                    human_m.weights[1046, :],
+                                                    human_m.weights[4530, :],
+                                                    human_m.weights[3333, :],
+                                                    human_m.weights[6732, :],
+                                                    human_m.weights[1664, :],
+                                                    human_m.weights[5121, :],
+                                                    human_m.weights[2208, :],
+                                                    human_m.weights[5669, :]]))
 
 
             self.parents = np.array([4294967295, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9, 12, 13, 14, 16, 17, 18, 19, 20, 21]).astype(np.int32)
@@ -146,17 +181,7 @@ class CNN(nn.Module):
             self.posedirs_repeat_m = self.posedirs_m.unsqueeze(0).repeat(self.N, 1, 1, 1).unsqueeze(0)
             self.posedirs_repeat = torch.cat((self.posedirs_repeat_f, self.posedirs_repeat_m), 0)
             # self.posedirs_repeat = self.posedirs_repeat.permute(1, 0, 2, 3, 4).view(self.N, 2, self.R*self.D*207)
-            self.posedirs_repeat = self.posedirs_repeat.permute(1, 0, 2, 3, 4).view(self.N, 2, self.R, self.D * 207)
-            self.posedirs_repeat = torch.stack([self.posedirs_repeat[:, :, 1325, :],
-                                                self.posedirs_repeat[:, :, 336, :],
-                                                self.posedirs_repeat[:, :, 1046, :],
-                                                self.posedirs_repeat[:, :, 4530, :],
-                                                self.posedirs_repeat[:, :, 3333, :],
-                                                self.posedirs_repeat[:, :, 6732, :],
-                                                self.posedirs_repeat[:, :, 1664, :],
-                                                self.posedirs_repeat[:, :, 5121, :],
-                                                self.posedirs_repeat[:, :, 2208, :],
-                                                self.posedirs_repeat[:, :, 5669, :]])
+            self.posedirs_repeat = self.posedirs_repeat.permute(1, 0, 2, 3, 4).view(self.N, 2, 10, self.D * 207)
             self.posedirs_repeat = self.posedirs_repeat.permute(1, 2, 0, 3).contiguous().view(self.N, 2,
                                                                                               10 * self.D * 207)
 
@@ -164,17 +189,7 @@ class CNN(nn.Module):
             self.weights_repeat_m = self.weights_m.unsqueeze(0).repeat(self.N, 1, 1).unsqueeze(0)
             self.weights_repeat = torch.cat((self.weights_repeat_f, self.weights_repeat_m), 0)
             # self.weights_repeat = self.weights_repeat.permute(1, 0, 2, 3).view(self.N, 2, self.R * 24)
-            self.weights_repeat = self.weights_repeat.permute(1, 0, 2, 3).view(self.N, 2, self.R, 24)
-            self.weights_repeat = torch.stack([self.weights_repeat[:, :, 1325, :],
-                                               self.weights_repeat[:, :, 336, :],
-                                               self.weights_repeat[:, :, 1046, :],
-                                               self.weights_repeat[:, :, 4530, :],
-                                               self.weights_repeat[:, :, 3333, :],
-                                               self.weights_repeat[:, :, 6732, :],
-                                               self.weights_repeat[:, :, 1664, :],
-                                               self.weights_repeat[:, :, 5121, :],
-                                               self.weights_repeat[:, :, 2208, :],
-                                               self.weights_repeat[:, :, 5669, :]])
+            self.weights_repeat = self.weights_repeat.permute(1, 0, 2, 3).view(self.N, 2, 10, 24)
             self.weights_repeat = self.weights_repeat.permute(1, 2, 0, 3).contiguous().view(self.N, 2, 10 * 24)
 
             self.zeros_cartesian = torch.zeros([self.N, 24]).type(dtype)

@@ -919,11 +919,8 @@ if __name__ == "__main__":
 
     if opt.quick_test == True:
         training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3555_upperbody_stiff.p')
-<<<<<<< HEAD
         training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
-=======
         #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
->>>>>>> 8d86e4385f702b58487cd40f91505cfc5ce084ce
         test_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
     else:
         training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3555_upperbody_stiff.p')
