@@ -94,6 +94,7 @@ class CNN(nn.Module):
             # Use for CPU
             dtype = torch.FloatTensor
             print('############################## USING CPU #################################')
+        self.dtype = dtype
 
         if loss_vector_type == 'anglesR' or loss_vector_type == 'anglesDC' or loss_vector_type == 'anglesEU':
 
@@ -115,7 +116,7 @@ class CNN(nn.Module):
                                                     human_f.posedirs[1664, :, :],
                                                     human_f.posedirs[5121, :, :],
                                                     human_f.posedirs[2208, :, :],
-                                                    human_f.posedirs[5669, :, :]]))
+                                                    human_f.posedirs[5669, :, :]])).type(dtype)
             self.weights_f = torch.Tensor(np.stack([human_f.weights[1325, :],
                                                     human_f.weights[336, :],
                                                     human_f.weights[1046, :],
@@ -125,7 +126,7 @@ class CNN(nn.Module):
                                                     human_f.weights[1664, :],
                                                     human_f.weights[5121, :],
                                                     human_f.weights[2208, :],
-                                                    human_f.weights[5669, :]]))
+                                                    human_f.weights[5669, :]])).type(dtype)
 
             model_path_m = filepath+'/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
             human_m = load_model(model_path_m)
@@ -142,7 +143,7 @@ class CNN(nn.Module):
                                                     human_m.posedirs[1664, :, :],
                                                     human_m.posedirs[5121, :, :],
                                                     human_m.posedirs[2208, :, :],
-                                                    human_m.posedirs[5669, :, :]]))
+                                                    human_m.posedirs[5669, :, :]])).type(dtype)
             self.weights_m = torch.Tensor(np.stack([human_m.weights[1325, :],
                                                     human_m.weights[336, :],
                                                     human_m.weights[1046, :],
@@ -152,7 +153,7 @@ class CNN(nn.Module):
                                                     human_m.weights[1664, :],
                                                     human_m.weights[5121, :],
                                                     human_m.weights[2208, :],
-                                                    human_m.weights[5669, :]]))
+                                                    human_m.weights[5669, :]])).type(dtype)
 
 
             self.parents = np.array([4294967295, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9, 12, 13, 14, 16, 17, 18, 19, 20, 21]).astype(np.int32)
@@ -492,7 +493,7 @@ class CNN(nn.Module):
                                     v_shaped[:, 5121, :],  # r elbow
                                     v_shaped[:, 2208, :],  # l wrist
                                     v_shaped[:, 5669, :]]).permute(1, 0, 2)  # r wrist
-        pose_feature = (Rs_est[:, 1:, :, :]).sub(1.0, torch.eye(3).type(dtype)).view(-1, 207)
+        pose_feature = (Rs_est[:, 1:, :, :]).sub(1.0, torch.eye(3).type(self.dtype)).view(-1, 207)
         posedirs_repeat = torch.bmm(gender_switch, self.posedirs_repeat[0:current_batch_size, :, :]) \
             .view(current_batch_size, 10 * self.D, 207) \
             .permute(0, 2, 1)
@@ -502,7 +503,7 @@ class CNN(nn.Module):
             .squeeze(1) \
             .view(current_batch_size, 10, 24)
         T = torch.bmm(weights_repeat, A_est.view(current_batch_size, 24, 16)).view(current_batch_size, -1, 4, 4)
-        v_posed_homo = torch.cat([v_posed, torch.ones(current_batch_size, v_posed.shape[1], 1)], dim=2)
+        v_posed_homo = torch.cat([v_posed, torch.ones(current_batch_size, v_posed.shape[1], 1).type(self.dtype)], dim=2)
         v_homo = torch.matmul(T, torch.unsqueeze(v_posed_homo, -1))
         verts = v_homo[:, :, :3, 0] - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
 
