@@ -195,7 +195,7 @@ class CNN(nn.Module):
             self.ones_cartesian = torch.ones([self.N, 24]).type(dtype)
 
             if self.loss_vector_type == 'anglesDC':
-                self.bounds = torch.Tensor(np.array([[-1.57, 1.57], [-1.57, 1.57], [-1.57, 1.57],
+                self.bounds = torch.Tensor(np.array([[-np.pi/3, np.pi/3], [-np.pi/3, np.pi/3], [-np.pi/3, np.pi/3],
                                        [-2.047187297216041, 0.0008725992352640336], [-1.0056561780573234, 0.9792596381050885], [-0.83127128871961, 0.9840833280290882],
                                        [-2.0467908364949654, 0.005041331594134009], [-0.9477521700520728, 1.0038579032816006],  [-0.8767199629302654, 0.35738032396710084],
                                        [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
@@ -221,7 +221,7 @@ class CNN(nn.Module):
                                        [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01]])).type(dtype)
 
             elif self.loss_vector_type == 'anglesEU':
-                self.bounds = torch.Tensor(np.array([[-1.57, 1.57], [-1.57, 1.57], [-1.57, 1.57],
+                self.bounds = torch.Tensor(np.array([[-np.pi/3, np.pi/3], [-np.pi/3, np.pi/3], [-np.pi/3, np.pi/3],
                                        [-2.0471621484033693, 0.14541260028988837], [-0.9814085437863385, 0.9483742180716594], [-0.9551477728226021, 0.9023028022585552],
                                        [-2.0471621484033693, 0.14541260028988837], [-0.9483742180716594, 0.9814085437863385],  [-0.9023028022585552, 0.9551477728226021],
                                        [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
@@ -377,8 +377,17 @@ class CNN(nn.Module):
 
 
         #scale things so the model starts close to the home position. Has nothing to do with weighting.
-        scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), 0.1)
-        scores[:, 10:] = torch.mul(scores[:, 10:].clone(), 0.01)
+        scores = torch.mul(scores.clone(), 0.01)
+
+        if self.GPU == True:
+            output_norm = 10*[6.0] + [0.91, 1.98, 0.15] + list(torch.abs(self.bounds.view(72,2)[:, 1] - self.bounds.view(72,2)[:, 0]).cpu().numpy())
+        else:
+            output_norm = 10 * [6.0] + [0.91, 1.98, 0.15] + list(torch.abs(self.bounds.view(72, 2)[:, 1] - self.bounds.view(72, 2)[:, 0]).numpy())
+
+
+        #normalize the output of the network based on the range of the parameters
+        for i in range(85):
+            scores[:, i] = torch.mul(scores[:, i].clone(), output_norm[i])
 
         scores[:, 10] = torch.add(scores[:, 10].clone(), 0.6)
         scores[:, 11] = torch.add(scores[:, 11].clone(), 1.2)
