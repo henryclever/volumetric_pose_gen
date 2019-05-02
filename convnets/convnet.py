@@ -183,17 +183,13 @@ class CNN(nn.Module):
             self.posedirs_repeat_m = self.posedirs_m.unsqueeze(0).repeat(self.N, 1, 1, 1).unsqueeze(0)
             self.posedirs_repeat = torch.cat((self.posedirs_repeat_f, self.posedirs_repeat_m), 0)
             # self.posedirs_repeat = self.posedirs_repeat.permute(1, 0, 2, 3, 4).view(self.N, 2, self.R*self.D*207)
-            self.posedirs_repeat = self.posedirs_repeat.permute(1, 0, 2, 3, 4).view(self.N, 2, 10, self.D * 207)
-            self.posedirs_repeat = self.posedirs_repeat.permute(1, 2, 0, 3).contiguous().view(self.N, 2,
-                                                                                              10 * self.D * 207)
+            self.posedirs_repeat = self.posedirs_repeat.permute(1, 0, 2, 3, 4).view(self.N, 2, 10 * self.D * 207)
 
             self.weights_repeat_f = self.weights_f.unsqueeze(0).repeat(self.N, 1, 1).unsqueeze(0)
             self.weights_repeat_m = self.weights_m.unsqueeze(0).repeat(self.N, 1, 1).unsqueeze(0)
             self.weights_repeat = torch.cat((self.weights_repeat_f, self.weights_repeat_m), 0)
             # self.weights_repeat = self.weights_repeat.permute(1, 0, 2, 3).view(self.N, 2, self.R * 24)
-            self.weights_repeat = self.weights_repeat.permute(1, 0, 2, 3).view(self.N, 2, 10, 24)
-            self.weights_repeat = self.weights_repeat.permute(1, 2, 0, 3).contiguous().view(self.N, 2, 10 * 24)
-
+            self.weights_repeat = self.weights_repeat.permute(1, 0, 2, 3).view(self.N, 2, 10 * 24)
 
             self.zeros_cartesian = torch.zeros([self.N, 24]).type(dtype)
             self.ones_cartesian = torch.ones([self.N, 24]).type(dtype)
@@ -398,6 +394,7 @@ class CNN(nn.Module):
 
         test_ground_truth = False #can only use True when the dataset is entirely synthetic AND when we use anglesDC
 
+
         if test_ground_truth == False or is_training == False:
             betas_est = scores[:, 0:10].clone().detach() #make sure to detach so the gradient flow of joints doesn't corrupt the betas
             root_shift_est = scores[:, 10:13].clone()
@@ -449,7 +446,6 @@ class CNN(nn.Module):
 
                 Rs_est = KinematicsLib().batch_euler_to_R(scores[:, 13:85].view(-1, 24, 3).clone(), self.zeros_cartesian, self.ones_cartesian).view(-1, 24, 3, 3)
 
-
         #print Rs_est[0, :]
 
         gender_switch = gender_switch.unsqueeze(1)
@@ -483,7 +479,6 @@ class CNN(nn.Module):
 
         targets_est = targets_est - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
 
-
         # assemble a reduced form of the transformed mesh
         v_shaped_red = torch.stack([v_shaped[:, 1325, :],
                                     v_shaped[:, 336, :],  # head
@@ -507,6 +502,8 @@ class CNN(nn.Module):
         T = torch.bmm(weights_repeat, A_est.view(current_batch_size, 24, 16)).view(current_batch_size, -1, 4, 4)
         v_posed_homo = torch.cat([v_posed, torch.ones(current_batch_size, v_posed.shape[1], 1).type(self.dtype)], dim=2)
         v_homo = torch.matmul(T, torch.unsqueeze(v_posed_homo, -1))
+
+
         verts = v_homo[:, :, :3, 0] - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
 
 
@@ -516,7 +513,6 @@ class CNN(nn.Module):
         for real_joint in range(10):
             verts_offset[:, real_joint, :] = verts_offset[:, real_joint, :] - targets_est_detached[:, synth_joint_addressed[real_joint], :]
 
-        print verts_offset[0, :], 'verts offset', betas_est[0, :]
 
         #here we need to the ground truth to make it a surface point for the mocap markers
         if is_training == True:
