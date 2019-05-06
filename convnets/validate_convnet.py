@@ -98,7 +98,7 @@ class PhysicalTrainer():
 
         self.verbose = opt.verbose
         self.opt = opt
-        self.batch_size = 128
+        self.batch_size = 1
         self.num_epochs = 300
         self.include_inter = True
         self.shuffle = True
@@ -701,8 +701,13 @@ class PhysicalTrainer():
 
         elif self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
             fc_output_size = 85## 10 + 3 + 24*3 --- betas, root shift, rotations
-            self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type, self.batch_size)
-            #self.model = torch.load('/home/ubuntu/Autobed_OFFICIAL_Trials' + '/subject_' + str(self.opt.leave_out) + '/convnets/convnet_9to18_'+str(self.loss_vector_type)+'_sTrue_128b_200e_' + str(self.opt.leave_out) + '.pt', map_location=lambda storage, loc: storage)
+            if GPU == True:
+                self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s7ang_sig0p5_5xreal_voloff_128b_200e.pt')
+                self.model = self.model.cuda()
+            else:
+                self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s7ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
+                #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/2.0xsize/convnet_anglesEU_synthreal_tanh_s3ang_sig0p5_5xreal_voloff_128b_300e.pt', map_location='cpu')
+
             print 'LOADED!!!!!!!!!!!!!!!!!1'
             pp = 0
             for p in list(self.model.parameters()):
@@ -722,12 +727,15 @@ class PhysicalTrainer():
 
     def validate_convnet(self, verbose=False, n_batches=None):
 
-        self.model.eval()
+        self.model.train()
         loss = 0.
         n_examples = 0
+
+        error_list = []
+
         for batch_i, batch in enumerate(self.test_loader):
 
-            self.model.eval()
+            #self.model.train()
 
             if self.loss_vector_type == 'direct':
 
@@ -747,7 +755,9 @@ class PhysicalTrainer():
 
             elif self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
 
-                #print batch[1].shape
+                #print batch[0].size()
+                batch[0] = batch[0].repeat(25, 1, 1, 1)
+                batch[1] = batch[1].repeat(25, 1)
 
                 #get the direct joint locations
                 batch.append(batch[1][:, 30:32])
@@ -756,31 +766,36 @@ class PhysicalTrainer():
 
                 images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2)))
                 images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
-                images, targets = Variable(batch[0].type(dtype), volatile=True, requires_grad=False), Variable(batch[1].type(dtype), volatile=True,requires_grad=False),
+                images, targets = Variable(batch[0].type(dtype), requires_grad=False), Variable(batch[1].type(dtype), requires_grad=False),
 
-                gender_switch = Variable(batch[2].type(dtype), volatile=True, requires_grad=False)
-
-
-                self.optimizer.zero_grad()
+                gender_switch = Variable(batch[2].type(dtype), requires_grad=False)
 
 
                 ground_truth = np.zeros((batch[0].numpy().shape[0], 30))
                 ground_truth = Variable(torch.Tensor(ground_truth).type(dtype))
                 ground_truth[:, 0:30] = targets[:, 0:30]/1000
 
-                scores_zeros = np.zeros((batch[0].numpy().shape[0], 10))
-                scores_zeros = Variable(torch.Tensor(scores_zeros).type(dtype))
+                scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].numpy().shape[0], 10))).type(dtype))
 
                 if self.loss_vector_type == 'anglesR':
-                    scores, targets_est, targets_est_reduced, betas_est = self.model.forward_kinematic_R(images_up, gender_switch, targets, is_training=False)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
+                    scores, targets_est, targets_est_reduced, betas_est = self.model.forward_kinematic_R(images_up, gender_switch,
+                                                                                                         0, targets, is_training=False)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
                 elif self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
-                    scores, targets_est, targets_est_reduced, betas_est = self.model.forward_kinematic_angles(images_up, gender_switch, targets,
-                                                                                                              is_training=False,
+                    scores, targets_est, targets_est_reduced, betas_est = self.model.forward_kinematic_angles(images_up, gender_switch,
+                                                                                                              0, targets, is_training=False,
                                                                                                               reg_angles = self.opt.reg_angles)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
 
                 self.criterion = nn.L1Loss()
-                loss = self.criterion(scores, scores_zeros)
-                loss = loss.data.item()
+
+
+                loss += self.criterion(scores, scores_zeros).data.item()
+
+                #print("VAL SCORES",
+                #      np.sum(np.abs(scores.data.numpy())),
+                #      np.sum(np.abs(scores.data.numpy())),
+                #      np.sum(np.abs(scores.data.numpy()))/(scores.size()[0] * scores.size()[1]),
+                #      np.sum(np.abs(scores.data.numpy()))/(scores.size()[0] * 24))
+
 
 
 
@@ -794,38 +809,46 @@ class PhysicalTrainer():
             if GPU == True:
                 VisualizationLib().print_error_val(targets.data.cpu(), targets_est_reduced.cpu(), self.output_size_val, self.loss_vector_type, data='validate')
             else:
-                VisualizationLib().print_error_val(targets.data, targets_est_reduced, self.output_size_val, self.loss_vector_type, data='validate')
+                #print targets.data.size()
+                #print targets_est_reduced.size()
+                #print targets_est_reduced[0:2, :]
 
-        loss /= n_examples
-        loss *= 100
-        loss *= 1000
+                targets_print = torch.mean(targets.data, dim = 0).unsqueeze(0)
+                targets_est_print = torch.mean(targets_est_reduced, dim = 0).unsqueeze(0)
 
-        if self.loss_vector_type == 'anglesR':
-            #print angles_est[0, :], 'validation angles'
-            print betas_est[0, :], 'validation betas'
+                error_norm, _, _ = VisualizationLib().print_error_val(targets_print, targets_est_print, self.output_size_val, self.loss_vector_type, data='validate')
 
-
-        NUM_IMAGES = images.data.size()[0]
-
-        for image_ct in range(NUM_IMAGES):
-            # #self.im_sampleval = self.im_sampleval[:,0,:,:]
-            self.im_sampleval = images.data[image_ct, :].squeeze()
-            self.tar_sampleval = targets.data[image_ct, :].squeeze() / 1000
-            self.sc_sampleval = targets_est[image_ct, :].squeeze() / 1000
-            self.sc_sampleval = self.sc_sampleval.view(24, 3)
-
+            error_list.append(np.mean(error_norm))
 
 
             if self.opt.visualize == True:
-                if GPU == True:
-                    VisualizationLib().visualize_pressure_map(self.im_sampleval.cpu(), self.tar_sampleval.cpu(), self.sc_sampleval.cpu(), block=False)
-                else:
-                    VisualizationLib().visualize_pressure_map(self.im_sample, self.tar_sample, self.sc_sample,self.im_sampleval, self.tar_sampleval, self.sc_sampleval, block=False)
-            time.sleep(1)
+                loss /= n_examples
+                loss *= 100
+                loss *= 1000
+
+                if self.loss_vector_type == 'anglesR':
+                    #print angles_est[0, :], 'validation angles'
+                    print betas_est[0, :], 'validation betas'
 
 
-        return loss
+                NUM_IMAGES = images.data.size()[0]
 
+                for image_ct in range(NUM_IMAGES):
+                    # #self.im_sampleval = self.im_sampleval[:,0,:,:]
+                    self.im_sampleval = images.data[image_ct, :].squeeze()
+                    self.tar_sampleval = targets.data[image_ct, :].squeeze() / 1000
+                    self.sc_sampleval = targets_est[image_ct, :].squeeze() / 1000
+                    self.sc_sampleval = self.sc_sampleval.view(24, 3)
+
+
+                    if GPU == True:
+                        VisualizationLib().visualize_pressure_map(self.im_sampleval.cpu(), self.tar_sampleval.cpu(), self.sc_sampleval.cpu(), block=False)
+                    else:
+                        VisualizationLib().visualize_pressure_map(self.im_sampleval, self.tar_sampleval, self.sc_sampleval, block=False)
+                    time.sleep(1)
+
+
+        print "MEAN IS: ", np.mean(error_list)
 
 
 if __name__ == "__main__":
@@ -871,7 +894,7 @@ if __name__ == "__main__":
     test_database_file_f = []
     test_database_file_m = []
 
-    training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3555_upperbody_stiff.p')
+    #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3555_upperbody_stiff.p')
     #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3681_rightside_stiff.p')
     #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3722_leftside_stiff.p')
     #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3808_lowerbody_stiff.p')
@@ -881,7 +904,7 @@ if __name__ == "__main__":
     #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1513_leftside_stiff.p')
     #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1494_lowerbody_stiff.p')
     #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_sit_1649_none_stiff.p')
-    #training_database_file_f.append(filepath_prefix_qt+'/real/trainval8_150rh1_sit120rh.p')
+    training_database_file_f.append(filepath_prefix_qt+'/real/trainval8_150rh1_sit120rh.p')
     #training_database_file_f.append(filepath_prefix_qt + '/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
 
     #training_database_file_m.append(filepath_prefix_qt+'/synth/train_m_lay_3573_upperbody_stiff.p')
@@ -897,20 +920,20 @@ if __name__ == "__main__":
     #training_database_file_m.append(filepath_prefix_qt+'/real/trainval4_150rh1_sit120rh.p')
     #training_database_file_m.append(filepath_prefix_qt + '/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
 
-    test_database_file_f.append(filepath_prefix_qt+'/real/trainval4_150rh1_sit120rh.p')
-    test_database_file_m.append(filepath_prefix_qt+'/real/trainval8_150rh1_sit120rh.p')
+    #test_database_file_f.append(filepath_prefix_qt+'/real/trainval4_150rh1_sit120rh.p')
+    #test_database_file_m.append(filepath_prefix_qt+'/real/trainval8_150rh1_sit120rh.p')
     #test_database_file_f.append(filepath_prefix_qt + '/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + '/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + '/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + '/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + '/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    #test_database_file_m.append(filepath_prefix_qt + '/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    test_database_file_m.append(filepath_prefix_qt + '/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_f.append(filepath_prefix_qt + '/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     p = PhysicalTrainer(training_database_file_f, training_database_file_m, test_database_file_f, test_database_file_m, opt)
 
     print "GOT HERE!"
-    #p.init_convnet_train()
+    p.init_convnet_train()
     #p.visualize_3d_data()
-    p.visualize_3d_data()
+    #p.visualize_3d_data()
         #else:
         #    print 'Please specify correct training type:1. HoG_KNN 2. convnet_2'

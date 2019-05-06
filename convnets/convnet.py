@@ -96,6 +96,7 @@ class CNN(nn.Module):
             print('############################## USING CPU #################################')
         self.dtype = dtype
 
+
         if loss_vector_type == 'anglesR' or loss_vector_type == 'anglesDC' or loss_vector_type == 'anglesEU':
 
 
@@ -362,6 +363,8 @@ class CNN(nn.Module):
 
 
     def forward_kinematic_angles(self, images, gender_switch, synth_real_switch, targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None, reg_angles = False):
+        self.GPU = False
+        self.dtype = torch.FloatTensor
 
         scores_cnn = self.CNN_pack1(images)
         scores_size = scores_cnn.size()
@@ -483,6 +486,7 @@ class CNN(nn.Module):
 
         J_est = torch.stack([Jx, Jy, Jz], dim=2)  # these are the joint locations with home pose (pose is 0 degree on all angles)
         #J_est = J_est - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
+
 
         targets_est, A_est = KinematicsLib().batch_global_rigid_transformation(Rs_est, J_est, self.parents, self.GPU, rotate_base=False)
 
