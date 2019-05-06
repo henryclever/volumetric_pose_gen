@@ -34,17 +34,17 @@ class CNN(nn.Module):
 
         self.CNN_pack1 = nn.Sequential(
 
-            nn.Conv2d(3, 128, kernel_size=7, stride=2, padding=3),
+            nn.Conv2d(3, 256, kernel_size=7, stride=2, padding=3),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.1, inplace=False),
             nn.MaxPool2d(3, stride=2),
-            nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=0),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=0.1, inplace=False),
-            nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=0),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=0.1, inplace=False),
             nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=0),
+            nn.ReLU(inplace=True),
+            nn.Dropout(p=0.1, inplace=False),
+            nn.Conv2d(256, 512, kernel_size=3, stride=1, padding=0),
+            nn.ReLU(inplace=True),
+            nn.Dropout(p=0.1, inplace=False),
+            nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=0),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.1, inplace=False),
 
@@ -71,11 +71,11 @@ class CNN(nn.Module):
 
         if self.split == False:
             self.CNN_fc1 = nn.Sequential(
-                nn.Linear(44800, out_size),
+                nn.Linear(89600, out_size),
             )
         if self.split == True:
             self.CNN_fc1 = nn.Sequential(
-                nn.Linear(44800, out_size-10),
+                nn.Linear(89600, out_size-10),
             )
 
         self.CNN_fc2 = nn.Sequential(
@@ -363,8 +363,8 @@ class CNN(nn.Module):
 
 
     def forward_kinematic_angles(self, images, gender_switch, synth_real_switch, targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None, reg_angles = False):
-        self.GPU = False
-        self.dtype = torch.FloatTensor
+        #self.GPU = False
+        #self.dtype = torch.FloatTensor
 
         scores_cnn = self.CNN_pack1(images)
         scores_size = scores_cnn.size()

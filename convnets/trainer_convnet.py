@@ -107,8 +107,8 @@ class PhysicalTrainer():
         print self.num_epochs, 'NUM EPOCHS!'
         #Entire pressure dataset with coordinates in world frame
 
-        #self.save_name = '_' + opt.losstype+'_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_' + str(self.batch_size) + 'b_' + str(self.num_epochs) + 'e'
-        self.save_name = '_' + opt.losstype+'_real_s9_alltest_' + str(self.batch_size) + 'b_' + str(self.num_epochs) + 'e'
+        self.save_name = '_' + opt.losstype+'_synthreal_tanh_s4ang_sig0p5_5xreal_4xsize_voloff_' + str(self.batch_size) + 'b_' + str(self.num_epochs) + 'e'
+        #self.save_name = '_' + opt.losstype+'_real_s9_alltest_' + str(self.batch_size) + 'b_'# + str(self.num_epochs) + 'e'
 
 
 
@@ -510,13 +510,13 @@ class PhysicalTrainer():
             print 'Time taken by epoch',epoch,':',self.t2,' seconds'
 
             if self.opt.aws == True:
-                if epoch == 200: torch.save(self.model, '/home/ubuntu/data/synth/convnet'+self.save_name+'.pt')
-                if epoch == 300: torch.save(self.model, '/home/ubuntu/data/synth/convnet'+self.save_name+'.pt')
+                if epoch == 200: torch.save(self.model, '/home/ubuntu/data/synth/convnet'+self.save_name+'_200e.pt')
+                if epoch == 300: torch.save(self.model, '/home/ubuntu/data/synth/convnet'+self.save_name+'_300e.pt')
 
             else:
 
-                if epoch == 200: torch.save(self.model, '/home/henry/data/synth/convnet'+self.save_name+'.pt')
-                if epoch == 300: torch.save(self.model, '/home/henry/data/synth/convnet'+self.save_name+'.pt')
+                if epoch == 200: torch.save(self.model, '/home/henry/data/synth/convnet'+self.save_name+'_200e.pt')
+                if epoch == 300: torch.save(self.model, '/home/henry/data/synth/convnet'+self.save_name+'_300e.pt')
 
 
         print 'done with epochs, now evaluating'
@@ -526,12 +526,12 @@ class PhysicalTrainer():
         # Save the model (architecture and weights)
 
         if self.opt.aws == True:
-            torch.save(self.model, '/home/ubuntu/data/synth/convnet'+self.save_name+'.pt')
-            pkl.dump(self.train_val_losses,open('/home/ubuntu/data/synth/convnet_losses'+self.save_name+'.p', 'wb'))
+            torch.save(self.model, '/home/ubuntu/data/synth/convnet'+self.save_name+'_300e.pt')
+            pkl.dump(self.train_val_losses,open('/home/ubuntu/data/synth/convnet_losses'+self.save_name+'_300e.p', 'wb'))
 
         else:
-            torch.save(self.model, '/home/henry/data/synth/convnet'+self.save_name+'.pt')
-            pkl.dump(self.train_val_losses,open('/home/henry/data/synth/convnet_losses'+self.save_name+'.p', 'wb'))
+            torch.save(self.model, '/home/henry/data/synth/convnet'+self.save_name+'_300e.pt')
+            pkl.dump(self.train_val_losses,open('/home/henry/data/synth/convnet_losses'+self.save_name+'_300e.p', 'wb'))
 
 
     def train_convnet(self, epoch):
@@ -926,7 +926,7 @@ if __name__ == "__main__":
         #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
         test_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
     else:
-        network_design = False
+        network_design = True
         if network_design == True:
             training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3555_upperbody_stiff.p')
             training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3681_rightside_stiff.p')

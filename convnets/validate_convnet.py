@@ -68,6 +68,8 @@ LOW_TAXEL_THRESH_Y = 0
 HIGH_TAXEL_THRESH_X = (NUMOFTAXELS_X - 1)
 HIGH_TAXEL_THRESH_Y = (NUMOFTAXELS_Y - 1)
 
+DROPOUT = False
+
 torch.set_num_threads(1)
 if torch.cuda.is_available():
     # Use for GPU
@@ -105,15 +107,14 @@ class PhysicalTrainer():
 
         self.count = 0
 
-        print testing_database_file_f
+        #print testing_database_file_f
         print self.num_epochs, 'NUM EPOCHS!'
         # Entire pressure dataset with coordinates in world frame
 
         self.save_name = '_' + opt.losstype + '_synthreal_tanh_s4ang_sig0p5_' + str(self.batch_size) + 'b_' + str(
             self.num_epochs) + 'e'
 
-        print
-        'appending to', 'train' + self.save_name
+        print'appending to', 'train' + self.save_name
         self.train_val_losses = {}
         self.train_val_losses['train' + self.save_name] = []
         self.train_val_losses['val' + self.save_name] = []
@@ -122,6 +123,8 @@ class PhysicalTrainer():
         self.mat_size = (NUMOFTAXELS_X, NUMOFTAXELS_Y)
         self.output_size_train = (NUMOFOUTPUTNODES_TRAIN, NUMOFOUTPUTDIMS)
         self.output_size_val = (NUMOFOUTPUTNODES_TEST, NUMOFOUTPUTDIMS)
+
+        #print training_database_file_f, training_database_file_m
 
         dat_f_synth = self.load_files_to_database(training_database_file_f, 'synth', 'training f synth')
         dat_m_synth = self.load_files_to_database(training_database_file_m, 'synth', 'training m synth')
@@ -680,10 +683,12 @@ class PhysicalTrainer():
         if self.loss_vector_type == 'direct':
             fc_output_size = 72
             if GPU == True:
-                self.model = torch.load('/home/henry/data/convnets/convnet_direct_real_s2_128b_300e.pt')
+                self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_direct_real_s5_128b_300e.pt')
+                #self.model = torch.load('/home/henry/data/convnets/convnet_direct_real_s2_128b_300e.pt')
                 self.model = self.model.cuda()
             else:
-                self.model = torch.load('/home/henry/data/convnets/convnet_direct_real_s2_128b_300e.pt', map_location='cpu')
+                self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_direct_real_s5_128b_300e.pt', map_location='cpu')
+                #self.model = torch.load('/home/henry/data/convnets/convnet_direct_real_s2_128b_300e.pt', map_location='cpu')
 
 
         elif self.loss_vector_type == 'anglesR':
@@ -702,11 +707,13 @@ class PhysicalTrainer():
         elif self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
             fc_output_size = 85## 10 + 3 + 24*3 --- betas, root shift, rotations
             if GPU == True:
-                self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s7ang_sig0p5_5xreal_voloff_128b_200e.pt')
+                #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s7ang_sig0p5_5xreal_voloff_128b_200e.pt')
+                self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_voloff_128b_300e.pt')
                 self.model = self.model.cuda()
             else:
-                self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s7ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
-                #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/2.0xsize/convnet_anglesEU_synthreal_tanh_s3ang_sig0p5_5xreal_voloff_128b_300e.pt', map_location='cpu')
+                #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s6ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
+                #pass
+                self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/2.0xsize/convnet_anglesEU_synthreal_tanh_s8ang_sig0p5_5xreal_voloff_128b_300e.pt', map_location='cpu')
 
             print 'LOADED!!!!!!!!!!!!!!!!!1'
             pp = 0
@@ -727,7 +734,10 @@ class PhysicalTrainer():
 
     def validate_convnet(self, verbose=False, n_batches=None):
 
-        self.model.train()
+        if DROPOUT == True:
+            self.model.train()
+        else:
+            self.model.eval()
         loss = 0.
         n_examples = 0
 
@@ -735,6 +745,9 @@ class PhysicalTrainer():
 
         for batch_i, batch in enumerate(self.test_loader):
 
+            if DROPOUT == True:
+                batch[0] = batch[0].repeat(25, 1, 1, 1)
+                batch[1] = batch[1].repeat(25, 1)
             #self.model.train()
 
             if self.loss_vector_type == 'direct':
@@ -756,8 +769,7 @@ class PhysicalTrainer():
             elif self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
 
                 #print batch[0].size()
-                batch[0] = batch[0].repeat(25, 1, 1, 1)
-                batch[1] = batch[1].repeat(25, 1)
+                #print batch[0].size()
 
                 #get the direct joint locations
                 batch.append(batch[1][:, 30:32])
@@ -806,15 +818,15 @@ class PhysicalTrainer():
             if n_batches and (batch_i >= n_batches):
                 break
 
-            if GPU == True:
-                VisualizationLib().print_error_val(targets.data.cpu(), targets_est_reduced.cpu(), self.output_size_val, self.loss_vector_type, data='validate')
-            else:
-                #print targets.data.size()
-                #print targets_est_reduced.size()
-                #print targets_est_reduced[0:2, :]
+            #print targets.data.size()
+            #print targets_est_reduced.size()
+            #print targets_est_reduced[0:2, :]
 
-                targets_print = torch.mean(targets.data, dim = 0).unsqueeze(0)
-                targets_est_print = torch.mean(targets_est_reduced, dim = 0).unsqueeze(0)
+            targets_print = torch.mean(targets.data, dim = 0).unsqueeze(0)
+            targets_est_print = torch.mean(targets_est_reduced, dim = 0).unsqueeze(0)
+            if GPU == True:
+                error_norm, _, _ = VisualizationLib().print_error_val(targets_print.cpu(), targets_est_print.cpu(), self.output_size_val, self.loss_vector_type, data='validate')
+            else:
 
                 error_norm, _, _ = VisualizationLib().print_error_val(targets_print, targets_est_print, self.output_size_val, self.loss_vector_type, data='validate')
 
@@ -924,10 +936,10 @@ if __name__ == "__main__":
     #test_database_file_m.append(filepath_prefix_qt+'/real/trainval8_150rh1_sit120rh.p')
     #test_database_file_f.append(filepath_prefix_qt + '/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + '/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    #test_database_file_m.append(filepath_prefix_qt + '/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    test_database_file_m.append(filepath_prefix_qt + '/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + '/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + '/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    test_database_file_m.append(filepath_prefix_qt + '/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    #test_database_file_m.append(filepath_prefix_qt + '/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_f.append(filepath_prefix_qt + '/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     p = PhysicalTrainer(training_database_file_f, training_database_file_m, test_database_file_f, test_database_file_m, opt)
 
