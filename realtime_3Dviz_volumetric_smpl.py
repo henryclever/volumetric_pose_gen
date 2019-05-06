@@ -14,6 +14,7 @@ import lib_visualization as libVisualization
 import lib_kinematics as libKinematics
 import lib_render as libRender
 from process_yash_data import ProcessYashData
+from preprocessing_lib import PreprocessingLib
 import dart_skel_sim
 from time import sleep
 import rospy
@@ -23,6 +24,7 @@ from hrl_msgs.msg import FloatArrayBare
 from ar_track_alvar_msgs.msg import AlvarMarkers
 import sensor_msgs.point_cloud2
 import ros_numpy
+from scipy.stats import mode
 
 #ROS
 #import rospy
@@ -59,6 +61,7 @@ class GeneratePose():
         ## Load SMPL model
         self.filepath_prefix = filepath_prefix
 
+        self.index_queue = []
         if gender == "m":
             model_path = filepath_prefix+'/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
         else:
@@ -82,6 +85,8 @@ class GeneratePose():
         rospy.Subscriber("/multi_pose/ar_pose_marker", AlvarMarkers, self.callback_bed_tags)
         rospy.Subscriber("/multi_pose/kinect2/qhd/points", PointCloud2, self.callback_points)
         rospy.Subscriber("/multi_pose/fsascan", FloatArrayBare, self.callback_pressure)
+
+        rospy.Subscriber("/abdout0", FloatArrayBare, self.bed_config_callback)
         #rospy.Subscriber("/abdout0", FloatArrayBare, self.callback_bed_state)
         print "init subscriber"
 
@@ -89,6 +94,31 @@ class GeneratePose():
         self.point_cloud_array = np.array([[0., 0., 0.]])
         self.pc_isnew = False
 
+    def bed_config_callback(self, msg):
+        '''This callback accepts incoming pressure map from
+        the Vista Medical Pressure Mat and sends it out.
+        Remember, this array needs to be binarized to be used'''
+        bedangle = np.round(msg.data[0], 0)
+
+        # this little statement tries to filter the angle data. Some of the angle data is messed up, so we make a queue and take the mode.
+        if self.index_queue == []:
+            self.index_queue = np.zeros(5)
+            if bedangle > 350:
+                self.index_queue = self.index_queue + math.ceil(bedangle) - 360
+            else:
+                self.index_queue = self.index_queue + math.ceil(bedangle)
+            bedangle = mode(self.index_queue)[0][0]
+        else:
+            self.index_queue[1:5] = self.index_queue[0:4]
+            if bedangle > 350:
+                self.index_queue[0] = math.ceil(bedangle) - 360
+            else:
+                self.index_queue[0] = math.ceil(bedangle)
+            bedangle = mode(self.index_queue)[0][0]
+
+        if bedangle > 180: bedangle = bedangle - 360
+
+        self.bedangle = bedangle
 
 
     def callback_bed_tags(self, data):
@@ -143,7 +173,7 @@ class GeneratePose():
     def generate_prechecked_pose(self, gender, posture, stiffness, filename):
 
 
-        prechecked_pose_list = np.load(filename).tolist()
+        prechecked_pose_list = np.load(filename, allow_pickle = True).tolist()
 
 
 
@@ -208,6 +238,107 @@ class GeneratePose():
 
             #break
 
+    def estimate_real_time(self, gender, filename):
+
+
+
+
+
+
+        pyRender = libRender.pyRenderMesh()
+        mat_size = (64, 27)
+
+        if torch.cuda.is_available():
+            # Use for GPU
+            GPU = True
+            dtype = torch.cuda.FloatTensor
+            print '######################### CUDA is available! #############################'
+        else:
+            # Use for CPU
+            GPU = False
+            dtype = torch.FloatTensor
+            print '############################## USING CPU #################################'
+
+        import convnet as convnet
+        from torch.autograd import Variable
+
+        if GPU == True:
+            model = torch.load(filename)
+            model = model.cuda()
+        else:
+            model = torch.load(filename, map_location='cpu')
+
+        while not rospy.is_shutdown():
+
+
+            pmat = np.clip(self.pressure.reshape(mat_size)*3, a_min=0, a_max=100)
+            print pmat.shape
+
+            print self.bedangle
+
+            pmat_stack = PreprocessingLib().preprocessing_create_pressure_angle_stack_realtime(pmat, self.bedangle, mat_size)
+            pmat_stack = torch.Tensor(pmat_stack)
+
+            images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(PreprocessingLib().preprocessing_pressure_map_upsample(pmat_stack.numpy(), multiple=2)))
+            images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
+
+            scores, targets_est, targets_est_reduced, betas_est = model.forward_kinematic_angles_realtime(images_up)
+            print scores.size()
+            print targets_est.size()
+            print targets_est_reduced.size()
+
+
+            for idx in range(len(shape_pose_vol[0])):
+                #print shape_pose_vol[0][idx]
+                self.m.betas[idx] = shape_pose_vol[0][idx]
+
+            print 'init'
+            print shape_pose_vol[2][0],shape_pose_vol[2][1],shape_pose_vol[2][2]
+
+            self.m.pose[:] = np.array(72 * [0.])
+
+            for idx in range(len(shape_pose_vol[1])):
+                #print shape_pose_vol[1][idx]
+                #print self.m.pose[shape_pose_vol[1][idx]]
+                #print shape_pose_vol[2][idx]
+                pose_index = shape_pose_vol[1][idx]*1
+
+                self.m.pose[pose_index] = shape_pose_vol[2][idx]*1.
+
+                #print idx, pose_index, self.m.pose[pose_index], shape_pose_vol[2][idx]
+
+            print self.m.pose[0:3]
+            init_root = np.array(self.m.pose[0:3])+0.000001
+            init_rootR = libKinematics.matrix_from_dir_cos_angles(init_root)
+            root_rot = libKinematics.eulerAnglesToRotationMatrix([np.pi, 0.0, np.pi/2])
+            #print root_rot
+            trans_root = libKinematics.dir_cos_angles_from_matrix(np.matmul(root_rot, init_rootR))
+
+            self.m.pose[0] = trans_root[0]
+            self.m.pose[1] = trans_root[1]
+            self.m.pose[2] = trans_root[2]
+
+            print root_rot
+            print init_rootR
+            print trans_root
+            print init_root, trans_root
+
+
+
+
+            #print self.m.J_transformed[1, :], self.m.J_transformed[4, :]
+            # self.m.pose[51] = selection_r
+            pyRender.mesh_render_pose_bed(self.m, self.point_cloud_array, self.pc_isnew, self.pressure, self.markers)
+            self.point_cloud_array = None
+
+            #dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix, add_floor = False)
+
+            #dss.run_simulation(10000)
+            #generator.standard_render()
+
+
+            #break
+
 if __name__ == "__main__":
 
     gender = "m"
@@ -218,4 +349,5 @@ if __name__ == "__main__":
 
 
     generator = GeneratePose(gender, posture, filepath_prefix)
-    generator.generate_prechecked_pose(gender, posture, stiffness, filepath_prefix+"/data/init_poses/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
+    #generator.generate_prechecked_pose(gender, posture, stiffness, filepath_prefix+"/data/init_poses/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
+    generator.estimate_real_time(gender, filepath_prefix+"/data/convnets/2.0xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt")

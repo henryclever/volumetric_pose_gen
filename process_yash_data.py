@@ -23,7 +23,7 @@ from ikpy.link import OriginLink, URDFLink
 #MISC
 import time as time
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+#from mpl_toolkits.mplot3d import Axes3D
 
 #hmr
 from hmr.src.tf_smpl.batch_smpl import SMPL

@@ -171,6 +171,102 @@ class KinematicsLib():
         return new_J, A
 
 
+    def batch_dir_cos_angles_from_euler_angles(self, theta, zeros_cartesian, ones_cartesian):
+        batch_size_current = theta.size()[0]
+
+        print theta.size()
+
+        cosx = torch.cos(theta[:, :, 0])
+        sinx = torch.sin(theta[:, :, 0])
+        cosy = torch.cos(theta[:, :, 1])
+        siny = torch.sin(theta[:, :, 1])
+        cosz = torch.cos(theta[:, :, 2])
+        sinz = torch.sin(theta[:, :, 2])
+
+        b_zeros = zeros_cartesian[:batch_size_current, :]
+        b_ones = ones_cartesian[:batch_size_current, :]
+
+        R_x = torch.stack([b_ones, b_zeros, b_zeros,
+                           b_zeros, cosx, -sinx,
+                           b_zeros, sinx, cosx], dim=2) \
+            .view(batch_size_current, 24, 3, 3)
+
+        R_y = torch.stack([cosy, b_zeros, siny,
+                           b_zeros, b_ones, b_zeros,
+                           -siny, b_zeros, cosy], dim=2) \
+            .view(batch_size_current, 24, 3, 3)
+
+        R_z = torch.stack([cosz, -sinz, b_zeros,
+                           sinz, cosz, b_zeros,
+                           b_zeros, b_zeros, b_ones], dim=2) \
+            .view(batch_size_current, 24, 3, 3)
+
+        R_x = R_x.view(batch_size_current * 24, 3, 3)
+        R_y = R_y.view(batch_size_current * 24, 3, 3)
+        R_z = R_z.view(batch_size_current * 24, 3, 3)
+
+        R = torch.bmm(torch.bmm(R_z, R_y), R_x).view(batch_size_current, 24, 3, 3)
+
+        m00 = R[:, :, 0, 0]
+        m01 = R[:, :, 0, 1]
+        m02 = R[:, :, 0, 2]
+        m10 = R[:, :, 1, 0]
+        m11 = R[:, :, 1, 1]
+        m12 = R[:, :, 1, 2]
+        m20 = R[:, :, 2, 0]
+        m21 = R[:, :, 2, 1]
+        m22 = R[:, :, 2, 2]
+
+        print m00.size()
+
+        print b_zeros.size()
+
+        # symmetric matrix K
+        K = torch.stack([m00 - m11 - m22, 0.0*m00, 0.0*m00, 0.0*m00,
+                      m01 + m10, m11 - m00 - m22, 0.0*m00, 0.0*m00,
+                      m02 + m20, m12 + m21, m22 - m00 - m11, 0.0*m00,
+                      m21 - m12, m02 - m20, m10 - m01, m00 + m11 + m22])
+        K = K.permute(1, 2, 0).view(-1, 24, 4, 4)
+        K /= 3.0
+        # quaternion is eigenvector of K that corresponds to largest eigenvalue
+
+        K = K.detach().cpu().numpy()
+        w, V = np.linalg.eigh(K)
+
+
+
+        w[0, 2, 1] = 12.
+        print w
+
+        quat = V[0, 0, [3, 0, 1, 2], np.argmax(w[0, 0, :])]
+        print V[0, 0, :, :]
+        print quat
+
+        quat = V[0, 2, [3, 0, 1, 2], np.argmax(w[0, 2, :])]
+        print V[0, 2, :, :]
+        print quat
+
+        quat = V[:, :, [3, 0, 1, 2], :]
+        print quat.shape
+        quat = quat[:, :, :, np.argmax(w, axis=2)[0]]
+        print quat.shape
+        #print quat[:, 0, :, :]
+        print quat[:, :, :, 0]
+        #print quat
+
+
+        if quat[0] < 0.0:
+            np.negative(quat, quat)
+
+
+        phi = 2 * np.arccos(quat[0])
+
+        dir_cos_angles = [0.0, 0.0, 0.0]
+        dir_cos_angles[0] = quat[1] * phi / np.sin(phi / 2)
+        dir_cos_angles[1] = quat[2] * phi / np.sin(phi / 2)
+        dir_cos_angles[2] = quat[3] * phi / np.sin(phi / 2)
+
+
 
 
     def batch_euler_angles_from_dir_cos_angles(self, theta_all):

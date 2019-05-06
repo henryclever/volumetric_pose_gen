@@ -34,17 +34,17 @@ class CNN(nn.Module):
 
         self.CNN_pack1 = nn.Sequential(
 
-            nn.Conv2d(3, 256, kernel_size=7, stride=2, padding=3),
+            nn.Conv2d(3, 128, kernel_size=7, stride=2, padding=3),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.1, inplace=False),
             nn.MaxPool2d(3, stride=2),
+            nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=0),
+            nn.ReLU(inplace=True),
+            nn.Dropout(p=0.1, inplace=False),
+            nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=0),
+            nn.ReLU(inplace=True),
+            nn.Dropout(p=0.1, inplace=False),
             nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=0),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=0.1, inplace=False),
-            nn.Conv2d(256, 512, kernel_size=3, stride=1, padding=0),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=0.1, inplace=False),
-            nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=0),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.1, inplace=False),
 
@@ -71,11 +71,11 @@ class CNN(nn.Module):
 
         if self.split == False:
             self.CNN_fc1 = nn.Sequential(
-                nn.Linear(89600, out_size),
+                nn.Linear(44800, out_size),
             )
         if self.split == True:
             self.CNN_fc1 = nn.Sequential(
-                nn.Linear(89600, out_size-10),
+                nn.Linear(44800, out_size-10),
             )
 
         self.CNN_fc2 = nn.Sequential(
@@ -359,6 +359,63 @@ class CNN(nn.Module):
         #print scores.size(), scores[0, :]
 
         return scores, targets_est_np, targets_est_reduced_np
+
+
+
+
+    def forward_kinematic_angles_realtime(self, images):
+        scores_cnn = self.CNN_pack1(images)
+        scores_size = scores_cnn.size()
+        # print scores_size, 'scores conv1'
+
+        # ''' # NOTE: Uncomment
+        # This combines the height, width, and filters into a single dimension
+        scores_cnn = scores_cnn.view(images.size(0), scores_size[1] * scores_size[2] * scores_size[3])
+        # print 'size for fc layer:', scores_cnn.size()
+
+        scores = self.CNN_fc1(scores_cnn)  # this is N x 229: betas, root shift, Rotation matrices
+
+        # weight the outputs, which are already centered around 0. First make them uniformly smaller than the direct output, which is too large.
+        scores = torch.mul(scores.clone(), 0.01)
+
+        # normalize the output of the network based on the range of the parameters
+        if self.GPU == True:
+            output_norm = 10 * [6.0] + [0.91, 1.98, 0.15] + list(
+                torch.abs(self.bounds.view(72, 2)[:, 1] - self.bounds.view(72, 2)[:, 0]).cpu().numpy())
+        else:
+            output_norm = 10 * [6.0] + [0.91, 1.98, 0.15] + list(
+                torch.abs(self.bounds.view(72, 2)[:, 1] - self.bounds.view(72, 2)[:, 0]).numpy())
+        for i in range(85):
+            scores[:, i] = torch.mul(scores[:, i].clone(), output_norm[i])
+
+        # add a factor so the model starts close to the home position. Has nothing to do with weighting.
+        scores[:, 10] = torch.add(scores[:, 10].clone(), 0.6)
+        scores[:, 11] = torch.add(scores[:, 11].clone(), 1.2)
+        scores[:, 12] = torch.add(scores[:, 12].clone(), 0.1)
+
+
+        betas_est = scores[:,0:10].clone().detach().cpu().numpy()  # make sure to detach so the gradient flow of joints doesn't corrupt the betas
+        root_shift_est = scores[:, 10:13].clone().detach().cpu().numpy()
+
+        # normalize for tan activation function
+        scores[:, 13:85] -= torch.mean(self.bounds[0:72, 0:2], dim=1)
+        scores[:, 13:85] *= (2. / torch.abs(self.bounds[0:72, 0] - self.bounds[0:72, 1]))
+        scores[:, 13:85] = scores[:, 13:85].tanh()
+        scores[:, 13:85] /= (2. / torch.abs(self.bounds[0:72, 0] - self.bounds[0:72, 1]))
+        scores[:, 13:85] += torch.mean(self.bounds[0:72, 0:2], dim=1)
+
+        if self.loss_vector_type == 'anglesDC':
+
+            angles_est = scores[:, 13:85].clone().detach().cpu().numpy()
+
+        elif self.loss_vector_type == 'anglesEU':
+
+            angles_est = KinematicsLib().batch_dir_cos_angles_from_euler_angles(scores[:, 13:85].view(-1, 24, 3).clone(), self.zeros_cartesian, self.ones_cartesian).view(-1, 24, 3).clone().detach().cpu().numpy()
+
+
+        return betas_est, root_shift_est, angles_est
+
+
 
 
 
