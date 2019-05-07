@@ -107,8 +107,8 @@ class PhysicalTrainer():
         print self.num_epochs, 'NUM EPOCHS!'
         #Entire pressure dataset with coordinates in world frame
 
-        #self.save_name = '_' + opt.losstype+'_synthreal_tanh_s4ang_sig0p5_5xreal_4xsize_voloff_' + str(self.batch_size) + 'b_' + str(self.num_epochs) + 'e'
-        self.save_name = '_' + opt.losstype+'_real_s9_alltest_' + str(self.batch_size) + 'b_'# + str(self.num_epochs) + 'e'
+        self.save_name = '_' + opt.losstype+'_synthreal_tanh_s4ang_sig1p0all_4xsize_voloff_' + str(self.batch_size) + 'b_' + str(self.num_epochs) + 'e'
+        #self.save_name = '_' + opt.losstype+'_real_s9_alltest_' + str(self.batch_size) + 'b_'# + str(self.num_epochs) + 'e'
 
 
 
@@ -136,7 +136,6 @@ class PhysicalTrainer():
                 self.train_x_flat.append(dat_m_synth['images'][entry] * 3)
 
 
-        self.train_x_flat = PreprocessingLib().preprocessing_blur_images(self.train_x_flat, self.mat_size, sigma=0.5)
 
         if dat_f_real is not None:
             for entry in range(len(dat_f_real['images'])):
@@ -145,6 +144,8 @@ class PhysicalTrainer():
             for entry in range(len(dat_m_real['images'])):
                 self.train_x_flat.append(dat_m_real['images'][entry])
 
+
+        self.train_x_flat = PreprocessingLib().preprocessing_blur_images(self.train_x_flat, self.mat_size, sigma=1.0)
 
 
         self.train_a_flat = []  # Initialize the testing pressure mat angle list
@@ -319,6 +320,7 @@ class PhysicalTrainer():
 
 
 
+        self.test_x_flat = PreprocessingLib().preprocessing_blur_images(self.test_x_flat, self.mat_size, sigma=1.0)
         if len(self.test_x_flat) == 0: print("NO TESTING DATA INCLUDED")
 
         test_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.test_x_flat, self.test_a_flat, self.include_inter, self.mat_size, self.verbose)
@@ -926,7 +928,7 @@ if __name__ == "__main__":
         #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
         test_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
     else:
-        network_design = False
+        network_design = True
         if network_design == True:
             training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3555_upperbody_stiff.p')
             training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3681_rightside_stiff.p')
