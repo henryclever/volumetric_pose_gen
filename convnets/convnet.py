@@ -686,7 +686,7 @@ class CNN(nn.Module):
             #print scores[0, :]
             #here multiply by 24/10 when you are regressing to real data so it balances with the synthetic data
             scores = torch.mul(torch.add(1.0, torch.mul(1.4, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
-            scores = torch.mul(torch.add(1.0, torch.mul(4.0, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
+            #scores = torch.mul(torch.add(1.0, torch.mul(4.0, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
             #scores = torch.mul(torch.mul(2.4, torch.sub(1, synth_real_switch)).unsqueeze(1), scores)
 
             # here multiply by 5 when you are regressing to real data because there is only 1/5 the amount of it
