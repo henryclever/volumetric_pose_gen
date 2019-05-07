@@ -248,7 +248,7 @@ class KinematicsLib():
 
         quat = V[:, :, [3, 0, 1, 2], :]
         print quat.shape
-        quat = quat[:, :, :, np.argmax(w, axis=2)[0]]
+        quat = quat[:, np.arange(24), :, np.argmax(w, axis=2)[0]]
         print quat.shape
         #print quat[:, 0, :, :]
         print quat[:, :, :, 0]
