@@ -107,8 +107,8 @@ class PhysicalTrainer():
         print self.num_epochs, 'NUM EPOCHS!'
         #Entire pressure dataset with coordinates in world frame
 
-        self.save_name = '_' + opt.losstype+'_synthreal_tanh_s4ang_sig0p5_5xreal_4xsize_voloff_' + str(self.batch_size) + 'b_' + str(self.num_epochs) + 'e'
-        #self.save_name = '_' + opt.losstype+'_real_s9_alltest_' + str(self.batch_size) + 'b_'# + str(self.num_epochs) + 'e'
+        #self.save_name = '_' + opt.losstype+'_synthreal_tanh_s4ang_sig0p5_5xreal_4xsize_voloff_' + str(self.batch_size) + 'b_' + str(self.num_epochs) + 'e'
+        self.save_name = '_' + opt.losstype+'_real_s9_alltest_' + str(self.batch_size) + 'b_'# + str(self.num_epochs) + 'e'
 
 
 
@@ -492,7 +492,7 @@ class PhysicalTrainer():
         elif self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'direct' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
             self.optimizer2 = optim.Adam(self.model.parameters(), lr=0.00002, weight_decay=0.0005)  #0.000002 does not converge even after 100 epochs on subjects 2-8 kin cons. use .00001
         #self.optimizer = optim.RMSprop(self.model.parameters(), lr=0.000001, momentum=0.7, weight_decay=0.0005)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.000002, weight_decay=0.0005) #start with .00005
+        self.optimizer = optim.Adam(self.model.parameters(), lr=0.00002, weight_decay=0.0005) #start with .00005
 
 
         # train the model one epoch at a time
@@ -780,7 +780,7 @@ class PhysicalTrainer():
                 batch[1] = batch[1][:, 0:30]
 
 
-                images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2)))
+                images_up_non_tensor = np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2))
                 images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
                 images, targets = Variable(batch[0].type(dtype), requires_grad=False), Variable(batch[1].type(dtype), requires_grad=False),
 
@@ -926,7 +926,7 @@ if __name__ == "__main__":
         #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
         test_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
     else:
-        network_design = True
+        network_design = False
         if network_design == True:
             training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3555_upperbody_stiff.p')
             training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_3681_rightside_stiff.p')

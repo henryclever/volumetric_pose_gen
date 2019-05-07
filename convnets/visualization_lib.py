@@ -158,6 +158,56 @@ class VisualizationLib():
         #return error_avg[:,3], error_std[:,3]
         return error_norm, error_avg[:,3], error_std[:,3]
 
+    def print_error_iros2018(self, target, score, output_size, loss_vector_type = None, data = None, printerror = True):
+
+        error = (score - target)
+
+        print error.shape
+        error = np.reshape(error, (error.shape[0], output_size[0], output_size[1]))
+
+        print error.shape
+
+        error_norm = np.expand_dims(np.linalg.norm(error, axis = 2),2)
+        error = np.concatenate((error, error_norm), axis = 2)
+
+        error_avg = np.mean(error, axis=0) / 10
+
+        for i in error_avg[:, 3]*10:
+            print i
+
+        error_avg = np.reshape(error_avg, (output_size[0], output_size[1]+1))
+        error_avg_print = np.reshape(np.array(["%.2f" % w for w in error_avg.reshape(error_avg.size)]),
+                                     (output_size[0], output_size[1] + 1))
+
+
+        error_avg_print = np.transpose(np.concatenate(([['Average Error for Last Batch', '       ', 'Head   ',
+                                                   'Torso  ', 'R Elbow', 'L Elbow', 'R Hand ', 'L Hand ',
+                                                   'R Knee ', 'L Knee ', 'R Foot ', 'L Foot ']], np.transpose(
+            np.concatenate(([['', '', '', ''], [' x, cm ', ' y, cm ', ' z, cm ', '  norm ']], error_avg_print))))))
+        if printerror == True:
+            print data, error_avg_print
+
+
+        error_std = np.std(error, axis=0) / 10
+
+        for i in error_std[:, 3]*10:
+            print i
+
+        error_std = np.reshape(error_std, (output_size[0], output_size[1] + 1))
+        error_std_print = np.reshape(np.array(["%.2f" % w for w in error_std.reshape(error_std.size)]),
+                                     (output_size[0], output_size[1] + 1))
+
+        error_std_print = np.transpose(np.concatenate(([['Error Standard Deviation for Last Batch', '       ', 'Head   ', 'Torso  ',
+                              'R Elbow', 'L Elbow', 'R Hand ', 'L Hand ', 'R Knee ', 'L Knee ',
+                              'R Foot ', 'L Foot ']], np.transpose(
+                np.concatenate(([['', '', '', ''], ['x, cm', 'y, cm', 'z, cm', '  norm ']], error_std_print))))))
+        if printerror == True:
+            print data, error_std_print
+        error_norm = np.squeeze(error_norm, axis = 2)
+
+        #return error_avg[:,3], error_std[:,3]
+        return error_norm, error_avg[:,3], error_std[:,3]
+
 
     def visualize_error_from_distance(self, bed_distance, error_norm):
         plt.close()
