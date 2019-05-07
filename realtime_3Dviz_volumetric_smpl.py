@@ -128,19 +128,20 @@ class GeneratePose():
             if marker.id == 0:
                 self.marker0 = np.array([marker.pose.pose.position.x,
                                          marker.pose.pose.position.y,
-                                         marker.pose.pose.position.z])
+                                         marker.pose.pose.position.z])*213./228.
             if marker.id == 1:
                 self.marker1 = np.array([marker.pose.pose.position.x,
                                          marker.pose.pose.position.y,
-                                         marker.pose.pose.position.z])
+                                         marker.pose.pose.position.z])*213./228.
             if marker.id == 2:
                 self.marker2 = np.array([marker.pose.pose.position.x,
                                          marker.pose.pose.position.y,
-                                         marker.pose.pose.position.z])
+                                         marker.pose.pose.position.z])*213./228.
             if marker.id == 3:
                 self.marker3 = np.array([marker.pose.pose.position.x,
                                          marker.pose.pose.position.y,
-                                         marker.pose.pose.position.z])
+                                         marker.pose.pose.position.z])*213./228.
+
 
         self.markers = [self.marker0, self.marker1, self.marker2, self.marker3]
 
@@ -155,7 +156,7 @@ class GeneratePose():
         self.point_cloud_array = np.array(point_cloud_array)
 
         try:
-            self.point_cloud_array -= (self.marker2 - np.array([0.0, 0.0, 0.1]))
+            self.point_cloud_array -= (self.marker2 - np.array([0.0, 0.0, 0.0]))
         except:
             self.point_cloud_array = np.array([[0., 0., 0.]])
         self.pc_isnew = True
@@ -271,7 +272,7 @@ class GeneratePose():
         while not rospy.is_shutdown():
 
 
-            pmat = np.clip(self.pressure.reshape(mat_size)*3, a_min=0, a_max=100)
+            pmat = np.fliplr(np.flipud(np.clip(self.pressure.reshape(mat_size)*3.5, a_min=0, a_max=100)))
             print pmat.shape
 
             print self.bedangle
@@ -282,32 +283,20 @@ class GeneratePose():
             images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(PreprocessingLib().preprocessing_pressure_map_upsample(pmat_stack.numpy(), multiple=2)))
             images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
 
-            scores, targets_est, targets_est_reduced, betas_est = model.forward_kinematic_angles_realtime(images_up)
-            print scores.size()
-            print targets_est.size()
-            print targets_est_reduced.size()
+            betas_est, root_shift_est, angles_est = model.forward_kinematic_angles_realtime(images_up)
 
+            print betas_est, root_shift_est, angles_est
+            angles_est = angles_est.reshape(72)
 
-            for idx in range(len(shape_pose_vol[0])):
+            for idx in range(10):
                 #print shape_pose_vol[0][idx]
-                self.m.betas[idx] = shape_pose_vol[0][idx]
+                self.m.betas[idx] = betas_est[idx]
 
-            print 'init'
-            print shape_pose_vol[2][0],shape_pose_vol[2][1],shape_pose_vol[2][2]
 
-            self.m.pose[:] = np.array(72 * [0.])
+            for idx in range(72):
+                self.m.pose[idx] = angles_est[idx]
 
-            for idx in range(len(shape_pose_vol[1])):
-                #print shape_pose_vol[1][idx]
-                #print self.m.pose[shape_pose_vol[1][idx]]
-                #print shape_pose_vol[2][idx]
-                pose_index = shape_pose_vol[1][idx]*1
 
-                self.m.pose[pose_index] = shape_pose_vol[2][idx]*1.
-
-                #print idx, pose_index, self.m.pose[pose_index], shape_pose_vol[2][idx]
-
-            print self.m.pose[0:3]
             init_root = np.array(self.m.pose[0:3])+0.000001
             init_rootR = libKinematics.matrix_from_dir_cos_angles(init_root)
             root_rot = libKinematics.eulerAnglesToRotationMatrix([np.pi, 0.0, np.pi/2])
@@ -318,17 +307,9 @@ class GeneratePose():
             self.m.pose[1] = trans_root[1]
             self.m.pose[2] = trans_root[2]
 
-            print root_rot
-            print init_rootR
-            print trans_root
-            print init_root, trans_root
-
-
-
-
             #print self.m.J_transformed[1, :], self.m.J_transformed[4, :]
             # self.m.pose[51] = selection_r
-            pyRender.mesh_render_pose_bed(self.m, self.point_cloud_array, self.pc_isnew, self.pressure, self.markers)
+            pyRender.mesh_render_pose_bed(self.m, root_shift_est, self.point_cloud_array, self.pc_isnew, pmat, self.markers)
             self.point_cloud_array = None
 
             #dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix, add_floor = False)

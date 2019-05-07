@@ -174,8 +174,6 @@ class KinematicsLib():
     def batch_dir_cos_angles_from_euler_angles(self, theta, zeros_cartesian, ones_cartesian):
         batch_size_current = theta.size()[0]
 
-        print theta.size()
-
         cosx = torch.cos(theta[:, :, 0])
         sinx = torch.sin(theta[:, :, 0])
         cosy = torch.cos(theta[:, :, 1])
@@ -233,39 +231,25 @@ class KinematicsLib():
         K = K.detach().cpu().numpy()
         w, V = np.linalg.eigh(K)
 
-
-
-        w[0, 2, 1] = 12.
-        print w
-
-        quat = V[0, 0, [3, 0, 1, 2], np.argmax(w[0, 0, :])]
-        print V[0, 0, :, :]
-        print quat
-
-        quat = V[0, 2, [3, 0, 1, 2], np.argmax(w[0, 2, :])]
-        print V[0, 2, :, :]
-        print quat
-
         quat = V[:, :, [3, 0, 1, 2], :]
-        print quat.shape
         quat = quat[:, np.arange(24), :, np.argmax(w, axis=2)[0]]
-        print quat.shape
-        #print quat[:, 0, :, :]
-        print quat[:, :, :, 0]
-        #print quat
+        quat = np.swapaxes(quat, 0, 1)
 
+        neg_multiplier = np.copy(quat[:, :, 0])
+        neg_multiplier[neg_multiplier < 0] = -1.
+        neg_multiplier[neg_multiplier >= 0] = 1.
 
-        if quat[0] < 0.0:
-            np.negative(quat, quat)
+        neg_multiplier = np.swapaxes(np.swapaxes(np.stack(4*[neg_multiplier]), 0, 1), 1, 2)
 
+        quat = neg_multiplier*quat - 0.000001
 
-        phi = 2 * np.arccos(quat[0])
-
-        dir_cos_angles = [0.0, 0.0, 0.0]
-        dir_cos_angles[0] = quat[1] * phi / np.sin(phi / 2)
-        dir_cos_angles[1] = quat[2] * phi / np.sin(phi / 2)
-        dir_cos_angles[2] = quat[3] * phi / np.sin(phi / 2)
-
+        phi = 2 * np.arccos(quat[:, :, 0])
+        dir_cos_angles = np.zeros_like(quat)
+        dir_cos_angles = dir_cos_angles[:, :, 0:3]
+        dir_cos_angles[:, :, 0] = quat[:, :, 1] * phi / np.sin(phi / 2)
+        dir_cos_angles[:, :, 1] = quat[:, :, 2] * phi / np.sin(phi / 2)
+        dir_cos_angles[:, :, 2] = quat[:, :, 3] * phi / np.sin(phi / 2)
+        return dir_cos_angles
 
 
 

@@ -100,7 +100,8 @@ class pyRenderMesh():
         # dterms = 'vc', 'camera', 'bgcolor'
         self.first_pass = True
         self.scene = pyrender.Scene()
-        self.human_mat = pyrender.MetallicRoughnessMaterial(baseColorFactor=[0.3, 0.3, 1.0 ,0.5])
+        self.human_mat = pyrender.MetallicRoughnessMaterial(baseColorFactor=[0.0, 0.0, 1.0 ,1.0])
+
 
 
 
@@ -195,8 +196,9 @@ class pyRenderMesh():
 
         pmat_reshaped = pmat.reshape(64, 27)
 
-        pmat_colors = np.flipud(np.fliplr(cm.jet(pmat_reshaped/100)))
+        pmat_colors = cm.jet(pmat_reshaped/100)
         print pmat_colors.shape
+        pmat_colors[:, :, 3] = 0.5
 
         pmat_xyz = np.zeros((64, 27, 3))
         pmat_faces = []
@@ -205,16 +207,16 @@ class pyRenderMesh():
         for j in range(64):
             for i in range(27):
 
-                pmat_xyz[j, i, 1] = i * 0.0286 * 1.0926 + 0.02
+                pmat_xyz[j, i, 1] = i * 0.0286 * 1.06 - 0.04#1.0926 - 0.02
                 if j > 23:
-                    pmat_xyz[j, i, 0] = ((64 - j) * 0.0286 - 0.0286 * 3 * np.sin(np.deg2rad(angle)))*1.1406 + 0.05
-                    pmat_xyz[j, i, 2] = 0.1
+                    pmat_xyz[j, i, 0] = ((64 - j) * 0.0286 - 0.0286 * 3 * np.sin(np.deg2rad(angle)))*1.04 + 0.11#1.1406 + 0.05
+                    pmat_xyz[j, i, 2] = 0.12
                     # print marker.pose.position.x, 'x'
                 else:
 
                     pmat_xyz[j, i, 0] = ((41) * 0.0286 + (23 - j) * 0.0286 * np.cos(np.deg2rad(angle)) \
-                                        - (0.0286 * 3 * np.sin(np.deg2rad(angle))) * 0.85)*1.1406 + 0.06
-                    pmat_xyz[j, i, 2] = -((23 - j) * 0.0286 * np.sin(np.deg2rad(angle))) * 0.85 + 0.1
+                                        - (0.0286 * 3 * np.sin(np.deg2rad(angle))) * 0.85)*1.04 + 0.12#1.1406 + 0.05
+                    pmat_xyz[j, i, 2] = -((23 - j) * 0.0286 * np.sin(np.deg2rad(angle))) * 0.85 + 0.12
                     # print j, marker.pose.position.z, marker.pose.position.y, 'head'
 
                 if j < 63 and i < 26:
@@ -245,10 +247,11 @@ class pyRenderMesh():
 
 
 
-    def mesh_render_pose_bed(self, m, pc, pc_isnew, pmat, markers):
+    def mesh_render_pose_bed(self, m, root_pos, pc, pc_isnew, pmat, markers):
+        print root_pos
 
         #get SMPL mesh
-        smpl_verts = (m.r - m.J_transformed[0, :])#*228./214.
+        smpl_verts = (m.r - m.J_transformed[0, :])+[root_pos[1]-0.286+0.15, root_pos[0]-0.286, 0.12-root_pos[2]]#*228./214.
         smpl_tm = trimesh.base.Trimesh(vertices=smpl_verts, faces=m.f)
         smpl_mesh = pyrender.Mesh.from_trimesh(smpl_tm, material=self.human_mat, wireframe = True)
 

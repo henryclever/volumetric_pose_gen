@@ -410,10 +410,9 @@ class CNN(nn.Module):
 
         elif self.loss_vector_type == 'anglesEU':
 
-            angles_est = KinematicsLib().batch_dir_cos_angles_from_euler_angles(scores[:, 13:85].view(-1, 24, 3).clone(), self.zeros_cartesian, self.ones_cartesian).view(-1, 24, 3).clone().detach().cpu().numpy()
+            angles_est = KinematicsLib().batch_dir_cos_angles_from_euler_angles(scores[:, 13:85].view(-1, 24, 3).clone(), self.zeros_cartesian, self.ones_cartesian)
 
-
-        return betas_est, root_shift_est, angles_est
+        return np.squeeze(betas_est), np.squeeze(root_shift_est), np.squeeze(angles_est)
 
 
 
