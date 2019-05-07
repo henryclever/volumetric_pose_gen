@@ -34,17 +34,17 @@ class CNN(nn.Module):
 
         self.CNN_pack1 = nn.Sequential(
 
-            nn.Conv2d(3, 128, kernel_size=7, stride=2, padding=3),
+            nn.Conv2d(3, 256, kernel_size=7, stride=2, padding=3),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.1, inplace=False),
             nn.MaxPool2d(3, stride=2),
-            nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=0),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=0.1, inplace=False),
-            nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=0),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=0.1, inplace=False),
             nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=0),
+            nn.ReLU(inplace=True),
+            nn.Dropout(p=0.1, inplace=False),
+            nn.Conv2d(256, 512, kernel_size=3, stride=1, padding=0),
+            nn.ReLU(inplace=True),
+            nn.Dropout(p=0.1, inplace=False),
+            nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=0),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.1, inplace=False),
 
@@ -71,11 +71,11 @@ class CNN(nn.Module):
 
         if self.split == False:
             self.CNN_fc1 = nn.Sequential(
-                nn.Linear(44800, out_size),
+                nn.Linear(89600, out_size),
             )
         if self.split == True:
             self.CNN_fc1 = nn.Sequential(
-                nn.Linear(44800, out_size-10),
+                nn.Linear(89600, out_size-10),
             )
 
         self.CNN_fc2 = nn.Sequential(
@@ -685,7 +685,7 @@ class CNN(nn.Module):
             #print scores[0, :]
             #here multiply by 24/10 when you are regressing to real data so it balances with the synthetic data
             scores = torch.mul(torch.add(1.0, torch.mul(1.4, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
-            #scores = torch.mul(torch.add(1.0, torch.mul(4.0, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
+            scores = torch.mul(torch.add(1.0, torch.mul(4.0, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
             #scores = torch.mul(torch.mul(2.4, torch.sub(1, synth_real_switch)).unsqueeze(1), scores)
 
             # here multiply by 5 when you are regressing to real data because there is only 1/5 the amount of it

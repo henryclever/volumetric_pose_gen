@@ -107,7 +107,7 @@ class PhysicalTrainer():
         print self.num_epochs, 'NUM EPOCHS!'
         #Entire pressure dataset with coordinates in world frame
 
-        self.save_name = '_' + opt.losstype+'_synthreal_tanh_s4ang_sig1p0all_4xsize_voloff_' + str(self.batch_size) + 'b_' + str(self.num_epochs) + 'e'
+        self.save_name = '_' + opt.losstype+'_synthreal_s4_sig0p5_5xreal_4xsize_voloff_' + str(self.batch_size) + 'b_' + str(self.num_epochs) + 'e'
         #self.save_name = '_' + opt.losstype+'_real_s9_alltest_' + str(self.batch_size) + 'b_'# + str(self.num_epochs) + 'e'
 
 
@@ -130,10 +130,10 @@ class PhysicalTrainer():
         self.train_x_flat = []  # Initialize the testing pressure mat list
         if dat_f_synth is not None:
             for entry in range(len(dat_f_synth['images'])):
-                self.train_x_flat.append(dat_f_synth['images'][entry] * 3)
+                self.train_x_flat.append(np.clip(dat_f_synth['images'][entry] * 3,a_min=0, a_max=100))
         if dat_m_synth is not None:
             for entry in range(len(dat_m_synth['images'])):
-                self.train_x_flat.append(dat_m_synth['images'][entry] * 3)
+                self.train_x_flat.append(np.clip(dat_m_synth['images'][entry] * 3,a_min=0, a_max=100))
 
 
 
@@ -144,8 +144,7 @@ class PhysicalTrainer():
             for entry in range(len(dat_m_real['images'])):
                 self.train_x_flat.append(dat_m_real['images'][entry])
 
-
-        self.train_x_flat = PreprocessingLib().preprocessing_blur_images(self.train_x_flat, self.mat_size, sigma=1.0)
+        self.train_x_flat = PreprocessingLib().preprocessing_blur_images(self.train_x_flat, self.mat_size, sigma=0.5)
 
 
         self.train_a_flat = []  # Initialize the testing pressure mat angle list
@@ -310,6 +309,10 @@ class PhysicalTrainer():
             for entry in range(len(test_dat_m['images'])):
                 self.test_x_flat.append(test_dat_m['images'][entry])
 
+
+        self.test_x_flat = PreprocessingLib().preprocessing_blur_images(self.test_x_flat, self.mat_size, sigma=0.5)
+
+
         self.test_a_flat = []  # Initialize the testing pressure mat angle listhave
         if test_dat_f is not None:
             for entry in range(len(test_dat_f['images'])):
@@ -320,7 +323,6 @@ class PhysicalTrainer():
 
 
 
-        self.test_x_flat = PreprocessingLib().preprocessing_blur_images(self.test_x_flat, self.mat_size, sigma=1.0)
         if len(self.test_x_flat) == 0: print("NO TESTING DATA INCLUDED")
 
         test_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.test_x_flat, self.test_a_flat, self.include_inter, self.mat_size, self.verbose)
