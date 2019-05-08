@@ -136,7 +136,6 @@ class PhysicalTrainer():
                 self.train_x_flat.append(np.clip(dat_m_synth['images'][entry] * 3,a_min=0, a_max=100))
 
 
-
         if dat_f_real is not None:
             for entry in range(len(dat_f_real['images'])):
                 self.train_x_flat.append(dat_f_real['images'][entry])
@@ -947,10 +946,10 @@ if __name__ == "__main__":
                     
             #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval8_150rh1_sit120rh.p')
 
-            training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_3573_upperbody_stiff.p')
+            #training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_3573_upperbody_stiff.p')
             training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_3628_rightside_stiff.p')
             training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_3646_leftside_stiff.p')
-            training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_3735_lowerbody_stiff.p')
+            #training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_3735_lowerbody_stiff.p')
             training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_3841_none_stiff.p')
             training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1302_upperbody_stiff.p')
             training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1259_rightside_stiff.p')

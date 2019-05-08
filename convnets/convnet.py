@@ -464,7 +464,7 @@ class CNN(nn.Module):
 
 
         if test_ground_truth == False or is_training == False:
-            betas_est = scores[:, 0:10].clone().detach() #make sure to detach so the gradient flow of joints doesn't corrupt the betas
+            betas_est = scores[:, 0:10].clone()#.detach() #make sure to detach so the gradient flow of joints doesn't corrupt the betas
             root_shift_est = scores[:, 10:13].clone()
 
             # normalize for tan activation function
