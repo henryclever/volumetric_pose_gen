@@ -573,12 +573,13 @@ class GeneratePose():
         for subject in subjects:
             for movement in movements:
 
-                filename = "/media/henry/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/" + movement + ".p"
+                #filename = "/media/henry/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/" + movement + ".p"
+                filename = "/home/ubuntu/data/init_ik_solutions_old/subject_" + subject + "/" + movement + ".p"
                 #filename_save = "/media/henry/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/" + movement + "_angles.p"
-                filename_save_orig = "/home/henry/data/init_ik_solutions/subject_" + subject + "/" + movement + "_angles_orig.p"
-                filename_save_offset = "/home/henry/data/init_ik_solutions/subject_" + subject + "/" + movement + "_angles_offset.p"
+                filename_save_orig = "/home/ubuntu/data/init_ik_solutions/subject_" + subject + "/" + movement + "_angles_orig.p"
+                filename_save_offset = "/home/ubuntu/data/init_ik_solutions/subject_" + subject + "/" + movement + "_angles_offset.p"
 
-                mat_transform_file = "/media/henry/multimodal_data_2/pressure_mat_pose_data/mat_axes.p"
+                mat_transform_file = "/media/ubuntu/multimodal_data_2/pressure_mat_pose_data/mat_axes.p"
 
                 if posture == "sit":
                     bedangle = 60.
@@ -614,7 +615,7 @@ class GeneratePose():
                     Jtc_origins = generator.get_joint_origins(Jtc, lengths)
                     # print Jtc_origins
 
-                    angles_from_mocap = generator.solve_ik_tree(Jtc_origins, Jtc, False)
+                    angles_from_mocap = generator.solve_ik_tree(Jtc_origins, Jtc, False, False)
 
                     self.ax.plot(Jtc_origins[:, 0], Jtc_origins[:, 1], Jtc_origins[:, 2], markerfacecolor='k',
                                  markeredgecolor='k', marker='o', markersize=5, alpha=0.5)
@@ -686,7 +687,7 @@ class GeneratePose():
 
                     Jtc_origins_offset = generator.get_joint_origins(Jtc_offset, lengths_offset)
 
-                    angles_from_mocap_offset = generator.solve_ik_tree(Jtc_origins_offset, Jtc_offset, True)
+                    angles_from_mocap_offset = generator.solve_ik_tree(Jtc_origins_offset, Jtc_offset, False, False)
 
                     for i in range(2, 10):
                         self.ax.plot([Jtc_offset[i, 0]], [Jtc_offset[i, 1]], [Jtc_offset[i, 2]], markerfacecolor='k',
@@ -722,7 +723,7 @@ class GeneratePose():
         for subject in subjects:
             for movement in movements:
                 print "subject: ", subject, " movement: ", movement
-                filename = "/media/henry/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/" + movement + "_angles.p"
+                filename = "/media/ubuntu/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/" + movement + "_angles.p"
 
                 with open(filename, 'rb') as fp:
                     angles_data = pickle.load(fp)
