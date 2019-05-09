@@ -322,10 +322,14 @@ def ikpy_leg(origins, current):
     omega_hip = np.array([rot_hip[2,1]-rot_hip[1,2], rot_hip[0,2]-rot_hip[2,0], rot_hip[1,0]-rot_hip[0,1]])
     omega_hip = (1/(2*np.sin(theta_inv_hip)))*omega_hip
 
-    #rot_knee = geometry_utils.Rx_matrix(IK_A[4])
+    R_knee = geometry_utils.Rx_matrix(IK_A[4])
     #print(rot_knee)
     #Tr_knee = rot_knee[0,0] + rot_knee[1,1] + rot_knee[2,2]
-    #print Tr_knee, 'Tr knee'
+
+
+
+    R_hip = np.matmul(hip_1, np.matmul(hip_2, hip_3))
+
     #theta_inv_knee = np.arccos((Tr_knee - 1)/2)
     #print theta_inv_knee, 'th inv knee'
     #omega_knee = np.array([rot_knee[2,1]-rot_knee[1,2], rot_knee[0,2]-rot_knee[2,0], rot_knee[1,0]-rot_knee[0,1]])
@@ -333,7 +337,7 @@ def ikpy_leg(origins, current):
     #omega_knee = (1/(2*np.sin(theta_inv_knee)))*omega_knee
 
 
-    return omega_hip, knee_chain, IK_K, ankle_chain, IK_A
+    return omega_hip, knee_chain, IK_K, ankle_chain, IK_A, R_hip, R_knee
 
 
 
@@ -404,12 +408,16 @@ def ikpy_left_arm(origin, current, posture = "lay"):
     #IK_W *= 0
    # print IK_RW, 'RW'
 
+    shoulder_init = geometry_utils.Rx_matrix(shoulder_rot)
     shoulder_1 = geometry_utils.Rz_matrix(IK_E[3])
     shoulder_2 = geometry_utils.Ry_matrix(IK_E[4])
     shoulder_3 = geometry_utils.Rx_matrix(IK_W[5])
+
+    R_shoulder = np.matmul(shoulder_init, np.matmul(shoulder_1, np.matmul(shoulder_2, shoulder_3)))
     #print shoulder_1, 'shoulder 1'
     #print shoulder_2, 'shoulder 2'
     #print shoulder_3, 'shoulder 3'
+    R_elbow = geometry_utils.Ry_matrix(IK_W[6])
 
     rot_shoulder = shoulder_1.dot(shoulder_2).dot(shoulder_3)
     Tr_shoulder = rot_shoulder[0, 0] + rot_shoulder[1, 1] + rot_shoulder[2, 2]
@@ -422,7 +430,7 @@ def ikpy_left_arm(origin, current, posture = "lay"):
     #IK_W[4] = -np.pi/2
     #IK_W[5] = -np.pi/4
 
-    return omega_shoulder, elbow_chain, IK_E, wrist_chain, IK_W
+    return omega_shoulder, elbow_chain, IK_E, wrist_chain, IK_W, R_shoulder, R_elbow
 
 
 def ikpy_right_arm(origin, current, posture = "lay"):
@@ -492,14 +500,21 @@ def ikpy_right_arm(origin, current, posture = "lay"):
     #IK_W *= 0
    # print IK_RW, 'RW'
 
+    shoulder_init = geometry_utils.Rx_matrix(shoulder_rot)
     shoulder_1 = geometry_utils.Rz_matrix(IK_E[3])
     shoulder_2 = geometry_utils.Ry_matrix(IK_E[4])
     shoulder_3 = geometry_utils.Rx_matrix(IK_W[5])
+
+    R_shoulder = np.matmul(shoulder_init, np.matmul(shoulder_1, np.matmul(shoulder_2, shoulder_3)))
+    #R_shoulder = np.matmul(shoulder_1, np.matmul(shoulder_2, shoulder_3))
+
     #print shoulder_1, 'shoulder 1'
     #print shoulder_2, 'shoulder 2'
     #print shoulder_3, 'shoulder 3'
+    R_elbow = geometry_utils.Ry_matrix(IK_W[6])
 
     rot_shoulder = shoulder_1.dot(shoulder_2).dot(shoulder_3)
+
     Tr_shoulder = rot_shoulder[0, 0] + rot_shoulder[1, 1] + rot_shoulder[2, 2]
     theta_inv_shoulder = np.arccos((Tr_shoulder - 1) / 2)
     #print(theta_inv_shoulder, 'theta inv should')
@@ -510,7 +525,41 @@ def ikpy_right_arm(origin, current, posture = "lay"):
     #IK_W[4] = -np.pi/2
     #IK_W[5] = -np.pi/4
 
-    return omega_shoulder, elbow_chain, IK_E, wrist_chain, IK_W
+    return omega_shoulder, elbow_chain, IK_E, wrist_chain, IK_W, R_shoulder, R_elbow
+
+
+def get_ik_marker_offsets(chain_start_joint, R_1, R_2, L_1, L_2, drop1, drop2):
+    T_torso_R1 = np.identity(4)
+    T_torso_R1[0:3, 3] = chain_start_joint * 1
+
+    T_R1_R2 = np.identity(4)
+    T_R1_R2[0:3, 0:3] = R_1
+
+    T_torso_R2 = np.matmul(T_torso_R1, T_R1_R2)
+
+    pos_2 = np.matmul(T_torso_R2, np.array([L_1[0], L_1[1], L_1[2], 1]).T)
+
+    R2_proj = np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]])
+    T2_proj = np.identity(4)
+    T2_proj[0:3, 0:3] = R2_proj
+    T2_proj[0:3, 3] = L_1
+
+    pos_2_hat = np.matmul(T_torso_R2, np.matmul(T2_proj, np.array([drop1[0], drop1[1], drop1[2], 1]).T))
+
+    T_R2_R3 = np.identity(4)
+    T_R2_R3[0:3, 0:3] = R_2
+    T_R2_R3[0:3, 3] = L_1
+
+    pos_3 = np.matmul(T_torso_R2, np.matmul(T_R2_R3, np.array([L_2[0], L_2[1], L_2[2], 1]).T))
+
+    R3_proj = np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]])
+    T3_proj = np.identity(4)
+    T3_proj[0:3, 0:3] = R3_proj
+
+    T3_proj[0:3, 3] = L_2
+
+    pos_3_hat = np.matmul(T_torso_R2, np.matmul(T_R2_R3, np.matmul(T3_proj, np.array([drop2[0], drop2[1], drop2[2], 1]).T)))
+    return pos_2[0:3], pos_2_hat[0:3], pos_3[0:3], pos_3_hat[0:3]
 
 
 def ikpy_head(origin, current):

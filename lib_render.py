@@ -90,6 +90,27 @@ def standard_render(m):
     # plt.show()
     # import pdb; pdb.set_trace()
 
+
+def render_rviz(self, mJ_transformed):
+
+    print mJ_transformed
+    rospy.init_node('smpl_model')
+
+    shift_sideways = np.zeros((24,3))
+    shift_sideways[:, 0] = 1.0
+
+    for i in range(0, 10):
+        #libVisualization.rviz_publish_output(None, np.array(self.m.J_transformed))
+        time.sleep(0.5)
+
+        concatted = np.concatenate((np.array(mJ_transformed), np.array(mJ_transformed) + shift_sideways), axis = 0)
+        #print concatted
+        #libVisualization.rviz_publish_output(None, np.array(self.m.J_transformed) + shift_sideways)
+        libVisualization.rviz_publish_output(None, concatted)
+        time.sleep(0.5)
+
+
+
 class pyRenderMesh():
     def __init__(self):
         ## Create OpenDR renderer
