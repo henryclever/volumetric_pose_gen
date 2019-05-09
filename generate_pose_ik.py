@@ -52,7 +52,7 @@ class GeneratePose():
         for i in range(72):
             self.m.pose[i] = 0.000001
 
-        self.m.pose[0] = 0 #pitch rotation of the person in space. 0 means the person is upside down facing back. pi is standing up facing forward
+        self.m.pose[0] = np.pi #pitch rotation of the person in space. 0 means the person is upside down facing back. pi is standing up facing forward
         self.m.pose[1] = 0 #roll of the person in space. -pi/2 means they are tilted to their right side
         self.m.pose[2] = 0#-np.pi/4 #yaw of the person in space, like turning around normal to the ground
 
@@ -64,7 +64,7 @@ class GeneratePose():
         self.m.pose[7] = -np.pi/8
         self.m.pose[8] = -np.pi/4 #right leg abduction (NEG) /adduction (POS)
 
-        self.m.pose[9] = 0 #bending of spine at hips. np.pi/2 means person bends down to touch the ground
+        self.m.pose[9] = np.pi/3 #bending of spine at hips. np.pi/2 means person bends down to touch the ground
         self.m.pose[10] = 0 #twisting of spine at hips. body above spine yaws normal to the ground
         self.m.pose[11] = 0 #bending of spine at hips. np.pi/2 means person bends down sideways to touch the ground 3
 
@@ -406,7 +406,7 @@ class GeneratePose():
         plt.show()
 
 
-    def solve_ik_tree(self, Jtc_origins, Jtc, plot_all_joints, verbose = True):
+    def solve_ik_tree(self, Jtc_origins, Jtc, plot_all_joints, working_on_offsets, verbose = True):
         angles = {}
 
         # grab the joint positions
@@ -470,7 +470,7 @@ class GeneratePose():
         # get the IK solution
         r_omega_shoulder, r_elbow_chain, IK_RE, r_wrist_chain, IK_RW, R_r_shoulder, R_r_elbow = libKinematics.ikpy_right_arm(
             r_arm_pos_origins,
-            r_arm_pos_current, posture)
+            r_arm_pos_current, working_on_offsets, posture)
 
         # get the RPH values
         r_shoulder_angles = [IK_RW[3], IK_RE[3], IK_RE[4]]
@@ -499,7 +499,7 @@ class GeneratePose():
         # get the IK solution
         l_omega_shoulder, l_elbow_chain, IK_LE, l_wrist_chain, IK_LW, R_l_shoulder, R_l_elbow = libKinematics.ikpy_left_arm(
             l_arm_pos_origins,
-            l_arm_pos_current, posture)
+            l_arm_pos_current, working_on_offsets, posture)
 
         # get the RPH values
         l_shoulder_angles = [IK_LW[3], IK_LE[3], IK_LE[4]]
@@ -565,21 +565,21 @@ class GeneratePose():
 
     def save_yash_data_with_angles(self, posture, verbose = True):
         if posture == "lay":
-            movements = ['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
+            movements = ['LL', 'RL']#['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
         elif posture == "sit":
             movements = ['LL_sitting', 'RL_sitting', 'LH_sitting','RH_sitting']
-        subjects = ['40ESJ',  'TX887', 'WFGW9', 'WM9KJ', 'ZV7TE', 'FMNGQ'] #'GRTJK',
+        subjects = ['GRTJK', '40ESJ',  'TX887', 'WFGW9', 'WM9KJ', 'ZV7TE', 'FMNGQ'] #'GRTJK',
 
         for subject in subjects:
             for movement in movements:
 
-                #filename = "/media/henry/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/" + movement + ".p"
-                filename = "/home/ubuntu/data/init_ik_solutions_old/subject_" + subject + "/" + movement + ".p"
+                filename = "/media/henry/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/" + movement + ".p"
+                #filename = "/home/henry/data/init_ik_solutions_old/subject_" + subject + "/" + movement + ".p"
                 #filename_save = "/media/henry/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/" + movement + "_angles.p"
-                filename_save_orig = "/home/ubuntu/data/init_ik_solutions/subject_" + subject + "/" + movement + "_angles_orig.p"
-                filename_save_offset = "/home/ubuntu/data/init_ik_solutions/subject_" + subject + "/" + movement + "_angles_offset.p"
+                filename_save_orig = "/home/henry/data/init_ik_solutions/subject_" + subject + "/" + movement + "_angles_orig.p"
+                filename_save_offset = "/home/henry/data/init_ik_solutions/subject_" + subject + "/" + movement + "_angles_offset.p"
 
-                mat_transform_file = "/media/ubuntu/multimodal_data_2/pressure_mat_pose_data/mat_axes.p"
+                mat_transform_file = "/media/henry/multimodal_data_2/pressure_mat_pose_data/mat_axes.p"
 
                 if posture == "sit":
                     bedangle = 60.
@@ -615,7 +615,7 @@ class GeneratePose():
                     Jtc_origins = generator.get_joint_origins(Jtc, lengths)
                     # print Jtc_origins
 
-                    angles_from_mocap = generator.solve_ik_tree(Jtc_origins, Jtc, False, False)
+                    angles_from_mocap = generator.solve_ik_tree(Jtc_origins, Jtc, plot_all_joints=False, working_on_offsets=False, verbose=False)
 
                     self.ax.plot(Jtc_origins[:, 0], Jtc_origins[:, 1], Jtc_origins[:, 2], markerfacecolor='k',
                                  markeredgecolor='k', marker='o', markersize=5, alpha=0.5)
@@ -635,8 +635,8 @@ class GeneratePose():
                                                             R_2=angles_from_mocap['r_knee_R'],
                                                             L_1=[0.0, -lengths['r_glute_knee'], 0.0],
                                                             L_2=[0.0, -lengths['r_knee_ankle'], 0.0],
-                                                            drop1=[0.0, -0.105, 0.0],
-                                                            drop2=[0.0, -0.1045, 0.0])
+                                                            drop1=[0.0, -0.05, 0.0],
+                                                            drop2=[0.0, -0.045, 0.0])
 
                     #################################### LEFT LEG OFFSETS #######################################
                     pos_l_knee, Jtc_offset[7, :], pos_l_ankle, Jtc_offset[9, :] = \
@@ -645,8 +645,8 @@ class GeneratePose():
                                                             R_2=angles_from_mocap['l_knee_R'],
                                                             L_1=[0.0, -lengths['l_glute_knee'], 0.0],
                                                             L_2=[0.0, -lengths['l_knee_ankle'], 0.0],
-                                                            drop1=[0.0, -0.105, 0.0],
-                                                            drop2=[0.0, -0.1045, 0.0])
+                                                            drop1=[0.0, -0.05, 0.0],
+                                                            drop2=[0.0, -0.045, 0.0])
 
                     ##################################### RIGHT ARM OFFSETS #####################################
                     pos_r_elbow, Jtc_offset[2, :], pos_r_wrist, Jtc_offset[4, :] = \
@@ -655,8 +655,8 @@ class GeneratePose():
                                                             R_2=angles_from_mocap['r_elbow_R'],
                                                             L_1=[-lengths['r_shoulder_elbow'], 0.0, 0.0],
                                                             L_2=[-lengths['r_elbow_wrist'], 0.0, 0.0],
-                                                            drop1=[0.0, -0.1029, 0.0],
-                                                            drop2=[0.0, 0.0, 0.1015])
+                                                            drop1=[0.0, -0.029, 0.0],
+                                                            drop2=[0.0, 0.0, 0.015])
 
                     ##################################### LEFT ARM OFFSETS #####################################
                     pos_l_elbow, Jtc_offset[3, :], pos_l_wrist, Jtc_offset[5, :] = \
@@ -665,8 +665,8 @@ class GeneratePose():
                                                             R_2=angles_from_mocap['l_elbow_R'],
                                                             L_1=[lengths['l_shoulder_elbow'], 0.0, 0.0],
                                                             L_2=[lengths['l_elbow_wrist'], 0.0, 0.0],
-                                                            drop1=[0.0, -0.1029, 0.0],
-                                                            drop2=[0.0, 0.0, 0.1015])
+                                                            drop1=[0.0, -0.029, 0.0],
+                                                            drop2=[0.0, 0.0, 0.015])
 
                     lengths_offset = {}
                     lengths_offset['neck_head'] = np.copy(lengths['neck_head'])
@@ -687,7 +687,7 @@ class GeneratePose():
 
                     Jtc_origins_offset = generator.get_joint_origins(Jtc_offset, lengths_offset)
 
-                    angles_from_mocap_offset = generator.solve_ik_tree(Jtc_origins_offset, Jtc_offset, False, False)
+                    angles_from_mocap_offset = generator.solve_ik_tree(Jtc_origins_offset, Jtc_offset, plot_all_joints=False, working_on_offsets=True, verbose= False)
 
                     for i in range(2, 10):
                         self.ax.plot([Jtc_offset[i, 0]], [Jtc_offset[i, 1]], [Jtc_offset[i, 2]], markerfacecolor='k',
@@ -703,9 +703,9 @@ class GeneratePose():
                     solution_offset_ik.append(angles_from_mocap_offset)
 
                 #sprint len(new_data), 'length of new data'
-                with open(filename_save_orig, 'wb') as fp:
-                    pickle.dump(solution_original_ik, fp)
-                print 'done saving ', filename_save_orig
+                #with open(filename_save_orig, 'wb') as fp:
+                #    pickle.dump(solution_original_ik, fp)
+                #print 'done saving ', filename_save_orig
 
                 with open(filename_save_offset, 'wb') as fp:
                     pickle.dump(solution_offset_ik, fp)
@@ -716,40 +716,43 @@ class GeneratePose():
 
     def map_yash_to_smpl_angles(self, verbose = True):
 
-        movements = ['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
-        subjects = ['FMNGQ']#['40ESJ', '4ZZZQ', '5LDJG', 'A4G4Y','G55Q1','GF5Q3', 'GRTJK', 'RQCLC', 'TSQNA', 'TX887', 'WCNOM', 'WE2SZ', 'WFGW9', 'WM9KJ', 'ZV7TE']
-
+        movements = ['LH_sitting']#['RH1', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
+        subjects = ['ZV7TE']#['40ESJ', '4ZZZQ', '5LDJG', 'A4G4Y','G55Q1','GF5Q3', 'GRTJK', 'RQCLC', 'TSQNA', 'TX887', 'WCNOM', 'WE2SZ', 'WFGW9', 'WM9KJ', 'ZV7TE']
+        #['GRTJK', '40ESJ', 'TX887', 'WFGW9', 'WM9KJ', 'ZV7TE', 'FMNGQ']
+        from random import shuffle
 
         for subject in subjects:
             for movement in movements:
                 print "subject: ", subject, " movement: ", movement
-                filename = "/media/ubuntu/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/" + movement + "_angles.p"
+                #filename = "/media/ubuntu/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/" + movement + "_angles_offset.p"
+                filename = "/home/henry/data/init_ik_solutions/subject_" + subject + "/" + movement + "_angles_offset.p"
 
                 with open(filename, 'rb') as fp:
                     angles_data = pickle.load(fp)
 
+                shuffle(angles_data)
                 for entry in angles_data:
 
 
                     #entry = angles_data[50]
 
                     self.m.pose[6] = entry['r_hip_angle_axis'][0]
-                    self.m.pose[7] = entry['r_hip_angle_axis'][1]/2
+                    self.m.pose[7] = entry['r_hip_angle_axis'][1]#/2
                     self.m.pose[8] = entry['r_hip_angle_axis'][2]
                     if verbose == True: print 'r hip', self.m.pose[6:9]
 
-                    self.m.pose[15] = entry['r_knee_angle_axis'][0]
-                    self.m.pose[16] = entry['r_hip_angle_axis'][1]/2
+                    self.m.pose[15] = entry['r_knee'][0]
+                    #self.m.pose[16] = entry['r_hip_angle_axis'][1]/2
                     if verbose == True: print 'r knee', self.m.pose[15:18]
 
 
                     self.m.pose[3] = entry['l_hip_angle_axis'][0]
-                    self.m.pose[4] = entry['l_hip_angle_axis'][1]/2
+                    self.m.pose[4] = entry['l_hip_angle_axis'][1]#/2
                     self.m.pose[5] = entry['l_hip_angle_axis'][2]
                     if verbose == True: print 'l hip', self.m.pose[3:6]
 
-                    self.m.pose[12] = entry['l_knee_angle_axis'][0]
-                    self.m.pose[13] = entry['l_hip_angle_axis'][1]/2
+                    self.m.pose[12] = entry['l_knee'][0]
+                    #self.m.pose[13] = entry['l_hip_angle_axis'][1]/2
                     if verbose == True: print 'l knee', self.m.pose[12:15]
 
 
@@ -761,7 +764,7 @@ class GeneratePose():
                     self.m.pose[44] = entry['r_shoulder_angle_axis'][2]*1/3
                     if verbose == True: print 'r shoulder', self.m.pose[51:54] + self.m.pose[42:45]
 
-                    self.m.pose[58] = entry['r_elbow_angle_axis'][1]
+                    self.m.pose[58] = entry['r_elbow'][1]
                     if verbose == True: print 'r elbow', self.m.pose[57:60]
 
 
@@ -773,8 +776,10 @@ class GeneratePose():
                     self.m.pose[41] = entry['l_shoulder_angle_axis'][2]*1/3
                     if verbose == True: print 'l shoulder', self.m.pose[48:51] + self.m.pose[39:42]
 
-                    self.m.pose[55] = entry['l_elbow_angle_axis'][1]
+                    self.m.pose[55] = entry['l_elbow'][1]
                     if verbose == True: print 'l elbow', self.m.pose[54:57]
+
+                    libRender.standard_render(self.m)
 
     def map_random_selection_to_smpl_angles(self, alter_angles):
         if alter_angles == True:
@@ -837,13 +842,12 @@ if __name__ == "__main__":
     generator.ax = plt.figure().add_subplot(111, projection='3d')
     #generator.solve_ik_tree_smpl()
 
-    posture = "lay"
+    posture = "sit"
 
-    generator.save_yash_data_with_angles(posture)
-    #generator.map_euler_angles_to_axis_angle()
-    #generator.check_found_limits()
+    #generator.save_yash_data_with_angles(posture)
 
     #processYashData = ProcessYashData()
+    generator.map_yash_to_smpl_angles()
     #processYashData.map_yash_to_axis_angle(verbose=False)
     #processYashData.check_found_limits()
 

@@ -341,7 +341,7 @@ def ikpy_leg(origins, current):
 
 
 
-def ikpy_left_arm(origin, current, posture = "lay"):
+def ikpy_left_arm(origin, current, working_on_offsets, posture = "lay"):
 
     #shoulder_rot1 = (origin[3, :] - origin[2, :])/np.linalg.norm(origin[3, :] - origin[2, :])
     #shoulder_rot1 = list(shoulder_rot1)
@@ -413,7 +413,10 @@ def ikpy_left_arm(origin, current, posture = "lay"):
     shoulder_2 = geometry_utils.Ry_matrix(IK_E[4])
     shoulder_3 = geometry_utils.Rx_matrix(IK_W[5])
 
-    R_shoulder = np.matmul(shoulder_init, np.matmul(shoulder_1, np.matmul(shoulder_2, shoulder_3)))
+    if working_on_offsets == True:
+        R_shoulder = np.matmul(shoulder_1, np.matmul(shoulder_2, shoulder_3))
+    else:
+        R_shoulder = np.matmul(shoulder_init, np.matmul(shoulder_1, np.matmul(shoulder_2, shoulder_3)))
     #print shoulder_1, 'shoulder 1'
     #print shoulder_2, 'shoulder 2'
     #print shoulder_3, 'shoulder 3'
@@ -433,7 +436,7 @@ def ikpy_left_arm(origin, current, posture = "lay"):
     return omega_shoulder, elbow_chain, IK_E, wrist_chain, IK_W, R_shoulder, R_elbow
 
 
-def ikpy_right_arm(origin, current, posture = "lay"):
+def ikpy_right_arm(origin, current, working_on_offsets, posture = "lay"):
 
     #shoulder_rot1 = (origin[3, :] - origin[2, :])/np.linalg.norm(origin[3, :] - origin[2, :])
     #shoulder_rot1 = list(shoulder_rot1)
@@ -505,8 +508,10 @@ def ikpy_right_arm(origin, current, posture = "lay"):
     shoulder_2 = geometry_utils.Ry_matrix(IK_E[4])
     shoulder_3 = geometry_utils.Rx_matrix(IK_W[5])
 
-    R_shoulder = np.matmul(shoulder_init, np.matmul(shoulder_1, np.matmul(shoulder_2, shoulder_3)))
-    #R_shoulder = np.matmul(shoulder_1, np.matmul(shoulder_2, shoulder_3))
+    if working_on_offsets == True:
+        R_shoulder = np.matmul(shoulder_1, np.matmul(shoulder_2, shoulder_3))
+    else:
+        R_shoulder = np.matmul(shoulder_init, np.matmul(shoulder_1, np.matmul(shoulder_2, shoulder_3)))
 
     #print shoulder_1, 'shoulder 1'
     #print shoulder_2, 'shoulder 2'

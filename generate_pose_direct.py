@@ -239,7 +239,7 @@ class GeneratePose():
             for movement in range(len(movements)):
                 print "subject: ", subject, " movement: ", movements[movement]
 
-                filename = "/home/henry/pressure_mat_angles/subject_" + subject + "/" + movements[movement] + "_angles.p"
+                filename = "/home/henry/data/init_ik_solutions/subject_" + subject + "/" + movements[movement] + "_angles_offset.p"
 
                 with open(filename, 'rb') as fp:
                     angles_data = pickle.load(fp)
@@ -252,9 +252,18 @@ class GeneratePose():
 
                     print "beginning!"
                     for entry in angles_data:
-                        if num_appended >= movement_ct[movement]:
-                            print "breaking!"
-                            break
+                        #print entry['r_hip_euler']
+                        #if num_appended >= movement_ct[movement]:
+                        #    #print "breaking!"
+                        #    break
+
+
+                        if posture == "lay" and entry['r_shoulder_euler'][0] < -1.6: pass
+                        elif posture == "lay" and entry['r_shoulder_euler'][0] > 2.9: pass
+                        elif posture == "lay" and entry['l_shoulder_euler'][0] < -1.6: pass
+                        elif posture == "lay" and entry['l_shoulder_euler'][0] > 2.9: pass
+                        elif posture == "sit" and entry['r_hip_euler'][2] < -1.0: pass
+                        elif posture == "sit" and entry['l_hip_euler'][0] < -2.0: pass
 
                         else:
                             bag.append(entry)
@@ -294,165 +303,166 @@ class GeneratePose():
         r_hip_euler_sit_0 = []
         r_hip_euler_sit_1 = []
         r_hip_euler_sit_2 = []
-        r_knee_euler_0 = []
+        r_knee_0 = []
         l_hip_euler_0 = []
         l_hip_euler_1 = []
         l_hip_euler_2 = []
         l_hip_euler_sit_0 = []
         l_hip_euler_sit_1 = []
         l_hip_euler_sit_2 = []
-        l_knee_euler_0 = []
+        l_knee_0 = []
         r_shoulder_euler_0 = []
         r_shoulder_euler_1 = []
         r_shoulder_euler_2 = []
-        r_elbow_euler_1 = []
+        r_elbow_1 = []
         l_shoulder_euler_0 = []
         l_shoulder_euler_1 = []
         l_shoulder_euler_2 = []
-        l_elbow_euler_1 = []
+        l_elbow_1 = []
 
         R_root = libKinematics.eulerAnglesToRotationMatrix([-np.pi/3, 0.0, 0.0])
 
 
         for entry in bag:
-            r_hip_angle_axis_0.append(entry['r_hip_angle_axis'][0])
-            r_hip_angle_axis_1.append(entry['r_hip_angle_axis'][1])
-            r_hip_angle_axis_2.append(entry['r_hip_angle_axis'][2])
 
-            R = libKinematics.matrix_from_dir_cos_angles([r_hip_angle_axis_0[-1], r_hip_angle_axis_1[-1], r_hip_angle_axis_2[-1]])
-            eulers = libKinematics.rotationMatrixToEulerAngles(R)
-            r_hip_euler_0.append(eulers[0])
-            r_hip_euler_1.append(eulers[1])
-            r_hip_euler_2.append(eulers[2])
+            if posture == "lay":
+                r_hip_angle_axis_0.append(entry['r_hip_angle_axis'][0])
+                r_hip_angle_axis_1.append(entry['r_hip_angle_axis'][1])
+                r_hip_angle_axis_2.append(entry['r_hip_angle_axis'][2])
 
-
-            R_r_hip_rod = libKinematics.matrix_from_dir_cos_angles(entry['l_hip_angle_axis'])
-            R_r = np.matmul(R_root, R_r_hip_rod)
-            new_right_hip = libKinematics.dir_cos_angles_from_matrix(R_r)
-
-            r_hip_angle_axis_sit_0.append(new_right_hip[0])
-            r_hip_angle_axis_sit_1.append(new_right_hip[1])
-            r_hip_angle_axis_sit_2.append(new_right_hip[2])
+                r_hip_euler_0.append(entry['r_hip_euler'][0])
+                r_hip_euler_1.append(entry['r_hip_euler'][1])
+                r_hip_euler_2.append(entry['r_hip_euler'][2])
 
 
-            R = libKinematics.matrix_from_dir_cos_angles([r_hip_angle_axis_sit_0[-1], r_hip_angle_axis_sit_1[-1], r_hip_angle_axis_sit_2[-1]])
-            eulers = libKinematics.rotationMatrixToEulerAngles(R)
-            r_hip_euler_sit_0.append(eulers[0])
-            r_hip_euler_sit_1.append(eulers[1])
-            r_hip_euler_sit_2.append(eulers[2])
+                l_hip_angle_axis_0.append(entry['l_hip_angle_axis'][0])
+                l_hip_angle_axis_1.append(entry['l_hip_angle_axis'][1])
+                l_hip_angle_axis_2.append(entry['l_hip_angle_axis'][2])
+
+                l_hip_euler_0.append(entry['l_hip_euler'][0])
+                l_hip_euler_1.append(entry['l_hip_euler'][1])
+                l_hip_euler_2.append(entry['l_hip_euler'][2])
 
 
-
-            r_knee_angle_axis_0.append(entry['r_knee_angle_axis'][0])
-
-
-
-            l_hip_angle_axis_0.append(entry['l_hip_angle_axis'][0])
-            l_hip_angle_axis_1.append(entry['l_hip_angle_axis'][1])
-            l_hip_angle_axis_2.append(entry['l_hip_angle_axis'][2])
-
-
-            R = libKinematics.matrix_from_dir_cos_angles([l_hip_angle_axis_0[-1], l_hip_angle_axis_1[-1], l_hip_angle_axis_2[-1]])
-            eulers = libKinematics.rotationMatrixToEulerAngles(R)
-            l_hip_euler_0.append(eulers[0])
-            l_hip_euler_1.append(eulers[1])
-            l_hip_euler_2.append(eulers[2])
+            if posture == "sit":
+                #now we have to rotate the limits for the sitting type poses
+                R_r = np.matmul(R_root, entry['r_hip_R'])
+                new_right_hip = libKinematics.dir_cos_angles_from_matrix(R_r)
+                r_hip_angle_axis_sit_0.append(new_right_hip[0])
+                r_hip_angle_axis_sit_1.append(new_right_hip[1])
+                r_hip_angle_axis_sit_2.append(new_right_hip[2])
 
 
-            R_l_hip_rod = libKinematics.matrix_from_dir_cos_angles(entry['r_hip_angle_axis'])
-            R_l = np.matmul(R_root, R_l_hip_rod)
-            new_left_hip = libKinematics.dir_cos_angles_from_matrix(R_l)
-
-            l_hip_angle_axis_sit_0.append(new_left_hip[0])
-            l_hip_angle_axis_sit_1.append(new_left_hip[1])
-            l_hip_angle_axis_sit_2.append(new_left_hip[2])
-
-
-            R = libKinematics.matrix_from_dir_cos_angles([l_hip_angle_axis_sit_0[-1], l_hip_angle_axis_sit_1[-1], l_hip_angle_axis_sit_2[-1]])
-            eulers = libKinematics.rotationMatrixToEulerAngles(R)
-            l_hip_euler_sit_0.append(eulers[0])
-            l_hip_euler_sit_1.append(eulers[1])
-            l_hip_euler_sit_2.append(eulers[2])
+                R = libKinematics.matrix_from_dir_cos_angles([r_hip_angle_axis_sit_0[-1], r_hip_angle_axis_sit_1[-1], r_hip_angle_axis_sit_2[-1]])
+                eulers = libKinematics.rotationMatrixToEulerAngles(R)
+                r_hip_euler_sit_0.append(eulers[0])
+                r_hip_euler_sit_1.append(eulers[1])
+                r_hip_euler_sit_2.append(eulers[2])
 
 
 
-            l_knee_angle_axis_0.append(entry['l_knee_angle_axis'][0])
+                R_l_hip_rod = libKinematics.matrix_from_dir_cos_angles(entry['l_hip_angle_axis'])
+                R_l = np.matmul(R_root, entry['l_hip_R'])
+                new_left_hip = libKinematics.dir_cos_angles_from_matrix(R_l)
+
+                l_hip_angle_axis_sit_0.append(new_left_hip[0])
+                l_hip_angle_axis_sit_1.append(new_left_hip[1])
+                l_hip_angle_axis_sit_2.append(new_left_hip[2])
+
+
+                R = libKinematics.matrix_from_dir_cos_angles([l_hip_angle_axis_sit_0[-1], l_hip_angle_axis_sit_1[-1], l_hip_angle_axis_sit_2[-1]])
+                eulers = libKinematics.rotationMatrixToEulerAngles(R)
+                l_hip_euler_sit_0.append(eulers[0])
+                l_hip_euler_sit_1.append(eulers[1])
+                l_hip_euler_sit_2.append(eulers[2])
+
+
+            r_knee_0.append(entry['r_knee'][0])
+            l_knee_0.append(entry['l_knee'][0])
+
+
             r_shoulder_angle_axis_0.append(entry['r_shoulder_angle_axis'][0])
             r_shoulder_angle_axis_1.append(entry['r_shoulder_angle_axis'][1])
             r_shoulder_angle_axis_2.append(entry['r_shoulder_angle_axis'][2])
 
+            r_shoulder_euler_0.append(entry['r_shoulder_euler'][0])
+            r_shoulder_euler_1.append(entry['r_shoulder_euler'][1])
+            r_shoulder_euler_2.append(entry['r_shoulder_euler'][2])
 
-            R = libKinematics.matrix_from_dir_cos_angles([r_shoulder_angle_axis_0[-1], r_shoulder_angle_axis_1[-1], r_shoulder_angle_axis_2[-1]])
-            eulers = libKinematics.rotationMatrixToEulerAngles(R)
-            r_shoulder_euler_0.append(eulers[0])
-            r_shoulder_euler_1.append(eulers[1])
-            r_shoulder_euler_2.append(eulers[2])
+            #if r_shoulder_euler_0[-1] > 3: print "greater than 3!" r_shoulder_euler_0[-1]
 
-
-            r_elbow_angle_axis_1.append(entry['r_elbow_angle_axis'][1])
             l_shoulder_angle_axis_0.append(entry['l_shoulder_angle_axis'][0])
             l_shoulder_angle_axis_1.append(entry['l_shoulder_angle_axis'][1])
             l_shoulder_angle_axis_2.append(entry['l_shoulder_angle_axis'][2])
 
+            l_shoulder_euler_0.append(entry['l_shoulder_euler'][0])
+            l_shoulder_euler_1.append(entry['l_shoulder_euler'][1])
+            l_shoulder_euler_2.append(entry['l_shoulder_euler'][2])
 
-            R = libKinematics.matrix_from_dir_cos_angles([l_shoulder_angle_axis_0[-1], l_shoulder_angle_axis_1[-1], l_shoulder_angle_axis_2[-1]])
-            eulers = libKinematics.rotationMatrixToEulerAngles(R)
-            l_shoulder_euler_0.append(eulers[0])
-            l_shoulder_euler_1.append(eulers[1])
-            l_shoulder_euler_2.append(eulers[2])
-
-
-            l_elbow_angle_axis_1.append(entry['l_elbow_angle_axis'][1])
+            r_elbow_1.append(entry['r_elbow'][1])
+            l_elbow_1.append(entry['l_elbow'][1])
 
 
         print "lower body axis angle: "
-        print min(r_hip_angle_axis_0), max(r_hip_angle_axis_0)
-        print min(r_hip_angle_axis_1), max(r_hip_angle_axis_1)
-        print min(r_hip_angle_axis_2), max(r_hip_angle_axis_2)
-        print min(r_hip_angle_axis_sit_0), max(r_hip_angle_axis_sit_0)
-        print min(r_hip_angle_axis_sit_1), max(r_hip_angle_axis_sit_1)
-        print min(r_hip_angle_axis_sit_2), max(r_hip_angle_axis_sit_2)
-        print min(r_knee_angle_axis_0), max(r_knee_angle_axis_0)
-        print min(l_hip_angle_axis_0), max(l_hip_angle_axis_0)
-        print min(l_hip_angle_axis_1), max(l_hip_angle_axis_1)
-        print min(l_hip_angle_axis_2), max(l_hip_angle_axis_2)
-        print min(l_hip_angle_axis_sit_0), max(l_hip_angle_axis_sit_0)
-        print min(l_hip_angle_axis_sit_1), max(l_hip_angle_axis_sit_1)
-        print min(l_hip_angle_axis_sit_2), max(l_hip_angle_axis_sit_2)
-        print min(l_knee_angle_axis_0), max(l_knee_angle_axis_0)
+        if posture == "lay":
+            print min(r_hip_angle_axis_0), max(r_hip_angle_axis_0), 'rhip'
+            print min(r_hip_angle_axis_1), max(r_hip_angle_axis_1), 'rhip'
+            print min(r_hip_angle_axis_2), max(r_hip_angle_axis_2), 'rhip'
+            print min(l_hip_angle_axis_0), max(l_hip_angle_axis_0), 'lhip'
+            print min(l_hip_angle_axis_1), max(l_hip_angle_axis_1), 'lhip'
+            print min(l_hip_angle_axis_2), max(l_hip_angle_axis_2), 'lhip'
+
+        elif posture == "sit":
+            print min(r_hip_angle_axis_sit_0), max(r_hip_angle_axis_sit_0), 'rhip sit'
+            print min(r_hip_angle_axis_sit_1), max(r_hip_angle_axis_sit_1), 'rhip sit'
+            print min(r_hip_angle_axis_sit_2), max(r_hip_angle_axis_sit_2), 'rhip sit'
+            print min(l_hip_angle_axis_sit_0), max(l_hip_angle_axis_sit_0), 'lhip sit'
+            print min(l_hip_angle_axis_sit_1), max(l_hip_angle_axis_sit_1), 'lhip sit'
+            print min(l_hip_angle_axis_sit_2), max(l_hip_angle_axis_sit_2), 'lhip sit'
+
+        print min(r_knee_0), max(r_knee_0), 'rknee'
+        print min(l_knee_0), max(l_knee_0), 'lknee'
+
         print "upper body axis angle: "
-        print min(r_shoulder_angle_axis_0), max(r_shoulder_angle_axis_0)
-        print min(r_shoulder_angle_axis_1), max(r_shoulder_angle_axis_1)
-        print min(r_shoulder_angle_axis_2), max(r_shoulder_angle_axis_2)
-        print min(r_elbow_angle_axis_1), max(r_elbow_angle_axis_1)
-        print min(l_shoulder_angle_axis_0), max(l_shoulder_angle_axis_0)
-        print min(l_shoulder_angle_axis_1), max(l_shoulder_angle_axis_1)
-        print min(l_shoulder_angle_axis_2), max(l_shoulder_angle_axis_2)
-        print min(l_elbow_angle_axis_1), max(l_elbow_angle_axis_1)
+        print min(r_shoulder_angle_axis_0), max(r_shoulder_angle_axis_0), 'rshould'
+        print min(r_shoulder_angle_axis_1), max(r_shoulder_angle_axis_1), 'rshould'
+        print min(r_shoulder_angle_axis_2), max(r_shoulder_angle_axis_2), 'rshould'
+        print min(l_shoulder_angle_axis_0), max(l_shoulder_angle_axis_0), 'lshould'
+        print min(l_shoulder_angle_axis_1), max(l_shoulder_angle_axis_1), 'lshould'
+        print min(l_shoulder_angle_axis_2), max(l_shoulder_angle_axis_2), 'lshould'
+        print min(r_elbow_1), max(r_elbow_1), 'relbow'
+        print min(l_elbow_1), max(l_elbow_1), 'lelbow'
 
 
         print "lower body euler: "
-        print min(r_hip_euler_0), max(r_hip_euler_0)
-        print min(r_hip_euler_1), max(r_hip_euler_1)
-        print min(r_hip_euler_2), max(r_hip_euler_2)
-        print min(r_hip_euler_sit_0), max(r_hip_euler_sit_0)
-        print min(r_hip_euler_sit_1), max(r_hip_euler_sit_1)
-        print min(r_hip_euler_sit_2), max(r_hip_euler_sit_2)
-        print min(l_hip_euler_0), max(l_hip_euler_0)
-        print min(l_hip_euler_1), max(l_hip_euler_1)
-        print min(l_hip_euler_2), max(l_hip_euler_2)
-        print min(l_hip_euler_sit_0), max(l_hip_euler_sit_0)
-        print min(l_hip_euler_sit_1), max(l_hip_euler_sit_1)
-        print min(l_hip_euler_sit_2), max(l_hip_euler_sit_2)
-        print "upper body euler: "
-        print min(r_shoulder_euler_0), max(r_shoulder_euler_0)
-        print min(r_shoulder_euler_1), max(r_shoulder_euler_1)
-        print min(r_shoulder_euler_2), max(r_shoulder_euler_2)
-        print min(l_shoulder_euler_0), max(l_shoulder_euler_0)
-        print min(l_shoulder_euler_1), max(l_shoulder_euler_1)
-        print min(l_shoulder_euler_2), max(l_shoulder_euler_2)
+        if posture == "lay":
+            print min(r_hip_euler_0), max(r_hip_euler_0), 'rhip'
+            print min(r_hip_euler_1), max(r_hip_euler_1), 'rhip'
+            print min(r_hip_euler_2), max(r_hip_euler_2), 'rhip'
+            print min(l_hip_euler_0), max(l_hip_euler_0), 'lhip'
+            print min(l_hip_euler_1), max(l_hip_euler_1), 'lhip'
+            print min(l_hip_euler_2), max(l_hip_euler_2), 'lhip'
+        elif posture == "sit":
+            print min(r_hip_euler_sit_0), max(r_hip_euler_sit_0), 'rhip sit'
+            print min(r_hip_euler_sit_1), max(r_hip_euler_sit_1), 'rhip sit'
+            print min(r_hip_euler_sit_2), max(r_hip_euler_sit_2), 'rhip sit'
+            print min(l_hip_euler_sit_0), max(l_hip_euler_sit_0), 'lhip sit'
+            print min(l_hip_euler_sit_1), max(l_hip_euler_sit_1), 'lhip sit'
+            print min(l_hip_euler_sit_2), max(l_hip_euler_sit_2), 'lhip sit'
 
-        pickle.dump(bag, open("/home/henry/git/volumetric_pose_gen/init_pose_angles/all_"+posture+"_angles.p", "wb"))
+        print "upper body euler: "
+        print min(r_shoulder_euler_0), max(r_shoulder_euler_0), 'rshould'
+        print min(r_shoulder_euler_1), max(r_shoulder_euler_1), 'rshould'
+        print min(r_shoulder_euler_2), max(r_shoulder_euler_2), 'rshould'
+        print min(l_shoulder_euler_0), max(l_shoulder_euler_0), 'lshould'
+        print min(l_shoulder_euler_1), max(l_shoulder_euler_1), 'lshould'
+        print min(l_shoulder_euler_2), max(l_shoulder_euler_2), 'lshould'
+
+        #import matplotlib.pyplot as plt
+        #plt.plot(np.arange(len(r_hip_angle_axis_sit_1)), r_hip_angle_axis_sit_1, 'ko')
+        #plt.show()
+
+        #pickle.dump(bag, open("/home/henry/data/init_ik_solutions/all_"+posture+"_angles.p", "wb"))
 
 
     def get_noisy_angle(self, angle, angle_min, angle_max):
@@ -487,7 +497,7 @@ class GeneratePose():
 
                 for entry in angles_data:
 
-                    hip_dir_cos = libKinematics.dir_cos_angles_from_matrix(libKinematics.eulerAnglesToRotationMatrix(entry['r_hip_angle_axis']))
+                    hip_dir_cos = (entry['r_hip_angle_axis'])
                     print hip_dir_cos
                     print entry['r_hip_angle_axis']
 
@@ -682,13 +692,13 @@ class GeneratePose():
 
 if __name__ == "__main__":
     generator = GeneratePose(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
-    generator.ax = plt.figure().add_subplot(111, projection='3d')
+    #generator.ax = plt.figure().add_subplot(111, projection='3d')
     #generator.get_max_min_of_init()
 
     #processYashData.get_r_leg_angles()
     #m, capsules, joint2name, rots0 = generator.map_random_selection_to_smpl_angles(alter_angles = True)
 
-    generator.random_bag_yash_data(posture = "both")
+    generator.random_bag_yash_data(posture = "sit")
 
     #m, capsules, joint2name, rots0 = generator.map_yash_to_smpl_angles(True)
    # m, capsules, joint2name, rots0 = generator.map_shuffled_yash_to_smpl_angles(True)

@@ -13,7 +13,7 @@ import lib_visualization as libVisualization
 import lib_kinematics as libKinematics
 import lib_render as libRender
 from process_yash_data import ProcessYashData
-#import dart_skel_sim
+import dart_skel_sim
 from time import sleep
 
 #ROS
@@ -60,9 +60,9 @@ class GeneratePose():
         self.m = load_model(model_path)
 
         if posture == "sit":
-            filename = filepath_prefix+'/git/volumetric_pose_gen/init_pose_angles/all_sit_angles.p'
+            filename = self.filepath_prefix+'/data/init_ik_solutions/all_sit_angles.p'
         else:
-            filename = filepath_prefix+'/git/volumetric_pose_gen/init_pose_angles/all_angles.p'
+            filename = self.filepath_prefix+'/data/init_ik_solutions/all_lay_angles.p'
         with open(filename, 'rb') as fp:
             self.angles_data = pickle.load(fp)
         shuffle(self.angles_data)
@@ -87,19 +87,22 @@ class GeneratePose():
         mu = 0
         counter = 0
         sigma = np.pi/16
+
+        #print "angle to make noisy", angle, angle_min, angle_max,
         while not_within_bounds == True:
 
             noisy_angle = angle + random.normalvariate(mu, sigma)
             if noisy_angle > angle_min and noisy_angle < angle_max:
                 not_within_bounds = False
             else:
-                print noisy_angle, angle_min, angle_max
+                #print "angle, min, max", noisy_angle, angle_min, angle_max
                 counter += 1
                 if counter > 10:
                     self.reset_pose = True
                     break
                 pass
 
+        #print "  noisy angle", noisy_angle
         return noisy_angle
 
 
@@ -109,6 +112,68 @@ class GeneratePose():
     def map_shuffled_yash_to_smpl_angles(self, posture, shiftUD,  alter_angles = True):
         angle_type = "angle_axis"
         #angle_type = "euler"
+
+        #limits are relative to left side of body. some joints for right side need flip
+        dircos_limit_lay = {}
+        dircos_limit_lay['hip0_L'] = -1.3597488648299256
+        dircos_limit_lay['hip0_U'] = 0.07150907780435195
+        dircos_limit_lay['hip1_L'] = -1.1586383564647427
+        dircos_limit_lay['hip1_U'] = 0.9060547654972676
+        dircos_limit_lay['hip2_L'] = -0.22146805085504204
+        dircos_limit_lay['hip2_U'] = 0.7070043169765721
+        dircos_limit_lay['knee_L'] = 0.0
+        dircos_limit_lay['knee_U'] = 2.6656374963467337
+        dircos_limit_lay['shd0_L'] = -1.3357882970793375
+        dircos_limit_lay['shd0_U'] = 1.580579714602293
+        dircos_limit_lay['shd1_L'] = -1.545407583212041
+        dircos_limit_lay['shd1_U'] = 1.0052006799247593
+        dircos_limit_lay['shd2_L'] = -1.740132642542865
+        dircos_limit_lay['shd2_U'] = 2.1843225295849584
+        dircos_limit_lay['elbow_L'] = -2.359569981489685
+        dircos_limit_lay['elbow_U'] = 0.0
+
+
+        dircos_limit_sit = {}
+        dircos_limit_sit['hip0_L'] = -2.655719256295683
+        dircos_limit_sit['hip0_U'] = -1.0272376612196454
+        dircos_limit_sit['hip1_L'] = -0.9042010441370677
+        dircos_limit_sit['hip1_U'] = 0.9340170076795724
+        dircos_limit_sit['hip2_L'] = -0.37290106435540205
+        dircos_limit_sit['hip2_U'] = 0.9190375825276169
+        dircos_limit_sit['knee_L'] = 0.0
+        dircos_limit_sit['knee_U'] = 2.6869091212979197
+        dircos_limit_sit['shd0_L'] = -1.5525790052790263
+        dircos_limit_sit['shd0_U'] = 0.6844121077167088
+        dircos_limit_sit['shd1_L'] = -0.7791830995457885
+        dircos_limit_sit['shd1_U'] = 1.0243644544117376
+        dircos_limit_sit['shd2_L'] = -1.5283559130498783
+        dircos_limit_sit['shd2_U'] = 1.1052120105774226
+        dircos_limit_sit['elbow_L'] = -2.4281310593630705
+        dircos_limit_sit['elbow_U'] = 0.0
+
+        dircos_limit = {}
+        dircos_limit['hip0_L'] = -2.655719256295683
+        dircos_limit['hip0_U'] = 0.07150907780435195
+        dircos_limit['hip1_L'] = -1.1586383564647427
+        dircos_limit['hip1_U'] = 0.9340170076795724
+        dircos_limit['hip2_L'] = -0.37290106435540205
+        dircos_limit['hip2_U'] = 0.9190375825276169
+        dircos_limit['knee_L'] = 0.0
+        dircos_limit['knee_U'] = 2.6869091212979197
+        dircos_limit['shd0_L'] = -1.5525790052790263
+        dircos_limit['shd0_U'] = 1.580579714602293
+        dircos_limit['shd1_L'] = -1.545407583212041
+        dircos_limit['shd1_U'] = 1.0243644544117376
+        dircos_limit['shd2_L'] = -1.740132642542865
+        dircos_limit['shd2_U'] = 2.1843225295849584
+        dircos_limit['elbow_L'] = -2.4281310593630705
+        dircos_limit['elbow_U'] = 0.0
+
+        #if posture == "lay":
+       #     dircos_limit = dircos_limit_lay
+       # elif posture == "sit":
+       #     dircos_limit = dircos_limit_sit
+
         if alter_angles == True:
 
             try:
@@ -116,9 +181,9 @@ class GeneratePose():
             except:
                 print "############################# RESAMPLING !! #################################"
                 if posture == "sit":
-                    filename = self.filepath_prefix+'/git/volumetric_pose_gen/init_pose_angles/all_sit_angles.p'
+                    filename = self.filepath_prefix+'/data/init_ik_solutions/all_sit_angles.p'
                 else:
-                    filename = self.filepath_prefix+'/git/volumetric_pose_gen/init_pose_angles/all_angles.p'
+                    filename = self.filepath_prefix+'/data/init_ik_solutions/all_lay_angles.p'
                 with open(filename, 'rb') as fp:
                     self.angles_data = pickle.load(fp)
                 shuffle(self.angles_data)
@@ -149,7 +214,7 @@ class GeneratePose():
                 self.m.pose[36] = np.pi / 12
                 self.m.pose[45] = np.pi / 12
 
-            R_root = libKinematics.eulerAnglesToRotationMatrix([-float(self.m.pose[0])/2, 0.0, 0.0])
+            R_root = libKinematics.eulerAnglesToRotationMatrix([-float(self.m.pose[0]), 0.0, 0.0])
 
             R_l_hip_rod = libKinematics.matrix_from_dir_cos_angles(entry['l_hip_'+angle_type])
             R_r_hip_rod = libKinematics.matrix_from_dir_cos_angles(entry['r_hip_'+angle_type])
@@ -164,66 +229,71 @@ class GeneratePose():
 
             while True:
                 self.reset_pose = False
+                print R_root, self.m.pose[0], shiftUD
+                print entry['l_hip_'+angle_type], new_left_hip
+                print entry['r_hip_'+angle_type], new_right_hip
                 if flip_leftright == False:
+                    #print "WORKING WITH:, ", new_left_hip[0], dircos_limit['hip0_L'], dircos_limit['hip0_U']
+                    #time.sleep(2)
+                    self.m.pose[3] = generator.get_noisy_angle(new_left_hip[0], dircos_limit['hip0_L'], dircos_limit['hip0_U'])
+                    self.m.pose[4] = generator.get_noisy_angle(new_left_hip[1], dircos_limit['hip1_L'], dircos_limit['hip1_U'])
+                    self.m.pose[5] = generator.get_noisy_angle(new_left_hip[2], dircos_limit['hip2_L'], dircos_limit['hip2_U'])
+                    self.m.pose[12] = generator.get_noisy_angle(entry['l_knee'][0], dircos_limit['knee_L'], dircos_limit['knee_U'])
 
-                    self.m.pose[3] = generator.get_noisy_angle(new_left_hip[0], -2.047187297216041, 0.0008725992352640336)
-                    self.m.pose[4] = generator.get_noisy_angle(new_left_hip[1], -1.0056561780573234, 0.9792596381050885)
-                    self.m.pose[5] = generator.get_noisy_angle(new_left_hip[2], -0.83127128871961, 0.9840833280290882)
-                    self.m.pose[12] = generator.get_noisy_angle(entry['l_knee_angle_axis'][0], 0.0,  2.320752282574325)
-
-                    self.m.pose[6] = generator.get_noisy_angle(new_right_hip[0], -2.047187297216041, 0.0008725992352640336)
-                    self.m.pose[7] = generator.get_noisy_angle(new_right_hip[1], -0.9792596381050885, 1.0056561780573234)
-                    self.m.pose[8] = generator.get_noisy_angle(new_right_hip[2], -0.9840833280290882,  0.83127128871961)
-                    self.m.pose[15] = generator.get_noisy_angle(entry['r_knee_angle_axis'][0], 0.0, 2.320752282574325)
+                    self.m.pose[6] = generator.get_noisy_angle(new_right_hip[0], dircos_limit['hip0_L'], dircos_limit['hip0_U'])
+                    self.m.pose[7] = generator.get_noisy_angle(new_right_hip[1], -dircos_limit['hip1_U'], -dircos_limit['hip1_L'])
+                    self.m.pose[8] = generator.get_noisy_angle(new_right_hip[2], -dircos_limit['hip2_U'], -dircos_limit['hip2_L'])
+                    self.m.pose[15] = generator.get_noisy_angle(entry['r_knee'][0], dircos_limit['knee_L'], dircos_limit['knee_U'])
 
 
-                    self.m.pose[39] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][0]*1/3, -1.8819412381973686 * 1 / 3, 1.5740500958475525 * 1 / 3)
-                    self.m.pose[40] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][1]*1/3, -2.452871806175492 * 1 / 3, 1.6424506514942065 * 1 / 3)
-                    self.m.pose[41] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][2]*1/3, -1.8997886932520462 * 1 / 3, 1.9844820788036448 * 1 / 3)
-                    self.m.pose[48] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][0]*2/3, -1.8819412381973686 * 2 / 3, 1.5740500958475525 * 2 / 3)
-                    self.m.pose[49] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][1]*2/3, -2.452871806175492 * 2 / 3, 1.6424506514942065 * 2 / 3)
-                    self.m.pose[50] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][2]*2/3, -1.8997886932520462 * 2 / 3, 1.9844820788036448 * 2 / 3)
-                    self.m.pose[55] = generator.get_noisy_angle(entry['l_elbow_angle_axis'][1], -2.146677709782182, 0.0)
+                    self.m.pose[39] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][0]*1/3, dircos_limit['shd0_L'] * 1 / 3, dircos_limit['shd0_U'] * 1 / 3)
+                    self.m.pose[40] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][1]*1/3, dircos_limit['shd1_L'] * 1 / 3, dircos_limit['shd1_U'] * 1 / 3)
+                    self.m.pose[41] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][2]*1/3, dircos_limit['shd2_L'] * 1 / 3, dircos_limit['shd2_U'] * 1 / 3)
+                    self.m.pose[48] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][0]*2/3, dircos_limit['shd0_L'] * 2 / 3, dircos_limit['shd0_U'] * 2 / 3)
+                    self.m.pose[49] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][1]*2/3, dircos_limit['shd1_L'] * 2 / 3, dircos_limit['shd1_U'] * 2 / 3)
+                    self.m.pose[50] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][2]*2/3, dircos_limit['shd2_L'] * 2 / 3, dircos_limit['shd2_U'] * 2 / 3)
+                    self.m.pose[55] = generator.get_noisy_angle(entry['l_elbow'][1], dircos_limit['elbow_L'], dircos_limit['elbow_U'])
 
-                    self.m.pose[42] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][0]*1/3, -1.8819412381973686 * 1 / 3, 1.5740500958475525 * 1 / 3)
-                    self.m.pose[43] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][1]*1/3, -1.6424506514942065 * 1 / 3, 2.452871806175492 * 1 / 3)
-                    self.m.pose[44] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][2]*1/3, -1.9844820788036448 * 1 / 3, 1.8997886932520462 * 1 / 3)
-                    self.m.pose[51] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][0]*2/3, -1.8819412381973686 * 2 / 3, 1.5740500958475525 * 2 / 3)
-                    self.m.pose[52] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][1]*2/3, -1.6424506514942065 * 2 / 3, 2.452871806175492 * 2 / 3)
-                    self.m.pose[53] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][2]*2/3, -1.9844820788036448 * 2 / 3, 1.8997886932520462 * 2 / 3)
-                    self.m.pose[58] = generator.get_noisy_angle(entry['r_elbow_angle_axis'][1], 0.0, 2.146677709782182)
+                    self.m.pose[42] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][0]*1/3, dircos_limit['shd0_L'] * 1 / 3, dircos_limit['shd0_U'] * 1 / 3)
+                    self.m.pose[43] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][1]*1/3, -dircos_limit['shd1_U'] * 1 / 3, -dircos_limit['shd1_L'] * 1 / 3)
+                    self.m.pose[44] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][2]*1/3, -dircos_limit['shd2_U'] * 1 / 3, -dircos_limit['shd2_L'] * 1 / 3)
+                    self.m.pose[51] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][0]*2/3, dircos_limit['shd0_L'] * 2 / 3, dircos_limit['shd0_U'] * 2 / 3)
+                    self.m.pose[52] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][1]*2/3, -dircos_limit['shd1_U'] * 2 / 3, -dircos_limit['shd1_L'] * 2 / 3)
+                    self.m.pose[53] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][2]*2/3, -dircos_limit['shd2_U'] * 2 / 3, -dircos_limit['shd2_L'] * 2 / 3)
+                    self.m.pose[58] = generator.get_noisy_angle(entry['r_elbow'][1], -dircos_limit['elbow_U'], -dircos_limit['elbow_L'])
 
                 elif flip_leftright == True:
 
-                    self.m.pose[3] = generator.get_noisy_angle(new_right_hip[0], -2.047187297216041, 0.0008725992352640336)
-                    self.m.pose[4] = generator.get_noisy_angle(-new_right_hip[1], -1.0056561780573234, 0.9792596381050885)
-                    self.m.pose[5] = generator.get_noisy_angle(-new_right_hip[2], -0.83127128871961, 0.9840833280290882)
-                    self.m.pose[12] = generator.get_noisy_angle(entry['r_knee_angle_axis'][0], 0.0,  2.320752282574325)
+                    self.m.pose[3] = generator.get_noisy_angle(new_right_hip[0], dircos_limit['hip0_L'], dircos_limit['hip0_U'])
+                    self.m.pose[4] = generator.get_noisy_angle(-new_right_hip[1], dircos_limit['hip1_L'], dircos_limit['hip1_U'])
+                    self.m.pose[5] = generator.get_noisy_angle(-new_right_hip[2], dircos_limit['hip2_L'], dircos_limit['hip2_U'])
+                    self.m.pose[12] = generator.get_noisy_angle(entry['r_knee'][0], dircos_limit['knee_L'], dircos_limit['knee_U'])
 
-                    self.m.pose[6] = generator.get_noisy_angle(new_left_hip[0], -2.047187297216041, 0.0008725992352640336)
-                    self.m.pose[7] = generator.get_noisy_angle(-new_left_hip[1], -0.9792596381050885, 1.0056561780573234)
-                    self.m.pose[8] = generator.get_noisy_angle(-new_left_hip[2], -0.9840833280290882,  0.83127128871961)
-                    self.m.pose[15] = generator.get_noisy_angle(entry['l_knee_angle_axis'][0], 0.0, 2.320752282574325)
-
-
-                    self.m.pose[39] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][0]*1/3, -1.8819412381973686 * 1 / 3, 1.5740500958475525 * 1 / 3)
-                    self.m.pose[40] = generator.get_noisy_angle(-entry['r_shoulder_'+angle_type][1]*1/3, -2.452871806175492 * 1 / 3, 1.6424506514942065 * 1 / 3)
-                    self.m.pose[41] = generator.get_noisy_angle(-entry['r_shoulder_'+angle_type][2]*1/3, -1.8997886932520462 * 1 / 3, 1.9844820788036448 * 1 / 3)
-                    self.m.pose[48] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][0]*2/3, -1.8819412381973686 * 2 / 3, 1.5740500958475525 * 2 / 3)
-                    self.m.pose[49] = generator.get_noisy_angle(-entry['r_shoulder_'+angle_type][1]*2/3, -2.452871806175492 * 2 / 3, 1.6424506514942065 * 2 / 3)
-                    self.m.pose[50] = generator.get_noisy_angle(-entry['r_shoulder_'+angle_type][2]*2/3, -1.8997886932520462 * 2 / 3, 1.9844820788036448 * 2 / 3)
-                    self.m.pose[55] = generator.get_noisy_angle(-entry['r_elbow_angle_axis'][1], -2.146677709782182, 0.0)
-
-                    self.m.pose[42] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][0]*1/3, -1.8819412381973686 * 1 / 3, 1.5740500958475525 * 1 / 3)
-                    self.m.pose[43] = generator.get_noisy_angle(-entry['l_shoulder_'+angle_type][1]*1/3, -1.6424506514942065 * 1 / 3, 2.452871806175492 * 1 / 3)
-                    self.m.pose[44] = generator.get_noisy_angle(-entry['l_shoulder_'+angle_type][2]*1/3, -1.9844820788036448 * 1 / 3, 1.8997886932520462 * 1 / 3)
-                    self.m.pose[51] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][0]*2/3, -1.8819412381973686 * 2 / 3, 1.5740500958475525 * 2 / 3)
-                    self.m.pose[52] = generator.get_noisy_angle(-entry['l_shoulder_'+angle_type][1]*2/3, -1.6424506514942065 * 2 / 3, 2.452871806175492 * 2 / 3)
-                    self.m.pose[53] = generator.get_noisy_angle(-entry['l_shoulder_'+angle_type][2]*2/3, -1.9844820788036448 * 2 / 3, 1.8997886932520462 * 2 / 3)
-                    self.m.pose[58] = generator.get_noisy_angle(-entry['l_elbow_angle_axis'][1], 0.0, 2.146677709782182)
+                    self.m.pose[6] = generator.get_noisy_angle(new_left_hip[0], dircos_limit['hip0_L'], dircos_limit['hip0_U'])
+                    self.m.pose[7] = generator.get_noisy_angle(-new_left_hip[1], -dircos_limit['hip1_U'], -dircos_limit['hip1_L'])
+                    self.m.pose[8] = generator.get_noisy_angle(-new_left_hip[2], -dircos_limit['hip2_U'], -dircos_limit['hip2_L'])
+                    self.m.pose[15] = generator.get_noisy_angle(entry['l_knee'][0], dircos_limit['knee_L'], dircos_limit['knee_U'])
 
 
+                    self.m.pose[39] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][0]*1/3, dircos_limit['shd0_L'] * 1 / 3, dircos_limit['shd0_U'] * 1 / 3)
+                    self.m.pose[40] = generator.get_noisy_angle(-entry['r_shoulder_'+angle_type][1]*1/3, dircos_limit['shd1_L'] * 1 / 3, dircos_limit['shd1_U'] * 1 / 3)
+                    self.m.pose[41] = generator.get_noisy_angle(-entry['r_shoulder_'+angle_type][2]*1/3, dircos_limit['shd2_L'] * 1 / 3, dircos_limit['shd2_U'] * 1 / 3)
+                    self.m.pose[48] = generator.get_noisy_angle(entry['r_shoulder_'+angle_type][0]*2/3, dircos_limit['shd0_L'] * 2 / 3, dircos_limit['shd0_U'] * 2 / 3)
+                    self.m.pose[49] = generator.get_noisy_angle(-entry['r_shoulder_'+angle_type][1]*2/3, dircos_limit['shd1_L'] * 2 / 3, dircos_limit['shd1_U'] * 2 / 3)
+                    self.m.pose[50] = generator.get_noisy_angle(-entry['r_shoulder_'+angle_type][2]*2/3, dircos_limit['shd2_L'] * 2 / 3, dircos_limit['shd2_U'] * 2 / 3)
+                    self.m.pose[55] = generator.get_noisy_angle(-entry['r_elbow'][1], dircos_limit['elbow_L'], dircos_limit['elbow_U'])
 
+                    self.m.pose[42] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][0]*1/3, dircos_limit['shd0_L'] * 1 / 3, dircos_limit['shd0_U'] * 1 / 3)
+                    self.m.pose[43] = generator.get_noisy_angle(-entry['l_shoulder_'+angle_type][1]*1/3, -dircos_limit['shd1_U'] * 1 / 3, -dircos_limit['shd1_L'] * 1 / 3)
+                    self.m.pose[44] = generator.get_noisy_angle(-entry['l_shoulder_'+angle_type][2]*1/3, -dircos_limit['shd2_U'] * 1 / 3, -dircos_limit['shd2_L'] * 1 / 3)
+                    self.m.pose[51] = generator.get_noisy_angle(entry['l_shoulder_'+angle_type][0]*2/3, dircos_limit['shd0_L'] * 2 / 3, dircos_limit['shd0_U'] * 2 / 3)
+                    self.m.pose[52] = generator.get_noisy_angle(-entry['l_shoulder_'+angle_type][1]*2/3, -dircos_limit['shd1_U'] * 2 / 3, -dircos_limit['shd1_L'] * 2 / 3)
+                    self.m.pose[53] = generator.get_noisy_angle(-entry['l_shoulder_'+angle_type][2]*2/3, -dircos_limit['shd2_U'] * 2 / 3, -dircos_limit['shd2_L'] * 2 / 3)
+                    self.m.pose[58] = generator.get_noisy_angle(-entry['l_elbow'][1], -dircos_limit['elbow_U'], -dircos_limit['elbow_L'])
+
+
+
+                print "stuck in loop", self.reset_pose, flip_leftright
                 if self.reset_pose == True:
                     pass
                 else:
@@ -305,35 +375,44 @@ class GeneratePose():
             shape_pose_vol[4] = shift_side
             shape_pose_vol[5] = shift_ud
 
-            #generator.sample_body_shape(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
+            generator.sample_body_shape(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
             in_collision = True
 
             self.m.pose[:] = np.random.rand(self.m.pose.size) * 0.
-            dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None, check_only_distal = False, filepath_prefix=self.filepath_prefix, add_floor = False)
+            #dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None, check_only_distal = True, filepath_prefix=self.filepath_prefix, add_floor = False)
             print "dataset create type", DATASET_CREATE_TYPE
             #print self.m.pose
             volumes = dss.getCapsuleVolumes(mm_resolution = 1., dataset_num = DATASET_CREATE_TYPE)
 
-            libRender.standard_render(self.m)
+            #libRender.standard_render(self.m)
             print volumes
             shape_pose_vol[6] = volumes
 
 
             while in_collision == True:
                 #m, capsules, joint2name, rots0 = generator.map_random_selection_to_smpl_angles(alter_angles = True)
+
+                #print "GOT HERE"
+                #time.sleep(2)
+
+                self.m.pose[:] = np.random.rand(self.m.pose.size) * 0.
+
                 m, capsules, joint2name, rots0 = generator.map_shuffled_yash_to_smpl_angles(posture, shift_ud, alter_angles = True)
+
+                #print "GOT HERE"
+                #time.sleep(2)
 
                 shape_pose_vol[0] = np.asarray(m.betas).tolist()
 
                 #print "stepping", m.pose
-                dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture = posture, stiffness=None, filepath_prefix=self.filepath_prefix, add_floor = False)
+                dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture = posture, stiffness=None, check_only_distal = True, filepath_prefix=self.filepath_prefix, add_floor = False)
 
                 #print "stepping", m.pose
                 invalid_pose = False
                 #run a step to check for collisions
                 dss.run_sim_step()
 
-                #dss.world.check_collision()
+                dss.world.check_collision()
                 #print "checked collisions"
                 #dss.run_simulation(1)
                 #print dss.world.CollisionResult()
@@ -351,7 +430,8 @@ class GeneratePose():
                                 #dss.run_simulation(1)
 
                                 print "resampling pose from the same shape, invalid pose"
-                                libRender.standard_render(self.m)
+                                #dss.run_simulation(1000)
+                                #libRender.standard_render(self.m)
                                 in_collision = True
                                 invalid_pose = True
                             break
@@ -359,18 +439,19 @@ class GeneratePose():
                     if invalid_pose == False:
                         print "resampling shape and pose, collision not important."
 
-                        libRender.standard_render(self.m)
+                        #libRender.standard_render(self.m)
                         in_collision = False
                 else: # no contacts anywhere.
 
                     print "resampling shape and pose, no collision."
                     in_collision = False
+                    #libRender.standard_render(self.m)
 
 
 
                 #dss.world.skeletons[0].remove_all_collision_pairs()
 
-                libRender.standard_render(self.m)
+                #libRender.standard_render(self.m)
                 dss.world.reset()
                 dss.world.destroy()
 
@@ -388,7 +469,7 @@ class GeneratePose():
         print "SAVING! "
         #print shape_pose_vol_list
         #pickle.dump(shape_pose_vol_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_list1.pkl", "wb"))
-        np.save(self.filepath_prefix+"/git/volumetric_pose_gen/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy", np.array(shape_pose_vol_list))
+        np.save(self.filepath_prefix+"/data/init_poses/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy", np.array(shape_pose_vol_list))
 
     def fix_dataset(self, gender, posture, num_data, stiffness, filepath_prefix):
 
@@ -434,13 +515,14 @@ class GeneratePose():
                 #run a step to check for collisions
                 dss.run_sim_step()
 
-                #dss.world.check_collision()
+                dss.world.check_collision()
 
                 print dss.world.collision_result.contact_sets
                 if len(dss.world.collision_result.contacted_bodies) != 0:
                     for contact_set in dss.world.collision_result.contact_sets:
                         if contact_set[0] in contact_check_bns or contact_set[1] in contact_check_bns: #consider removing spine 3 and upper legs
                             if contact_set in contact_exceptions:
+                                print "contact set is in exceptions"
                                 pass
 
                             else:
@@ -449,7 +531,8 @@ class GeneratePose():
                                 #dss.run_simulation(1)
 
                                 print "resampling pose from the same shape, invalid pose"
-                                libRender.standard_render(self.m)
+                                dss.run_simulation(10000)
+                                #libRender.standard_render(self.m)
                                 in_collision = True
                                 invalid_pose = True
                             break
@@ -457,7 +540,7 @@ class GeneratePose():
                     if invalid_pose == False:
                         print "resampling shape and pose, collision not important."
 
-                        libRender.standard_render(self.m)
+                        #libRender.standard_render(self.m)
                         in_collision = False
                 else: # no contacts anywhere.
 
@@ -585,7 +668,7 @@ class GeneratePose():
             # self.m.pose[51] = selection_r
 
 
-            pyRender.mesh_render(self.m)
+            #pyRender.mesh_render(self.m)
 
 
             #verts = np.array(self.m.r)
@@ -595,9 +678,9 @@ class GeneratePose():
 
             #smpl_mesh = pyrender.Mesh.from_trimesh(tm, material=self.human_mat, wireframe=True , smooth = False)# smoothing doesn't do anything to wireframe
 
-            #dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix, add_floor = False)
+            dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix, add_floor = False)
 
-            #dss.run_simulation(10000)
+            dss.run_simulation(10000)
             #generator.standard_render()
 
 
@@ -639,14 +722,14 @@ class GeneratePose():
 if __name__ == "__main__":
 
     gender = "m"
-    num_data = 4000
-    posture = "lay"
+    num_data = 100
+    posture = "sit"
     stiffness = "rightside"
     filepath_prefix = "/home/henry"
 
 
 
-    DATASET_CREATE_TYPE = None
+    #DATASET_CREATE_TYPE = None
 
 
 
@@ -654,81 +737,81 @@ if __name__ == "__main__":
     if DATASET_CREATE_TYPE == None:
         generator = GeneratePose(gender, posture, filepath_prefix)
         generator.generate_prechecked_pose(gender, posture, stiffness, filepath_prefix+"/data/init_poses/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
-        #generator.generate_dataset(gender = gender, posture = posture, num_data = num_data, stiffness = stiffness)
+        #sgenerator.generate_dataset(gender = gender, posture = posture, num_data = num_data, stiffness = stiffness)
         #generator.doublecheck_prechecked_list(gender, posture, stiffness, filepath_prefix+"/data/init_poses/valid_shape_pose_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
 
     if DATASET_CREATE_TYPE == 1:
         generator = GeneratePose("m",  "sit", filepath_prefix)
-        #generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "rightside")
+        generator.generate_dataset(gender = "m", posture = "sit", num_data = 3000, stiffness = "rightside")
         #generator.fix_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "rightside", filepath_prefix = filepath_prefix)
         generator = GeneratePose("f",  "sit", filepath_prefix)
-        #generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "rightside")
+        generator.generate_dataset(gender = "f", posture = "sit", num_data = 3000, stiffness = "rightside")
         #generator.fix_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "rightside", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 2:
         generator = GeneratePose("m",  "sit", filepath_prefix)
-        #generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "leftside")
+        generator.generate_dataset(gender = "m", posture = "sit", num_data = 3000, stiffness = "leftside")
         #generator.fix_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "leftside", filepath_prefix = filepath_prefix)
         generator = GeneratePose("f",  "sit", filepath_prefix)
-        #generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "leftside")
+        generator.generate_dataset(gender = "f", posture = "sit", num_data = 3000, stiffness = "leftside")
         #generator.fix_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "leftside", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 3:
         generator = GeneratePose("m",  "sit", filepath_prefix)
-        #generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "upperbody")
+        generator.generate_dataset(gender = "m", posture = "sit", num_data = 3000, stiffness = "upperbody")
         #generator.fix_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "upperbody", filepath_prefix = filepath_prefix)
         generator = GeneratePose("f",  "sit", filepath_prefix)
-        #generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "upperbody")
+        generator.generate_dataset(gender = "f", posture = "sit", num_data = 3000, stiffness = "upperbody")
         #generator.fix_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "upperbody", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 4:
         generator = GeneratePose("m",  "sit", filepath_prefix)
-        #generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "lowerbody")
+        generator.generate_dataset(gender = "m", posture = "sit", num_data = 3000, stiffness = "lowerbody")
         #generator.fix_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "lowerbody", filepath_prefix = filepath_prefix)
         generator = GeneratePose("f",  "sit", filepath_prefix)
-        #generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "lowerbody")
+        generator.generate_dataset(gender = "f", posture = "sit", num_data = 3000, stiffness = "lowerbody")
         #generator.fix_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "lowerbody", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 5:
         generator = GeneratePose("m",  "sit", filepath_prefix)
-        #generator.generate_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "none")
+        generator.generate_dataset(gender = "m", posture = "sit", num_data = 3000, stiffness = "none")
         #generator.fix_dataset(gender = "m", posture = "sit", num_data = 2000, stiffness = "none", filepath_prefix = filepath_prefix)
         generator = GeneratePose("f",  "sit", filepath_prefix)
-        #generator.generate_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "none")
+        generator.generate_dataset(gender = "f", posture = "sit", num_data = 3000, stiffness = "none")
         #generator.fix_dataset(gender = "f", posture = "sit", num_data = 2000, stiffness = "none", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 6:
         generator = GeneratePose("m",  "lay", filepath_prefix)
-        #generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "rightside")
+        generator.generate_dataset(gender = "m", posture = "lay", num_data = 5000, stiffness = "rightside")
         #generator.fix_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "rightside", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 7:
         generator = GeneratePose("f",  "lay", filepath_prefix)
-        #generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "rightside")
+        generator.generate_dataset(gender = "f", posture = "lay", num_data = 5000, stiffness = "rightside")
         #generator.fix_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "rightside", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 8:
         generator = GeneratePose("m",  "lay", filepath_prefix)
-        #generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "leftside")
+        generator.generate_dataset(gender = "m", posture = "lay", num_data = 5000, stiffness = "leftside")
         #generator.fix_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "leftside", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 9:
         generator = GeneratePose("f",  "lay", filepath_prefix)
-        #generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "leftside")
+        generator.generate_dataset(gender = "f", posture = "lay", num_data = 5000, stiffness = "leftside")
         #generator.fix_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "leftside", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 10:
         generator = GeneratePose("m",  "lay", filepath_prefix)
-        #generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "upperbody")
+        generator.generate_dataset(gender = "m", posture = "lay", num_data = 5000, stiffness = "upperbody")
         #generator.fix_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "upperbody", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 11:
         generator = GeneratePose("f",  "lay", filepath_prefix)
-        #generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "upperbody")
+        generator.generate_dataset(gender = "f", posture = "lay", num_data = 5000, stiffness = "upperbody")
         #generator.fix_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "upperbody", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 12:
         generator = GeneratePose("m",  "lay", filepath_prefix)
-        #generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "lowerbody")
+        generator.generate_dataset(gender = "m", posture = "lay", num_data = 5000, stiffness = "lowerbody")
         #generator.fix_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "lowerbody", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 13:
         generator = GeneratePose("f",  "lay", filepath_prefix)
-        #generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "lowerbody")
+        generator.generate_dataset(gender = "f", posture = "lay", num_data = 5000, stiffness = "lowerbody")
         #generator.fix_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "lowerbody", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 14:
         generator = GeneratePose("m",  "lay", filepath_prefix)
-        #generator.generate_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "none")
+        generator.generate_dataset(gender = "m", posture = "lay", num_data = 5000, stiffness = "none")
         #generator.fix_dataset(gender = "m", posture = "lay", num_data = 4000, stiffness = "none", filepath_prefix = filepath_prefix)
     elif DATASET_CREATE_TYPE == 15:
         generator = GeneratePose("f",  "lay", filepath_prefix)
-        #generator.generate_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "none")
+        generator.generate_dataset(gender = "f", posture = "lay", num_data = 5000, stiffness = "none")
         #generator.fix_dataset(gender = "f", posture = "lay", num_data = 4000, stiffness = "none", filepath_prefix = filepath_prefix)

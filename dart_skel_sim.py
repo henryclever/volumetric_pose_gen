@@ -124,7 +124,8 @@ class DartSkelSim(object):
 
         self.red_joint_ref = red_joint_ref
         self.red_parent_ref = red_parent_ref
-        self.root_capsule_rad = np.abs(float(capsules[0].rad[0]))
+        self.root_capsule_rad = float(capsules[0].rad[0])
+        if self.root_capsule_rad < 0.0001: self.root_capsule_rad = 0.0001
 
         #make lists of the locations of the joint locations and the smplify capsule initial ends
         for i in range(np.shape(mJ)[0]):
@@ -170,8 +171,10 @@ class DartSkelSim(object):
 
         for capsule in capsules:
             print "************* Capsule No.",count, joint_names[count], " joint ref: ", red_joint_ref[count]," parent_ref: ", red_parent_ref[count]," ****************"
-            cap_rad = np.abs(float(capsule.rad[0]))
-            cap_len = np.abs(float(capsule.length[0]))
+            cap_rad = float(capsule.rad[0])
+            if cap_rad < 0.0001: cap_rad = 0.0001
+            cap_len = float(capsule.length[0])
+            if cap_len < 0.0001: cap_len = 0.0001
             cap_init_rot = list(np.asarray(initial_rots[count]))
 
 
@@ -213,7 +216,9 @@ class DartSkelSim(object):
                                        cap_rot=cap_init_rot, cap_offset=cap_offset, joint_loc=joint_loc,
                                        joint_type="BALL", joint_name=joint_names[count])
 
-            lowest_points.append(np.asarray(joint_locs_trans_abs)[count, 2] - np.abs(float(capsule.rad[0])))
+            lowest_pt_cap_rad = float(capsule.rad[0])
+            if lowest_pt_cap_rad < 0.0001: lowest_pt_cap_rad = 0.0001
+            lowest_points.append(np.asarray(joint_locs_trans_abs)[count, 2] - lowest_pt_cap_rad)
 
 
             count += 1
@@ -264,11 +269,15 @@ class DartSkelSim(object):
             volume_median = []
             for body_ct in range(NUM_CAPSULES):
                 #give the capsules a weight propertional to their volume
-                cap_rad = np.abs(float(capsules[body_ct].rad[0]))
-                cap_len = np.abs(float(capsules[body_ct].length[0]))
+                cap_rad = float(capsules[body_ct].rad[0])
+                if cap_rad < 0.0001: cap_rad = 0.0001
+                cap_len = float(capsules[body_ct].length[0])
+                if cap_len < 0.0001: cap_len = 0.0001
 
-                cap_rad_median = np.abs(float(capsules_median[body_ct].rad[0]))
-                cap_len_median = np.abs(float(capsules_median[body_ct].length[0]))
+                cap_rad_median = float(capsules_median[body_ct].rad[0])
+                if cap_rad_median < 0.0001: cap_rad_median = 0.0001
+                cap_len_median = float(capsules_median[body_ct].length[0])
+                if cap_len_median < 0.0001: cap_len_median = 0.0001
 
                 volume.append(np.pi*np.square(cap_rad)*(cap_rad*4/3 + cap_len))
                 volume_median.append(np.pi*np.square(cap_rad_median)*(cap_rad_median*4/3 + cap_len_median))
@@ -336,8 +345,10 @@ class DartSkelSim(object):
         body_mass = 0.0
         #set the mass moment of inertia matrices
         for body_ct in range(NUM_CAPSULES):
-            radius = np.abs(float(capsules[body_ct].rad[0]))
-            length = np.abs(float(capsules[body_ct].length[0]))
+            radius = float(capsules[body_ct].rad[0])
+            if radius < 0.0001: radius = 0.0001
+            length = float(capsules[body_ct].length[0])
+            if length < 0.0001: length = 0.0001
             radius2 = radius * radius
             length2 = length * length
             mass = skel.bodynodes[body_ct].m
@@ -435,8 +446,11 @@ class DartSkelSim(object):
 
         for body_ct in range(NUM_CAPSULES):
             #give the capsules a weight propertional to their volume
-            cap_rad = np.abs(float(self.capsules[body_ct].rad[0]))
-            cap_len = np.abs(float(self.capsules[body_ct].length[0]))
+            cap_rad = float(self.capsules[body_ct].rad[0])
+            if cap_rad < 0.0001: cap_rad = 0.0001
+            cap_len = float(self.capsules[body_ct].length[0])
+            if cap_len < 0.0001: cap_len = 0.0001
+
 
             contacts_with_node = []
             for contact in contacts: #check all possible contacts
