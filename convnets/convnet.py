@@ -419,8 +419,8 @@ class CNN(nn.Module):
 
 
     def forward_kinematic_angles(self, images, gender_switch, synth_real_switch, targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None, reg_angles = False):
-        #self.GPU = False
-        #self.dtype = torch.FloatTensor
+        self.GPU = False
+        self.dtype = torch.FloatTensor
 
         scores_cnn = self.CNN_pack1(images)
         scores_size = scores_cnn.size()
@@ -727,7 +727,8 @@ class CNN(nn.Module):
 
             #print(targets.size(), targets[0, :])
 
-            scores[:, 10:40] = (targets/1000. - targets_est_reduced[:, 0:30]).pow(2)
+            if targets is not None:
+                scores[:, 10:40] = (targets/1000. - targets_est_reduced[:, 0:30]).pow(2)
 
             #print(scores.size(), scores[0, 10:40])
 

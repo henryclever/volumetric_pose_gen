@@ -130,10 +130,10 @@ class PhysicalTrainer():
         self.train_x_flat = []  # Initialize the testing pressure mat list
         if dat_f_synth is not None:
             for entry in range(len(dat_f_synth['images'])):
-                self.train_x_flat.append(np.clip(dat_f_synth['images'][entry] * 3,a_min=0, a_max=100))
+                self.train_x_flat.append(np.clip(dat_f_synth['images'][entry] * 3.5,a_min=0, a_max=100))
         if dat_m_synth is not None:
             for entry in range(len(dat_m_synth['images'])):
-                self.train_x_flat.append(np.clip(dat_m_synth['images'][entry] * 3,a_min=0, a_max=100))
+                self.train_x_flat.append(np.clip(dat_m_synth['images'][entry] * 3.5,a_min=0, a_max=100))
 
 
         if dat_f_real is not None:

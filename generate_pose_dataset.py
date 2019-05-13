@@ -722,14 +722,14 @@ class GeneratePose():
 if __name__ == "__main__":
 
     gender = "m"
-    num_data = 100
+    num_data = 3000
     posture = "sit"
     stiffness = "rightside"
     filepath_prefix = "/home/henry"
 
 
 
-    #DATASET_CREATE_TYPE = None
+    DATASET_CREATE_TYPE = None
 
 
 

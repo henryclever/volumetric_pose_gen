@@ -87,8 +87,7 @@ class PhysicalTrainer():
     '''Gets the dictionary of pressure maps from the training database,
     and will have API to do all sorts of training with it.'''
 
-    def __init__(self, training_database_file_f, training_database_file_m, testing_database_file_f,
-                 testing_database_file_m, opt):
+    def __init__(self, testing_database_file_f, testing_database_file_m, opt):
         '''Opens the specified pickle files to get the combined dataset:
         This dataset is a dictionary of pressure maps with the corresponding
         3d position and orientation of the markers associated with it.'''
@@ -111,183 +110,16 @@ class PhysicalTrainer():
         print self.num_epochs, 'NUM EPOCHS!'
         # Entire pressure dataset with coordinates in world frame
 
-        self.save_name = '_' + opt.losstype + '_synthreal_tanh_s4ang_sig0p5_' + str(self.batch_size) + 'b_' + str(
-            self.num_epochs) + 'e'
-
-        print'appending to', 'train' + self.save_name
-        self.train_val_losses = {}
-        self.train_val_losses['train' + self.save_name] = []
-        self.train_val_losses['val' + self.save_name] = []
-        self.train_val_losses['epoch' + self.save_name] = []
 
         self.mat_size = (NUMOFTAXELS_X, NUMOFTAXELS_Y)
-        self.output_size_train = (NUMOFOUTPUTNODES_TRAIN, NUMOFOUTPUTDIMS)
         self.output_size_val = (NUMOFOUTPUTNODES_TEST, NUMOFOUTPUTDIMS)
 
         #print training_database_file_f, training_database_file_m
 
-        dat_f_synth = self.load_files_to_database(training_database_file_f, 'synth', 'training f synth')
-        dat_m_synth = self.load_files_to_database(training_database_file_m, 'synth', 'training m synth')
-        dat_f_real = self.load_files_to_database(training_database_file_f, 'real', 'training f real')
-        dat_m_real = self.load_files_to_database(training_database_file_m, 'real', 'training m real')
-
-        self.train_x_flat = []  # Initialize the testing pressure mat list
-        if dat_f_synth is not None:
-            for entry in range(len(dat_f_synth['images'])):
-                self.train_x_flat.append(dat_f_synth['images'][entry] * 3)
-        if dat_m_synth is not None:
-            for entry in range(len(dat_m_synth['images'])):
-                self.train_x_flat.append(dat_m_synth['images'][entry] * 3)
-
-        self.train_x_flat = PreprocessingLib().preprocessing_blur_images(self.train_x_flat, self.mat_size, sigma=0.5)
-
-        if dat_f_real is not None:
-            for entry in range(len(dat_f_real['images'])):
-                self.train_x_flat.append(dat_f_real['images'][entry])
-        if dat_m_real is not None:
-            for entry in range(len(dat_m_real['images'])):
-                self.train_x_flat.append(dat_m_real['images'][entry])
-
-        self.train_a_flat = []  # Initialize the testing pressure mat angle list
-        if dat_f_synth is not None:
-            for entry in range(len(dat_f_synth['images'])):
-                self.train_a_flat.append(dat_f_synth['bed_angle_deg'][entry])
-        if dat_m_synth is not None:
-            for entry in range(len(dat_m_synth['images'])):
-                self.train_a_flat.append(dat_m_synth['bed_angle_deg'][entry])
-
-        if dat_f_real is not None:
-            for entry in range(len(dat_f_real['images'])):
-                self.train_a_flat.append(dat_f_real['bed_angle_deg'][entry])
-        if dat_m_real is not None:
-            for entry in range(len(dat_m_real['images'])):
-                self.train_a_flat.append(dat_m_real['bed_angle_deg'][entry])
-
-        if len(self.train_x_flat) == 0: print("NO TRAINING DATA INCLUDED")
-
-        train_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.train_x_flat,
-                                                                                self.train_a_flat,
-                                                                                self.include_inter, self.mat_size,
-                                                                                self.verbose)
-        train_xa = np.array(train_xa)
-        self.train_x_tensor = torch.Tensor(train_xa)
-
-        print(self.train_x_tensor.shape, 'tensor shape')
-
-        self.train_y_flat = []  # Initialize the training ground truth list
-
-        if dat_f_synth is not None:
-            for entry in range(len(dat_f_synth['markers_xyz_m'])):
-                if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
-                    # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-
-                    z_subt = np.array(24 * [0.0, 0.0, -75.])
-                    c = np.concatenate((dat_f_synth['markers_xyz_m'][entry][0:72] * 1000 + z_subt,
-                                        dat_f_synth['body_shape'][entry][0:10],
-                                        dat_f_synth['joint_angles'][entry][0:72],
-                                        dat_f_synth['root_xyz_shift'][entry][0:3] + np.array([0.0, 0.0, -0.075]),
-                                        [1], [0], [1]), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
-                    self.train_y_flat.append(c)
-                else:
-                    # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                    c = np.concatenate((dat_f_synth['markers_xyz_m'][entry][0:72] * 1000,
-                                        np.array(10 * [0]),
-                                        np.array(72 * [0]),
-                                        np.array(3 * [0]),
-                                        [1], [0], [1]), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
-                    self.train_y_flat.append(c)
-
-        if dat_m_synth is not None:
-            for entry in range(len(dat_m_synth['markers_xyz_m'])):
-                if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
-                    # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-
-                    z_subt = np.array(24 * [0.0, 0.0, -75.])
-                    c = np.concatenate((dat_m_synth['markers_xyz_m'][entry][0:72] * 1000 + z_subt,
-                                        dat_m_synth['body_shape'][entry][0:10],
-                                        dat_m_synth['joint_angles'][entry][0:72],
-                                        dat_m_synth['root_xyz_shift'][entry][0:3] + np.array([0.0, 0.0, -0.075]),
-                                        [0], [1], [1]), axis=0)  # [x1], [x2], [x3]: male synth: 0, 1, 1.
-                    self.train_y_flat.append(c)
-                else:
-                    # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                    c = np.concatenate((dat_m_synth['markers_xyz_m'][entry][0:72] * 1000,
-                                        np.array(10 * [0]),
-                                        np.array(72 * [0]),
-                                        np.array(3 * [0]),
-                                        [1], [0], [1]), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
-                    self.train_y_flat.append(c)
-
-        if dat_f_real is not None:
-            for entry in range(len(dat_f_real['markers_xyz_m'])):  ######FIX THIS!!!!######
-                # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                # print np.shape(dat_f_real['markers_xyz_m'][entry])
-                fixed_head_markers = dat_f_real['markers_xyz_m'][entry][0:3] * 1000# + \
-                                     #[0.0,
-                                     # -141.4 * np.cos(np.deg2rad(dat_f_real['bed_angle_deg'][entry] + 45)),
-                                     # -141.4 * np.sin(np.deg2rad(dat_f_real['bed_angle_deg'][entry] + 45))]
-                # print dat_f_real['bed_angle_deg'][entry], dat_f_real['markers_xyz_m'][entry][0:3] * 1000, fixed_head_markers
-
-                fixed_torso_markers = dat_f_real['markers_xyz_m'][entry][3:6] * 1000# + [0.0, 0.0, -100.0]
-
-                c = np.concatenate((np.array(9 * [0]),
-                                    # dat_f_real['markers_xyz_m'][entry][3:6] * 1000,  # TORSO
-                                    fixed_torso_markers,  # TORSO
-                                    dat_f_real['markers_xyz_m'][entry][21:24] * 1000,  # L KNEE
-                                    dat_f_real['markers_xyz_m'][entry][18:21] * 1000,  # R KNEE
-                                    np.array(3 * [0]),
-                                    dat_f_real['markers_xyz_m'][entry][27:30] * 1000,  # L ANKLE
-                                    dat_f_real['markers_xyz_m'][entry][24:27] * 1000,  # R ANKLE
-                                    np.array(18 * [0]),
-                                    # dat_f_real['markers_xyz_m'][entry][0:3] * 1000,  # HEAD
-                                    fixed_head_markers,
-                                    np.array(6 * [0]),
-                                    dat_f_real['markers_xyz_m'][entry][9:12] * 1000,  # L ELBOW
-                                    dat_f_real['markers_xyz_m'][entry][6:9] * 1000,  # R ELBOW
-                                    dat_f_real['markers_xyz_m'][entry][15:18] * 1000,  # L WRIST
-                                    dat_f_real['markers_xyz_m'][entry][12:15] * 1000,  # R WRIST
-                                    np.array(6 * [0]),
-                                    np.array(85 * [0]),
-                                    [1], [0], [0]), axis=0)  # [x1], [x2], [x3]: female real: 1, 0, 0.
-                self.train_y_flat.append(c)
-
-        if dat_m_real is not None:
-            for entry in range(len(dat_m_real['markers_xyz_m'])):  ######FIX THIS!!!!######
-                # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                fixed_head_markers = dat_m_real['markers_xyz_m'][entry][0:3] * 1000# + \
-                                     #[0.0,
-                                     # -141.4 * np.cos(np.deg2rad(dat_m_real['bed_angle_deg'][entry] + 45)),
-                                     # -141.4 * np.sin(np.deg2rad(dat_m_real['bed_angle_deg'][entry] + 45))]
-
-                fixed_torso_markers = dat_m_real['markers_xyz_m'][entry][3:6] * 1000# + [0.0, 0.0, -100.0]
-
-                c = np.concatenate((np.array(9 * [0]),
-                                    # dat_m_real['markers_xyz_m'][entry][3:6] * 1000,  # TORSO
-                                    fixed_torso_markers,
-                                    dat_m_real['markers_xyz_m'][entry][21:24] * 1000,  # L KNEE
-                                    dat_m_real['markers_xyz_m'][entry][18:21] * 1000,  # R KNEE
-                                    np.array(3 * [0]),
-                                    dat_m_real['markers_xyz_m'][entry][27:30] * 1000,  # L ANKLE
-                                    dat_m_real['markers_xyz_m'][entry][24:27] * 1000,  # R ANKLE
-                                    np.array(18 * [0]),
-                                    # dat_m_real['markers_xyz_m'][entry][0:3] * 1000,  # HEAD
-                                    fixed_head_markers,
-                                    np.array(6 * [0]),
-                                    dat_m_real['markers_xyz_m'][entry][9:12] * 1000,  # L ELBOW
-                                    dat_m_real['markers_xyz_m'][entry][6:9] * 1000,  # R ELBOW
-                                    dat_m_real['markers_xyz_m'][entry][15:18] * 1000,  # L WRIST
-                                    dat_m_real['markers_xyz_m'][entry][12:15] * 1000,  # R WRIST
-                                    np.array(6 * [0]),
-                                    np.array(85 * [0]),
-                                    [0], [1], [0]), axis=0)  # [x1], [x2], [x3]: male real: 0, 1, 0.
-                self.train_y_flat.append(c)
-
-        print np.shape(self.train_y_flat), 'shape flat !'
-        self.train_y_tensor = torch.Tensor(self.train_y_flat)
 
         # load in the test file
-        test_dat_f = self.load_files_to_database(testing_database_file_f, 'real', 'training f real')
-        test_dat_m = self.load_files_to_database(testing_database_file_m, 'real', 'training f real')
+        test_dat_f = self.load_files_to_database(testing_database_file_f, 'unlabeled_pmat_data', 'training f real')
+        test_dat_m = self.load_files_to_database(testing_database_file_m, 'unlabeled_pmat_data', 'training f real')
 
         # create a tensor for our testing dataset.  First print out how many input/output sets we have and what data we have
         if test_dat_f is not None:
@@ -300,10 +132,10 @@ class PhysicalTrainer():
         self.test_x_flat = []  # Initialize the testing pressure mat listhave
         if test_dat_f is not None:
             for entry in range(len(test_dat_f['images'])):
-                self.test_x_flat.append(test_dat_f['images'][entry])
+                self.test_x_flat.append(np.clip(np.array(test_dat_f['images'][entry])*3.5, a_min=0, a_max=100))
         if test_dat_m is not None:
             for entry in range(len(test_dat_m['images'])):
-                self.test_x_flat.append(test_dat_m['images'][entry])
+                self.test_x_flat.append(np.clip(np.array(test_dat_m['images'][entry])*3.5, a_min=0, a_max=100))
 
         self.test_a_flat = []  # Initialize the testing pressure mat angle listhave
         if test_dat_f is not None:
@@ -323,42 +155,14 @@ class PhysicalTrainer():
 
         self.test_y_flat = []  # Initialize the ground truth listhave
         if test_dat_f is not None:
-            for entry in range(len(test_dat_f['markers_xyz_m'])):
-                if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
-                    # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                    fixed_head_markers = test_dat_f['markers_xyz_m'][entry][0:3] * 1000# + \
-                                         #[0.0,
-                                         # -141.4 * np.cos(np.deg2rad(test_dat_f['bed_angle_deg'][entry] + 45)),
-                                         # -141.4 * np.sin(np.deg2rad(test_dat_f['bed_angle_deg'][entry] + 45))]
-
-                    fixed_torso_markers = test_dat_f['markers_xyz_m'][entry][3:6] * 1000# + [0.0, 0.0, -100.0]
-
-                    c = np.concatenate((fixed_head_markers,
-                                        fixed_torso_markers,
-                                        test_dat_f['markers_xyz_m'][entry][6:] * 1000,
-                                        [1], [0]), axis=0)  # shapedirs (N, 6890, 3, 10)
-                    self.test_y_flat.append(c)
-                else:
-                    self.test_y_flat.append(test_dat_f['markers_xyz_m'][entry] * 1000)
+            for entry in range(len(test_dat_f['images'])):
+                c = np.concatenate(([1], [0]), axis=0)  # shapedirs (N, 6890, 3, 10)
+                self.test_y_flat.append(c)
 
         if test_dat_m is not None:
-            for entry in range(len(test_dat_m['markers_xyz_m'])):
-                if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
-                    # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                    fixed_head_markers = test_dat_m['markers_xyz_m'][entry][0:3] * 1000# + \
-                                         #[0.0,
-                                         # -141.4 * np.cos(np.deg2rad(test_dat_m['bed_angle_deg'][entry] + 45)),
-                                         # -141.4 * np.sin(np.deg2rad(test_dat_m['bed_angle_deg'][entry] + 45))]
-
-                    fixed_torso_markers = test_dat_m['markers_xyz_m'][entry][3:6] * 1000# + [0.0, 0.0, -100.0]
-
-                    c = np.concatenate((fixed_head_markers,
-                                        fixed_torso_markers,
-                                        test_dat_m['markers_xyz_m'][entry][6:] * 1000,
-                                        [0], [1]), axis=0)  # shapedirs (N, 6890, 3, 10)
-                    self.test_y_flat.append(c)
-                else:
-                    self.test_y_flat.append(test_dat_m['markers_xyz_m'][entry] * 1000)
+            for entry in range(len(test_dat_m['images'])):
+                c = np.concatenate(([0], [1]), axis=0)  # shapedirs (N, 6890, 3, 10)
+                self.test_y_flat.append(c)
 
         self.test_y_tensor = torch.Tensor(self.test_y_flat)
 
@@ -369,12 +173,14 @@ class PhysicalTrainer():
         # load in the training or testing files.  This may take a while.
         try:
             for some_subject in database_file:
+                print "got here"
                 if creation_type in some_subject:
+                    print "some creation type"
                     dat_curr = load_pickle(some_subject)
                     print some_subject, dat_curr['bed_angle_deg'][0]
                     for key in dat_curr:
                         if np.array(dat_curr[key]).shape[0] != 0:
-                            for inputgoalset in np.arange(len(dat_curr['markers_xyz_m'])):
+                            for inputgoalset in np.arange(len(dat_curr['images'])):
                                 datcurr_to_append = dat_curr[key][inputgoalset]
                                 if key == 'images' and np.shape(datcurr_to_append)[0] == 3948:
                                     datcurr_to_append = list(
@@ -395,6 +201,7 @@ class PhysicalTrainer():
             for key in dat:
                 print descriptor, key, np.array(dat[key]).shape
         except:
+            print "COULD NOT LOAD"
             dat = None
         return dat
 
@@ -519,16 +326,7 @@ class PhysicalTrainer():
 
         from kinematics_lib import KinematicsLib
 
-        p_mat_array = self.train_x_tensor.numpy()[:, 0, :, :]
-        bedangle_array = self.train_x_tensor.numpy()[:, 2, 0, 0]
-
         self.init_smpl(self.batch_size)
-
-        print self.train_y_tensor.size(), self.train_y_tensor.numpy()[:, 0:72].shape
-
-        #self.train_x_tensor = self.train_x_tensor.unsqueeze(1)
-        self.train_dataset = torch.utils.data.TensorDataset(self.train_x_tensor, self.train_y_tensor)
-        self.train_loader = torch.utils.data.DataLoader(self.train_dataset, self.batch_size, shuffle=self.shuffle)
 
 
         #self.test_x_tensor = self.test_x_tensor.unsqueeze(1)
@@ -537,7 +335,7 @@ class PhysicalTrainer():
 
 
 
-        for batch_idx, batch in enumerate(self.train_loader):
+        for batch_idx, batch in enumerate(self.test_loader):
 
             p_mat_array = batch[0].numpy()[:, 0, :, :]
             joint_loc_array = batch[1][:, 0:72].numpy().reshape(-1, 24, 3) / 1000
@@ -712,9 +510,8 @@ class PhysicalTrainer():
                 self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_300e.pt')
                 self.model = self.model.cuda()
             else:
-                #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s6ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
-                #pass
                 self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
+                #pass
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/2.0xsize/convnet_anglesEU_synthreal_tanh_s8ang_sig0p5_5xreal_voloff_128b_300e.pt', map_location='cpu')
 
             print 'LOADED!!!!!!!!!!!!!!!!!1'
@@ -757,7 +554,7 @@ class PhysicalTrainer():
 
                 images_up_non_tensor = np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy()[:, :, :, :], multiple = 2))
                 images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
-                images, targets, scores_zeros = Variable(batch[0].type(dtype), requires_grad=False), Variable(batch[1].type(dtype), requires_grad=False), Variable(torch.Tensor(np.zeros((batch[1].shape[0], batch[1].shape[1] / 3))).type(dtype), requires_grad=False)
+                images = Variable(batch[0].type(dtype), requires_grad=False)
 
                 scores, targets_est, targets_est_reduced = self.model.forward_direct(images_up, 0, targets, is_training = False)
 
@@ -771,39 +568,23 @@ class PhysicalTrainer():
 
             elif self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
 
-                #print batch[0].size()
-                #print batch[0].size()
-
-                #get the direct joint locations
-                batch.append(batch[1][:, 30:32])
-                batch[1] = batch[1][:, 0:30]
 
 
                 images_up_non_tensor = np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2))
                 images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
-                images, targets = Variable(batch[0].type(dtype), requires_grad=False), Variable(batch[1].type(dtype), requires_grad=False),
+                images = Variable(batch[0].type(dtype), requires_grad=False)
 
-                gender_switch = Variable(batch[2].type(dtype), requires_grad=False)
+                gender_switch = Variable(batch[1].type(dtype), requires_grad=False)
 
 
-                ground_truth = np.zeros((batch[0].numpy().shape[0], 30))
-                ground_truth = Variable(torch.Tensor(ground_truth).type(dtype))
-                ground_truth[:, 0:30] = targets[:, 0:30]/1000
-
-                scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].numpy().shape[0], 10))).type(dtype))
 
                 if self.loss_vector_type == 'anglesR':
                     scores, targets_est, targets_est_reduced, betas_est = self.model.forward_kinematic_R(images_up, gender_switch,
-                                                                                                         0, targets, is_training=False)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
+                                                                                                         0, targets=None, is_training=False)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
                 elif self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
                     scores, targets_est, targets_est_reduced, betas_est = self.model.forward_kinematic_angles(images_up, gender_switch,
-                                                                                                              0, targets, is_training=False,
+                                                                                                              0, targets=None, is_training=False,
                                                                                                               reg_angles = self.opt.reg_angles)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
-
-                self.criterion = nn.L1Loss()
-
-
-                loss += self.criterion(scores, scores_zeros).data.item()
 
                 #print("VAL SCORES",
                 #      np.sum(np.abs(scores.data.numpy())),
@@ -814,76 +595,27 @@ class PhysicalTrainer():
 
 
 
-
-            n_examples += self.batch_size
-            #print n_examples
-
-            if n_batches and (batch_i >= n_batches):
-                break
+            if self.loss_vector_type == 'anglesR':
+                #print angles_est[0, :], 'validation angles'
+                print betas_est[0, :], 'validation betas'
 
 
-            try:
-                targets_print = torch.cat([targets_print, torch.mean(targets.data, dim = 0).unsqueeze(0)], dim=0)
-                targets_est_print = torch.cat([targets_est_print, torch.mean(targets_est_reduced, dim = 0).unsqueeze(0)], dim=0)
-            except:
+            NUM_IMAGES = images.data.size()[0]
 
-                targets_print = torch.mean(targets.data, dim = 0).unsqueeze(0)
-                targets_est_print = torch.mean(targets_est_reduced, dim = 0).unsqueeze(0)
-            if GPU == True:
-                error_norm, error_avg, _ = VisualizationLib().print_error_val(targets_print[-2:-1,:].cpu(),
-                                                                                   targets_est_print[-2:-1,:].cpu(),
-                                                                                   self.output_size_val,
-                                                                                   self.loss_vector_type,
-                                                                                   data='validate')
-            else:
-                error_norm, error_avg, _ = VisualizationLib().print_error_val(targets_print[-2:-1,:], targets_est_print[-2:-1,:],
-                                                                                   self.output_size_val,
-                                                                                   self.loss_vector_type,
-                                                                                   data='validate')
-
-            #error_list.append(np.mean(error_norm))
-
-            #try:
-            #    error_norm_flat = np.concatenate((error_norm_flat, error_norm.flatten()), axis=0)
-            #except:
-            #    error_norm_flat = error_norm.flatten()
+            for image_ct in range(NUM_IMAGES):
+                # #self.im_sampleval = self.im_sampleval[:,0,:,:]
+                self.im_sampleval = images.data[image_ct, :].squeeze()
+                self.sc_sampleval = targets_est[image_ct, :].squeeze() / 1000
+                self.sc_sampleval = self.sc_sampleval.view(24, 3)
 
 
+                if GPU == True:
+                    VisualizationLib().visualize_pressure_map(self.im_sampleval.cpu(), self.sc_sampleval.cpu(), block=False)
+                else:
+                    VisualizationLib().visualize_pressure_map(self.im_sampleval, self.sc_sampleval, block=False)
+                time.sleep(1)
 
 
-            if self.opt.visualize == True:
-                loss /= n_examples
-                loss *= 100
-                loss *= 1000
-
-                if self.loss_vector_type == 'anglesR':
-                    #print angles_est[0, :], 'validation angles'
-                    print betas_est[0, :], 'validation betas'
-
-
-                NUM_IMAGES = images.data.size()[0]
-
-                for image_ct in range(NUM_IMAGES):
-                    # #self.im_sampleval = self.im_sampleval[:,0,:,:]
-                    self.im_sampleval = images.data[image_ct, :].squeeze()
-                    self.tar_sampleval = targets.data[image_ct, :].squeeze() / 1000
-                    self.sc_sampleval = targets_est[image_ct, :].squeeze() / 1000
-                    self.sc_sampleval = self.sc_sampleval.view(24, 3)
-
-
-                    if GPU == True:
-                        VisualizationLib().visualize_pressure_map(self.im_sampleval.cpu(), self.tar_sampleval.cpu(), self.sc_sampleval.cpu(), block=False)
-                    else:
-                        VisualizationLib().visualize_pressure_map(self.im_sampleval, self.tar_sampleval, self.sc_sampleval, block=False)
-                    time.sleep(1)
-
-        if GPU == True:
-            error_norm, error_avg, _ = VisualizationLib().print_error_iros2018(targets_print.cpu(), targets_est_print.cpu(), self.output_size_val, self.loss_vector_type, data='validate')
-        else:
-            error_norm, error_avg, _ = VisualizationLib().print_error_iros2018(targets_print, targets_est_print, self.output_size_val, self.loss_vector_type, data='validate')
-
-        print "MEAN IS: ", np.mean(error_norm, axis=0)
-        print error_avg, np.mean(error_avg)*10
 
 
 if __name__ == "__main__":
@@ -929,79 +661,10 @@ if __name__ == "__main__":
     test_database_file_f = []
     test_database_file_m = []
 
-    network_design = True
-    if network_design == True:
-        #training_database_file_f.append(filepath_prefix_qt + 'data/synth/train_f_lay_3555_upperbody_stiff.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/synth/train_f_lay_3681_rightside_stiff.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/synth/train_f_lay_3722_leftside_stiff.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/synth/train_f_lay_3808_lowerbody_stiff.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/synth/train_f_lay_3829_none_stiff.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/synth/train_f_sit_1508_upperbody_stiff.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/synth/train_f_sit_1534_rightside_stiff.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/synth/train_f_sit_1513_leftside_stiff.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/synth/train_f_sit_1494_lowerbody_stiff.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/synth/train_f_sit_1649_none_stiff.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    #test_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
+    test_database_file_f.append('/home/henry/data/unlabeled_pmat_data/henryc_on_bed_05102019.p')
 
-        training_database_file_f.append(filepath_prefix_qt+'data/real/trainval8_150rh1_sit120rh.p')
-
-        #training_database_file_m.append(filepath_prefix_qt + 'data/synth/train_m_lay_3573_upperbody_stiff.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/synth/train_m_lay_3628_rightside_stiff.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/synth/train_m_lay_3646_leftside_stiff.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/synth/train_m_lay_3735_lowerbody_stiff.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/synth/train_m_lay_3841_none_stiff.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/synth/train_m_sit_1302_upperbody_stiff.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/synth/train_m_sit_1259_rightside_stiff.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/synth/train_m_sit_1302_leftside_stiff.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/synth/train_m_sit_1275_lowerbody_stiff.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/synth/train_m_sit_1414_none_stiff.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        # training_database_file_m.append(filepath_prefix_qt+'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-
-        # training_database_file_m.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
-        # training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_95_rightside_stiff.p')
-
-        # test_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
-        # test_database_file_m.append(filepath_prefix_qt+'data/real/trainval8_150rh1_sit120rh.p')
-        # test_database_file_f.append(filepath_prefix_qt + 'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        # test_database_file_m.append(filepath_prefix_qt + 'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        test_database_file_m.append(filepath_prefix_qt + 'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        # test_database_file_m.append(filepath_prefix_qt + 'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        # test_database_file_m.append(filepath_prefix_qt + 'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        # test_database_file_m.append(filepath_prefix_qt + 'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        # test_database_file_f.append(filepath_prefix_qt + 'data/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    else:
-        training_database_file_m.append(filepath_prefix_qt + 'data/real/trainval4_150rh1_sit120rh.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/real/subject_12/p_files/trainval_200rlh1_115rlh2_75rlh3_175rllair.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/real/subject_12/p_files/trainval_sit175rlh_sit120rll.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/real/subject_16/p_files/trainval_200rlh1_115rlh2_75rlh3_175rllair.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/real/subject_16/p_files/trainval_sit175rlh_sit120rll.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/real/subject_17/p_files/trainval_200rlh1_115rlh2_75rlh3_175rllair.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/real/subject_17/p_files/trainval_sit175rlh_sit120rll.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/real/subject_18/p_files/trainval_200rlh1_115rlh2_75rlh3_175rllair.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/real/subject_18/p_files/trainval_sit175rlh_sit120rll.p')
-
-        # training_database_file_m.append(filepath_prefix_qt+'data/real/subject_9/p_files/trainval_200rlh1_115rlh2_75rlh3_175rllair.p')
-        # training_database_file_m.append(filepath_prefix_qt+'data/real/subject_9/p_files/trainval_sit175rlh_sit120rll.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/real/subject_10/p_files/trainval_200rlh1_115rlh2_75rlh3_175rllair.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/real/subject_10/p_files/trainval_sit175rlh_sit120rll.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/real/subject_11/p_files/trainval_200rlh1_115rlh2_75rlh3_175rllair.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/real/subject_11/p_files/trainval_sit175rlh_sit120rll.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/real/subject_13/p_files/trainval_200rlh1_115rlh2_75rlh3_175rllair.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/real/subject_13/p_files/trainval_sit175rlh_sit120rll.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/real/subject_14/p_files/trainval_200rlh1_115rlh2_75rlh3_175rllair.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/real/subject_14/p_files/trainval_sit175rlh_sit120rll.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/real/subject_15/p_files/trainval_200rlh1_115rlh2_75rlh3_175rllair.p')
-        #training_database_file_m.append(filepath_prefix_qt + 'data/real/subject_15/p_files/trainval_sit175rlh_sit120rll.p')
-
-        #test_database_file_m.append(filepath_prefix_qt + 'data/real/subject_9/p_files/trainval_200rlh1_115rlh2_75rlh3_175rllair.p')
-        test_database_file_m.append(filepath_prefix_qt + 'data/real/subject_9/p_files/trainval_sit175rlh_sit120rll.p')
-
-    p = PhysicalTrainer(training_database_file_f, training_database_file_m, test_database_file_f, test_database_file_m, opt)
+    p = PhysicalTrainer(test_database_file_f, test_database_file_m, opt)
 
     print "GOT HERE!"
     p.init_convnet_train()
