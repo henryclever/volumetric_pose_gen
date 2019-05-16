@@ -56,10 +56,12 @@ class BagfileToPickle():
 
     def read_bag(self, filepath):
 
+        filename = filepath+'/henryc_on_bed_05102019.bag'
+
 
         self.mat_sampled = False
 
-        bag = rosbag.Bag(filepath, 'r')
+        bag = rosbag.Bag(filename, 'r')
         count = 0
 
 
@@ -109,8 +111,32 @@ class BagfileToPickle():
         print count, len(self.final_dataset['images'])
         return self.final_dataset
 
-    
 
+    def read_numpy(self, filepath):
+
+        self.final_dataset = {}
+
+        self.final_dataset['images'] = []
+        self.final_dataset['bed_angle_deg'] = []
+
+
+        for i in range(19, 22):
+
+            file_number = '{0:04}'.format(i)
+            newpath = filepath +'data_082018_'+ str(file_number)
+            print "loading existing npy files in the new path...."
+            pressure_all = np.load(newpath + "/pressure.npy")
+            for image in range(pressure_all.shape[0]):
+                p_mat = pressure_all[image, :]
+                p_mat = np.fliplr(np.flipud(np.array(p_mat).reshape(64, 27)))
+
+                self.final_dataset['images'].append(list(p_mat.flatten()))
+                self.final_dataset['bed_angle_deg'].append(0)
+
+            print pressure_all.shape
+
+        print len(self.final_dataset['images'])
+        return self.final_dataset
 
 if __name__ == '__main__':
     rospy.init_node('bag_to_pickle')
@@ -119,14 +145,17 @@ if __name__ == '__main__':
 
     #print file_details_dict['9']
     database_path = '/home/henry/data/unlabeled_pmat_data'
+    database_path2 = '/media/henry/multimodal_data_1/test_data_09102018_to_09112018/'
 
 
-
-    subject_detaildata = bagtopkl.read_bag(database_path+'/henryc_on_bed_05102019.bag')
+    #subject_detaildata = bagtopkl.read_bag(database_path)
+    subject_detaildata = bagtopkl.read_numpy(database_path2)
     #pkl.dump(database_path, open(database_path+detail[2],'.p', "wb"))
 
     #do this when you want to overwrite the current files
 
-    pkl.dump(subject_detaildata,open(os.path.join(database_path+'/henryc_on_bed_05102019.p'), 'wb'))
+    #pkl.dump(subject_detaildata,open(os.path.join(database_path+'/henryc_on_bed_05102019.p'), 'wb'))
+
+    pkl.dump(subject_detaildata, open(os.path.join(database_path+'/henrye_on_bed_09102019.p'), 'wb'))
 
 

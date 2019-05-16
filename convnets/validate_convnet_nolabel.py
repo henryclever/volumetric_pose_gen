@@ -13,7 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torchvision import transforms
+#from torchvision import transforms
 from torch.autograd import Variable
 
 import chumpy as ch
@@ -132,10 +132,10 @@ class PhysicalTrainer():
         self.test_x_flat = []  # Initialize the testing pressure mat listhave
         if test_dat_f is not None:
             for entry in range(len(test_dat_f['images'])):
-                self.test_x_flat.append(np.clip(np.array(test_dat_f['images'][entry])*3.5, a_min=0, a_max=100))
+                self.test_x_flat.append(np.clip(np.array(test_dat_f['images'][entry])*5.0, a_min=0, a_max=100))
         if test_dat_m is not None:
             for entry in range(len(test_dat_m['images'])):
-                self.test_x_flat.append(np.clip(np.array(test_dat_m['images'][entry])*3.5, a_min=0, a_max=100))
+                self.test_x_flat.append(np.clip(np.array(test_dat_m['images'][entry])*5.0, a_min=0, a_max=100))
 
         self.test_a_flat = []  # Initialize the testing pressure mat angle listhave
         if test_dat_f is not None:
@@ -174,6 +174,7 @@ class PhysicalTrainer():
         try:
             for some_subject in database_file:
                 print "got here"
+                print some_subject
                 if creation_type in some_subject:
                     print "some creation type"
                     dat_curr = load_pickle(some_subject)
@@ -662,7 +663,9 @@ if __name__ == "__main__":
     test_database_file_m = []
 
     #test_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
-    test_database_file_f.append('/home/henry/data/unlabeled_pmat_data/henryc_on_bed_05102019.p')
+    #test_database_file_m.append('/home/henry/data/unlabeled_pmat_data/henryc_on_bed_05102019.p')
+
+    test_database_file_m.append('/home/henry/data/unlabeled_pmat_data/henrye_on_bed_09102019.p')
 
     p = PhysicalTrainer(test_database_file_f, test_database_file_m, opt)
 
