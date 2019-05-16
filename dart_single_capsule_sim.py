@@ -19,14 +19,15 @@ from pydart2.gui.opengl.scene import OpenGLScene
 from time import time
 import scipy.signal as signal
 from smpl.smpl_webuser.serialization import load_model
+import lib_kinematics
 
 GRAVITY = -9.81
 
-K = 1269.0
-B = 10000.0
-FRICTION_COEFF = 0.5
+K = 590.0*2*2
+B = K*2
+FRICTION_COEFF = 0.0#0.5
 
-NUM_CAPSULES = 20
+NUM_CAPSULES = 1
 DART_TO_FLEX_CONV = 2.58872
 
 
@@ -54,11 +55,14 @@ class DartSingleCapsuleSim(object):
 
         capsules_median = get_capsules(m, betas*0, length_regs, rad_regs)
         capsules = get_capsules(m, betas, length_regs, rad_regs)
+
+
         joint_names = joint2name
         initial_rots = rots0
         self.num_steps = 10000
         self.render_dart = render
         self.ct = 0
+        self.num_dart_steps = 4
 
         self.has_reset_velocity1 = False
         self.has_reset_velocity2 = False
@@ -73,7 +77,7 @@ class DartSingleCapsuleSim(object):
         pydart.init(verbose=True)
         print('pydart initialization OK')
 
-        self.world = pydart.World(0.0103/5, "EMPTY") #0.002 is what works well. 0.0103 is when the velocity aligns. thus flex is 0.0103/0.0020 = 5.15x more fast than dart
+        self.world = pydart.World(0.0103/4, "EMPTY") #0.002 is what works well. 0.0103 is when the velocity aligns. thus flex is 0.0103/0.0020 = 5.15x more fast than dart
         self.world.set_gravity([0, 0, GRAVITY])#([0, 0,  -9.81])
         self.world.set_collision_detector(detector_type=2)
         self.world.add_empty_skeleton(_skel_name="human")
@@ -84,6 +88,7 @@ class DartSingleCapsuleSim(object):
 
         joint_root_loc = np.asarray(np.transpose(capsules[0].t)[0])
 
+        self.step_num = 0
 
 
         joint_locs = []
@@ -160,9 +165,10 @@ class DartSingleCapsuleSim(object):
         self.cap_init_rots = []
         lowest_points = []
 
-
         for capsule in capsules:
             print "************* Capsule No.",count, joint_names[count], " joint ref: ", red_joint_ref[count]," parent_ref: ", red_parent_ref[count]," ****************"
+
+
             cap_rad = input_flex_radius
             cap_len = input_flex_length
             cap_init_rot = list(np.asarray(initial_rots[count]))
@@ -311,6 +317,22 @@ class DartSingleCapsuleSim(object):
         self.force_application_count = 0
         self.count = 0
 
+        self.zi = []
+        self.b = []
+        self.a = []
+        for i in range(60):
+            b, a = signal.butter(1, 0.05, analog=False)
+            self.b.append(b)
+            self.a.append(a)
+            self.zi.append(signal.lfilter_zi(self.b[-1], self.a[-1]))
+        self.ziF = []
+        self.bF = []
+        self.aF = []
+        for i in range(3):
+            b, a = signal.butter(1, 0.05, analog=False)
+            self.bF.append(b)
+            self.aF.append(a)
+            self.ziF.append(signal.lfilter_zi(self.bF[-1], self.aF[-1]))
 
 
         #print "joint locs",
@@ -478,8 +500,9 @@ class DartSingleCapsuleSim(object):
         GLUT.glutMainLoop()
 
 
-    def run_sim_step(self, pmat_red_list = [], force_loc_red_dart = [], force_dir_red_dart = [], pmat_idx_red_dart = [], nearest_capsule_list = [], stiffness = None, kill_dart_vel = False):
-        self.world.step()
+    def run_sim_step_noforce(self, pmat_red_list = [], force_loc_red_dart = [], force_dir_red_dart = [], pmat_idx_red_dart = [], nearest_capsule_list = [], stiffness = None, kill_dart_vel = False):
+        for i in range(self.num_dart_steps):
+            self.world.step()
         #print "did a step"
 
 
@@ -492,9 +515,210 @@ class DartSingleCapsuleSim(object):
         root_joint_pos = [skel.bodynodes[0].C[0] - self.cap_offsets[0][0]*np.cos(skel.q[2]) + self.cap_offsets[0][1]*np.sin(skel.q[2]),
                           skel.bodynodes[0].C[1] - self.cap_offsets[0][0]*np.sin(skel.q[2]) - self.cap_offsets[0][1]*np.cos(skel.q[2])]
 
-        #print skel.bodynodes[0]
+        print skel.bodynodes[0].C
 
         return skel.q, skel.bodynodes, root_joint_pos, vel, acc
+
+
+    def run_sim_step(self, pmat_red_list = [], force_loc_red_dart = [], force_dir_red_dart = [], pmat_idx_red_dart = [], nearest_capsule_list = [], kill_dart_vel = False):
+        self.world.step()
+        if kill_dart_vel == True:
+            self.world.skeletons[0].reset_momentum()
+
+        max_vel = 0.0
+        max_acc = 0.0
+        skel = self.world.skeletons[0]
+
+
+        force_dir_red_dart = (np.multiply(np.asarray(force_dir_red_dart), np.expand_dims(np.asarray(pmat_red_list), axis=1)))/10
+
+
+        nearest_capsules = nearest_capsule_list
+
+
+        force_dir_list = [[]]
+        pmat_idx_list = [[]]
+        force_loc_list = [[]]
+        force_vel_list = [[]]
+        for idx in range(len(nearest_capsules)):
+            force_dir_list[nearest_capsules[idx]].append(force_dir_red_dart[idx])
+            pmat_idx_list[nearest_capsules[idx]].append(pmat_idx_red_dart[idx])
+            force_loc_list[nearest_capsules[idx]].append(force_loc_red_dart[idx])
+
+
+
+        #filter the acceleration vectors
+        accel_vectors = []
+        for item in range(len(force_dir_list)):\
+            accel_vectors.append(skel.bodynodes[item].com_linear_acceleration())
+        accel_vectors = np.array(accel_vectors).flatten()
+        accel_vectors_filtered = np.copy(accel_vectors)
+        for i in range(len(force_dir_list)*3):
+            accel_vectors_filtered[i], self.zi[i] = signal.lfilter(self.b[i], self.a[i], [accel_vectors[i]], zi=self.zi[i])
+        accel_vectors_filtered = accel_vectors_filtered.reshape(len(accel_vectors.tolist())/3, 3)
+
+        #time3 = time() - time2 - time1 - time0
+
+        print accel_vectors, accel_vectors_filtered
+
+        active_bn_list = []
+        active_force_resultant_COM_list = []
+        active_moment_at_COM_list = []
+
+
+
+        for item in range(len(force_dir_list)):
+            #print "linear v", skel.bodynodes[item].com_linear_velocity()
+
+            #if item not in max_vel_withhold and np.linalg.norm(skel.bodynodes[item].com_linear_velocity()) > max_vel:
+
+            if np.linalg.norm(skel.bodynodes[item].com_linear_velocity()) > max_vel:
+                max_vel = np.linalg.norm(skel.bodynodes[item].com_linear_velocity())
+
+
+            if np.linalg.norm(accel_vectors_filtered[item]) > max_acc:
+                max_acc = np.linalg.norm(accel_vectors_filtered[item])
+
+
+            if len(force_dir_list[item]) is not 0:
+                item, len(force_dir_list[item])
+                # find the sum of forces and the moment about the center of mass of each capsule
+                #COM = skel.bodynodes[item].C + [0.96986 / DART_TO_FLEX_CONV, 2.4 / DART_TO_FLEX_CONV, self.STARTING_HEIGHT / DART_TO_FLEX_CONV]
+                COM = skel.bodynodes[item].C + [1.185 / DART_TO_FLEX_CONV, 2.55 / DART_TO_FLEX_CONV, self.STARTING_HEIGHT / DART_TO_FLEX_CONV]
+
+                #print item
+                #print self.pmat_idx_list_prev[item], pmat_idx_list[item]
+                #print self.force_dir_list_prev[item]
+                #print "dir:", len(force_dir_list[item]), force_dir_list[item]
+
+                #Calculate the spring force
+                ##PARTICLE BASIS##
+                f_spring = K*np.asarray(force_dir_list[item]) + np.asarray([0.00001, 0.00001, 0.00001])
+                force_spring_COM = np.sum(f_spring, axis=0)
+
+
+                #Calculate the damping force
+                ##PARTICLE BASIS##
+                f_damping = LibDartSkel().get_particle_based_damping_force(pmat_idx_list, self.pmat_idx_list_prev, force_dir_list, self.force_dir_list_prev, force_vel_list, item, B)
+                force_damping_COM = np.sum(f_damping, axis=0)
+                ##CAPSULE BASIS##
+                #force_damping_COM = - B*skel.bodynodes[item].com_linear_velocity()
+
+
+                #Calculate the friction force
+                ##PARTICLE BASIS##
+                f_normal = f_spring + f_damping
+                V_capsule = skel.bodynodes[item].com_linear_velocity() + np.asarray([0.00001, 0.00001, 0.00001])
+                f_friction = LibDartSkel().get_particle_based_friction_force(f_normal, V_capsule, FRICTION_COEFF)
+                force_friction_COM = np.sum(f_friction, axis = 0)
+                ##CAPSULE BASIS##
+                #force_friction_COM = LibDartSkel().get_capsule_based_friction_force(skel.bodynodes[item], force_spring_COM, force_damping_COM, FRICTION_COEFF)
+
+
+                #
+                force_resultant_COM = force_spring_COM + force_damping_COM + force_friction_COM
+                print force_resultant_COM, "F R COM"
+
+
+
+                force_resultant_COM_filtered = np.copy(force_resultant_COM)
+                for i in range(3):
+                    force_resultant_COM[i], self.ziF[i] = signal.lfilter(self.bF[i], self.aF[i], [force_resultant_COM[i]],
+                                                                           zi=self.ziF[i])
+
+                print force_resultant_COM
+
+
+
+
+
+
+                #Calculate the moment arm
+                d_forces = force_loc_list[item] - COM
+
+                #Calculate the moment
+                ##PARTICLE BASIS##
+                moments = np.cross(d_forces, f_normal)#+f_friction
+                ##CAPSULE BASIS##
+                #moments = np.cross(d_forces, f_spring)
+
+
+
+                moment_at_COM = np.sum(moments, axis=0)
+
+                active_bn_list.append(item)
+                active_force_resultant_COM_list.append(force_resultant_COM)
+                active_moment_at_COM_list.append(moment_at_COM)
+                LibDartSkel().impose_force(skel=skel, body_node=item, force=force_resultant_COM,
+                                           offset_from_centroid=np.asarray([0.0, 0.0, 0.0]),
+                                           cap_offsets=self.cap_offsets,
+                                           render=False, init=False)
+
+                #LibDartSkel().impose_torque(skel=skel, body_node=item, torque=moment_at_COM, init=False)
+
+
+        #time4 = time() - time3 - time2 - time1 - time0
+
+        #now apply the forces and step through dart for some repeated number of times. not particularly fast. expect 20 ms for
+        for step in range(self.num_dart_steps-1):
+            self.world.step()
+
+            for active_bn in range(len(active_bn_list)):
+                LibDartSkel().impose_force(skel=skel, body_node=active_bn_list[active_bn], force=active_force_resultant_COM_list[active_bn],
+                                           offset_from_centroid=np.asarray([0.0, 0.0, 0.0]),
+                                           cap_offsets=self.cap_offsets,
+                                           render=False, init=False)
+
+                #LibDartSkel().impose_torque(skel=skel, body_node=active_bn_list[active_bn], torque=active_moment_at_COM_list[active_bn], init=False)
+
+
+
+
+        #print "dart timing", time1, time2, time3, time4, time() - time4-time3-time2-time1-time0
+
+        #this root joint position will tell us how to shift the root when we remesh the capsule model
+
+
+
+        #root_joint_pos = [skel.bodynodes[0].C[0] - self.cap_offsets[0][0]*np.cos(skel.q[2]) + self.cap_offsets[0][1]*np.sin(skel.q[2]),
+        #                  skel.bodynodes[0].C[1] - self.cap_offsets[0][0]*np.sin(skel.q[2]) - self.cap_offsets[0][1]*np.cos(skel.q[2])]
+
+
+        #print skel.bodynodes[0].C
+        #print skel.q[0:3], "FIRST 3 ANGLES"
+        #print root_joint_pos, 'old root pos'
+
+
+        Trans1 = lib_kinematics.matrix_from_dir_cos_angles(skel.q[0:3])
+        dist = np.matmul(Trans1, np.array([0.0, -0.04, 0.0]))
+
+        print skel.bodynodes[0].C, skel.bodynodes[0].m
+        root_joint_pos = skel.bodynodes[0].C - dist
+        root_joint_pos[2] += self.STARTING_HEIGHT / DART_TO_FLEX_CONV
+        print root_joint_pos
+
+        #print "appending time", time() - time_orig
+
+        #LibDartSkel().impose_force(skel=skel, body_node=self.body_node, force=self.force, offset_from_centroid=self.offset_from_centroid, cap_offsets=self.cap_offsets, render=False, init=False)
+
+        self.force_dir_list_prev = force_dir_list
+        self.pmat_idx_list_prev = pmat_idx_list
+        self.force_loc_list_prev = force_loc_list
+
+        if self.step_num == 0:
+            self.world.check_collision()
+            contact_check_bns = [4, 5, 7, 8, 16, 17, 18, 19]
+            #for contact_set in self.world.collision_result.contact_sets:
+            #    if contact_set[0] in contact_check_bns or contact_set[1] in contact_check_bns:  # consider removing spine 3 and upper legs
+            print self.world.collision_result.contact_sets
+                    #sleep(1)
+
+        self.step_num += 1
+
+
+
+        return skel.q, skel.bodynodes, root_joint_pos, max_vel, max_acc
+
 
 
 

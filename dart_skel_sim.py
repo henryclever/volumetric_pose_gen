@@ -28,9 +28,10 @@ STARTING_HEIGHT = 1.3
 
 #K = 1269.0
 #K = 1521.1
-K = 1196.5
+#K = 1196.5
+K = 704.5
 #K = 1042.05
-B = K*3
+B = K*10
 FRICTION_COEFF = 0.5
 
 NUM_CAPSULES = 20
@@ -233,8 +234,10 @@ class DartSkelSim(object):
             #add a floor-STARTING_HEIGHT / DART_TO_FLEX_CONV
             self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.0, -self.STARTING_HEIGHT/DART_TO_FLEX_CONV/2 - 0.05], box_rot=[0.0, 0.0, 0.0], joint_name = "floor") #-0.05
 
+            print "got there!!!!"
+
             if posture == "sit": #need to hack the 0.5 to the right spot
-                self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.48, 0.0], box_rot=[np.pi/3, 0.0, 0.0], joint_name = "headrest") #-0.05
+                self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.43, 0.0], box_rot=[np.pi/3, 0.0, 0.0], joint_name = "headrest") #-0.05
 
         skel = self.world.add_built_skeleton(_skel_id=0, _skel_name="human")
 

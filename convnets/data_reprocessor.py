@@ -189,7 +189,7 @@ if __name__ == "__main__":
     #stiffness = "leftside"
     #num_resting_poses = 3722
 
-    all_data_names = [["f", "lay", "upperbody", 3555]]
+    all_data_names = [["m", "lay", "upperbody", 50, 56]]
     #all_data_names = [["f", "lay", "leftside", 3722],
     #                  ["f", "sit", "lowerbody", 1494],
     #                  ["f", "sit", "upperbody", 1508],
@@ -212,6 +212,7 @@ if __name__ == "__main__":
         posture = gpsn[1]
         stiffness = gpsn[2]
         num_resting_poses = gpsn[3]
+        num_resting_poses_tried = gpsn[4]
 
         training_data_dict = {}
         training_data_dict['markers_xyz_m'] = []
@@ -252,7 +253,7 @@ if __name__ == "__main__":
         #print m.pose
         #print "J x trans", m.J_transformed[:, 0]
 
-        resting_pose_data_list = np.load('/home/henry/data/resting_poses/resting_pose_'+gender+'_'+posture+'_'+str(num_resting_poses)+'_'+stiffness+'_stiff.npy')
+        resting_pose_data_list = np.load('/home/henry/data/resting_poses/resting_pose_'+gender+'_'+posture+'_'+str(num_resting_poses)+'_of_'+str(num_resting_poses_tried)+"_"+stiffness+'_stiff.npy')
         training_database_pmat_height_list = np.load('/home/henry/data/pmat_height/pmat_height_'+gender+'_'+posture+'_'+str(num_resting_poses)+'_'+stiffness+'_stiff.npy')
 
         print len(resting_pose_data_list), len(training_database_pmat_height_list[0])
@@ -361,7 +362,7 @@ if __name__ == "__main__":
 
         print training_data_dict['markers_xyz_m'][i][0:2], training_data_dict['root_xyz_shift'][i]
 
-        training_pmat = np.array(training_data_dict['images'][i]).reshape(1, 64, 27)*3
+        training_pmat = np.array(training_data_dict['images'][i]).reshape(1, 64, 27)*5.0
         training_targets = np.array(training_data_dict['markers_xyz_m'][i])
 
         validate_pmat = np.array(test_database_file['images'][i]).reshape(1, 84, 47)[:, 10:74, 10:37]

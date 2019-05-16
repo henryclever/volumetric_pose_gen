@@ -302,120 +302,173 @@ class LibDartSkel():
         torso_damping = torso_stiffness*5
 
         for joint in skel.joints:
-            print
-            joint.spring_stiffness(0)
+            print joint.spring_stiffness(0)
 
             if joint.name == "leftThigh":
-                joint.set_position_lower_limit(0, -2.047187297216041)  # ext
-                joint.set_position_upper_limit(0, 0.0008725992352640336)
-                joint.set_position_lower_limit(1, -1.0056561780573234)  # yaw
-                joint.set_position_upper_limit(1, 0.9792596381050885)
-                joint.set_position_lower_limit(2, -0.83127128871961)  # abd
-                joint.set_position_upper_limit(2, 0.9840833280290882)
+                joint.set_position_lower_limit(0, -2.655719256295683)  # ext
+                joint.set_position_upper_limit(0, 0.07150907780435195)
+                joint.set_position_lower_limit(1, -1.1586383564647427)  # yaw
+                joint.set_position_upper_limit(1, 0.9340170076795724)
+                joint.set_position_lower_limit(2, -0.37290106435540205)  # abd
+                joint.set_position_upper_limit(2, 0.9190375825276169)
                 joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, l_leg_damping)
                 joint.set_damping_coefficient(1, l_leg_damping)
                 joint.set_damping_coefficient(2, l_leg_damping)
             elif joint.name == "rightThigh":
-                joint.set_position_lower_limit(0, -2.0467908364949654)  # ext
-                joint.set_position_upper_limit(0, 0.005041331594134009)
-                joint.set_position_lower_limit(1, -0.9477521700520728)  # yaw
-                joint.set_position_upper_limit(1, 1.0038579032816006)
-                joint.set_position_lower_limit(2, -0.8767199629302654)  # abd
-                joint.set_position_upper_limit(2, 0.35738032396710084)
+                joint.set_position_lower_limit(0, -2.655719256295683)  # ext
+                joint.set_position_upper_limit(0, 0.07150907780435195)
+                joint.set_position_lower_limit(1, -0.9340170076795724)  # yaw
+                joint.set_position_upper_limit(1, 1.1586383564647427)
+                joint.set_position_lower_limit(2, -0.9190375825276169)  # abd
+                joint.set_position_upper_limit(2, 0.37290106435540205)
                 joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, r_leg_damping)
                 joint.set_damping_coefficient(1, r_leg_damping)
                 joint.set_damping_coefficient(2, r_leg_damping)
+            elif joint.name == "spine" or joint.name == "spine1" or joint.name == "spine2":
+                joint.set_position_lower_limit(0, -np.pi/6)
+                joint.set_position_upper_limit(0, np.pi/6)
+                joint.set_position_lower_limit(1, -np.pi/36)
+                joint.set_position_upper_limit(1, np.pi/36)
+                joint.set_position_lower_limit(2, -np.pi/36)
+                joint.set_position_upper_limit(2, np.pi/36)
+                joint.set_position_limit_enforced(True)
+                joint.set_damping_coefficient(0, torso_damping)
+                joint.set_damping_coefficient(1, torso_damping)
+                joint.set_damping_coefficient(2, torso_damping)
             elif joint.name == "leftCalf":
                 joint.set_position_lower_limit(0, 0.0)
-                joint.set_position_upper_limit(0, 2.307862756803765)
+                joint.set_position_upper_limit(0, 2.6869091212979197)
                 joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, l_knee_damping)
             elif joint.name == "rightCalf":
                 joint.set_position_lower_limit(0, 0.0)
-                joint.set_position_upper_limit(0, 2.320752282574325)
+                joint.set_position_upper_limit(0, 2.6869091212979197)
                 joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, r_knee_damping)
             elif joint.name == "leftFoot":
+                joint.set_position_lower_limit(0, -np.pi/6)
+                joint.set_position_upper_limit(0, np.pi/6)
+                joint.set_position_lower_limit(1, -np.pi/6)
+                joint.set_position_upper_limit(1, np.pi/6)
+                joint.set_position_lower_limit(2, -np.pi/6)
+                joint.set_position_upper_limit(2, np.pi/6)
+                joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, l_leg_damping)
                 joint.set_damping_coefficient(1, l_leg_damping)
                 joint.set_damping_coefficient(2, l_leg_damping)
             elif joint.name == "rightFoot":
+                joint.set_position_lower_limit(0, -np.pi/6)
+                joint.set_position_upper_limit(0, np.pi/6)
+                joint.set_position_lower_limit(1, -np.pi/6)
+                joint.set_position_upper_limit(1, np.pi/6)
+                joint.set_position_lower_limit(2, -np.pi/6)
+                joint.set_position_upper_limit(2, np.pi/6)
+                joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, r_leg_damping)
                 joint.set_damping_coefficient(1, r_leg_damping)
                 joint.set_damping_coefficient(2, r_leg_damping)
-
             elif joint.name == "leftShoulder":
-                joint.set_position_lower_limit(0,  -1.7636153960682888 * 1 / 3)  # roll
-                joint.set_position_upper_limit(0, 1.5740500958475525 * 1 / 3)
-                joint.set_position_lower_limit(1, -1.5168279883317557 * 1 / 3)  # yaw
-                joint.set_position_upper_limit(1, 1.6123857573735045 * 1 / 3)
-                joint.set_position_lower_limit(2, -1.7656139149798185 * 1 / 3)  # pitch
-                joint.set_position_upper_limit(2, 1.9844820788036448 * 1 / 3)
+                joint.set_position_lower_limit(0,  -1.5525790052790263 * 1 / 3)  # roll
+                joint.set_position_upper_limit(0, 1.580579714602293 * 1 / 3)
+                joint.set_position_lower_limit(1, -1.545407583212041 * 1 / 3)  # yaw
+                joint.set_position_upper_limit(1, 1.0243644544117376 * 1 / 3)
+                joint.set_position_lower_limit(2, -1.740132642542865 * 1 / 3)  # pitch
+                joint.set_position_upper_limit(2, 2.1843225295849584 * 1 / 3)
                 joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, l_arm_damping)
                 joint.set_damping_coefficient(1, l_arm_damping)
                 joint.set_damping_coefficient(2, l_arm_damping)
             elif joint.name == "leftUpperArm":
-                joint.set_position_lower_limit(0, -1.7636153960682888 * 2 / 3)  # roll
-                joint.set_position_upper_limit(0, 1.5740500958475525 * 2 / 3)
-                joint.set_position_lower_limit(1, -1.5168279883317557 * 2 / 3)  # yaw
-                joint.set_position_upper_limit(1, 1.6123857573735045 * 2 / 3)
-                joint.set_position_lower_limit(2, -1.7656139149798185 * 2 / 3)  # pitch
-                joint.set_position_upper_limit(2, 1.9844820788036448 * 2 / 3)
+                joint.set_position_lower_limit(0, -1.5525790052790263 * 2 / 3)  # roll
+                joint.set_position_upper_limit(0, 1.580579714602293 * 2 / 3)
+                joint.set_position_lower_limit(1, -1.545407583212041 * 2 / 3)  # yaw
+                joint.set_position_upper_limit(1, 1.0243644544117376 * 2 / 3)
+                joint.set_position_lower_limit(2, -1.740132642542865 * 2 / 3)  # pitch
+                joint.set_position_upper_limit(2, 2.1843225295849584 * 2 / 3)
                 joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, l_arm_damping)
                 joint.set_damping_coefficient(1, l_arm_damping)
                 joint.set_damping_coefficient(2, l_arm_damping)
             elif joint.name == "rightShoulder":
-                joint.set_position_lower_limit(0, -1.8819412381973686 * 1 / 3)  # roll
-                joint.set_position_upper_limit(0, 1.5386423137579994 * 1 / 3)
-                joint.set_position_lower_limit(1, -1.6424506514942065 * 1 / 3)  # yaw
-                joint.set_position_upper_limit(1, 2.452871806175492  * 1 / 3)
-                joint.set_position_lower_limit(2, -1.9397148210114974 * 1 / 3)  # pitch
-                joint.set_position_upper_limit(2, 1.8997886932520462 * 1 / 3)
+                joint.set_position_lower_limit(0, -1.5525790052790263 * 1 / 3)  # roll
+                joint.set_position_upper_limit(0, 1.580579714602293 * 1 / 3)
+                joint.set_position_lower_limit(1, -1.0243644544117376 * 1 / 3)  # yaw
+                joint.set_position_upper_limit(1, 1.545407583212041  * 1 / 3)
+                joint.set_position_lower_limit(2, -2.1843225295849584 * 1 / 3)  # pitch
+                joint.set_position_upper_limit(2, 1.740132642542865 * 1 / 3)
                 joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, r_arm_damping)
                 joint.set_damping_coefficient(1, r_arm_damping)
                 joint.set_damping_coefficient(2, r_arm_damping)
             elif joint.name == "rightUpperArm":
-                joint.set_position_lower_limit(0, -1.8819412381973686 * 2 / 3)  # roll
-                joint.set_position_upper_limit(0, 1.5386423137579994 * 2 / 3)
-                joint.set_position_lower_limit(1, -1.6424506514942065 * 2 / 3)  # yaw
-                joint.set_position_upper_limit(1, 2.452871806175492 * 2 / 3)
-                joint.set_position_lower_limit(2, -1.9397148210114974 * 2 / 3)  # pitch
-                joint.set_position_upper_limit(2, 1.8997886932520462 * 2 / 3)
+                joint.set_position_lower_limit(0, -1.5525790052790263 * 2 / 3)  # roll
+                joint.set_position_upper_limit(0, 1.580579714602293 * 2 / 3)
+                joint.set_position_lower_limit(1, -1.0243644544117376 * 2 / 3)  # yaw
+                joint.set_position_upper_limit(1, 1.545407583212041 * 2 / 3)
+                joint.set_position_lower_limit(2, -2.1843225295849584 * 2 / 3)  # pitch
+                joint.set_position_upper_limit(2, 1.740132642542865 * 2 / 3)
                 joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, r_arm_damping)
                 joint.set_damping_coefficient(1, r_arm_damping)
                 joint.set_damping_coefficient(2, r_arm_damping)
             elif joint.name == "leftForeArm":
-                joint.set_position_lower_limit(0, -2.146677709782182)
+                joint.set_position_lower_limit(0, -2.4281310593630705)
                 joint.set_position_upper_limit(0, 0.0)
                 joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, l_arm_damping)
             elif joint.name == "rightForeArm":
                 joint.set_position_lower_limit(0, 0.0)
-                joint.set_position_upper_limit(0, 2.136934895040784)
+                joint.set_position_upper_limit(0, 2.4281310593630705)
                 joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, r_arm_damping)
             elif joint.name == "leftHand":
+                joint.set_position_lower_limit(0, -np.pi/6)
+                joint.set_position_upper_limit(0, np.pi/6)
+                joint.set_position_lower_limit(1, -np.pi/6)
+                joint.set_position_upper_limit(1, np.pi/6)
+                joint.set_position_lower_limit(2, -np.pi/6)
+                joint.set_position_upper_limit(2, np.pi/6)
+                joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, l_arm_damping)
                 joint.set_damping_coefficient(1, l_arm_damping)
                 joint.set_damping_coefficient(2, l_arm_damping)
             elif joint.name == "rightHand":
+                joint.set_position_lower_limit(0, -np.pi/6)
+                joint.set_position_upper_limit(0, np.pi/6)
+                joint.set_position_lower_limit(1, -np.pi/6)
+                joint.set_position_upper_limit(1, np.pi/6)
+                joint.set_position_lower_limit(2, -np.pi/6)
+                joint.set_position_upper_limit(2, np.pi/6)
+                joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, r_arm_damping)
                 joint.set_damping_coefficient(1, r_arm_damping)
                 joint.set_damping_coefficient(2, r_arm_damping)
             elif joint.name == "neck" or joint.name == "head":
+                joint.set_position_lower_limit(0, -np.pi/6)
+                joint.set_position_upper_limit(0, np.pi/6)
+                joint.set_position_lower_limit(1, -np.pi/36)
+                joint.set_position_upper_limit(1, np.pi/36)
+                joint.set_position_lower_limit(2, -np.pi/36)
+                joint.set_position_upper_limit(2, np.pi/36)
+                joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, head_damping)
                 joint.set_damping_coefficient(1, head_damping)
                 joint.set_damping_coefficient(2, head_damping)
-            else:
+            elif joint.name == "pelvis":
+                joint.set_position_lower_limit(0, -np.pi/3)
+                joint.set_position_upper_limit(0, np.pi/3)
+                joint.set_position_lower_limit(1, -np.pi/3)
+                joint.set_position_upper_limit(1, np.pi/3)
+                joint.set_position_lower_limit(2, -np.pi/3)
+                joint.set_position_upper_limit(2, np.pi/3)
+                joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, torso_damping)
                 joint.set_damping_coefficient(1, torso_damping)
                 joint.set_damping_coefficient(2, torso_damping)
+            else:
+                print joint.name
 
         return skel
 
