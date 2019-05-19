@@ -130,9 +130,9 @@ class LibDartSkel():
             torso_stiffness = 300.0*bm_fraction
 
         if STIFFNESS == "upperbody":
-            r_arm_stiffness = 75.0*bm_fraction
-            l_arm_stiffness = 75.0*bm_fraction
-            head_stiffness = 150.0*bm_fraction
+            r_arm_stiffness = 100.0*bm_fraction
+            l_arm_stiffness = 100.0*bm_fraction
+            head_stiffness = 200.0*bm_fraction
             r_leg_stiffness = 10.0*bm_fraction
             l_leg_stiffness = 10.0*bm_fraction
             r_knee_stiffness = 10.0*bm_fraction
@@ -140,31 +140,31 @@ class LibDartSkel():
         elif STIFFNESS == "lowerbody":
             r_arm_stiffness = 2.0*bm_fraction
             l_arm_stiffness = 2.0*bm_fraction
-            head_stiffness = 150.0*bm_fraction
-            r_leg_stiffness = 150.0*bm_fraction
-            l_leg_stiffness = 150.0*bm_fraction
-            r_knee_stiffness = 150.0*bm_fraction
-            l_knee_stiffness = 150.0*bm_fraction
+            head_stiffness = 200.0*bm_fraction
+            r_leg_stiffness = 200.0*bm_fraction
+            l_leg_stiffness = 200.0*bm_fraction
+            r_knee_stiffness = 200.0*bm_fraction
+            l_knee_stiffness = 200.0*bm_fraction
         elif STIFFNESS == "rightside":
-            r_arm_stiffness = 75.0*bm_fraction
+            r_arm_stiffness = 100.0*bm_fraction
             l_arm_stiffness = 2.0*bm_fraction
-            head_stiffness = 150.0*bm_fraction
-            r_leg_stiffness = 150.0*bm_fraction
+            head_stiffness = 200.0*bm_fraction
+            r_leg_stiffness = 200.0*bm_fraction
             l_leg_stiffness = 10.0*bm_fraction
-            r_knee_stiffness = 150.0*bm_fraction
+            r_knee_stiffness = 200.0*bm_fraction
             l_knee_stiffness = 10.0*bm_fraction
         elif STIFFNESS == "leftside":
             r_arm_stiffness = 2.0*bm_fraction
-            l_arm_stiffness = 75.0*bm_fraction
-            head_stiffness = 150.0*bm_fraction
+            l_arm_stiffness = 100.0*bm_fraction
+            head_stiffness = 200.0*bm_fraction
             r_leg_stiffness = 10.0*bm_fraction
-            l_leg_stiffness = 150.0*bm_fraction
+            l_leg_stiffness = 200.0*bm_fraction
             r_knee_stiffness = 10.0*bm_fraction
-            l_knee_stiffness = 150.0*bm_fraction
+            l_knee_stiffness = 200.0*bm_fraction
         else: #not stiff
             r_arm_stiffness = 2.0*bm_fraction
             l_arm_stiffness = 2.0*bm_fraction
-            head_stiffness = 150.0*bm_fraction
+            head_stiffness = 200.0*bm_fraction
             r_leg_stiffness = 10.0*bm_fraction
             l_leg_stiffness = 10.0*bm_fraction
             r_knee_stiffness = 10.0*bm_fraction
