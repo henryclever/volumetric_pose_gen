@@ -565,7 +565,7 @@ class GeneratePose():
 
     def save_yash_data_with_angles(self, posture, verbose = True):
         if posture == "lay":
-            movements = ['LL', 'RL']#['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
+            movements = ['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
         elif posture == "sit":
             movements = ['LL_sitting', 'RL_sitting', 'LH_sitting','RH_sitting']
         subjects = ['GRTJK', '40ESJ',  'TX887', 'WFGW9', 'WM9KJ', 'ZV7TE', 'FMNGQ'] #'GRTJK',
@@ -577,7 +577,7 @@ class GeneratePose():
                 #filename = "/home/henry/data/init_ik_solutions_old/subject_" + subject + "/" + movement + ".p"
                 #filename_save = "/media/henry/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/" + movement + "_angles.p"
                 filename_save_orig = "/home/henry/data/init_ik_solutions/subject_" + subject + "/" + movement + "_angles_orig.p"
-                filename_save_offset = "/home/henry/data/init_ik_solutions/subject_" + subject + "/" + movement + "_angles_offset.p"
+                filename_save_offset = "/home/henry/data/init_ik_solutions/subject_" + subject + "/" + movement + "_angles_offset_elbowside.p"
 
                 mat_transform_file = "/media/henry/multimodal_data_2/pressure_mat_pose_data/mat_axes.p"
 
@@ -655,7 +655,7 @@ class GeneratePose():
                                                             R_2=angles_from_mocap['r_elbow_R'],
                                                             L_1=[-lengths['r_shoulder_elbow'], 0.0, 0.0],
                                                             L_2=[-lengths['r_elbow_wrist'], 0.0, 0.0],
-                                                            drop1=[0.0, -0.029, 0.0],
+                                                            drop1=[0.0, 0.0, 0.029],
                                                             drop2=[0.0, 0.0, 0.015])
 
                     ##################################### LEFT ARM OFFSETS #####################################
@@ -665,7 +665,7 @@ class GeneratePose():
                                                             R_2=angles_from_mocap['l_elbow_R'],
                                                             L_1=[lengths['l_shoulder_elbow'], 0.0, 0.0],
                                                             L_2=[lengths['l_elbow_wrist'], 0.0, 0.0],
-                                                            drop1=[0.0, -0.029, 0.0],
+                                                            drop1=[0.0, 0.0, 0.029],
                                                             drop2=[0.0, 0.0, 0.015])
 
                     lengths_offset = {}
@@ -697,7 +697,7 @@ class GeneratePose():
 
 
 
-                    #plt.show()
+                   # plt.show()
 
                     solution_original_ik.append(angles_from_mocap)
                     solution_offset_ik.append(angles_from_mocap_offset)
@@ -844,10 +844,13 @@ if __name__ == "__main__":
 
     posture = "sit"
 
-    #generator.save_yash_data_with_angles(posture)
+    generator.save_yash_data_with_angles(posture)
+    posture = "lay"
+
+    generator.save_yash_data_with_angles(posture)
 
     #processYashData = ProcessYashData()
-    generator.map_yash_to_smpl_angles()
+    #generator.map_yash_to_smpl_angles()
     #processYashData.map_yash_to_axis_angle(verbose=False)
     #processYashData.check_found_limits()
 

@@ -60,9 +60,9 @@ class GeneratePose():
         self.m = load_model(model_path)
 
         if posture == "sit":
-            filename = self.filepath_prefix+'/data/init_ik_solutions/all_sit_angles.p'
+            filename = self.filepath_prefix+'/data/init_ik_solutions/all_sit_angles_elbowside.p'
         else:
-            filename = self.filepath_prefix+'/data/init_ik_solutions/all_lay_angles.p'
+            filename = self.filepath_prefix+'/data/init_ik_solutions/all_lay_angles_elbowside.p'
         with open(filename, 'rb') as fp:
             self.angles_data = pickle.load(fp)
         shuffle(self.angles_data)
@@ -114,6 +114,7 @@ class GeneratePose():
         #angle_type = "euler"
 
         #limits are relative to left side of body. some joints for right side need flip
+        '''
         dircos_limit_lay = {}
         dircos_limit_lay['hip0_L'] = -1.3597488648299256
         dircos_limit_lay['hip0_U'] = 0.07150907780435195
@@ -150,7 +151,8 @@ class GeneratePose():
         dircos_limit_sit['shd2_U'] = 1.1052120105774226
         dircos_limit_sit['elbow_L'] = -2.4281310593630705
         dircos_limit_sit['elbow_U'] = 0.0
-
+        '''
+        '''
         dircos_limit = {}
         dircos_limit['hip0_L'] = -2.655719256295683
         dircos_limit['hip0_U'] = 0.07150907780435195
@@ -167,6 +169,25 @@ class GeneratePose():
         dircos_limit['shd2_L'] = -1.740132642542865
         dircos_limit['shd2_U'] = 2.1843225295849584
         dircos_limit['elbow_L'] = -2.4281310593630705
+        dircos_limit['elbow_U'] = 0.0 
+        '''
+
+        dircos_limit = {}
+        dircos_limit['hip0_L'] = -2.655719256295683
+        dircos_limit['hip0_U'] = -0.022624800749700587
+        dircos_limit['hip1_L'] = -1.1628766943205007
+        dircos_limit['hip1_U'] = 0.9340170076795724
+        dircos_limit['hip2_L'] = -0.37290106435540205
+        dircos_limit['hip2_U'] = 0.9190375825276169
+        dircos_limit['knee_L'] = 0.0
+        dircos_limit['knee_U'] = 2.6869091212979197
+        dircos_limit['shd0_L'] = -1.7987714393846532
+        dircos_limit['shd0_U'] = 1.3841366870162246
+        dircos_limit['shd1_L'] = -1.5412375493997066
+        dircos_limit['shd1_U'] = 1.2301399685794014
+        dircos_limit['shd2_L'] = -1.9634126434375496
+        dircos_limit['shd2_U'] = 1.9050155394491972
+        dircos_limit['elbow_L'] = -2.4028118143418453
         dircos_limit['elbow_U'] = 0.0
 
         #if posture == "lay":
@@ -181,9 +202,9 @@ class GeneratePose():
             except:
                 print "############################# RESAMPLING !! #################################"
                 if posture == "sit":
-                    filename = self.filepath_prefix+'/data/init_ik_solutions/all_sit_angles.p'
+                    filename = self.filepath_prefix+'/data/init_ik_solutions/all_sit_angles_elbowside.p'
                 else:
-                    filename = self.filepath_prefix+'/data/init_ik_solutions/all_lay_angles.p'
+                    filename = self.filepath_prefix+'/data/init_ik_solutions/all_lay_angles_elbowside.p'
                 with open(filename, 'rb') as fp:
                     self.angles_data = pickle.load(fp)
                 shuffle(self.angles_data)
@@ -474,9 +495,9 @@ class GeneratePose():
     def fix_dataset(self, gender, posture, num_data, stiffness, filepath_prefix):
 
 
-        filename = filepath_prefix+"/data/init_poses_contactissue/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy"
+        filename = filepath_prefix+"/data/init_poses/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy"
 
-        old_pose_list = np.load(filename).tolist()
+        old_pose_list = np.load(filename, allow_pickle=True).tolist()
 
 
         #NEED FOR DATASET: pose Nx72, shape Nx10
@@ -531,7 +552,7 @@ class GeneratePose():
                                 #dss.run_simulation(1)
 
                                 print "resampling pose from the same shape, invalid pose"
-                                dss.run_simulation(10000)
+                                #dss.run_simulation(10000)
                                 #libRender.standard_render(self.m)
                                 in_collision = True
                                 invalid_pose = True
@@ -572,7 +593,7 @@ class GeneratePose():
         print "SAVING! "
         #print shape_pose_vol_list
         #pickle.dump(shape_pose_vol_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_list1.pkl", "wb"))
-        np.save(self.filepath_prefix+"/data/init_poses/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(len(old_pose_list))+"_"+stiffness+"_stiff.npy", np.array(shape_pose_vol_list))
+        np.save(self.filepath_prefix+"/data/init_poses/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(len(old_pose_list))+"_"+stiffness+"_stiff_elbowside.npy", np.array(shape_pose_vol_list))
 
 
     def generate_prechecked_pose(self, gender, posture, stiffness, filename):
@@ -736,8 +757,9 @@ if __name__ == "__main__":
 
     if DATASET_CREATE_TYPE == None:
         generator = GeneratePose(gender, posture, filepath_prefix)
-        generator.generate_prechecked_pose(gender, posture, stiffness, filepath_prefix+"/data/init_poses/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
+        #generator.generate_prechecked_pose(gender, posture, stiffness, filepath_prefix+"/data/init_poses/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
         #sgenerator.generate_dataset(gender = gender, posture = posture, num_data = num_data, stiffness = stiffness)
+        generator.fix_dataset(gender = "m", posture = "sit", num_data = 3000, stiffness = "rightside", filepath_prefix = filepath_prefix)
         #generator.doublecheck_prechecked_list(gender, posture, stiffness, filepath_prefix+"/data/init_poses/valid_shape_pose_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
 
     if DATASET_CREATE_TYPE == 1:

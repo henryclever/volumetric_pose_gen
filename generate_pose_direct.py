@@ -239,7 +239,7 @@ class GeneratePose():
             for movement in range(len(movements)):
                 print "subject: ", subject, " movement: ", movements[movement]
 
-                filename = "/home/henry/data/init_ik_solutions/subject_" + subject + "/" + movements[movement] + "_angles_offset.p"
+                filename = "/home/henry/data/init_ik_solutions/subject_" + subject + "/" + movements[movement] + "_angles_offset_elbowside.p"
 
                 with open(filename, 'rb') as fp:
                     angles_data = pickle.load(fp)
@@ -258,10 +258,10 @@ class GeneratePose():
                         #    break
 
 
-                        if posture == "lay" and entry['r_shoulder_euler'][0] < -1.6: pass
-                        elif posture == "lay" and entry['r_shoulder_euler'][0] > 2.9: pass
-                        elif posture == "lay" and entry['l_shoulder_euler'][0] < -1.6: pass
-                        elif posture == "lay" and entry['l_shoulder_euler'][0] > 2.9: pass
+                        if entry['r_shoulder_euler'][0] < -1.8: pass
+                        elif entry['r_shoulder_euler'][0] > 2.9: pass
+                        elif entry['l_shoulder_euler'][0] < -1.8: pass
+                        elif entry['l_shoulder_euler'][0] > 2.9: pass
                         elif posture == "sit" and entry['r_hip_euler'][2] < -1.0: pass
                         elif posture == "sit" and entry['l_hip_euler'][0] < -2.0: pass
 
@@ -361,10 +361,9 @@ class GeneratePose():
 
 
 
-                R_l_hip_rod = libKinematics.matrix_from_dir_cos_angles(entry['l_hip_angle_axis'])
+                #R_l_hip_rod = libKinematics.matrix_from_dir_cos_angles(entry['l_hip_angle_axis'])
                 R_l = np.matmul(R_root, entry['l_hip_R'])
                 new_left_hip = libKinematics.dir_cos_angles_from_matrix(R_l)
-
                 l_hip_angle_axis_sit_0.append(new_left_hip[0])
                 l_hip_angle_axis_sit_1.append(new_left_hip[1])
                 l_hip_angle_axis_sit_2.append(new_left_hip[2])
@@ -402,6 +401,7 @@ class GeneratePose():
             r_elbow_1.append(entry['r_elbow'][1])
             l_elbow_1.append(entry['l_elbow'][1])
 
+        print r_hip_angle_axis_sit_1
 
         print "lower body axis angle: "
         if posture == "lay":
@@ -458,11 +458,12 @@ class GeneratePose():
         print min(l_shoulder_euler_1), max(l_shoulder_euler_1), 'lshould'
         print min(l_shoulder_euler_2), max(l_shoulder_euler_2), 'lshould'
 
-        #import matplotlib.pyplot as plt
-        #plt.plot(np.arange(len(r_hip_angle_axis_sit_1)), r_hip_angle_axis_sit_1, 'ko')
-        #plt.show()
+        import matplotlib.pyplot as plt
+        #print r_hip_angle_axis_1
+        plt.plot(np.arange(len(r_shoulder_euler_0)), r_shoulder_euler_0, 'ko')
+        plt.show()
 
-        #pickle.dump(bag, open("/home/henry/data/init_ik_solutions/all_"+posture+"_angles.p", "wb"))
+        #pickle.dump(bag, open("/home/henry/data/init_ik_solutions/all_"+posture+"_angles_elbowside.p", "wb"))
 
 
     def get_noisy_angle(self, angle, angle_min, angle_max):

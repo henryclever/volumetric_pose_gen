@@ -396,12 +396,12 @@ class DartSkelSim(object):
         self.offset_from_centroid = np.asarray([-0.15, 0.0, 0.0])
 
 
-        self.pmat_red_all = np.load(filepath_prefix+'/git/volumetric_pose_gen/data/pmat_red.npy')
-        self.force_dir_red_dart_all = np.load(filepath_prefix+'/git/volumetric_pose_gen/data/force_dir_red.npy')
+        self.pmat_red_all = np.load(filepath_prefix+'/git/volumetric_pose_gen/data/pmat_red.npy', allow_pickle=True)
+        self.force_dir_red_dart_all = np.load(filepath_prefix+'/git/volumetric_pose_gen/data/force_dir_red.npy', allow_pickle=True)
         for element in range(len(self.force_dir_red_dart_all)):
             self.force_dir_red_dart_all[element] = (np.multiply(np.asarray(self.force_dir_red_dart_all[element]),np.expand_dims(np.asarray(self.pmat_red_all[element]), axis = 1)))
-        self.force_loc_red_dart_all = np.load(filepath_prefix+'/git/volumetric_pose_gen/data/force_loc_red.npy').tolist()
-        self.nearest_capsule_list_all = np.load(filepath_prefix+'/git/volumetric_pose_gen/data/nearest_capsule.npy').tolist()
+        self.force_loc_red_dart_all = np.load(filepath_prefix+'/git/volumetric_pose_gen/data/force_loc_red.npy', allow_pickle=True).tolist()
+        self.nearest_capsule_list_all = np.load(filepath_prefix+'/git/volumetric_pose_gen/data/nearest_capsule.npy', allow_pickle=True).tolist()
 
 
         #print('init pose = %s' % skel.q)
