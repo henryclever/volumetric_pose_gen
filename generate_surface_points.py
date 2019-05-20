@@ -251,21 +251,23 @@ class GeneratePose():
         print "L elbow: ", L_elbow_joint
         dist_from_L_elbow = list(vertices - L_elbow_joint)
         euclid_dist_from_L_elbow = np.square(dist_from_L_elbow)
-        euclid_dist_from_L_elbow = list(np.sqrt(euclid_dist_from_L_elbow[:, 0] + euclid_dist_from_L_elbow[:, 1]))
+        euclid_dist_from_L_elbow = list(np.sqrt(euclid_dist_from_L_elbow[:, 0] + euclid_dist_from_L_elbow[:, 2]))
         for i in range(10):
             print np.argmin(euclid_dist_from_L_elbow), dist_from_L_elbow[np.argmin(euclid_dist_from_L_elbow)] + L_elbow_joint
             euclid_dist_from_L_elbow[np.argmin(euclid_dist_from_L_elbow)] += 100.
             #L elbow is 1664
+            #L elbow from side is 1620
 
         R_elbow_joint = np.array(self.m.J_transformed[19, :])
         print "R elbow: ", R_elbow_joint
         dist_from_R_elbow = list(vertices - R_elbow_joint)
         euclid_dist_from_R_elbow = np.square(dist_from_R_elbow)
-        euclid_dist_from_R_elbow = list(np.sqrt(euclid_dist_from_R_elbow[:, 0] + euclid_dist_from_R_elbow[:, 1]))
+        euclid_dist_from_R_elbow = list(np.sqrt(euclid_dist_from_R_elbow[:, 0] + euclid_dist_from_R_elbow[:, 2]))
         for i in range(10):
             print np.argmin(euclid_dist_from_R_elbow), dist_from_R_elbow[np.argmin(euclid_dist_from_R_elbow)] + R_elbow_joint
             euclid_dist_from_R_elbow[np.argmin(euclid_dist_from_R_elbow)] += 100.
             #R elbow is 5121
+            #R elbow from side is 5091
 
 
         L_wrist_joint = np.array(self.m.J_transformed[20, :])

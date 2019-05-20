@@ -114,8 +114,8 @@ class CNN(nn.Module):
                                                     human_f.posedirs[4515, :, :],
                                                     human_f.posedirs[1374, :, :],
                                                     human_f.posedirs[4848, :, :],
-                                                    human_f.posedirs[1664, :, :],
-                                                    human_f.posedirs[5121, :, :],
+                                                    human_f.posedirs[1620, :, :],
+                                                    human_f.posedirs[5091, :, :],
                                                     human_f.posedirs[2208, :, :],
                                                     human_f.posedirs[5669, :, :]])).type(dtype)
             self.weights_f = torch.Tensor(np.stack([human_f.weights[1325, :],
@@ -124,8 +124,8 @@ class CNN(nn.Module):
                                                     human_f.weights[4515, :],
                                                     human_f.weights[1374, :],
                                                     human_f.weights[4848, :],
-                                                    human_f.weights[1664, :],
-                                                    human_f.weights[5121, :],
+                                                    human_f.weights[1620, :],
+                                                    human_f.weights[5091, :],
                                                     human_f.weights[2208, :],
                                                     human_f.weights[5669, :]])).type(dtype)
 
@@ -141,8 +141,8 @@ class CNN(nn.Module):
                                                     human_m.posedirs[4515, :, :],
                                                     human_m.posedirs[1374, :, :],
                                                     human_m.posedirs[4848, :, :],
-                                                    human_m.posedirs[1664, :, :],
-                                                    human_m.posedirs[5121, :, :],
+                                                    human_m.posedirs[1620, :, :],
+                                                    human_m.posedirs[5091, :, :],
                                                     human_m.posedirs[2208, :, :],
                                                     human_m.posedirs[5669, :, :]])).type(dtype)
             self.weights_m = torch.Tensor(np.stack([human_m.weights[1325, :],
@@ -151,8 +151,8 @@ class CNN(nn.Module):
                                                     human_m.weights[4515, :],
                                                     human_m.weights[1374, :],
                                                     human_m.weights[4848, :],
-                                                    human_m.weights[1664, :],
-                                                    human_m.weights[5121, :],
+                                                    human_m.weights[1620, :],
+                                                    human_m.weights[5091, :],
                                                     human_m.weights[2208, :],
                                                     human_m.weights[5669, :]])).type(dtype)
 
@@ -555,8 +555,8 @@ class CNN(nn.Module):
                                     v_shaped[:, 4515, :],  # r knee
                                     v_shaped[:, 1374, :],  # l ankle
                                     v_shaped[:, 4848, :],  # r ankle
-                                    v_shaped[:, 1664, :],  # l elbow
-                                    v_shaped[:, 5121, :],  # r elbow
+                                    v_shaped[:, 1620, :],  # l elbow
+                                    v_shaped[:, 5091, :],  # r elbow
                                     v_shaped[:, 2208, :],  # l wrist
                                     v_shaped[:, 5669, :]]).permute(1, 0, 2)  # r wrist
         pose_feature = (Rs_est[:, 1:, :, :]).sub(1.0, torch.eye(3).type(self.dtype)).view(-1, 207)
