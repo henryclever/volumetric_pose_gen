@@ -189,22 +189,27 @@ if __name__ == "__main__":
     #stiffness = "leftside"
     #num_resting_poses = 3722
 
-    all_data_names = [["m", "lay", "upperbody", 50, 56]]
-    #all_data_names = [["f", "lay", "leftside", 3722],
-    #                  ["f", "sit", "lowerbody", 1494],
-    #                  ["f", "sit", "upperbody", 1508],
-    #                  ["f", "sit", "leftside", 1513],
-    #                  ["f", "sit", "rightside", 1534],
-    #                  ["f", "sit", "none", 1649],
-    #                  ["m", "lay", "upperbody", 3573],
-    #                  ["m", "lay", "none", 3841],
-     #                 ["m", "lay", "lowerbody", 3735],
-    #                  ["m", "lay", "leftside", 3646],
-    #                  ["m", "sit", "lowerbody", 1275],
-    #                  ["m", "sit", "upperbody", 1302],
-    #                  ["m", "sit", "leftside", 1302],
-    #                  ["m", "sit", "rightside", 1259],
-    #                  ["m", "sit", "none", 1414]]
+    #all_data_names = [["f", "sit", "upperbody", 1000, 1302]]
+    all_data_names = [["f", "lay", "lowerbody", 2000, 2214],
+                      ["f", "lay", "upperbody", 2000, 2191],
+                      ["f", "lay", "leftside", 2000, 2202],
+                      ["f", "lay", "rightside", 2000, 2190],
+                      ["f", "lay", "none", 2000, 2486],
+                      ["f", "sit", "lowerbody", 1000, 1213],
+                      #["f", "sit", "upperbody", 1000, 1302],
+                      #["f", "sit", "leftside", 1513],
+                      ["f", "sit", "rightside", 1000, 1233],
+                      ["f", "sit", "none", 1000, 1308],
+                      ["m", "lay", "lowerbody", 2000, 2063],
+                      ["m", "lay", "upperbody", 2000, 2071],
+                      ["m", "lay", "leftside", 2000, 2078],
+                      ["m", "lay", "rightside", 2000, 2059],
+                      ["m", "lay", "none", 2000, 2184],
+                      ["m", "sit", "lowerbody", 1000, 1300],
+                      ["m", "sit", "upperbody", 1000, 1297],
+                      ["m", "sit", "leftside", 1000, 1338],
+                      ["m", "sit", "rightside", 1000, 1291]]
+                      #["m", "sit", "none", ]]
 
 
     for gpsn in all_data_names:
@@ -253,8 +258,12 @@ if __name__ == "__main__":
         #print m.pose
         #print "J x trans", m.J_transformed[:, 0]
 
-        resting_pose_data_list = np.load('/home/henry/data/resting_poses/resting_pose_'+gender+'_'+posture+'_'+str(num_resting_poses)+'_of_'+str(num_resting_poses_tried)+"_"+stiffness+'_stiff.npy')
-        training_database_pmat_height_list = np.load('/home/henry/data/pmat_height/pmat_height_'+gender+'_'+posture+'_'+str(num_resting_poses)+'_'+stiffness+'_stiff.npy')
+        resting_pose_data_list = np.load('/home/henry/data/resting_poses/resting_pose_'
+                                        +gender+'_'+posture+'_'+str(num_resting_poses)+'_of_'+str(num_resting_poses_tried)+'_'+stiffness+'_stiff.npy',
+                                        allow_pickle = True)
+        training_database_pmat_height_list = np.load('/home/henry/data/pmat_height/pmat_height_'
+                                        +gender+'_'+posture+'_'+str(num_resting_poses)+'_of_'+str(num_resting_poses_tried)+'_'+stiffness+'_stiff.npy',
+                                        allow_pickle = True)
 
         print len(resting_pose_data_list), len(training_database_pmat_height_list[0])
 
@@ -355,7 +364,7 @@ if __name__ == "__main__":
         print "item name: ", item
         print np.shape(test_database_file[item])
 
-
+    '''
     for i in range(len(training_data_dict['markers_xyz_m'])):
         #print training_data_dict['markers_xyz_m'][i].reshape(24, 3)
         #print test_database_file['markers_xyz_m'][i].reshape(10, 3)
@@ -370,4 +379,4 @@ if __name__ == "__main__":
 
 
         visualize_pressure_map(training_pmat, training_targets, None, validate_pmat, validate_targets)
-
+    '''
