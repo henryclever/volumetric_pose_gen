@@ -110,20 +110,20 @@ class CNN(nn.Module):
             self.J_regressor_f = torch.Tensor(np.array(self.J_regressor_f).astype(float)).permute(1, 0).type(dtype)
             self.posedirs_f = torch.Tensor(np.stack([human_f.posedirs[1325, :, :],
                                                     human_f.posedirs[336, :, :],
-                                                    human_f.posedirs[1046, :, :],
-                                                    human_f.posedirs[4530, :, :],
-                                                    human_f.posedirs[3333, :, :],
-                                                    human_f.posedirs[6732, :, :],
+                                                    human_f.posedirs[1032, :, :],
+                                                    human_f.posedirs[4515, :, :],
+                                                    human_f.posedirs[1374, :, :],
+                                                    human_f.posedirs[4848, :, :],
                                                     human_f.posedirs[1664, :, :],
                                                     human_f.posedirs[5121, :, :],
                                                     human_f.posedirs[2208, :, :],
                                                     human_f.posedirs[5669, :, :]])).type(dtype)
             self.weights_f = torch.Tensor(np.stack([human_f.weights[1325, :],
                                                     human_f.weights[336, :],
-                                                    human_f.weights[1046, :],
-                                                    human_f.weights[4530, :],
-                                                    human_f.weights[3333, :],
-                                                    human_f.weights[6732, :],
+                                                    human_f.weights[1032, :],
+                                                    human_f.weights[4515, :],
+                                                    human_f.weights[1374, :],
+                                                    human_f.weights[4848, :],
                                                     human_f.weights[1664, :],
                                                     human_f.weights[5121, :],
                                                     human_f.weights[2208, :],
@@ -137,20 +137,20 @@ class CNN(nn.Module):
             self.J_regressor_m = torch.Tensor(np.array(self.J_regressor_m).astype(float)).permute(1, 0).type(dtype)
             self.posedirs_m = torch.Tensor(np.stack([human_m.posedirs[1325, :, :],
                                                     human_m.posedirs[336, :, :],
-                                                    human_m.posedirs[1046, :, :],
-                                                    human_m.posedirs[4530, :, :],
-                                                    human_m.posedirs[3333, :, :],
-                                                    human_m.posedirs[6732, :, :],
+                                                    human_m.posedirs[1032, :, :],
+                                                    human_m.posedirs[4515, :, :],
+                                                    human_m.posedirs[1374, :, :],
+                                                    human_m.posedirs[4848, :, :],
                                                     human_m.posedirs[1664, :, :],
                                                     human_m.posedirs[5121, :, :],
                                                     human_m.posedirs[2208, :, :],
                                                     human_m.posedirs[5669, :, :]])).type(dtype)
             self.weights_m = torch.Tensor(np.stack([human_m.weights[1325, :],
                                                     human_m.weights[336, :],
-                                                    human_m.weights[1046, :],
-                                                    human_m.weights[4530, :],
-                                                    human_m.weights[3333, :],
-                                                    human_m.weights[6732, :],
+                                                    human_m.weights[1032, :],
+                                                    human_m.weights[4515, :],
+                                                    human_m.weights[1374, :],
+                                                    human_m.weights[4848, :],
                                                     human_m.weights[1664, :],
                                                     human_m.weights[5121, :],
                                                     human_m.weights[2208, :],
@@ -551,10 +551,10 @@ class CNN(nn.Module):
         # assemble a reduced form of the transformed mesh
         v_shaped_red = torch.stack([v_shaped[:, 1325, :],
                                     v_shaped[:, 336, :],  # head
-                                    v_shaped[:, 1046, :],  # l knee
-                                    v_shaped[:, 4530, :],  # r knee
-                                    v_shaped[:, 3333, :],  # l ankle
-                                    v_shaped[:, 6732, :],  # r ankle
+                                    v_shaped[:, 1032, :],  # l knee
+                                    v_shaped[:, 4515, :],  # r knee
+                                    v_shaped[:, 1374, :],  # l ankle
+                                    v_shaped[:, 4848, :],  # r ankle
                                     v_shaped[:, 1664, :],  # l elbow
                                     v_shaped[:, 5121, :],  # r elbow
                                     v_shaped[:, 2208, :],  # l wrist

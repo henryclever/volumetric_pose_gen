@@ -197,6 +197,7 @@ class GeneratePose():
             #head is 336
 
         L_knee_joint = np.array(self.m.J_transformed[4, :])
+        L_knee_joint[1] += 0.05
         print "L KNEE: ", L_knee_joint
         dist_from_L_knee = list(vertices - L_knee_joint)
         euclid_dist_from_L_knee = np.square(dist_from_L_knee)
@@ -205,8 +206,10 @@ class GeneratePose():
             print np.argmin(euclid_dist_from_L_knee), dist_from_L_knee[np.argmin(euclid_dist_from_L_knee)] + L_knee_joint
             euclid_dist_from_L_knee[np.argmin(euclid_dist_from_L_knee)] += 100.
             #L knee is 1046
+            #5cm up: 1032
 
         R_knee_joint = np.array(self.m.J_transformed[5, :])
+        R_knee_joint[1] += 0.05
         print "R KNEE: ", R_knee_joint
         dist_from_R_knee = list(vertices - R_knee_joint)
         euclid_dist_from_R_knee = np.square(dist_from_R_knee)
@@ -215,8 +218,10 @@ class GeneratePose():
             print np.argmin(euclid_dist_from_R_knee), dist_from_R_knee[np.argmin(euclid_dist_from_R_knee)] + R_knee_joint
             euclid_dist_from_R_knee[np.argmin(euclid_dist_from_R_knee)] += 100.
             #R knee is 4530
+            #5cm up: 4515
 
         L_ankle_joint = np.array(self.m.J_transformed[7, :])
+        L_ankle_joint[1] += 0.10
         print "L ankle: ", L_ankle_joint
         dist_from_L_ankle = list(vertices - L_ankle_joint)
         euclid_dist_from_L_ankle = np.square(dist_from_L_ankle)
@@ -225,8 +230,11 @@ class GeneratePose():
             print np.argmin(euclid_dist_from_L_ankle), dist_from_L_ankle[np.argmin(euclid_dist_from_L_ankle)] + L_ankle_joint
             euclid_dist_from_L_ankle[np.argmin(euclid_dist_from_L_ankle)] += 100.
             #L ankle is 3333
+            #5cm up: 3319
+            #10cm up: 1374
 
         R_ankle_joint = np.array(self.m.J_transformed[8, :])
+        R_ankle_joint[1] += 0.10
         print "R ankle: ", R_ankle_joint
         dist_from_R_ankle = list(vertices - R_ankle_joint)
         euclid_dist_from_R_ankle = np.square(dist_from_R_ankle)
@@ -235,6 +243,8 @@ class GeneratePose():
             print np.argmin(euclid_dist_from_R_ankle), dist_from_R_ankle[np.argmin(euclid_dist_from_R_ankle)] + R_ankle_joint
             euclid_dist_from_R_ankle[np.argmin(euclid_dist_from_R_ankle)] += 100.
             #R knee is 6732
+            #5cm up: 6720
+            #10cm up: 4848
 
 
         L_elbow_joint = np.array(self.m.J_transformed[18, :])
