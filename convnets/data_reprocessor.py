@@ -190,26 +190,26 @@ if __name__ == "__main__":
     #num_resting_poses = 3722
 
     #all_data_names = [["f", "sit", "upperbody", 1000, 1302]]
-    all_data_names = [["f", "lay", "lowerbody", 2000, 2214],
-                      ["f", "lay", "upperbody", 2000, 2191],
-                      ["f", "lay", "leftside", 2000, 2202],
-                      ["f", "lay", "rightside", 2000, 2190],
-                      ["f", "lay", "none", 2000, 2486],
-                      ["f", "sit", "lowerbody", 1000, 1213],
-                      #["f", "sit", "upperbody", 1000, 1302],
-                      #["f", "sit", "leftside", 1513],
-                      ["f", "sit", "rightside", 1000, 1233],
-                      ["f", "sit", "none", 1000, 1308],
-                      ["m", "lay", "lowerbody", 2000, 2063],
-                      ["m", "lay", "upperbody", 2000, 2071],
-                      ["m", "lay", "leftside", 2000, 2078],
-                      ["m", "lay", "rightside", 2000, 2059],
-                      ["m", "lay", "none", 2000, 2184],
-                      ["m", "sit", "lowerbody", 1000, 1300],
-                      ["m", "sit", "upperbody", 1000, 1297],
-                      ["m", "sit", "leftside", 1000, 1338],
-                      ["m", "sit", "rightside", 1000, 1291]]
-                      #["m", "sit", "none", ]]
+    all_data_names = [["f", "lay", "lowerbody", 2000, 2030]]#,
+                      #["f", "lay", "upperbody", 2000, 2090],
+                      #["f", "lay", "leftside", 2000, 2057],
+                      #["f", "lay", "rightside", 2000, 2069],
+                      #["f", "lay", "none", 2000, 2039],
+                      #["f", "sit", "lowerbody", 1000, 1124],
+                      #["f", "sit", "upperbody", 1000, 1195],
+                      #["f", "sit", "leftside", 1000, 1143],
+                      #["f", "sit", "rightside", 1000, 1158],
+                      #["f", "sit", "none", 1000, 1120],
+                      #["m", "lay", "lowerbody", 2000, 2012],
+                      #["m", "lay", "upperbody", 2000, 2053],
+                      #["m", "lay", "leftside", 2000, 2033],
+                      #["m", "lay", "rightside", 2000, 2035],
+                      #["m", "lay", "none", 2000, 2021],
+                      #["m", "sit", "lowerbody", 1000, 1201],
+                      #["m", "sit", "upperbody", 1000, 1223],
+                      #["m", "sit", "leftside", 1000, 1184],
+                      #["m", "sit", "rightside", 1000, 1216],
+                      #["m", "sit", "none", 1000, 1156]]
 
 
     for gpsn in all_data_names:
@@ -350,7 +350,7 @@ if __name__ == "__main__":
             print entry, training_data_dict['markers_xyz_m'][entry][0:2], training_data_dict['body_shape'][entry][0:2], training_data_dict['joint_angles'][entry][0:2]
 
 
-        pickle.dump(training_data_dict, open(os.path.join('/home/henry/data/synth/train_'+gender+'_'+posture+'_'+str(num_resting_poses)+'_'+stiffness+'_stiff.p'), 'wb'))
+        pickle.dump(training_data_dict, open(os.path.join('/home/henry/data/synth/train_'+gender+'_'+posture+'_'+str(num_resting_poses)+'_of_'+str(num_resting_poses_tried)+'_'+stiffness+'_stiff.p'), 'wb'))
 
     for item in training_data_dict:
         print "item name: ", item
