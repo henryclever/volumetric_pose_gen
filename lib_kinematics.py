@@ -137,7 +137,7 @@ class JointLimbFiller():
         lengths['neck_head'] = np.linalg.norm(self.H - self.N)
 
 
-        lengths['torso_spine2'] = 0.14
+        lengths['torso_spine2'] = 0.20
         lengths['spine2_tail'] = 0.1549 * self.pseudoheight[str(subject)] - 0.03968  # about 0.25. torso vert
         lengths['tail_l_glute'] = 0.08072 * self.pseudoheight[
             str(subject)] - 0.02128  # Equal to 0.6 times the equivalent neck to shoulder. glute left
@@ -145,19 +145,19 @@ class JointLimbFiller():
             str(subject)] - 0.02128  # Equal to 0.6 times the equivalent neck to shoulder. glute right
 
         self.B[0, 0] = self.T[0, 0]
-        self.B[1, 0] = self.T[1, 0] - lengths['spine2_tail'] * np.cos(np.deg2rad(bedangle * 0.6))
-        self.B[2, 0] = self.T[2, 0] - lengths['torso_spine2'] - lengths['spine2_tail'] * np.sin(np.deg2rad(bedangle * 0.6))
+        self.B[1, 0] = self.T[1, 0] - lengths['spine2_tail'] * np.cos(np.deg2rad(bedangle * 0.3))
+        self.B[2, 0] = self.T[2, 0] - lengths['torso_spine2'] - lengths['spine2_tail'] * np.sin(np.deg2rad(bedangle * 0.3))
         self.B[3, 0] = 1
 
         # here we construct pseudo ground truths for the shoulders by making fixed translations from the torso
         self.r_G[0, 0] = self.T[0, 0] - lengths['tail_r_glute']
-        self.r_G[1, 0] = self.T[1, 0] - lengths['spine2_tail'] * np.cos(np.deg2rad(bedangle * 0.6))
-        self.r_G[2, 0] = self.T[2, 0] - lengths['torso_spine2'] - lengths['spine2_tail'] * np.sin(np.deg2rad(bedangle * 0.6))
+        self.r_G[1, 0] = self.T[1, 0] - lengths['spine2_tail'] * np.cos(np.deg2rad(bedangle * 0.3))
+        self.r_G[2, 0] = self.T[2, 0] - lengths['torso_spine2'] - lengths['spine2_tail'] * np.sin(np.deg2rad(bedangle * 0.3))
         self.r_G[3, 0] = 1
 
         self.l_G[0, 0] = self.T[0, 0] + lengths['tail_l_glute']
-        self.l_G[1, 0] = self.T[1, 0] - lengths['spine2_tail'] * np.cos(np.deg2rad(bedangle * 0.6))
-        self.l_G[2, 0] = self.T[2, 0] - lengths['torso_spine2'] - lengths['spine2_tail'] * np.sin(np.deg2rad(bedangle * 0.6))
+        self.l_G[1, 0] = self.T[1, 0] - lengths['spine2_tail'] * np.cos(np.deg2rad(bedangle * 0.3))
+        self.l_G[2, 0] = self.T[2, 0] - lengths['torso_spine2'] - lengths['spine2_tail'] * np.sin(np.deg2rad(bedangle * 0.3))
         self.l_G[3, 0] = 1
 
         pseudotargets[3, 0] = self.r_G[0, 0]

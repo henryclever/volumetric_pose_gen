@@ -137,6 +137,9 @@ class PhysicalTrainer():
             for entry in range(len(test_dat_m['images'])):
                 self.test_x_flat.append(np.clip(np.array(test_dat_m['images'][entry])*5.0, a_min=0, a_max=100))
 
+
+        self.test_x_flat = PreprocessingLib().preprocessing_blur_images(self.test_x_flat, self.mat_size, sigma=0.5)
+
         self.test_a_flat = []  # Initialize the testing pressure mat angle listhave
         if test_dat_f is not None:
             for entry in range(len(test_dat_f['images'])):
@@ -511,7 +514,8 @@ class PhysicalTrainer():
                 self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_300e.pt')
                 self.model = self.model.cuda()
             else:
-                self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
+                #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
+                self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_s4_3xreal_4xsize_detach_128b_200e.pt', map_location='cpu')
                 #pass
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/2.0xsize/convnet_anglesEU_synthreal_tanh_s8ang_sig0p5_5xreal_voloff_128b_300e.pt', map_location='cpu')
 
@@ -663,9 +667,9 @@ if __name__ == "__main__":
     test_database_file_m = []
 
     #test_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
-    #test_database_file_m.append('/home/henry/data/unlabeled_pmat_data/henryc_on_bed_05102019.p')
+    test_database_file_m.append('/home/henry/data/unlabeled_pmat_data/henryc_on_bed_05102019.p')
 
-    test_database_file_m.append('/home/henry/data/unlabeled_pmat_data/henrye_on_bed_09102019.p')
+    #test_database_file_m.append('/home/henry/data/unlabeled_pmat_data/henrye_on_bed_09102019.p')
 
     p = PhysicalTrainer(test_database_file_f, test_database_file_m, opt)
 

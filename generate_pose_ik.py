@@ -577,7 +577,7 @@ class GeneratePose():
                 #filename = "/home/henry/data/init_ik_solutions_old/subject_" + subject + "/" + movement + ".p"
                 #filename_save = "/media/henry/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/" + movement + "_angles.p"
                 filename_save_orig = "/home/henry/data/init_ik_solutions/subject_" + subject + "/" + movement + "_angles_orig.p"
-                filename_save_offset = "/home/henry/data/init_ik_solutions/subject_" + subject + "/" + movement + "_angles_offset_elbowside.p"
+                filename_save_offset = "/home/henry/data/init_ik_solutions/subject_" + subject + "/" + movement + "_angles_offset_side_up.p"
 
                 mat_transform_file = "/media/henry/multimodal_data_2/pressure_mat_pose_data/mat_axes.p"
 
@@ -635,8 +635,8 @@ class GeneratePose():
                                                             R_2=angles_from_mocap['r_knee_R'],
                                                             L_1=[0.0, -lengths['r_glute_knee'], 0.0],
                                                             L_2=[0.0, -lengths['r_knee_ankle'], 0.0],
-                                                            drop1=[0.0, -0.05, 0.0],
-                                                            drop2=[0.0, -0.045, 0.0])
+                                                            drop1=[0.0, -0.05, 0.05],
+                                                            drop2=[0.0, -0.045, 0.10])
 
                     #################################### LEFT LEG OFFSETS #######################################
                     pos_l_knee, Jtc_offset[7, :], pos_l_ankle, Jtc_offset[9, :] = \
@@ -645,8 +645,8 @@ class GeneratePose():
                                                             R_2=angles_from_mocap['l_knee_R'],
                                                             L_1=[0.0, -lengths['l_glute_knee'], 0.0],
                                                             L_2=[0.0, -lengths['l_knee_ankle'], 0.0],
-                                                            drop1=[0.0, -0.05, 0.0],
-                                                            drop2=[0.0, -0.045, 0.0])
+                                                            drop1=[0.0, -0.05, 0.05],
+                                                            drop2=[0.0, -0.045, 0.10])
 
                     ##################################### RIGHT ARM OFFSETS #####################################
                     pos_r_elbow, Jtc_offset[2, :], pos_r_wrist, Jtc_offset[4, :] = \
@@ -655,8 +655,8 @@ class GeneratePose():
                                                             R_2=angles_from_mocap['r_elbow_R'],
                                                             L_1=[-lengths['r_shoulder_elbow'], 0.0, 0.0],
                                                             L_2=[-lengths['r_elbow_wrist'], 0.0, 0.0],
-                                                            drop1=[0.0, 0.0, 0.029],
-                                                            drop2=[0.0, 0.0, 0.015])
+                                                            drop1=[-0.025, 0.0, 0.029],
+                                                            drop2=[-0.05, 0.0, 0.015])
 
                     ##################################### LEFT ARM OFFSETS #####################################
                     pos_l_elbow, Jtc_offset[3, :], pos_l_wrist, Jtc_offset[5, :] = \
@@ -665,8 +665,8 @@ class GeneratePose():
                                                             R_2=angles_from_mocap['l_elbow_R'],
                                                             L_1=[lengths['l_shoulder_elbow'], 0.0, 0.0],
                                                             L_2=[lengths['l_elbow_wrist'], 0.0, 0.0],
-                                                            drop1=[0.0, 0.0, 0.029],
-                                                            drop2=[0.0, 0.0, 0.015])
+                                                            drop1=[0.025, 0.0, 0.029],
+                                                            drop2=[0.05, 0.0, 0.015])
 
                     lengths_offset = {}
                     lengths_offset['neck_head'] = np.copy(lengths['neck_head'])
@@ -697,7 +697,7 @@ class GeneratePose():
 
 
 
-                   # plt.show()
+                    #plt.show()
 
                     solution_original_ik.append(angles_from_mocap)
                     solution_offset_ik.append(angles_from_mocap_offset)
