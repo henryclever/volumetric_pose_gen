@@ -26,6 +26,7 @@ import sensor_msgs.point_cloud2
 import ros_numpy
 from scipy.stats import mode
 
+from scipy.ndimage.filters import gaussian_filter
 #ROS
 #import rospy
 #import tf
@@ -57,7 +58,7 @@ from hmr.src.tf_smpl.batch_smpl import SMPL
 
 
 class GeneratePose():
-    def __init__(self, gender, posture = "lay", filepath_prefix = '/home/henry'):
+    def __init__(self, gender, filepath_prefix = '/home/henry'):
         ## Load SMPL model
         self.filepath_prefix = filepath_prefix
 
@@ -69,15 +70,6 @@ class GeneratePose():
 
         self.reset_pose = False
         self.m = load_model(model_path)
-
-        if posture == "sit":
-            filename = filepath_prefix+'/git/volumetric_pose_gen/init_pose_angles/all_sit_angles.p'
-        else:
-            filename = filepath_prefix+'/git/volumetric_pose_gen/init_pose_angles/all_angles.p'
-        with open(filename, 'rb') as fp:
-            self.angles_data = pickle.load(fp)
-        shuffle(self.angles_data)
-
 
         self.marker0, self.marker1, self.marker2, self.marker3 = None, None, None, None
         self.pressure = None
@@ -272,10 +264,10 @@ class GeneratePose():
         while not rospy.is_shutdown():
 
 
-            pmat = np.fliplr(np.flipud(np.clip(self.pressure.reshape(mat_size)*3.5, a_min=0, a_max=100)))
-            print pmat.shape
+            pmat = np.fliplr(np.flipud(np.clip(self.pressure.reshape(mat_size)*5.0, a_min=0, a_max=100)))
 
-            print self.bedangle
+            pmat = gaussian_filter(pmat, sigma= 0.5)
+
 
             pmat_stack = PreprocessingLib().preprocessing_create_pressure_angle_stack_realtime(pmat, self.bedangle, mat_size)
             pmat_stack = torch.Tensor(pmat_stack)
@@ -323,12 +315,8 @@ class GeneratePose():
 if __name__ == "__main__":
 
     gender = "m"
-    num_data = 4000
-    posture = "lay"
-    stiffness = "rightside"
     filepath_prefix = "/home/henry"
 
 
-    generator = GeneratePose(gender, posture, filepath_prefix)
-    #generator.generate_prechecked_pose(gender, posture, stiffness, filepath_prefix+"/data/init_poses/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+"_"+stiffness+"_stiff.npy")
-    generator.estimate_real_time(gender, filepath_prefix+"/data/convnets/2.0xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt")
+    generator = GeneratePose(gender, filepath_prefix)
+    generator.estimate_real_time(gender, filepath_prefix+"/data/synth/convnet_anglesEU_synthreal_s4_3xreal_4xsize_128b_200e.pt")
