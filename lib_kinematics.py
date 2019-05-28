@@ -92,7 +92,7 @@ class JointLimbFiller():
         pseudotargets = np.zeros((5, 3))
 
         lengths = {}
-        lengths['torso_spine1'] = 0.10
+        lengths['torso_spine1'] = 0.15
         lengths['spine1_neck'] = 0.2065 * self.pseudoheight[str(subject)] - 0.0529  # about 0.25. torso vert
         lengths['neck_l_shoulder'] = 0.13454 * self.pseudoheight[str(subject)] - 0.03547  # about 0.15. shoulder left
         lengths['neck_r_shoulder'] = 0.13454 * self.pseudoheight[str(subject)] - 0.03547  # about 0.15. shoulder right
@@ -137,7 +137,7 @@ class JointLimbFiller():
         lengths['neck_head'] = np.linalg.norm(self.H - self.N)
 
 
-        lengths['torso_spine2'] = 0.20
+        lengths['torso_spine2'] = 0.25
         lengths['spine2_tail'] = 0.1549 * self.pseudoheight[str(subject)] - 0.03968  # about 0.25. torso vert
         lengths['tail_l_glute'] = 0.08072 * self.pseudoheight[
             str(subject)] - 0.02128  # Equal to 0.6 times the equivalent neck to shoulder. glute left
