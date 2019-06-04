@@ -305,23 +305,23 @@ class LibDartSkel():
             print joint.spring_stiffness(0)
 
             if joint.name == "leftThigh":
-                joint.set_position_lower_limit(0, -2.6630969584625968)  # ext
+                joint.set_position_lower_limit(0, -2.7443260550003967)  # ext
                 joint.set_position_upper_limit(0, -0.14634814003149707)
                 joint.set_position_lower_limit(1, -1.0403111466710133)  # yaw
-                joint.set_position_upper_limit(1, 0.7797238444581264)
-                joint.set_position_lower_limit(2, -0.3678530987804197)  # abd
-                joint.set_position_upper_limit(2, 0.8654752836217577)
+                joint.set_position_upper_limit(1, 1.1185343875601006)
+                joint.set_position_lower_limit(2, -0.421484532214729)  # abd
+                joint.set_position_upper_limit(2, 0.810063927501682)
                 joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, l_leg_damping)
                 joint.set_damping_coefficient(1, l_leg_damping)
                 joint.set_damping_coefficient(2, l_leg_damping)
             elif joint.name == "rightThigh":
-                joint.set_position_lower_limit(0, -2.6630969584625968)  # ext
+                joint.set_position_lower_limit(0, -2.7443260550003967)  # ext
                 joint.set_position_upper_limit(0, -0.14634814003149707)
-                joint.set_position_lower_limit(1, -0.7797238444581264)  # yaw
+                joint.set_position_lower_limit(1, -1.1185343875601006)  # yaw
                 joint.set_position_upper_limit(1, 1.0403111466710133)
-                joint.set_position_lower_limit(2, -0.8654752836217577)  # abd
-                joint.set_position_upper_limit(2, 0.3678530987804197)
+                joint.set_position_lower_limit(2, -0.810063927501682)  # abd
+                joint.set_position_upper_limit(2, 0.421484532214729)
                 joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, r_leg_damping)
                 joint.set_damping_coefficient(1, r_leg_damping)
@@ -339,12 +339,12 @@ class LibDartSkel():
                 joint.set_damping_coefficient(2, torso_damping)
             elif joint.name == "leftCalf":
                 joint.set_position_lower_limit(0, 0.0)
-                joint.set_position_upper_limit(0, 2.7115279828308503)
+                joint.set_position_upper_limit(0, 2.7020409229712863)
                 joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, l_knee_damping)
             elif joint.name == "rightCalf":
                 joint.set_position_lower_limit(0, 0.0)
-                joint.set_position_upper_limit(0, 2.7115279828308503)
+                joint.set_position_upper_limit(0, 2.7020409229712863)
                 joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, r_knee_damping)
             elif joint.name == "leftFoot":
