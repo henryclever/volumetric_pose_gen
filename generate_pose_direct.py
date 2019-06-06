@@ -239,7 +239,7 @@ class GeneratePose():
             for movement in range(len(movements)):
                 print "subject: ", subject, " movement: ", movements[movement]
 
-                filename = "/home/henry/data/init_ik_solutions/subject_" + subject + "/" + movements[movement] + "_angles_offset_elbowside.p"
+                filename = "/home/henry/data/init_ik_solutions/subject_" + subject + "/side_up/" + movements[movement] + "_angles_offset_side_up.p"
 
                 with open(filename, 'rb') as fp:
                     angles_data = pickle.load(fp)
@@ -260,10 +260,16 @@ class GeneratePose():
 
                         if entry['r_shoulder_euler'][0] < -1.8: pass
                         elif entry['r_shoulder_euler'][0] > 2.9: pass
+                        elif  posture == "sit" and entry['r_shoulder_euler'][2] < -1.05: pass
                         elif entry['l_shoulder_euler'][0] < -1.8: pass
+                        elif posture == "lay" and entry['l_shoulder_euler'][2] > 1.8: pass
                         elif entry['l_shoulder_euler'][0] > 2.9: pass
                         elif posture == "sit" and entry['r_hip_euler'][2] < -1.0: pass
                         elif posture == "sit" and entry['l_hip_euler'][0] < -2.0: pass
+                        elif posture == "sit" and entry['l_hip_euler'][2] > 2.5: pass
+                        elif posture == "sit" and entry['r_hip_angle_axis'][1] > 0.95: pass
+                        elif posture == "lay" and entry['l_hip_euler'][0] < -2.0: pass
+                        elif posture == "lay" and entry['r_hip_euler'][0] < -2.0: pass
 
                         else:
                             bag.append(entry)
@@ -460,10 +466,10 @@ class GeneratePose():
 
         import matplotlib.pyplot as plt
         #print r_hip_angle_axis_1
-        plt.plot(np.arange(len(r_shoulder_euler_0)), r_shoulder_euler_0, 'ko')
+        plt.plot(np.arange(len(r_shoulder_angle_axis_1)), r_shoulder_angle_axis_1, 'ko')
         plt.show()
 
-        #pickle.dump(bag, open("/home/henry/data/init_ik_solutions/all_"+posture+"_angles_elbowside.p", "wb"))
+        pickle.dump(bag, open("/home/henry/data/init_ik_solutions/all_"+posture+"_angles_side_up.p", "wb"))
 
 
     def get_noisy_angle(self, angle, angle_min, angle_max):

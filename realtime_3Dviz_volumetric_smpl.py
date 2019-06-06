@@ -314,7 +314,7 @@ class GeneratePose():
 
 if __name__ == "__main__":
 
-    gender = "m"
+    gender = "f"
     filepath_prefix = "/home/henry"
 
 

@@ -565,19 +565,19 @@ class GeneratePose():
 
     def save_yash_data_with_angles(self, posture, verbose = True):
         if posture == "lay":
-            movements = ['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
+            movements = ['RH3']#['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
         elif posture == "sit":
             movements = ['LL_sitting', 'RL_sitting', 'LH_sitting','RH_sitting']
         subjects = ['GRTJK', '40ESJ',  'TX887', 'WFGW9', 'WM9KJ', 'ZV7TE', 'FMNGQ'] #'GRTJK',
 
-        for subject in subjects:
+        for subject in subjects[6:7]:
             for movement in movements:
 
                 filename = "/media/henry/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/" + movement + ".p"
                 #filename = "/home/henry/data/init_ik_solutions_old/subject_" + subject + "/" + movement + ".p"
                 #filename_save = "/media/henry/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/" + movement + "_angles.p"
                 filename_save_orig = "/home/henry/data/init_ik_solutions/subject_" + subject + "/" + movement + "_angles_orig.p"
-                filename_save_offset = "/home/henry/data/init_ik_solutions/subject_" + subject + "/" + movement + "_angles_offset_side_up.p"
+                filename_save_offset = "/home/henry/data/init_ik_solutions/subject_" + subject + "/side_up/" + movement + "_angles_offset_side_up.p"
 
                 mat_transform_file = "/media/henry/multimodal_data_2/pressure_mat_pose_data/mat_axes.p"
 
@@ -845,9 +845,9 @@ if __name__ == "__main__":
     posture = "sit"
 
     generator.save_yash_data_with_angles(posture)
-    posture = "lay"
+    #posture = "lay"
 
-    generator.save_yash_data_with_angles(posture)
+    #generator.save_yash_data_with_angles(posture)
 
     #processYashData = ProcessYashData()
     #generator.map_yash_to_smpl_angles()

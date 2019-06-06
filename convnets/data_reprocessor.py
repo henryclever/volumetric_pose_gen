@@ -190,26 +190,26 @@ if __name__ == "__main__":
     #num_resting_poses = 3722
 
     #all_data_names = [["f", "sit", "upperbody", 1000, 1302]]
-    all_data_names = [["f", "lay", "lowerbody", 2000, 2030]]#,
-                      #["f", "lay", "upperbody", 2000, 2090],
-                      #["f", "lay", "leftside", 2000, 2057],
-                      #["f", "lay", "rightside", 2000, 2069],
-                      #["f", "lay", "none", 2000, 2039],
-                      #["f", "sit", "lowerbody", 1000, 1124],
-                      #["f", "sit", "upperbody", 1000, 1195],
-                      #["f", "sit", "leftside", 1000, 1143],
-                      #["f", "sit", "rightside", 1000, 1158],
-                      #["f", "sit", "none", 1000, 1120],
-                      #["m", "lay", "lowerbody", 2000, 2012],
-                      #["m", "lay", "upperbody", 2000, 2053],
-                      #["m", "lay", "leftside", 2000, 2033],
-                      #["m", "lay", "rightside", 2000, 2035],
-                      #["m", "lay", "none", 2000, 2021],
-                      #["m", "sit", "lowerbody", 1000, 1201],
-                      #["m", "sit", "upperbody", 1000, 1223],
-                      #["m", "sit", "leftside", 1000, 1184],
-                      #["m", "sit", "rightside", 1000, 1216],
-                      #["m", "sit", "none", 1000, 1156]]
+    all_data_names = [#["f", "lay", "lowerbody", 2000, 2018],
+                      #["f", "lay", "upperbody", 2000, 2051]
+                      #["f", "lay", "leftside", 2000, 2034],
+                      #["f", "lay", "rightside", 2000, 2052],
+                      #["f", "lay", "none", 2000, 2029],
+                      #["f", "sit", "lowerbody", 1000, 1126],
+                      ["f", "sit", "upperbody", 1000, 1168],
+                      ["f", "sit", "leftside", 1000, 1133]]
+                      #["f", "sit", "rightside", 1000, 1121],
+                      #["f", "sit", "none", 1000, 1113]]
+                      #["m", "lay", "lowerbody", 2000, 2016],
+                      #["m", "lay", "upperbody", 2000, 2024],
+                      #["m", "lay", "leftside", 2000, 2015],
+                      #["m", "lay", "rightside", 2000, 2016],
+                      #["m", "lay", "none", 2000, 2008],
+                      #["m", "sit", "lowerbody", 1000, 1166],
+                      #["m", "sit", "upperbody", 1000, 1181],
+                      #["m", "sit", "leftside", 1000, 1183],
+                      #["m", "sit", "rightside", 1000, 1161],
+                      #["m", "sit", "none", 1000, 1155]]
 
 
     for gpsn in all_data_names:
@@ -258,10 +258,10 @@ if __name__ == "__main__":
         #print m.pose
         #print "J x trans", m.J_transformed[:, 0]
 
-        resting_pose_data_list = np.load('/home/henry/data/resting_poses/resting_pose_'
+        resting_pose_data_list = np.load('/home/henry/data/resting_poses/side_up/resting_pose_'
                                         +gender+'_'+posture+'_'+str(num_resting_poses)+'_of_'+str(num_resting_poses_tried)+'_'+stiffness+'_stiff.npy',
                                         allow_pickle = True)
-        training_database_pmat_height_list = np.load('/home/henry/data/pmat_height/pmat_height_'
+        training_database_pmat_height_list = np.load('/home/henry/data/pmat_height/side_up/pmat_height_'
                                         +gender+'_'+posture+'_'+str(num_resting_poses)+'_of_'+str(num_resting_poses_tried)+'_'+stiffness+'_stiff.npy',
                                         allow_pickle = True)
 
