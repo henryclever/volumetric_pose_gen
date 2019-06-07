@@ -6,7 +6,7 @@ from torch.autograd import Variable
 from kinematics_lib import KinematicsLib
 import scipy.stats as ss
 import torchvision
-
+import resnet
 
 class CNN(nn.Module):
     def __init__(self, mat_size, out_size, hidden_dim, kernel_size, loss_vector_type, batch_size, split = False, filepath = '/home/henry/'):
@@ -73,10 +73,12 @@ class CNN(nn.Module):
             self.CNN_fc1 = nn.Sequential(
                 nn.Linear(89600, out_size),
             )
+            self.resnet = resnet.resnet34(pretrained=False, output_size=out_size, num_classes=out_size)
         if self.split == True:
             self.CNN_fc1 = nn.Sequential(
                 nn.Linear(89600, out_size-10),
             )
+            self.resnet = resnet.resnet34(pretrained=False, output_size=out_size-10, num_classes=out_size-10)
 
         self.CNN_fc2 = nn.Sequential(
             nn.Linear(11200, 10),
@@ -422,21 +424,27 @@ class CNN(nn.Module):
         #self.GPU = False
         #self.dtype = torch.FloatTensor
 
-        scores_cnn = self.CNN_pack1(images)
-        scores_size = scores_cnn.size()
+        #scores_cnn = self.CNN_pack1(images)
+        #scores_size = scores_cnn.size()
         # print scores_size, 'scores conv1'
 
         # ''' # NOTE: Uncomment
         # This combines the height, width, and filters into a single dimension
-        scores_cnn = scores_cnn.view(images.size(0),scores_size[1] *scores_size[2]*scores_size[3])
+        #scores_cnn = scores_cnn.view(images.size(0),scores_size[1] *scores_size[2]*scores_size[3])
         #print 'size for fc layer:', scores_cnn.size()
 
 
-        scores = self.CNN_fc1(scores_cnn) #this is N x 229: betas, root shift, Rotation matrices
+        #scores = self.CNN_fc1(scores_cnn) #this is N x 229: betas, root shift, Rotation matrices
+
+        #print scores.size()
+        #print scores[0, :]
+        scores = self.resnet(images)
+        #print scores.size()
+        #print scores[0, :]
 
 
         #weight the outputs, which are already centered around 0. First make them uniformly smaller than the direct output, which is too large. 
-        scores = torch.mul(scores.clone(), 0.01)
+        scores = torch.mul(scores.clone(), 0.00001)
 
         #normalize the output of the network based on the range of the parameters
         if self.GPU == True:
