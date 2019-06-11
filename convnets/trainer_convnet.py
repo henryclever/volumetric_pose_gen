@@ -149,8 +149,12 @@ class PhysicalTrainer():
         if dat_f_real is not None:
             for entry in range(len(dat_f_real['images'])):
                 self.train_x_flat_real.append(dat_f_real['images'][entry])
+                self.train_x_flat_real.append(dat_f_real['images'][entry])
+                self.train_x_flat_real.append(dat_f_real['images'][entry])
         if dat_m_real is not None:
             for entry in range(len(dat_m_real['images'])):
+                self.train_x_flat_real.append(dat_m_real['images'][entry])
+                self.train_x_flat_real.append(dat_m_real['images'][entry])
                 self.train_x_flat_real.append(dat_m_real['images'][entry])
 
         if len(self.train_x_flat_real) != 0:
@@ -171,8 +175,12 @@ class PhysicalTrainer():
         if dat_f_real is not None:
             for entry in range(len(dat_f_real['images'])):
                 self.train_a_flat.append(dat_f_real['bed_angle_deg'][entry])
+                self.train_a_flat.append(dat_f_real['bed_angle_deg'][entry])
+                self.train_a_flat.append(dat_f_real['bed_angle_deg'][entry])
         if dat_m_real is not None:
             for entry in range(len(dat_m_real['images'])):
+                self.train_a_flat.append(dat_m_real['bed_angle_deg'][entry])
+                self.train_a_flat.append(dat_m_real['bed_angle_deg'][entry])
                 self.train_a_flat.append(dat_m_real['bed_angle_deg'][entry])
 
 
@@ -262,6 +270,8 @@ class PhysicalTrainer():
                                     np.array(85 * [0]),
                                     [1], [0], [0]), axis=0)  # [x1], [x2], [x3]: female real: 1, 0, 0.
                 self.train_y_flat.append(c)
+                self.train_y_flat.append(c)
+                self.train_y_flat.append(c)
 
         if dat_m_real is not None:
             for entry in range(len(dat_m_real['markers_xyz_m'])):  ######FIX THIS!!!!######
@@ -292,6 +302,8 @@ class PhysicalTrainer():
                                     np.array(6 * [0]),
                                     np.array(85 * [0]),
                                     [0], [1], [0]), axis=0)  # [x1], [x2], [x3]: male real: 0, 1, 0.
+                self.train_y_flat.append(c)
+                self.train_y_flat.append(c)
                 self.train_y_flat.append(c)
 
 
@@ -507,11 +519,11 @@ class PhysicalTrainer():
 
 
         if self.loss_vector_type == None:
-            self.optimizer2 = optim.Adam(self.model.parameters(), lr=0.00002, weight_decay=0.0005)
+            self.optimizer2 = optim.Adam(self.model.parameters(), lr=0.00001, weight_decay=0.0005)
         elif self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'direct' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
-            self.optimizer2 = optim.Adam(self.model.parameters(), lr=0.00002, weight_decay=0.0005)  #0.000002 does not converge even after 100 epochs on subjects 2-8 kin cons. use .00001
+            self.optimizer2 = optim.Adam(self.model.parameters(), lr=0.00001, weight_decay=0.0005)  #0.000002 does not converge even after 100 epochs on subjects 2-8 kin cons. use .00001
         #self.optimizer = optim.RMSprop(self.model.parameters(), lr=0.000001, momentum=0.7, weight_decay=0.0005)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.00002, weight_decay=0.0005) #start with .00005
+        self.optimizer = optim.Adam(self.model.parameters(), lr=0.00001, weight_decay=0.0005) #start with .00005
 
 
         # train the model one epoch at a time
@@ -662,21 +674,30 @@ class PhysicalTrainer():
 
 
                     self.criterion = nn.L1Loss()
-                    loss = self.criterion(scores, scores_zeros)
-                    #print(scores.size())
-                    #print("TRAIN SCORES", loss,
-                    #      np.sum(np.abs(scores.data.numpy())),
-                    #      np.sum(np.abs(scores[:, 10:].data.numpy())),
-                    #      np.sum(np.abs(scores[:, 10:].data.numpy()))/(scores[:, 10:].size()[0] * scores[:, 10:].size()[1]))
+                    #print np.mean(np.abs(scores.cpu().detach().numpy()), axis=0)[0:10]
+                    #print np.mean(np.abs(scores.cpu().detach().numpy()), axis=0)[10:34]
+                    #print np.mean(np.abs(scores.cpu().detach().numpy()), axis=0)[34:106]
+                    print np.mean(np.mean(np.abs(scores.cpu().detach().numpy()), axis=0)[0:10])
+                    print np.mean(np.mean(np.abs(scores.cpu().detach().numpy()), axis=0)[10:34])
+                    print np.mean(np.mean(np.abs(scores.cpu().detach().numpy()), axis=0)[34:106])
+
+
+                    loss_betas = self.criterion(scores[:, 0:10], scores_zeros[:, 0:10])
+                    loss_eucl = self.criterion(scores[:, 10:34], scores_zeros[:, 10:34])
+                    loss_angs = self.criterion(scores[:, 34:106], scores_zeros[:, 34:106])
+
+                    loss = loss_betas + loss_eucl + loss_angs
+
+
 
                     if GPU == True:
                         if self.opt.reg_angles == True:
-                            loss_breakdown = [1000*np.sum(np.abs(scores[:, 0:10].data.cpu().numpy()))/(scores.size()[0] * 34),
-                                              1000*np.sum(np.abs(scores[:, 10:34].data.cpu().numpy()))/(scores.size()[0] * 34),
-                                              1000*np.sum(np.abs(scores[:, 34:106].data.cpu().numpy()))/(scores.size()[0] * 34)]
+                            loss_breakdown = [1000*loss_betas.data,
+                                              1000*loss_eucl.data,
+                                              1000*loss_angs.data]
                         else:
-                            loss_breakdown = [1000*np.sum(np.abs(scores[:, 0:10].data.cpu().numpy()))/(scores.size()[0] * 34),
-                                              1000*np.sum(np.abs(scores[:, 10:34].data.cpu().numpy()))/(scores.size()[0] * 34)]
+                            loss_breakdown = [1000*loss_betas.data,
+                                              1000*loss_eucl.data]
 
                     else:
                         if self.opt.reg_angles == True:
@@ -745,7 +766,7 @@ class PhysicalTrainer():
                                   'Train Loss Joints: {:.2f}, Betas Loss: {:.2f}, Angles Loss: {:.2f}, Total Loss: {:.2f}\n\t\t\t\t'
                                   '   Val Loss Total: {:.2f}'.format(
                                 epoch, examples_this_epoch, len(self.train_loader.dataset),
-                                epoch_progress, loss_breakdown[1], loss_breakdown[0], loss_breakdown[2], train_loss*106/34., val_loss))
+                                epoch_progress, loss_breakdown[1], loss_breakdown[0], loss_breakdown[2], train_loss, val_loss))
                         else:
                             print('Train Epoch: {} [{}/{} ({:.0f}%)]\t'
                                   'Train Loss Joints: {:.2f}, Betas Loss: {:.2f}, Total Loss: {:.2f}\n\t\t\t\t'

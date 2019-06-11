@@ -71,14 +71,16 @@ class CNN(nn.Module):
 
         if self.split == False:
             self.CNN_fc1 = nn.Sequential(
-                nn.Linear(89600, out_size),
+                nn.Linear(89600, 1000),
+                nn.Linear(1000, out_size),
             )
-            self.resnet = resnet.resnet34(pretrained=False, output_size=out_size, num_classes=out_size)
+            self.resnet = resnet.resnet34(pretrained=True, num_classes=1000)
         if self.split == True:
             self.CNN_fc1 = nn.Sequential(
-                nn.Linear(89600, out_size-10),
+                nn.Linear(89600, 1000),
+                nn.Linear(1000, out_size-10),
             )
-            self.resnet = resnet.resnet34(pretrained=False, output_size=out_size-10, num_classes=out_size-10)
+            self.resnet = resnet.resnet34(pretrained=True, output_size=out_size-10, num_classes=out_size-10)
 
         self.CNN_fc2 = nn.Sequential(
             nn.Linear(11200, 10),
@@ -424,27 +426,26 @@ class CNN(nn.Module):
         #self.GPU = False
         #self.dtype = torch.FloatTensor
 
-        #scores_cnn = self.CNN_pack1(images)
-        #scores_size = scores_cnn.size()
-        # print scores_size, 'scores conv1'
+        scores_cnn = self.CNN_pack1(images)
+        scores_size = scores_cnn.size()
 
         # ''' # NOTE: Uncomment
         # This combines the height, width, and filters into a single dimension
-        #scores_cnn = scores_cnn.view(images.size(0),scores_size[1] *scores_size[2]*scores_size[3])
+        scores_cnn = scores_cnn.view(images.size(0),scores_size[1] *scores_size[2]*scores_size[3])
         #print 'size for fc layer:', scores_cnn.size()
 
 
-        #scores = self.CNN_fc1(scores_cnn) #this is N x 229: betas, root shift, Rotation matrices
+        scores = self.CNN_fc1(scores_cnn) #this is N x 229: betas, root shift, Rotation matrices
 
         #print scores.size()
         #print scores[0, :]
-        scores = self.resnet(images)
+        #scores = self.resnet(images)
         #print scores.size()
         #print scores[0, :]
 
 
         #weight the outputs, which are already centered around 0. First make them uniformly smaller than the direct output, which is too large. 
-        scores = torch.mul(scores.clone(), 0.00001)
+        scores = torch.mul(scores.clone(), 0.01)
 
         #normalize the output of the network based on the range of the parameters
         if self.GPU == True:
@@ -693,7 +694,7 @@ class CNN(nn.Module):
             #print scores[0, :]
             #here multiply by 24/10 when you are regressing to real data so it balances with the synthetic data
             scores = torch.mul(torch.add(1.0, torch.mul(1.4, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
-            scores = torch.mul(torch.add(1.0, torch.mul(3.0, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
+            #scores = torch.mul(torch.add(1.0, torch.mul(3.0, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
             #scores = torch.mul(torch.mul(2.4, torch.sub(1, synth_real_switch)).unsqueeze(1), scores)
 
             # here multiply by 5 when you are regressing to real data because there is only 1/5 the amount of it
@@ -709,9 +710,9 @@ class CNN(nn.Module):
             scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), (1/0.1282715100608753)) #weight the 24 joints by std
             if reg_angles == True: scores[:, 34:106] = torch.mul(scores[:, 34:106].clone(), (1/0.2130542427733348)) #weight the angles by how many there are
 
-            scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1./10)) #weight the betas by how many betas there are
-            scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), (1./24)) #weight the joints by how many there are
-            if reg_angles == True: scores[:, 34:106] = torch.mul(scores[:, 34:106].clone(), (1./72)) #weight the angles by how many there are
+            #scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1./10)) #weight the betas by how many betas there are
+            #scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), (1./24)) #weight the joints by how many there are
+            #if reg_angles == True: scores[:, 34:106] = torch.mul(scores[:, 34:106].clone(), (1./72)) #weight the angles by how many there are
 
         else:
             if self.GPU == True:

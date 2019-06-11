@@ -301,7 +301,9 @@ class GeneratePose():
 
             #print self.m.J_transformed[1, :], self.m.J_transformed[4, :]
             # self.m.pose[51] = selection_r
-            pyRender.mesh_render_pose_bed(self.m, root_shift_est, self.point_cloud_array, self.pc_isnew, pmat, self.markers)
+
+
+            pyRender.mesh_render_pose_bed(self.m, root_shift_est, self.point_cloud_array, self.pc_isnew, pmat, self.markers, self.bedangle)
             self.point_cloud_array = None
 
             #dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix, add_floor = False)
@@ -314,9 +316,9 @@ class GeneratePose():
 
 if __name__ == "__main__":
 
-    gender = "f"
+    gender = "m"
     filepath_prefix = "/home/henry"
 
 
     generator = GeneratePose(gender, filepath_prefix)
-    generator.estimate_real_time(gender, filepath_prefix+"/data/synth/convnet_anglesEU_synthreal_s4_3xreal_4xsize_128b_200e.pt")
+    generator.estimate_real_time(gender, filepath_prefix+"/data/convnets/epochs_set_3/convnet_anglesEU_synthreal_s12_3xreal_128b_101e_300e.pt")

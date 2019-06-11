@@ -121,7 +121,7 @@ class pyRenderMesh():
         # dterms = 'vc', 'camera', 'bgcolor'
         self.first_pass = True
         self.scene = pyrender.Scene()
-        self.human_mat = pyrender.MetallicRoughnessMaterial(baseColorFactor=[0.0, 0.0, 1.0 ,1.0])
+        self.human_mat = pyrender.MetallicRoughnessMaterial(baseColorFactor=[0.0, 0.0, 1.0 ,0.0])
 
 
 
@@ -213,7 +213,7 @@ class pyRenderMesh():
 
 
 
-    def get_3D_pmat_markers(self, pmat, angle = 0.0):
+    def get_3D_pmat_markers(self, pmat, angle = 60.0):
 
         pmat_reshaped = pmat.reshape(64, 27)
 
@@ -268,13 +268,17 @@ class pyRenderMesh():
 
 
 
-    def mesh_render_pose_bed(self, m, root_pos, pc, pc_isnew, pmat, markers):
-        print root_pos
+    def mesh_render_pose_bed(self, m, root_pos, pc, pc_isnew, pmat, markers, bedangle):
 
         #get SMPL mesh
         smpl_verts = (m.r - m.J_transformed[0, :])+[root_pos[1]-0.286+0.15, root_pos[0]-0.286, 0.12-root_pos[2]]#*228./214.
+
+        if np.sum(pmat) < 5000:
+            smpl_verts = smpl_verts * 0.001
+
         smpl_tm = trimesh.base.Trimesh(vertices=smpl_verts, faces=m.f)
         smpl_mesh = pyrender.Mesh.from_trimesh(smpl_tm, material=self.human_mat, wireframe = True)
+
 
         #get Point cloud mesh
         if pc is not None:
@@ -304,7 +308,7 @@ class pyRenderMesh():
 
 
 
-        pmat_verts, pmat_faces, pmat_facecolors = self.get_3D_pmat_markers(pmat)
+        pmat_verts, pmat_faces, pmat_facecolors = self.get_3D_pmat_markers(pmat, bedangle)
         pmat_tm = trimesh.base.Trimesh(vertices=pmat_verts, faces=pmat_faces, face_colors = pmat_facecolors)
         pmat_mesh = pyrender.Mesh.from_trimesh(pmat_tm, smooth = False)
 

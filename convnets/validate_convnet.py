@@ -111,14 +111,6 @@ class PhysicalTrainer():
         print self.num_epochs, 'NUM EPOCHS!'
         # Entire pressure dataset with coordinates in world frame
 
-        self.save_name = '_' + opt.losstype + '_synthreal_tanh_s4ang_sig0p5_' + str(self.batch_size) + 'b_' + str(
-            self.num_epochs) + 'e'
-
-        print'appending to', 'train' + self.save_name
-        self.train_val_losses = {}
-        self.train_val_losses['train' + self.save_name] = []
-        self.train_val_losses['val' + self.save_name] = []
-        self.train_val_losses['epoch' + self.save_name] = []
 
         self.mat_size = (NUMOFTAXELS_X, NUMOFTAXELS_Y)
         self.output_size_train = (NUMOFOUTPUTNODES_TRAIN, NUMOFOUTPUTDIMS)
@@ -134,10 +126,10 @@ class PhysicalTrainer():
         self.train_x_flat = []  # Initialize the testing pressure mat list
         if dat_f_synth is not None:
             for entry in range(len(dat_f_synth['images'])):
-                self.train_x_flat.append(dat_f_synth['images'][entry] * 3)
+                self.train_x_flat.append(dat_f_synth['images'][entry] * 5)
         if dat_m_synth is not None:
             for entry in range(len(dat_m_synth['images'])):
-                self.train_x_flat.append(dat_m_synth['images'][entry] * 3)
+                self.train_x_flat.append(dat_m_synth['images'][entry] * 5)
 
         self.train_x_flat = PreprocessingLib().preprocessing_blur_images(self.train_x_flat, self.mat_size, sigma=0.5)
 
@@ -486,14 +478,16 @@ class PhysicalTrainer():
         self.posedirs_repeat = self.posedirs_repeat.permute(1, 0, 2, 3, 4).view(self.N, 2, self.R, self.D*207)
         self.posedirs_repeat = torch.stack([self.posedirs_repeat[:, :, 1325, :],
                                             self.posedirs_repeat[:, :, 336, :],
-                                            self.posedirs_repeat[:, :, 1046, :],
-                                            self.posedirs_repeat[:, :, 4530, :],
-                                            self.posedirs_repeat[:, :, 3333, :],
-                                            self.posedirs_repeat[:, :, 6732, :],
-                                            self.posedirs_repeat[:, :, 1664, :],
-                                            self.posedirs_repeat[:, :, 5121, :],
-                                            self.posedirs_repeat[:, :, 2208, :],
-                                            self.posedirs_repeat[:, :, 5669, :]])
+                                            self.posedirs_repeat[:, :, 1032, :],
+                                            self.posedirs_repeat[:, :, 4515, :],
+                                            self.posedirs_repeat[:, :, 1374, :],
+                                            self.posedirs_repeat[:, :, 4848, :],
+                                            self.posedirs_repeat[:, :, 1739, :],
+                                            self.posedirs_repeat[:, :, 5209, :],
+                                            self.posedirs_repeat[:, :, 1960, :],
+                                            self.posedirs_repeat[:, :, 5423, :]])
+
+
         self.posedirs_repeat = self.posedirs_repeat.permute(1, 2, 0, 3).contiguous().view(self.N, 2, 10*self.D*207)
 
         self.weights_repeat_f = self.weights_f.unsqueeze(0).repeat(self.N, 1, 1).unsqueeze(0)
@@ -503,14 +497,14 @@ class PhysicalTrainer():
         self.weights_repeat = self.weights_repeat.permute(1, 0, 2, 3).view(self.N, 2, self.R, 24)
         self.weights_repeat = torch.stack([self.weights_repeat[:, :, 1325, :],
                                             self.weights_repeat[:, :, 336, :],
-                                            self.weights_repeat[:, :, 1046, :],
-                                            self.weights_repeat[:, :, 4530, :],
-                                            self.weights_repeat[:, :, 3333, :],
-                                            self.weights_repeat[:, :, 6732, :],
-                                            self.weights_repeat[:, :, 1664, :],
-                                            self.weights_repeat[:, :, 5121, :],
-                                            self.weights_repeat[:, :, 2208, :],
-                                            self.weights_repeat[:, :, 5669, :]])
+                                            self.weights_repeat[:, :, 1032, :],
+                                            self.weights_repeat[:, :, 4515, :],
+                                            self.weights_repeat[:, :, 1374, :],
+                                            self.weights_repeat[:, :, 4848, :],
+                                            self.weights_repeat[:, :, 1739, :],
+                                            self.weights_repeat[:, :, 5209, :],
+                                            self.weights_repeat[:, :, 1960, :],
+                                            self.weights_repeat[:, :, 5423, :]])
         self.weights_repeat = self.weights_repeat.permute(1, 2, 0, 3).contiguous().view(self.N, 2, 10*24)
 
 
@@ -600,18 +594,17 @@ class PhysicalTrainer():
             verts = v_homo[:, :, :3, 0] - J_est[:, 0:1, :] + root_loc_array.unsqueeze(1)
             '''
 
-
             #assemble a reduced form of the transformed mesh
             v_shaped_red = torch.stack([v_shaped[:, 1325, :],
                                         v_shaped[:, 336, :], #head
-                                        v_shaped[:, 1046, :], #l knee
-                                        v_shaped[:, 4530, :], #r knee
-                                        v_shaped[:, 3333, :], #l ankle
-                                        v_shaped[:, 6732, :], #r ankle
-                                        v_shaped[:, 1664, :], #l elbow
-                                        v_shaped[:, 5121, :], #r elbow
-                                        v_shaped[:, 2208, :], #l wrist
-                                        v_shaped[:, 5669, :]]).permute(1, 0, 2) #r wrist
+                                        v_shaped[:, 1032, :], #l knee
+                                        v_shaped[:, 4515, :], #r knee
+                                        v_shaped[:, 1374, :], #l ankle
+                                        v_shaped[:, 4848, :], #r ankle
+                                        v_shaped[:, 1739, :], #l elbow
+                                        v_shaped[:, 5209, :], #r elbow
+                                        v_shaped[:, 1960, :], #l wrist
+                                        v_shaped[:, 5423, :]]).permute(1, 0, 2) #r wrist
             #now we assemble the transformed mesh
             pose_feature = (Rs_est[:, 1:, :, :]).sub(1.0, torch.eye(3).float()).view(-1, 207)
             posedirs_repeat = torch.bmm(gender_switch, self.posedirs_repeat[0:batch_size, :, :])\
@@ -708,16 +701,16 @@ class PhysicalTrainer():
         elif self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
             fc_output_size = 85## 10 + 3 + 24*3 --- betas, root shift, rotations
             if GPU == True:
-                #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s7ang_sig0p5_5xreal_voloff_128b_200e.pt')
-                self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_300e.pt')
+                self.model = torch.load('/home/henry/data/convnets/epochs_set_3/convnet_anglesEU_synthreal_s17_3xreal_128b_101e_300e.pt')
+                #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_300e.pt')
                 self.model = self.model.cuda()
             else:
                 #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s6ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
-                #pass
-                self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
+                pass
+                #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/2.0xsize/convnet_anglesEU_synthreal_tanh_s8ang_sig0p5_5xreal_voloff_128b_300e.pt', map_location='cpu')
 
-            print 'LOADED!!!!!!!!!!!!!!!!!1'
+            print 'LOADED anglesEU !!!!!!!!!!!!!!!!!1'
             pp = 0
             for p in list(self.model.parameters()):
                 nn = 1
@@ -929,7 +922,7 @@ if __name__ == "__main__":
     test_database_file_f = []
     test_database_file_m = []
 
-    network_design = True
+    network_design = False
     if network_design == True:
         #training_database_file_f.append(filepath_prefix_qt + 'data/synth/train_f_lay_3555_upperbody_stiff.p')
         #training_database_file_f.append(filepath_prefix_qt + 'data/synth/train_f_lay_3681_rightside_stiff.p')
@@ -999,7 +992,8 @@ if __name__ == "__main__":
         #training_database_file_m.append(filepath_prefix_qt + 'data/real/subject_15/p_files/trainval_sit175rlh_sit120rll.p')
 
         #test_database_file_m.append(filepath_prefix_qt + 'data/real/subject_9/p_files/trainval_200rlh1_115rlh2_75rlh3_175rllair.p')
-        test_database_file_m.append(filepath_prefix_qt + 'data/real/subject_9/p_files/trainval_sit175rlh_sit120rll.p')
+        #test_database_file_m.append(filepath_prefix_qt + 'data/real/subject_17/p_files/trainval_200rlh1_115rlh2_75rlh3_175rllair.p')
+        test_database_file_m.append(filepath_prefix_qt + 'data/real/subject_17/p_files/trainval_sit175rlh_sit120rll.p')
 
     p = PhysicalTrainer(training_database_file_f, training_database_file_m, test_database_file_f, test_database_file_m, opt)
 
