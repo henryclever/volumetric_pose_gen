@@ -74,13 +74,13 @@ class CNN(nn.Module):
                 nn.Linear(89600, 1000),
                 nn.Linear(1000, out_size),
             )
-            self.resnet = resnet.resnet34(pretrained=True, num_classes=1000)
+            #self.resnet = resnet.resnet34(pretrained=True, num_classes=1000)
         if self.split == True:
             self.CNN_fc1 = nn.Sequential(
                 nn.Linear(89600, 1000),
                 nn.Linear(1000, out_size-10),
             )
-            self.resnet = resnet.resnet34(pretrained=True, output_size=out_size-10, num_classes=out_size-10)
+            #self.resnet = resnet.resnet34(pretrained=True, output_size=out_size-10, num_classes=out_size-10)
 
         self.CNN_fc2 = nn.Sequential(
             nn.Linear(11200, 10),
@@ -657,7 +657,10 @@ class CNN(nn.Module):
                 scores[:, 34:106] = torch.mul(synth_real_switch.unsqueeze(1), scores[:, 34:106].clone())
 
 
+            penetration_weights = KinematicsLib().get_penetration_weights(images, targets[:, 0:72])
 
+            print np.shape(penetration_weights)
+            print penetration_weights[0, :]
 
             #compare the output joints to the target values
             scores[:, 34+add_idx:106+add_idx] = targets[:, 0:72]/1000 - scores[:, 34+add_idx:106+add_idx]

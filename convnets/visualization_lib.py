@@ -353,7 +353,6 @@ class VisualizationLib():
     def rviz_publish_input(self, image, angle):
         mat_size = (NUMOFTAXELS_X, NUMOFTAXELS_Y)
 
-
         markerArray = MarkerArray()
         for j in range(image.shape[0]):
             for i in range(image.shape[1]):
@@ -405,7 +404,7 @@ class VisualizationLib():
         imagePublisher.publish(markerArray)
 
 
-    def rviz_publish_output(self, targets, scores = None):
+    def rviz_publish_output(self, targets, scores = None, scores_std = None):
 
         if targets is not None:
             TargetArray = MarkerArray()
