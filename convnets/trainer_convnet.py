@@ -100,7 +100,7 @@ class PhysicalTrainer():
         self.batch_size = 128
         self.num_epochs = 300
         self.include_inter = True
-        self.shuffle = False#True
+        self.shuffle = True
 
         self.count = 0
 
@@ -197,7 +197,7 @@ class PhysicalTrainer():
 
         self.train_y_flat = []  # Initialize the training ground truth list
 
-        z_subt = np.array(24 * [0.0, 0.0, 75.])
+        z_subt = np.array(24 * [0.0, 0.0, -37.5])
 
         if dat_f_synth is not None:
             for entry in range(len(dat_f_synth['markers_xyz_m'])):
@@ -206,7 +206,7 @@ class PhysicalTrainer():
                     c = np.concatenate((dat_f_synth['markers_xyz_m'][entry][0:72] * 1000 + z_subt,
                                         dat_f_synth['body_shape'][entry][0:10],
                                         dat_f_synth['joint_angles'][entry][0:72],
-                                        dat_f_synth['root_xyz_shift'][entry][0:3] + np.array([0.0, 0.0, 0.075]),
+                                        dat_f_synth['root_xyz_shift'][entry][0:3] + np.array([0.0, 0.0, -0.0375]),
                                         [1], [0], [1]), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
                     self.train_y_flat.append(c)
                 else:
@@ -226,7 +226,7 @@ class PhysicalTrainer():
                     c = np.concatenate((dat_m_synth['markers_xyz_m'][entry][0:72] * 1000 + z_subt,
                                         dat_m_synth['body_shape'][entry][0:10],
                                         dat_m_synth['joint_angles'][entry][0:72],
-                                        dat_m_synth['root_xyz_shift'][entry][0:3] + np.array([0.0, 0.0, 0.075]),
+                                        dat_m_synth['root_xyz_shift'][entry][0:3] + np.array([0.0, 0.0, -0.0375]),
                                         [0], [1], [1]), axis=0)  # [x1], [x2], [x3]: male synth: 0, 1, 1.
                     self.train_y_flat.append(c)
                 else:
@@ -639,7 +639,6 @@ class PhysicalTrainer():
                                              Variable(batch[1].type(dtype), requires_grad = False), \
                                              Variable(batch[2].type(dtype), requires_grad = False)
 
-
                     angles_gt = Variable(batch[3].type(dtype), requires_grad = True)
                     root_shift = Variable(batch[4].type(dtype), requires_grad = True)
                     gender_switch = Variable(batch[5].type(dtype), requires_grad = True)
@@ -681,13 +680,13 @@ class PhysicalTrainer():
                     #print np.mean(np.mean(np.abs(scores.cpu().detach().numpy()), axis=0)[10:34])
                     #print np.mean(np.mean(np.abs(scores.cpu().detach().numpy()), axis=0)[34:106])
 
-
                     loss_betas = self.criterion(scores[:, 0:10], scores_zeros[:, 0:10])
                     loss_eucl = self.criterion(scores[:, 10:34], scores_zeros[:, 10:34])
-                    loss_angs = self.criterion(scores[:, 34:106], scores_zeros[:, 34:106])
-
-                    loss = loss_betas + loss_eucl + loss_angs
-
+                    if self.opt.reg_angles == True:
+                        loss_angs = self.criterion(scores[:, 34:106], scores_zeros[:, 34:106])
+                        loss = loss_betas + loss_eucl + loss_angs
+                    else:
+                        loss = loss_betas + loss_eucl
 
 
                     if GPU == True:
@@ -897,14 +896,18 @@ class PhysicalTrainer():
 
         if self.opt.visualize == True:
             if GPU == True:
+                #VisualizationLib().rviz_publish_input(self.im_sample.cpu().numpy()[0, :, :], self.im_sample.cpu().numpy()[2, 1, 0])
+
+                #print self.tar_sample.cpu().numpy()
+                #VisualizationLib().rviz_publish_output(self.tar_sample.cpu().numpy().reshape(24,3), self.sc_sample.cpu().numpy().reshape(24,3))
 
                 VisualizationLib().visualize_pressure_map(self.im_sample.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),self.im_sampleval.cpu(), self.tar_sampleval.cpu(), self.sc_sampleval.cpu(), block=False)
             else:
-                VisualizationLib().rviz_publish_input(self.im_sample.numpy()[0, :, :], self.im_sample.numpy()[2, 1, 0])
+                #VisualizationLib().rviz_publish_input(self.im_sample.numpy()[0, :, :], self.im_sample.numpy()[2, 1, 0])
 
-                print self.tar_sample.numpy()
-                VisualizationLib().rviz_publish_output(self.tar_sample.numpy().reshape(24,3), self.sc_sample.numpy().reshape(24,3))
-                #VisualizationLib().visualize_pressure_map(self.im_sample, self.tar_sample, self.sc_sample,self.im_sampleval, self.tar_sampleval, self.sc_sampleval, block=False)
+                #print self.tar_sample.numpy()
+                #VisualizationLib().rviz_publish_output(self.tar_sample.numpy().reshape(24,3), self.sc_sample.numpy().reshape(24,3))
+                VisualizationLib().visualize_pressure_map(self.im_sample, self.tar_sample, self.sc_sample,self.im_sampleval, self.tar_sampleval, self.sc_sampleval, block=False)
 
 
         return loss
@@ -970,7 +973,7 @@ if __name__ == "__main__":
 
 
     if opt.quick_test == True:
-        #training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_2000_of_2051_upperbody_stiff.p')
+        #training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_2000_of_2018_lowerbody_stiff.p')
         training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1000_of_1168_upperbody_stiff.p')
         #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
         #training_database_file_m.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
@@ -990,8 +993,8 @@ if __name__ == "__main__":
             training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1000_of_1133_leftside_stiff.p')
             training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1000_of_1126_lowerbody_stiff.p')
             training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1000_of_1113_none_stiff.p')
-            training_database_file_f.append(filepath_prefix_qt+'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-            training_database_file_f.append(filepath_prefix_qt+'data/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+            #training_database_file_f.append(filepath_prefix_qt+'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+            #training_database_file_f.append(filepath_prefix_qt+'data/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
                     
             #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval8_150rh1_sit120rh.p')
 
@@ -1005,11 +1008,11 @@ if __name__ == "__main__":
             training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1000_of_1183_leftside_stiff.p')
             training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1000_of_1166_lowerbody_stiff.p')
             training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1000_of_1155_none_stiff.p')
-            training_database_file_m.append(filepath_prefix_qt+'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+            #training_database_file_m.append(filepath_prefix_qt+'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
             #training_database_file_m.append(filepath_prefix_qt+'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-            training_database_file_m.append(filepath_prefix_qt+'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-            training_database_file_m.append(filepath_prefix_qt+'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-            training_database_file_m.append(filepath_prefix_qt+'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+            #training_database_file_m.append(filepath_prefix_qt+'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+            #training_database_file_m.append(filepath_prefix_qt+'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+            #training_database_file_m.append(filepath_prefix_qt+'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
 
             #training_database_file_m.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
             #training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_95_rightside_stiff.p')

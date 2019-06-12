@@ -656,11 +656,13 @@ class CNN(nn.Module):
 
                 scores[:, 34:106] = torch.mul(synth_real_switch.unsqueeze(1), scores[:, 34:106].clone())
 
+            if self.GPU == True:
+                penetration_weights = torch.Tensor(KinematicsLib().get_penetration_weights(images, targets[:, 0:72])).cuda()
+            else:
+                penetration_weights = torch.Tensor(KinematicsLib().get_penetration_weights(images, targets[:, 0:72]))
 
-            penetration_weights = KinematicsLib().get_penetration_weights(images, targets[:, 0:72])
-
-            print np.shape(penetration_weights)
-            print penetration_weights[0, :]
+            #print np.shape(penetration_weights)
+            #print penetration_weights[0, :]
 
             #compare the output joints to the target values
             scores[:, 34+add_idx:106+add_idx] = targets[:, 0:72]/1000 - scores[:, 34+add_idx:106+add_idx]
@@ -711,6 +713,9 @@ class CNN(nn.Module):
 
             scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1/1.7312621950698526)) #weight the betas by std
             scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), (1/0.1282715100608753)) #weight the 24 joints by std
+
+            scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), penetration_weights)
+
             if reg_angles == True: scores[:, 34:106] = torch.mul(scores[:, 34:106].clone(), (1/0.2130542427733348)) #weight the angles by how many there are
 
             #scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1./10)) #weight the betas by how many betas there are

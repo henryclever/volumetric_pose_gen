@@ -348,49 +348,57 @@ class KinematicsLib():
 
 
     def get_penetration_weights(self, images, targets):
-        mat_size = (NUMOFTAXELS_X, NUMOFTAXELS_Y)
 
-        bedangle = torch.mean(images[:, 2, 1:3, 0], dim=1)
+        try:
+            bedangle = torch.mean(images[:, 2, 1:3, 0], dim=1)
+            images = images.data.numpy()
+            targets = targets.data.numpy()/1000
+        except:
+            bedangle = torch.mean(images[:, 2, 1:3, 0].cpu(), dim=1)
+            images = images.cpu().data.numpy()
+            targets = targets.cpu().data.numpy()/1000
 
-        images = images.data.numpy()
-        targets = targets.data.numpy()/1000
         targets = np.reshape(targets, (targets.shape[0], targets.shape[1]/3, 3))
 
 
 
-        distances = np.zeros((images.shape[0], targets.shape[1]))
         queue_frame = np.zeros((targets.shape[0], targets.shape[1], 4))
         queue_head = np.zeros((targets.shape[0], targets.shape[1], 4))
 
         # get the shortest distance from the main frame of the bed. it's just the z.
-        queue_frame[:, :, 0] = targets[:, :, 2]
-        print targets[0, :, 2]
+        queue_frame[:, :, 0] = np.copy(targets[:, :, 2])
 
         # get the shortest distance from the head of the bed. you have to rotate about the bending point.
         By = (51) * 0.0286 - 0.0286 * 3 * np.sin(np.deg2rad(np.expand_dims(bedangle[:], axis = 1)))
         queue_head[:, :, 0] = targets[:, :, 2] * np.cos(np.deg2rad(np.expand_dims(bedangle[:], axis = 1))) - (targets[:, :,1] - By) * np.sin(np.deg2rad(np.expand_dims(bedangle[:], axis = 1) ))
 
+
+        # now get the plane that the point is closer to.
+        queue_frame[:, :, 2] += queue_frame[:, :, 0]
+        queue_frame[:, :, 2][targets[:, :, 1] > 48*0.0286] = 0.0
+        queue_head[:, :, 2] += queue_head[:, :, 0]
+        queue_head[:, :, 2][targets[:, :, 1] <= 48*0.0286] = 0.0
+
+
+        penetration_weights = queue_frame[:, :, 2] + queue_head[:, :, 2]
+        penetration_weights[penetration_weights > 0] = 0.0
+        penetration_weights[penetration_weights < 0] = 1.0
+
+
         # Get the distance off the side of the bed.  The bed is 27 pixels wide, so things over hanging this are added
         queue_frame[:, :, 1] = (-targets[:, :, 0] + 10 * 0.0286).clip(min=0)
         queue_frame[:, :, 1] = queue_frame[:, :, 1] + (targets[:, :, 0] - 37 * 0.0286).clip(min=0)
+        queue_frame[:, :, 1] += 1.0
+        queue_frame[:, :, 1][queue_frame[:, :, 1] > 1] = 0.0
+
         queue_head[:, :, 1] = np.copy(queue_frame[:, :, 1])  # the x distance does not depend on bed angle.
 
-        # Now take the Euclidean for each frame and head set
-        queue_frame[:, :, 2] = np.sqrt(np.square(queue_frame[:, :, 0]) + np.square(queue_frame[:, :, 1]))
-        queue_head[:, :, 2] = np.sqrt(np.square(queue_head[:, :, 0]) + np.square(queue_head[:, :, 1]))
-
-        # however, there is still a problem.  We should zero out the distance if the x position is within the bounds
-        # of the pressure mat and the z is negative. This just indicates the person is pushing into the mat.
-        queue_frame[:, :, 3] = (queue_frame[:, :, 2] - queue_frame[:, :, 0] - queue_frame[:, :, 1] * 1000000).clip(min=0)
-        queue_head[:, :, 3] = (queue_head[:, :, 2] - queue_head[:, :, 0] - queue_frame[:, :, 1] * 1000000).clip(min=0)
-        queue_frame[:, :, 2] = (queue_frame[:, :, 2] - queue_frame[:, :, 3])#.clip(min=0)  # corrected Euclidean
-        queue_head[:, :, 2] = (queue_head[:, :, 2] - queue_head[:, :, 3])#.clip(min=0)  # corrected Euclidean
-
-        # Now take the minimum of the Euclideans from the head and the frame planes
-        distances[:, :] = np.amin([queue_frame[:, :, 2], queue_head[:, :, 2]], axis=0)
+        penetration_weights = penetration_weights*queue_frame[:, :, 1]
+        penetration_weights*=np.array([0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0])*3
+        penetration_weights+= 1
 
 
-        return distances
+        return penetration_weights
 
 
 
