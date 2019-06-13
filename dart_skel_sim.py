@@ -254,22 +254,30 @@ class DartSkelSim(object):
 
 
         if gender == "f":
-            volume_median = [0.015277643666666658, 0.007676252166666666, 0.007705970166666665, 0.007150662166666678, 0.004637961,
-                             0.0046260565, 0.006919925999999999, 0.0009656045, 0.000978959, 0.010161063749999996,
-                             0.0014945347499999992, 0.002064434, 0.002040836916666667, 0.003933601916666668, 0.00184907,
-                             0.0018632635, 0.0009073805, 0.0009390935, 0.000400365, 0.0004192055]
+            #volume_median = [0.015277643666666658, 0.007676252166666666, 0.007705970166666665, 0.007150662166666678, 0.004637961,
+            #                 0.0046260565, 0.006919925999999999, 0.0009656045, 0.000978959, 0.010161063749999996,
+            #                 0.0014945347499999992, 0.002064434, 0.002040836916666667, 0.003933601916666668, 0.00184907,
+            #                 0.0018632635, 0.0009073805, 0.0009390935, 0.000400365, 0.0004192055]
+            volume_median = [0.020918456, 0.010185206, 0.010185206, 0.011688111, 0.004861564,
+                             0.004851375, 0.012607848, 0.001170955, 0.001184272, 0.015511426,
+                             0.003288661, 0.002799336, 0.002799336, 0.005684597, 0.002302096,
+                             0.002304728, 0.001159883, 0.001192307, 0.000451576, 0.000483304]
         else:
-            volume_median = [0.014475041666666666, 0.007873465666666668, 0.007963612000000004, 0.009262944666666675, 0.0052877485,
-                             0.0052843175, 0.006637316166666669, 0.001300277, 0.001316104, 0.011297247333333335,
-                             0.002356231416666665, 0.003092792416666667, 0.0030801008333333343, 0.004614448, 0.0022653085,
-                             0.002294299, 0.0014234765, 0.001413545, 0.000390882, 0.000409517]
+            #volume_median = [0.014475041666666666, 0.007873465666666668, 0.007963612000000004, 0.009262944666666675, 0.0052877485,
+            #                 0.0052843175, 0.006637316166666669, 0.001300277, 0.001316104, 0.011297247333333335,
+            #                 0.002356231416666665, 0.003092792416666667, 0.0030801008333333343, 0.004614448, 0.0022653085,
+            #                 0.002294299, 0.0014234765, 0.001413545, 0.000390882, 0.000409517]
+            volume_median = [0.019681484, 0.010447408, 0.01054436, 0.013953241, 0.005571068,
+                             0.005571068, 0.012321504, 0.00156056, 0.001583692, 0.016830335,
+                             0.004977728, 0.003976808, 0.003944192, 0.006793848, 0.00284046,
+                             0.0028836, 0.001737588, 0.001753752, 0.000454112, 0.000483304]
 
 
         if volume is None:
             #weight the capsules appropriately
             print "volume is none!!!"
             volume = []
-            volume_median = []
+            #volume_median = []
             for body_ct in range(NUM_CAPSULES):
                 #give the capsules a weight propertional to their volume
                 cap_rad = float(capsules[body_ct].rad[0])
@@ -277,13 +285,13 @@ class DartSkelSim(object):
                 cap_len = float(capsules[body_ct].length[0])
                 if cap_len < 0.0001: cap_len = 0.0001
 
-                cap_rad_median = float(capsules_median[body_ct].rad[0])
-                if cap_rad_median < 0.0001: cap_rad_median = 0.0001
-                cap_len_median = float(capsules_median[body_ct].length[0])
-                if cap_len_median < 0.0001: cap_len_median = 0.0001
+                #cap_rad_median = float(capsules_median[body_ct].rad[0])
+                #if cap_rad_median < 0.0001: cap_rad_median = 0.0001
+                #cap_len_median = float(capsules_median[body_ct].length[0])
+                #if cap_len_median < 0.0001: cap_len_median = 0.0001
 
                 volume.append(np.pi*np.square(cap_rad)*(cap_rad*4/3 + cap_len))
-                volume_median.append(np.pi*np.square(cap_rad_median)*(cap_rad_median*4/3 + cap_len_median))
+                #volume_median.append(np.pi*np.square(cap_rad_median)*(cap_rad_median*4/3 + cap_len_median))
 
         #print volume
         #sleep(1)
@@ -295,6 +303,7 @@ class DartSkelSim(object):
 
         volume_torso = volume[0] + volume[3] + volume[6] + volume[9] + volume[11] + volume[12]
         volume_head = volume[10] + volume[13]
+
 
         #Human Body Dynamics: Classical Mechanics and Human Movement by Aydin Tozeren, the average percentage of weight for each body part is as follows:
         #Trunk(Chest, back and abdomen)- 50.80,  Head - 7.30, Thigh - 9.88 x 2, Lower leg - 4.65 x 2, Foot - 1.45 x 2, Upper arm - 2.7 x 2, Forearm - 1.60 x 2, Hand - 0.66 x 2,
@@ -390,7 +399,9 @@ class DartSkelSim(object):
         #skel = LibDartSkel().assign_capsule_friction(skel, friction = 1000.0)
 
 
-        print "Body mass is: ", body_mass, "kg"
+        #print "Body mass is: ", body_mass, "kg"
+        self.body_mass = body_mass
+
         self.body_node = 9 #need to solve for the body node that corresponds to a force using flex.
         self.force = np.asarray([0.0, 100.0, 100.0])
         self.offset_from_centroid = np.asarray([-0.15, 0.0, 0.0])

@@ -181,7 +181,7 @@ if __name__ == "__main__":
 
     #fix_angles_in_dataset()
 
-
+    import dart_skel_sim
 
 
     #gender = "f"
@@ -224,6 +224,8 @@ if __name__ == "__main__":
         training_data_dict['root_xyz_shift'] = []
         training_data_dict['joint_angles'] = []
         training_data_dict['body_shape'] = []
+        training_data_dict['body_mass'] = []
+        training_data_dict['body_height'] = []
         training_data_dict['bed_angle_deg'] = []
         training_data_dict['images'] = []
 
@@ -258,10 +260,10 @@ if __name__ == "__main__":
         #print m.pose
         #print "J x trans", m.J_transformed[:, 0]
 
-        resting_pose_data_list = np.load('/home/henry/data/resting_poses/side_up/resting_pose_'
+        resting_pose_data_list = np.load('/media/henry/multimodal_data_2/data/resting_poses/side_up/resting_pose_'
                                         +gender+'_'+posture+'_'+str(num_resting_poses)+'_of_'+str(num_resting_poses_tried)+'_'+stiffness+'_stiff.npy',
                                         allow_pickle = True)
-        training_database_pmat_height_list = np.load('/home/henry/data/pmat_height/side_up/pmat_height_'
+        training_database_pmat_height_list = np.load('/media/henry/multimodal_data_2/data/pmat_height/side_up/pmat_height_'
                                         +gender+'_'+posture+'_'+str(num_resting_poses)+'_of_'+str(num_resting_poses_tried)+'_'+stiffness+'_stiff.npy',
                                         allow_pickle = True)
 
@@ -278,6 +280,30 @@ if __name__ == "__main__":
             #print "shape", body_shape_list
 
             print np.shape(resting_pose_data), np.shape(pmat), np.shape(height), np.shape(capsule_angles), np.shape(root_joint_pos_list), np.shape(body_shape_list)
+
+            for shape_param in range(10):
+                m.betas[shape_param] = float(body_shape_list[shape_param])
+
+
+
+            m.pose[:] = np.random.rand(m.pose.size) * 0.
+            dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture=posture, stiffness=None, check_only_distal = True, filepath_prefix='/home/henry', add_floor = False)
+            #print self.m.pose
+            volumes = dss.getCapsuleVolumes(mm_resolution = 1.)[2]
+            dss.world.reset()
+            dss.world.destroy()
+            dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture=posture, stiffness=None, check_only_distal = True, filepath_prefix='/home/henry', add_floor = False, volume = volumes)
+            #print self.m.pose
+            training_data_dict['body_mass'].append(dss.body_mass)#, "person's mass"
+            dss.world.reset()
+            dss.world.destroy()
+            training_data_dict['body_height'].append(np.abs(np.min(m.r[:, 1])-np.max(m.r[:, 1])))
+
+            print training_data_dict['body_mass'][-1]*2.20462, 'MASS, lbs'
+            print training_data_dict['body_height'][-1]*3.28084, 'HEIGHT, ft'
+
+
+
 
             m.pose[0:3] = capsule_angles[0:3]
             m.pose[3:6] = capsule_angles[6:9]
@@ -300,8 +326,6 @@ if __name__ == "__main__":
             m.pose[60:63] = capsule_angles[49:52]
             m.pose[63:66] = capsule_angles[52:55]
 
-            for shape_param in range(10):
-                m.betas[shape_param] = float(body_shape_list[shape_param])
 
             training_data_dict['joint_angles'].append(np.array(m.pose).astype(float))
             training_data_dict['body_shape'].append(np.array(m.betas).astype(float))
