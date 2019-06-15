@@ -653,11 +653,11 @@ class PhysicalTrainer():
 
 
 
-                    weight_input = torch.ones((images_up.size()[0], images_up.size()[2]*images_up.size()[3]))
-                    weight_input*=batch[7]
+                    weight_input = torch.ones((images_up.size()[0], images_up.size()[2]*images_up.size()[3])).type(dtype)
+                    weight_input*=batch[7].type(dtype)
                     weight_input = weight_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
-                    height_input = torch.ones((images_up.size()[0], images_up.size()[2]*images_up.size()[3]))
-                    height_input*=batch[8]
+                    height_input = torch.ones((images_up.size()[0], images_up.size()[2]*images_up.size()[3])).type(dtype)
+                    height_input*=batch[8].type(dtype)
                     height_input = height_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
                     images_up = torch.cat((images_up, weight_input, height_input), 1)
 
@@ -855,11 +855,11 @@ class PhysicalTrainer():
                 gender_switch = Variable(batch[2].type(dtype), requires_grad=False)
 
 
-                weight_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3]))
-                weight_input *= batch[3]
+                weight_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(dtype)
+                weight_input *= batch[3].type(dtype)
                 weight_input = weight_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
-                height_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3]))
-                height_input *= batch[4]
+                height_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(dtype)
+                height_input *= batch[4].type(dtype)
                 height_input = height_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
                 images_up = torch.cat((images_up, weight_input, height_input), 1)
 
@@ -1014,13 +1014,13 @@ if __name__ == "__main__":
         training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1000_of_1121_rightside_stiff.p')
         #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
         #training_database_file_m.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
-        training_database_file_f.append(filepath_prefix_qt + 'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        training_database_file_f.append(filepath_prefix_qt + 'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        training_database_file_f.append(filepath_prefix_qt + 'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        training_database_file_f.append(filepath_prefix_qt + 'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        training_database_file_f.append(filepath_prefix_qt + 'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        training_database_file_f.append(filepath_prefix_qt + 'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        training_database_file_f.append(filepath_prefix_qt + 'data/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
         #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
         test_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
     else:
