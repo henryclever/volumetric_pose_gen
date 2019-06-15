@@ -166,7 +166,7 @@ class PreprocessingLib():
                 p_map = p_map[10:74, 10:37]
 
             height_strip = np.zeros(np.shape(p_map)[0])
-            height_strip[0:25] = np.flip(np.linspace(0, 1, num=25) * 25 * 2.86 * np.sin(np.deg2rad(a_data[map_index])), axis = 0)
+            height_strip[0:25] = np.flip(np.linspace(0, 1, num=25) * 25 * 2.86 * np.sin(np.deg2rad(a_data[map_index][0])), axis = 0)
             height_strip = np.repeat(np.expand_dims(height_strip, axis = 1), 27, 1)
             a_map = height_strip
 

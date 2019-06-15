@@ -34,7 +34,7 @@ class CNN(nn.Module):
 
         self.CNN_pack1 = nn.Sequential(
 
-            nn.Conv2d(3, 256, kernel_size=7, stride=2, padding=3),
+            nn.Conv2d(5, 256, kernel_size=7, stride=2, padding=3),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.1, inplace=False),
             nn.MaxPool2d(3, stride=2),
@@ -52,7 +52,7 @@ class CNN(nn.Module):
 
         self.CNN_pack2 = nn.Sequential(
 
-            nn.Conv2d(3, 32, kernel_size = 7, stride = 2, padding = 3),
+            nn.Conv2d(5, 32, kernel_size = 7, stride = 2, padding = 3),
             nn.ReLU(inplace = True),
             nn.Dropout(p = 0.1, inplace=False),
             nn.MaxPool2d(3, stride=2),

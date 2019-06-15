@@ -167,21 +167,21 @@ class PhysicalTrainer():
         self.train_a_flat = []  # Initialize the testing pressure mat angle list
         if dat_f_synth is not None:
             for entry in range(len(dat_f_synth['images'])):
-                self.train_a_flat.append(dat_f_synth['bed_angle_deg'][entry])
+                self.train_a_flat.append([dat_f_synth['bed_angle_deg'][entry]])
         if dat_m_synth is not None:
             for entry in range(len(dat_m_synth['images'])):
-                self.train_a_flat.append(dat_m_synth['bed_angle_deg'][entry])
+                self.train_a_flat.append([dat_m_synth['bed_angle_deg'][entry]])
 
         if dat_f_real is not None:
             for entry in range(len(dat_f_real['images'])):
-                self.train_a_flat.append(dat_f_real['bed_angle_deg'][entry])
-                self.train_a_flat.append(dat_f_real['bed_angle_deg'][entry])
-                self.train_a_flat.append(dat_f_real['bed_angle_deg'][entry])
+                self.train_a_flat.append([dat_f_real['bed_angle_deg'][entry]])
+                self.train_a_flat.append([dat_f_real['bed_angle_deg'][entry]])
+                self.train_a_flat.append([dat_f_real['bed_angle_deg'][entry]])
         if dat_m_real is not None:
             for entry in range(len(dat_m_real['images'])):
-                self.train_a_flat.append(dat_m_real['bed_angle_deg'][entry])
-                self.train_a_flat.append(dat_m_real['bed_angle_deg'][entry])
-                self.train_a_flat.append(dat_m_real['bed_angle_deg'][entry])
+                self.train_a_flat.append([dat_m_real['bed_angle_deg'][entry]])
+                self.train_a_flat.append([dat_m_real['bed_angle_deg'][entry]])
+                self.train_a_flat.append([dat_m_real['bed_angle_deg'][entry]])
 
 
         if len(self.train_x_flat) == 0: print("NO TRAINING DATA INCLUDED")
@@ -207,7 +207,9 @@ class PhysicalTrainer():
                                         dat_f_synth['body_shape'][entry][0:10],
                                         dat_f_synth['joint_angles'][entry][0:72],
                                         dat_f_synth['root_xyz_shift'][entry][0:3] + np.array([0.0, 0.0, -0.0375]),
-                                        [1], [0], [1]), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
+                                        [1], [0], [1],
+                                        [dat_f_synth['body_mass'][entry]],
+                                        [(dat_f_synth['body_height'][entry]-1.)*100]), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
                     self.train_y_flat.append(c)
                 else:
                     # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
@@ -227,7 +229,9 @@ class PhysicalTrainer():
                                         dat_m_synth['body_shape'][entry][0:10],
                                         dat_m_synth['joint_angles'][entry][0:72],
                                         dat_m_synth['root_xyz_shift'][entry][0:3] + np.array([0.0, 0.0, -0.0375]),
-                                        [0], [1], [1]), axis=0)  # [x1], [x2], [x3]: male synth: 0, 1, 1.
+                                        [0], [1], [1],
+                                        [dat_m_synth['body_mass'][entry]],
+                                        [(dat_m_synth['body_height'][entry]-1.)*100]), axis=0)  # [x1], [x2], [x3]: male synth: 0, 1, 1.
                     self.train_y_flat.append(c)
                 else:
                     # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
@@ -235,7 +239,7 @@ class PhysicalTrainer():
                                         np.array(10 * [0]),
                                         np.array(72 * [0]),
                                         np.array(3 * [0]),
-                                        [1], [0], [1]), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
+                                        [0], [1], [1]), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
                     self.train_y_flat.append(c)
 
         if dat_f_real is not None:
@@ -268,7 +272,9 @@ class PhysicalTrainer():
                                     dat_f_real['markers_xyz_m'][entry][12:15] * 1000,  # R WRIST
                                     np.array(6 * [0]),
                                     np.array(85 * [0]),
-                                    [1], [0], [0]), axis=0)  # [x1], [x2], [x3]: female real: 1, 0, 0.
+                                    [1], [0], [0],
+                                    [dat_f_real['body_mass'][entry]],
+                                    [(dat_f_real['body_height'][entry]-1.)*100]), axis=0)  # [x1], [x2], [x3]: female real: 1, 0, 0.
                 self.train_y_flat.append(c)
                 self.train_y_flat.append(c)
                 self.train_y_flat.append(c)
@@ -301,7 +307,9 @@ class PhysicalTrainer():
                                     dat_m_real['markers_xyz_m'][entry][12:15] * 1000,  # R WRIST
                                     np.array(6 * [0]),
                                     np.array(85 * [0]),
-                                    [0], [1], [0]), axis=0)  # [x1], [x2], [x3]: male real: 0, 1, 0.
+                                    [0], [1], [0],
+                                    [dat_m_real['body_mass'][entry]],
+                                    [(dat_m_real['body_height'][entry]-1.)*100]), axis=0)  # [x1], [x2], [x3]: male real: 0, 1, 0.
                 self.train_y_flat.append(c)
                 self.train_y_flat.append(c)
                 self.train_y_flat.append(c)
@@ -341,10 +349,10 @@ class PhysicalTrainer():
         self.test_a_flat = []  # Initialize the testing pressure mat angle listhave
         if test_dat_f is not None:
             for entry in range(len(test_dat_f['images'])):
-                self.test_a_flat.append(test_dat_f['bed_angle_deg'][entry])
+                self.test_a_flat.append([test_dat_f['bed_angle_deg'][entry]])
         if test_dat_m is not None:
             for entry in range(len(test_dat_m['images'])):
-                self.test_a_flat.append(test_dat_m['bed_angle_deg'][entry])
+                self.test_a_flat.append([test_dat_m['bed_angle_deg'][entry]])
 
 
 
@@ -370,7 +378,9 @@ class PhysicalTrainer():
                     c = np.concatenate((fixed_head_markers,
                                         fixed_torso_markers,
                                         test_dat_f['markers_xyz_m'][entry][6:] * 1000,
-                                        [1], [0]), axis=0) # shapedirs (N, 6890, 3, 10)
+                                        [1], [0], [0],
+                                        [test_dat_f['body_mass'][entry]],
+                                        [(test_dat_f['body_height'][entry]-1.)*100]), axis=0) # shapedirs (N, 6890, 3, 10)
                     self.test_y_flat.append(c)
                 else:
                     self.test_y_flat.append(test_dat_f['markers_xyz_m'][entry] * 1000)
@@ -389,7 +399,9 @@ class PhysicalTrainer():
                     c = np.concatenate((fixed_head_markers,
                                         fixed_torso_markers,
                                         test_dat_m['markers_xyz_m'][entry][6:] * 1000,
-                                        [0], [1]), axis=0) # shapedirs (N, 6890, 3, 10)
+                                        [0], [1], [0],
+                                        [test_dat_m['body_mass'][entry]],
+                                        [(test_dat_m['body_height'][entry]-1.)*100]), axis=0) # shapedirs (N, 6890, 3, 10)
                     self.test_y_flat.append(c)
                 else:
                     self.test_y_flat.append(test_dat_m['markers_xyz_m'][entry] * 1000)
@@ -621,6 +633,8 @@ class PhysicalTrainer():
                     batch.append(batch[1][:, 154:157]) #root pos
                     batch.append(batch[1][:, 157:159]) #gender switch
                     batch.append(batch[1][:, 159]) #synth vs real switch
+                    batch.append(batch[1][:, 160:161]) #mass, kg
+                    batch.append(batch[1][:, 161:162]) #height, kg
 
                     #cut it off so batch[2] is only the xyz marker targets
                     batch[1] = batch[1][:, 0:72]
@@ -633,7 +647,19 @@ class PhysicalTrainer():
 
 
                     images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple = 2)))
+
+
                     images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
+
+
+
+                    weight_input = torch.ones((images_up.size()[0], images_up.size()[2]*images_up.size()[3]))
+                    weight_input*=batch[7]
+                    weight_input = weight_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
+                    height_input = torch.ones((images_up.size()[0], images_up.size()[2]*images_up.size()[3]))
+                    height_input*=batch[8]
+                    height_input = height_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
+                    images_up = torch.cat((images_up, weight_input, height_input), 1)
 
                     images, targets, betas = Variable(batch[0].type(dtype), requires_grad = False), \
                                              Variable(batch[1].type(dtype), requires_grad = False), \
@@ -816,7 +842,10 @@ class PhysicalTrainer():
 
                 #get the direct joint locations
                 batch.append(batch[1][:, 30:32])
+                batch.append(batch[1][:, 33:34]) #mass, kg
+                batch.append(batch[1][:, 34:35]) #height, kg
                 batch[1] = batch[1][:, 0:30]
+
 
 
                 images_up_non_tensor = np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2))
@@ -825,6 +854,14 @@ class PhysicalTrainer():
 
                 gender_switch = Variable(batch[2].type(dtype), requires_grad=False)
 
+
+                weight_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3]))
+                weight_input *= batch[3]
+                weight_input = weight_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
+                height_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3]))
+                height_input *= batch[4]
+                height_input = height_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
+                images_up = torch.cat((images_up, weight_input, height_input), 1)
 
                 self.optimizer.zero_grad()
 
@@ -974,10 +1011,16 @@ if __name__ == "__main__":
 
     if opt.quick_test == True:
         #training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_2000_of_2018_lowerbody_stiff.p')
-        training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1000_of_1168_upperbody_stiff.p')
+        training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1000_of_1121_rightside_stiff.p')
         #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
         #training_database_file_m.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        training_database_file_f.append(filepath_prefix_qt + 'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        training_database_file_f.append(filepath_prefix_qt + 'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        training_database_file_f.append(filepath_prefix_qt + 'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        training_database_file_f.append(filepath_prefix_qt + 'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        training_database_file_f.append(filepath_prefix_qt + 'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        training_database_file_f.append(filepath_prefix_qt + 'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        training_database_file_f.append(filepath_prefix_qt + 'data/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
         #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
         test_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
     else:
