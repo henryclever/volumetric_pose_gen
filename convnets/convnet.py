@@ -422,7 +422,7 @@ class CNN(nn.Module):
 
 
 
-    def forward_kinematic_angles(self, images, gender_switch, synth_real_switch, targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None, reg_angles = False):
+    def forward_kinematic_angles(self, images, gender_switch, synth_real_switch, targets=None, targets_de_off = None, is_training = True, betas=None, angles_gt = None, root_shift = None, reg_angles = False):
         #self.GPU = False
         #self.dtype = torch.FloatTensor
 
@@ -657,12 +657,12 @@ class CNN(nn.Module):
                 scores[:, 34:106] = torch.mul(synth_real_switch.unsqueeze(1), scores[:, 34:106].clone())
 
             if self.GPU == True:
-                penetration_weights = torch.Tensor(KinematicsLib().get_penetration_weights(images, targets[:, 0:72])).cuda()
+                penetration_weights = torch.Tensor(KinematicsLib().get_penetration_weights(images, targets_de_off[:, 0:72])).cuda()
             else:
-                penetration_weights = torch.Tensor(KinematicsLib().get_penetration_weights(images, targets[:, 0:72]))
+                penetration_weights = torch.Tensor(KinematicsLib().get_penetration_weights(images, targets_de_off[:, 0:72]))
 
             #print np.shape(penetration_weights)
-            #print penetration_weights[0, :]
+            print penetration_weights[0, :]
 
             #compare the output joints to the target values
             scores[:, 34+add_idx:106+add_idx] = targets[:, 0:72]/1000 - scores[:, 34+add_idx:106+add_idx]

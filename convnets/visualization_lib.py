@@ -438,7 +438,7 @@ class VisualizationLib():
             for joint in range(0, scores.shape[0]):
                 scoresPublisher = rospy.Publisher("/scores", MarkerArray)
                 Smarker = Marker()
-                Smarker.header.frame_id = "autobed/base_link"
+                Smarker.header.frame_id = "map"
                 Smarker.type = Smarker.SPHERE
                 Smarker.action = Smarker.ADD
                 Smarker.scale.x = 0.06
@@ -462,8 +462,8 @@ class VisualizationLib():
                     Smarker.color.b = 0.0
 
                 Smarker.pose.orientation.w = 1.0
-                Smarker.pose.position.x = scores[joint, 0]
-                Smarker.pose.position.y = scores[joint, 1]
+                Smarker.pose.position.x = scores[joint, 0] - INTER_SENSOR_DISTANCE*10
+                Smarker.pose.position.y = scores[joint, 1] - INTER_SENSOR_DISTANCE*10
                 Smarker.pose.position.z = scores[joint, 2]
                 ScoresArray.markers.append(Smarker)
                 sid = 0

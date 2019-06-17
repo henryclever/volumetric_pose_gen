@@ -48,7 +48,7 @@ HIGH_TAXEL_THRESH_Y = (NUMOFTAXELS_Y - 1)
 
 class SyntheticLib():
 
-    def synthetic_scale(self, images, targets, bedangles, synth_real_switch):
+    def synthetic_scale(self, images, targets, bedangles, synth_real_switch, extra_targets = None):
 
 
         x = np.arange(-10 ,11)
@@ -78,6 +78,8 @@ class SyntheticLib():
 
         # print multiplier
         tar_mod = np.reshape(targets, (targets.shape[0], targets.shape[1] / 3, 3) ) /1000
+        if extra_targets is not None:
+            extra_tar_mod = np.reshape(extra_targets, (extra_targets.shape[0], extra_targets.shape[1] / 3, 3) ) /1000
 
 
         for i in np.arange(images.shape[0]):
@@ -141,10 +143,10 @@ class SyntheticLib():
             # print shift_factor_y, shift_factor_x
 
             resized_tar = np.copy(tar_mod[i ,: ,:])
+
             # resized_tar = np.reshape(resized_tar, (len(resized_tar) / 3, 3))
             # print resized_tar.shape/
             resized_tar = (resized_tar + INTER_SENSOR_DISTANCE ) * multiplier[i]
-
 
             resized_tar[:, 0] = resized_tar[:, 0] + shift_factor_x  - INTER_SENSOR_DISTANCE #- 10 * INTER_SENSOR_DISTANCE * (1 - multiplier[i])
 
@@ -154,20 +156,43 @@ class SyntheticLib():
             # resized_tar[7,:] = [-0.286,0,0]
             resized_tar[:, 2] = np.copy(tar_mod[i, :, 2]) * multiplier[i]
 
-
             #print resized_root, multiplier[i]
 
-
             tar_mod[i, :, :] = resized_tar
+
+            if extra_targets is not None:
+                resized_extra_tar = np.copy(extra_tar_mod[i ,: ,:])
+
+                # resized_tar = np.reshape(resized_tar, (len(resized_tar) / 3, 3))
+                # print resized_tar.shape/
+                resized_extra_tar = (resized_extra_tar + INTER_SENSOR_DISTANCE ) * multiplier[i]
+
+                resized_extra_tar[:, 0] = resized_extra_tar[:, 0] + shift_factor_x  - INTER_SENSOR_DISTANCE #- 10 * INTER_SENSOR_DISTANCE * (1 - multiplier[i])
+
+                # resized_tar2 = np.copy(resized_tar)
+                resized_extra_tar[:, 1] = resized_extra_tar[:, 1] + NUMOFTAXELS_X * (1 - multiplier[i]) * INTER_SENSOR_DISTANCE + shift_factor_y  - INTER_SENSOR_DISTANCE #- 10 * INTER_SENSOR_DISTANCE * (1 - multiplier[i])
+
+                # resized_tar[7,:] = [-0.286,0,0]
+                resized_extra_tar[:, 2] = np.copy(extra_tar_mod[i, :, 2]) * multiplier[i]
+
+                #print resized_root, multiplier[i]
+
+                extra_tar_mod[i, :, :] = resized_extra_tar
+
+
+
 
         #print root_mod
         #print tar_mod[0,:,:], 'post'
         targets = np.reshape(tar_mod, (targets.shape[0], targets.shape[1])) * 1000
 
-        return images, targets
+        if extra_targets is not None:
+           extra_targets = np.reshape(extra_tar_mod, (targets.shape[0], targets.shape[1])) * 1000
+
+        return images, targets, extra_targets
 
 
-    def synthetic_shiftxy(self, images, targets, bedangles, synth_real_switch):
+    def synthetic_shiftxy(self, images, targets, bedangles, synth_real_switch, extra_targets = None):
 
         #use bed angles to keep it from shifting in the x and y directions
 
@@ -194,6 +219,8 @@ class SyntheticLib():
         #plt.show()
 
         tar_mod = np.reshape(targets, (targets.shape[0], targets.shape[1] / 3, 3))
+        if extra_targets is not None:
+            extra_tar_mod = np.reshape(extra_targets, (extra_targets.shape[0], extra_targets.shape[1] / 3, 3))
 
         # print images[0,30:34,10:14]
         # print modified_x[0]
@@ -230,14 +257,20 @@ class SyntheticLib():
 
             tar_mod[i, :, 0] += modified_x[i] * INTER_SENSOR_DISTANCE * 1000
             tar_mod[i, :, 1] -= modified_y[i] * INTER_SENSOR_DISTANCE * 1000
+            if extra_targets is not None:
+                extra_tar_mod[i, :, 0] += modified_x[i] * INTER_SENSOR_DISTANCE * 1000
+                extra_tar_mod[i, :, 1] -= modified_y[i] * INTER_SENSOR_DISTANCE * 1000
 
         # print images[0, 30:34, 10:14]
         targets = np.reshape(tar_mod, (targets.shape[0], targets.shape[1]))
+        if extra_targets is not None:
+            extra_targets = np.reshape(extra_tar_mod, (extra_targets.shape[0], extra_targets.shape[1]))
 
-        return images, targets
+
+        return images, targets, extra_targets
 
 
-    def synthetic_fliplr(self, images, targets, synth_real_switch):
+    def synthetic_fliplr(self, images, targets, synth_real_switch, extra_targets = None):
         coin = np.random.randint(2, size=images.shape[0])
         coin[synth_real_switch == 1] = 0
 
@@ -286,10 +319,44 @@ class SyntheticLib():
 
         images = im_orig + im_mod
         targets = tar_orig + tar_mod
-        return images, targets
+
+        if extra_targets is not None:
+            extra_tar_orig = np.multiply(extra_targets, original[:, np.newaxis])
+            extra_tar_mod = np.multiply(extra_targets, modified[:, np.newaxis])
+
+            #print pcons.shape, 'pconshape'
+
+            # change the left and right tags on the target in the z, flip x target left to right
+            extra_tar_mod = np.reshape(extra_tar_mod, (extra_tar_mod.shape[0], extra_tar_mod.shape[1] / 3, 3))
+
+            # flip the x left to right
+            extra_tar_mod[:, :, 0] = (extra_tar_mod[:, :, 0] - 657.8) * -1 + 657.8
+
+            #print tar_mod.shape
+            #print tar_mod[0, :, :]
+
+            # swap in the z
+            dummy = zeros((extra_tar_mod.shape))
 
 
-    def synthetic_master(self, images_tensor, targets_tensor, synth_real_switch_tensor, flip=False, shift=False, scale=False, bedangle = False, include_inter = False, loss_vector_type = False):
+            dummy[:, [4, 7, 18, 20], :] = extra_tar_mod[:, [4, 7, 18, 20], :]
+            extra_tar_mod[:, [4, 7, 18, 20], :] = extra_tar_mod[:, [5, 8, 19, 21], :]
+            extra_tar_mod[:, [5, 8, 19, 21], :] = dummy[:, [4, 7, 18, 20], :]
+
+
+
+            extra_tar_mod = np.reshape(extra_tar_mod, (extra_tar_mod.shape[0], extra_tar_orig.shape[1]))
+            extra_tar_mod = np.multiply(extra_tar_mod, modified[:, np.newaxis])
+
+            extra_targets = extra_tar_orig + extra_tar_mod
+
+
+        return images, targets, extra_targets
+
+
+    def synthetic_master(self, images_tensor, targets_tensor, synth_real_switch_tensor, flip=False, shift=False,
+                         scale=False, bedangle = False, include_inter = False, loss_vector_type = False,
+                         extra_targets = None):
         self.loss_vector_type = loss_vector_type
         self.include_inter = include_inter
         self.t1 = time.time()
@@ -297,6 +364,8 @@ class SyntheticLib():
         # images_tensor.torch.Tensor.permute(1,2,0)
         imagesangles = images_tensor.numpy()
         targets = targets_tensor.numpy()
+        if extra_targets is not None:
+            extra_targets = extra_targets.numpy()
         synth_real_switch = synth_real_switch_tensor.numpy()
 
 
@@ -320,11 +389,11 @@ class SyntheticLib():
 
 
         if scale == True:
-            images, targets = self.synthetic_scale(images, targets, bedangles, synth_real_switch)
+            images, targets, extra_targets = self.synthetic_scale(images, targets, bedangles, synth_real_switch, extra_targets)
         if flip == True:
-            images, targets = self.synthetic_fliplr(images, targets, synth_real_switch)
+            images, targets, extra_targets = self.synthetic_fliplr(images, targets, synth_real_switch, extra_targets)
         if shift == True:
-            images, targets = self.synthetic_shiftxy(images, targets, bedangles, synth_real_switch)
+            images, targets, extra_targets = self.synthetic_shiftxy(images, targets, bedangles, synth_real_switch, extra_targets)
 
         # print images[0, 10:15, 20:25]
 
@@ -334,6 +403,10 @@ class SyntheticLib():
                 targets[:, joint_num * 3] = targets[:, joint_num * 3] * synth_real_switch
                 targets[:, joint_num * 3 + 1] = targets[:, joint_num * 3 + 1] * synth_real_switch
                 targets[:, joint_num * 3 + 2] = targets[:, joint_num * 3 + 2] * synth_real_switch
+                if extra_targets is not None:
+                    extra_targets[:, joint_num * 3] = extra_targets[:, joint_num * 3] * synth_real_switch
+                    extra_targets[:, joint_num * 3 + 1] = extra_targets[:, joint_num * 3 + 1] * synth_real_switch
+                    extra_targets[:, joint_num * 3 + 2] = extra_targets[:, joint_num * 3 + 2] * synth_real_switch
 
         if bedangle == True:
             if include_inter == True:
@@ -348,11 +421,17 @@ class SyntheticLib():
 
 
         targets_tensor = torch.Tensor(targets)
+
+        if extra_targets is not None:
+            extra_targets_tensor = torch.Tensor(extra_targets)
+        else:
+            extra_targets_tensor = None
+
         # images_tensor.torch.Tensor.permute(2, 0, 1)
         try:
             self.t2 = time.time() - self.t1
         except:
             self.t2 = 0
         # print self.t2, 'elapsed time'
-        return images_tensor, targets_tensor
+        return images_tensor, targets_tensor, extra_targets_tensor
 
