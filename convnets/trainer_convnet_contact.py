@@ -209,9 +209,7 @@ class PhysicalTrainer():
                                         dat_f_synth['root_xyz_shift'][entry][0:3] + np.array([0.0, 0.0, -0.0375]),
                                         [1], [0], [1],
                                         [dat_f_synth['body_mass'][entry]],
-                                        [(dat_f_synth['body_height'][entry]-1.)*100],
-                                        dat_f_synth['markers_xyz_m'][entry][0:72] * 1000 + z_subt,
-                                        ), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
+                                        [(dat_f_synth['body_height'][entry]-1.)*100],), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
                     self.train_y_flat.append(c)
                 else:
                     # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
@@ -219,8 +217,7 @@ class PhysicalTrainer():
                                         np.array(10 * [0]),
                                         np.array(72 * [0]),
                                         np.array(3 * [0]),
-                                        [1], [0], [1],
-                                        ), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
+                                        [1], [0], [1]), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
                     self.train_y_flat.append(c)
 
         
@@ -234,9 +231,7 @@ class PhysicalTrainer():
                                         dat_m_synth['root_xyz_shift'][entry][0:3] + np.array([0.0, 0.0, -0.0375]),
                                         [0], [1], [1],
                                         [dat_m_synth['body_mass'][entry]],
-                                        [(dat_m_synth['body_height'][entry]-1.)*100],
-                                        dat_m_synth['markers_xyz_m'][entry][0:72] * 1000 + z_subt,
-                                        ), axis=0)  # [x1], [x2], [x3]: male synth: 0, 1, 1.
+                                        [(dat_m_synth['body_height'][entry]-1.)*100],), axis=0)  # [x1], [x2], [x3]: male synth: 0, 1, 1.
                     self.train_y_flat.append(c)
                 else:
                     # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
@@ -244,8 +239,7 @@ class PhysicalTrainer():
                                         np.array(10 * [0]),
                                         np.array(72 * [0]),
                                         np.array(3 * [0]),
-                                        [0], [1], [1],
-                                        ), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
+                                        [1], [0], [1]), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
                     self.train_y_flat.append(c)
 
         if dat_f_real is not None:
@@ -280,25 +274,7 @@ class PhysicalTrainer():
                                     np.array(85 * [0]),
                                     [1], [0], [0],
                                     [dat_f_real['body_mass'][entry]],
-                                    [(dat_f_real['body_height'][entry]-1.)*100],
-                                    np.array(9 * [0]),
-                                    dat_f_real['markers_xyz_m_offset'][entry][3:6] * 1000,  # TORSO DE-OFF
-                                    #fixed_torso_markers,  # TORSO
-                                    dat_f_real['markers_xyz_m_offset'][entry][21:24] * 1000,  # L KNEE DE-OFF
-                                    dat_f_real['markers_xyz_m_offset'][entry][18:21] * 1000,  # R KNEE DE-OFF
-                                    np.array(3 * [0]),
-                                    dat_f_real['markers_xyz_m_offset'][entry][27:30] * 1000,  # L ANKLE DE-OFF
-                                    dat_f_real['markers_xyz_m_offset'][entry][24:27] * 1000,  # R ANKLE DE-OFF
-                                    np.array(18 * [0]),
-                                    dat_f_real['markers_xyz_m_offset'][entry][0:3] * 1000,  # HEAD DE-OFF
-                                    #fixed_head_markers,
-                                    np.array(6 * [0]),
-                                    dat_f_real['markers_xyz_m_offset'][entry][9:12] * 1000,  # L ELBOW DE-OFF
-                                    dat_f_real['markers_xyz_m_offset'][entry][6:9] * 1000,  # R ELBOW DE-OFF
-                                    dat_f_real['markers_xyz_m_offset'][entry][15:18] * 1000,  # L WRIST DE-OFF
-                                    dat_f_real['markers_xyz_m_offset'][entry][12:15] * 1000,  # R WRIST DE-OFF
-                                    np.array(6 * [0]),
-                                    ), axis=0)  # [x1], [x2], [x3]: female real: 1, 0, 0.
+                                    [(dat_f_real['body_height'][entry]-1.)*100],), axis=0)  # [x1], [x2], [x3]: female real: 1, 0, 0.
                 self.train_y_flat.append(c)
                 self.train_y_flat.append(c)
                 self.train_y_flat.append(c)
@@ -333,25 +309,7 @@ class PhysicalTrainer():
                                     np.array(85 * [0]),
                                     [0], [1], [0], #gender and is real or not
                                     [dat_m_real['body_mass'][entry]],
-                                    [(dat_m_real['body_height'][entry]-1.)*100],
-                                    np.array(9 * [0]),
-                                    dat_m_real['markers_xyz_m_offset'][entry][3:6] * 1000,  # TORSO DE-OFF
-                                    # fixed_torso_markers,
-                                    dat_m_real['markers_xyz_m_offset'][entry][21:24] * 1000,  # L KNEE DE-OFF
-                                    dat_m_real['markers_xyz_m_offset'][entry][18:21] * 1000,  # R KNEE DE-OFF
-                                    np.array(3 * [0]),
-                                    dat_m_real['markers_xyz_m_offset'][entry][27:30] * 1000,  # L ANKLE DE-OFF
-                                    dat_m_real['markers_xyz_m_offset'][entry][24:27] * 1000,  # R ANKLE DE-OFF
-                                    np.array(18 * [0]),
-                                    dat_m_real['markers_xyz_m_offset'][entry][0:3] * 1000,  # HEAD DE-OFF
-                                    # fixed_head_markers,
-                                    np.array(6 * [0]),
-                                    dat_m_real['markers_xyz_m_offset'][entry][9:12] * 1000,  # L ELBOW DE-OFF
-                                    dat_m_real['markers_xyz_m_offset'][entry][6:9] * 1000,  # R ELBOW DE-OFF
-                                    dat_m_real['markers_xyz_m_offset'][entry][15:18] * 1000,  # L WRIST DE-OFF
-                                    dat_m_real['markers_xyz_m_offset'][entry][12:15] * 1000,  # R WRIST DE-OFF
-                                    np.array(6 * [0]),
-                                    ), axis=0)  # [x1], [x2], [x3]: male real: 0, 1, 0.
+                                    [(dat_m_real['body_height'][entry]-1.)*100],), axis=0)  # [x1], [x2], [x3]: male real: 0, 1, 0.
                 self.train_y_flat.append(c)
                 self.train_y_flat.append(c)
                 self.train_y_flat.append(c)
@@ -529,12 +487,17 @@ class PhysicalTrainer():
         if self.loss_vector_type == 'direct':
             fc_output_size = 72
 
+
             self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type, self.batch_size, filepath=filepath_prefix)
             print 'LOADED!!!!!!!!!!!!!!!!!1'
 
+
         elif self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
+            print "Loading..........."
             fc_output_size = 85## 10 + 3 + 24*3 --- betas, root shift, rotations
+
             self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type, self.batch_size, filepath=filepath_prefix)
+            #self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type, self.batch_size, filepath=filepath_prefix)
             #self.model = torch.load('/home/ubuntu/Autobed_OFFICIAL_Trials' + '/subject_' + str(self.opt.leave_out) + '/convnets/convnet_9to18_'+str(self.loss_vector_type)+'_sTrue_128b_200e_' + str(self.opt.leave_out) + '.pt', map_location=lambda storage, loc: storage)
             print 'LOADED!!!!!!!!!!!!!!!!!1'
             pp = 0
@@ -559,7 +522,7 @@ class PhysicalTrainer():
 
         if self.loss_vector_type == None:
             self.optimizer2 = optim.Adam(self.model.parameters(), lr=0.00001, weight_decay=0.0005)
-        elif self.loss_vector_type == 'direct' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
+        elif self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'direct' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
             self.optimizer2 = optim.Adam(self.model.parameters(), lr=0.00001, weight_decay=0.0005)  #0.000002 does not converge even after 100 epochs on subjects 2-8 kin cons. use .00001
         #self.optimizer = optim.RMSprop(self.model.parameters(), lr=0.000001, momentum=0.7, weight_decay=0.0005)
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.00001, weight_decay=0.0005) #start with .00005
@@ -616,6 +579,11 @@ class PhysicalTrainer():
         with torch.autograd.set_detect_anomaly(True):
 
             #This will loop a total = training_images/batch_size times
+            #print len(self.train_loader)
+            #self.train_loader = self.train_loader + self.train_loader
+
+            #print len(self.train_loader)
+
             for batch_idx, batch in enumerate(self.train_loader):
 
                 if self.loss_vector_type == 'direct':
@@ -653,7 +621,6 @@ class PhysicalTrainer():
 
                 elif self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
 
-
                     #0:72: positions.
                     batch.append(batch[1][:, 72:82]) #betas
                     batch.append(batch[1][:, 82:154]) #angles
@@ -662,27 +629,19 @@ class PhysicalTrainer():
                     batch.append(batch[1][:, 159]) #synth vs real switch
                     batch.append(batch[1][:, 160:161]) #mass, kg
                     batch.append(batch[1][:, 161:162]) #height, kg
-                    batch.append(batch[1][:, 162:234]) #de-offset markers on real data (at the joints)
 
                     #cut it off so batch[2] is only the xyz marker targets
                     batch[1] = batch[1][:, 0:72]
 
-
-
-                    batch[0], batch[1], batch[9] = SyntheticLib().synthetic_master(batch[0], batch[1], batch[6],
+                    batch[0], batch[1], _ = SyntheticLib().synthetic_master(batch[0], batch[1], batch[6],
                                                                             flip=True, shift=True, scale=False,
                                                                             bedangle=True,
                                                                             include_inter=self.include_inter,
-                                                                            loss_vector_type=self.loss_vector_type,
-                                                                            extra_targets = batch[9])
+                                                                            loss_vector_type=self.loss_vector_type)
 
 
                     images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple = 2)))
-
-
                     images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
-
-
 
                     weight_input = torch.ones((images_up.size()[0], images_up.size()[2]*images_up.size()[3])).type(dtype)
                     weight_input*=batch[7].type(dtype)
@@ -700,7 +659,6 @@ class PhysicalTrainer():
                     root_shift = Variable(batch[4].type(dtype), requires_grad = True)
                     gender_switch = Variable(batch[5].type(dtype), requires_grad = True)
                     synth_real_switch = Variable(batch[6].type(dtype), requires_grad = True)
-                    targets_de_off = Variable(batch[9].type(dtype), requires_grad = True)
 
                     self.optimizer.zero_grad()
                     ground_truth = np.zeros((batch[0].numpy().shape[0], 82)) #82 is 10 shape params and 72 joint locations x,y,z
@@ -723,8 +681,7 @@ class PhysicalTrainer():
                     elif self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
                         scores, targets_est, _, betas_est = self.model.forward_kinematic_angles(images_up, gender_switch,
                                                                                            synth_real_switch,
-                                                                                           targets, targets_de_off,
-                                                                                           is_training=True,
+                                                                                           targets, is_training=True,
                                                                                            betas=betas,
                                                                                            angles_gt=angles_gt,
                                                                                            root_shift=root_shift,
@@ -777,7 +734,7 @@ class PhysicalTrainer():
                 #print "got here"
                 #print batch_idx, opt.log_interval
 
-                if True:#batch_idx % opt.log_interval == 0:
+                if batch_idx % opt.log_interval == 0:
                     #if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC':
                         #print targets.data.size()
                         #print targets_est.shape
@@ -803,13 +760,12 @@ class PhysicalTrainer():
                     self.im_sample = self.im_sample[0, :].squeeze()
                     self.tar_sample = targets.data
                     self.tar_sample = self.tar_sample[0, :].squeeze()/1000
-                    #self.sc_sample = targets_est.clone()
-                    self.sc_sample = targets_de_off.data
+                    self.sc_sample = targets_est.clone()
                     self.sc_sample = self.sc_sample[0, :].squeeze() / 1000
                     self.sc_sample = self.sc_sample.view(self.output_size_train)
 
 
-                    val_loss = self.validate_convnet(n_batches=1)
+                    val_loss = self.validate_convnet(n_batches=2)
                     train_loss = loss.data.item()
                     examples_this_epoch = batch_idx * len(images)
                     epoch_progress = 100. * batch_idx / len(self.train_loader)
@@ -881,13 +837,11 @@ class PhysicalTrainer():
                 batch[1] = batch[1][:, 0:30]
 
 
-
                 images_up_non_tensor = np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2))
                 images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
                 images, targets = Variable(batch[0].type(dtype), requires_grad=False), Variable(batch[1].type(dtype), requires_grad=False),
 
                 gender_switch = Variable(batch[2].type(dtype), requires_grad=False)
-
 
                 weight_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(dtype)
                 weight_input *= batch[3].type(dtype)
@@ -974,12 +928,11 @@ class PhysicalTrainer():
 
                 VisualizationLib().visualize_pressure_map(self.im_sample.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),self.im_sampleval.cpu(), self.tar_sampleval.cpu(), self.sc_sampleval.cpu(), block=False)
             else:
-                VisualizationLib().rviz_publish_input(self.im_sample.numpy()[0, :, :], self.im_sample.numpy()[2, 1, 0])
+                #VisualizationLib().rviz_publish_input(self.im_sample.numpy()[0, :, :], self.im_sample.numpy()[2, 1, 0])
 
                 #print self.tar_sample.numpy()
-                #print self.sc_sample.numpy()
-                VisualizationLib().rviz_publish_output(self.tar_sample.numpy().reshape(24,3), self.sc_sample.numpy().reshape(24,3))
-                #VisualizationLib().visualize_pressure_map(self.im_sample, self.tar_sample, self.sc_sample,self.im_sampleval, self.tar_sampleval, self.sc_sampleval, block=False)
+                #VisualizationLib().rviz_publish_output(self.tar_sample.numpy().reshape(24,3), self.sc_sample.numpy().reshape(24,3))
+                VisualizationLib().visualize_pressure_map(self.im_sample, self.tar_sample, self.sc_sample,self.im_sampleval, self.tar_sampleval, self.sc_sampleval, block=False)
 
 
         return loss
@@ -989,9 +942,9 @@ class PhysicalTrainer():
 if __name__ == "__main__":
     #Initialize trainer with a training database file
 
-    import rospy
+    #import rospy
 
-    rospy.init_node('pose_trainer')
+    #rospy.init_node('pose_trainer')
 
     import optparse
     p = optparse.OptionParser()
@@ -1045,52 +998,46 @@ if __name__ == "__main__":
 
 
     if opt.quick_test == True:
-        #training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_2000_of_2018_lowerbody_stiff.p')
-        training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1000_of_1121_rightside_stiff.p')
+        training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff.p')
+        #training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1000_of_1168_upperbody_stiff.p')
         #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
         #training_database_file_m.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        training_database_file_f.append(filepath_prefix_qt + 'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
         #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
         test_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
     else:
         network_design = True
         if network_design == True:
-            training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_2000_of_2051_upperbody_stiff.p')
-            training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_2000_of_2052_rightside_stiff.p')
-            training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_2000_of_2034_leftside_stiff.p')
-            training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_2000_of_2018_lowerbody_stiff.p')
-            training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_lay_2000_of_2029_none_stiff.p')
-            training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1000_of_1168_upperbody_stiff.p')
-            training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1000_of_1121_rightside_stiff.p')
-            training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1000_of_1133_leftside_stiff.p')
-            training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1000_of_1126_lowerbody_stiff.p')
-            training_database_file_f.append(filepath_prefix_qt+'data/synth/train_f_sit_1000_of_1113_none_stiff.p')
-            #training_database_file_f.append(filepath_prefix_qt+'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-            #training_database_file_f.append(filepath_prefix_qt+'data/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+            training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff.p')
+            training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
+            training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff.p')
+            training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff.p')
+            training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2067_none_stiff.p')
+            training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1121_upperbody_stiff.p')
+            training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1087_rightside_stiff.p')
+            training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1102_leftside_stiff.p')
+            training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1106_lowerbody_stiff.p')
+            training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1096_none_stiff.p')
+            training_database_file_f.append(filepath_prefix_qt+'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+            training_database_file_f.append(filepath_prefix_qt+'data/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
                     
             #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval8_150rh1_sit120rh.p')
 
-            training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_2000_of_2024_upperbody_stiff.p')
-            training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_2000_of_2016_rightside_stiff.p')
-            training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_2000_of_2015_leftside_stiff.p')
-            training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_2000_of_2016_lowerbody_stiff.p')
-            training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_lay_2000_of_2008_none_stiff.p')
-            training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1000_of_1181_upperbody_stiff.p')
-            training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1000_of_1161_rightside_stiff.p')
-            training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1000_of_1183_leftside_stiff.p')
-            training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1000_of_1166_lowerbody_stiff.p')
-            training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_1000_of_1155_none_stiff.p')
-            #training_database_file_m.append(filepath_prefix_qt+'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+            training_database_file_m.append(filepath_prefix_qt+'data/synth/side_up_fw/train_m_lay_2000_of_2031_upperbody_stiff.p')
+            training_database_file_m.append(filepath_prefix_qt+'data/synth/side_up_fw/train_m_lay_2000_of_2016_rightside_stiff.p')
+            training_database_file_m.append(filepath_prefix_qt+'data/synth/side_up_fw/train_m_lay_2000_of_2016_leftside_stiff.p')
+            training_database_file_m.append(filepath_prefix_qt+'data/synth/side_up_fw/train_m_lay_2000_of_2012_lowerbody_stiff.p')
+            training_database_file_m.append(filepath_prefix_qt+'data/synth/side_up_fw/train_m_lay_2000_of_2006_none_stiff.p')
+            training_database_file_m.append(filepath_prefix_qt+'data/synth/side_up_fw/train_m_sit_1000_of_1147_upperbody_stiff.p')
+            training_database_file_m.append(filepath_prefix_qt+'data/synth/side_up_fw/train_m_sit_1000_of_1132_rightside_stiff.p')
+            training_database_file_m.append(filepath_prefix_qt+'data/synth/side_up_fw/train_m_sit_1000_of_1152_leftside_stiff.p')
+            training_database_file_m.append(filepath_prefix_qt+'data/synth/side_up_fw/train_m_sit_1000_of_1144_lowerbody_stiff.p')
+            training_database_file_m.append(filepath_prefix_qt+'data/synth/side_up_fw/train_m_sit_1000_of_1126_none_stiff.p')
+            training_database_file_m.append(filepath_prefix_qt+'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
             #training_database_file_m.append(filepath_prefix_qt+'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-            #training_database_file_m.append(filepath_prefix_qt+'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-            #training_database_file_m.append(filepath_prefix_qt+'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-            #training_database_file_m.append(filepath_prefix_qt+'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+            training_database_file_m.append(filepath_prefix_qt+'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+            training_database_file_m.append(filepath_prefix_qt+'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+            training_database_file_m.append(filepath_prefix_qt+'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
 
             #training_database_file_m.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
             #training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_95_rightside_stiff.p')

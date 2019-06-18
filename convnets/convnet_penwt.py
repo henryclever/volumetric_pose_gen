@@ -31,6 +31,7 @@ class CNN(nn.Module):
         self.count = 0
         self.split = split
 
+
         self.CNN_pack1 = nn.Sequential(
 
             nn.Conv2d(5, 256, kernel_size=7, stride=2, padding=3),
@@ -48,7 +49,6 @@ class CNN(nn.Module):
             nn.Dropout(p=0.1, inplace=False),
 
         )
-
 
         self.CNN_pack2 = nn.Sequential(
 
@@ -104,8 +104,6 @@ class CNN(nn.Module):
         if loss_vector_type == 'anglesR' or loss_vector_type == 'anglesDC' or loss_vector_type == 'anglesEU':
 
 
-            print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p1"
-
             from smpl.smpl_webuser.serialization import load_model
 
             model_path_f = filepath+'git/SMPL_python_v.1.0.0/smpl/models/basicModel_f_lbs_10_207_0_v1.0.0.pkl'
@@ -114,8 +112,26 @@ class CNN(nn.Module):
             self.shapedirs_f = torch.Tensor(np.array(human_f.shapedirs)).permute(0, 2, 1).type(dtype)
             self.J_regressor_f = np.zeros((human_f.J_regressor.shape)) + human_f.J_regressor
             self.J_regressor_f = torch.Tensor(np.array(self.J_regressor_f).astype(float)).permute(1, 0).type(dtype)
-            self.posedirs_f = torch.Tensor(np.array(human_f.posedirs)).type(dtype)
-            self.weights_f = torch.Tensor(np.array(human_f.weights)).type(dtype)
+            self.posedirs_f = torch.Tensor(np.stack([human_f.posedirs[1325, :, :],
+                                                    human_f.posedirs[336, :, :],
+                                                    human_f.posedirs[1032, :, :],
+                                                    human_f.posedirs[4515, :, :],
+                                                    human_f.posedirs[1374, :, :],
+                                                    human_f.posedirs[4848, :, :],
+                                                    human_f.posedirs[1739, :, :],
+                                                    human_f.posedirs[5209, :, :],
+                                                    human_f.posedirs[1960, :, :],
+                                                    human_f.posedirs[5423, :, :]])).type(dtype)
+            self.weights_f = torch.Tensor(np.stack([human_f.weights[1325, :],
+                                                    human_f.weights[336, :],
+                                                    human_f.weights[1032, :],
+                                                    human_f.weights[4515, :],
+                                                    human_f.weights[1374, :],
+                                                    human_f.weights[4848, :],
+                                                    human_f.weights[1739, :],
+                                                    human_f.weights[5209, :],
+                                                    human_f.weights[1960, :],
+                                                    human_f.weights[5423, :]])).type(dtype)
 
             model_path_m = filepath+'/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
             human_m = load_model(model_path_m)
@@ -123,57 +139,65 @@ class CNN(nn.Module):
             self.shapedirs_m = torch.Tensor(np.array(human_m.shapedirs)).permute(0, 2, 1).type(dtype)
             self.J_regressor_m = np.zeros((human_m.J_regressor.shape)) + human_m.J_regressor
             self.J_regressor_m = torch.Tensor(np.array(self.J_regressor_m).astype(float)).permute(1, 0).type(dtype)
-            self.posedirs_m = torch.Tensor(np.array(human_m.posedirs)).type(dtype)
-            self.weights_m = torch.Tensor(np.array(human_m.weights)).type(dtype)
+            self.posedirs_m = torch.Tensor(np.stack([human_m.posedirs[1325, :, :],
+                                                    human_m.posedirs[336, :, :],
+                                                    human_m.posedirs[1032, :, :],
+                                                    human_m.posedirs[4515, :, :],
+                                                    human_m.posedirs[1374, :, :],
+                                                    human_m.posedirs[4848, :, :],
+                                                    human_m.posedirs[1739, :, :],
+                                                    human_m.posedirs[5209, :, :],
+                                                    human_m.posedirs[1960, :, :],
+                                                    human_m.posedirs[5423, :, :]])).type(dtype)
+            self.weights_m = torch.Tensor(np.stack([human_m.weights[1325, :],
+                                                    human_m.weights[336, :],
+                                                    human_m.weights[1032, :],
+                                                    human_m.weights[4515, :],
+                                                    human_m.weights[1374, :],
+                                                    human_m.weights[4848, :],
+                                                    human_m.weights[1739, :],
+                                                    human_m.weights[5209, :],
+                                                    human_m.weights[1960, :],
+                                                    human_m.weights[5423, :]])).type(dtype)
 
-            print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(),"p2"
 
             self.parents = np.array([4294967295, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9, 12, 13, 14, 16, 17, 18, 19, 20, 21]).astype(np.int32)
 
             #print batch_size
-            batch_sub_divider = 8
+            self.N = batch_size
+            self.shapedirs_repeat_f = self.shapedirs_f.unsqueeze(0).repeat(self.N, 1, 1, 1).permute(0, 2, 1, 3).unsqueeze(0)
+            self.shapedirs_repeat_m = self.shapedirs_m.unsqueeze(0).repeat(self.N, 1, 1, 1).permute(0, 2, 1, 3).unsqueeze(0)
+            self.shapedirs_repeat = torch.cat((self.shapedirs_repeat_f, self.shapedirs_repeat_m), 0) #this is 2 x N x B x R x D
+            self.B = self.shapedirs_repeat.size()[2] #this is 10
+            self.R = self.shapedirs_repeat.size()[3] #this is 6890, or num of verts
+            self.D = self.shapedirs_repeat.size()[4] #this is 3, or num dimensions
+            self.shapedirs_repeat = self.shapedirs_repeat.permute(1,0,2,3,4).view(self.N, 2, self.B*self.R*self.D)
 
-            self.N = batch_size/batch_sub_divider
-            self.shapedirs_f = self.shapedirs_f.unsqueeze(0).repeat(self.N, 1, 1, 1).permute(0, 2, 1, 3).unsqueeze(0)
-            self.shapedirs_m = self.shapedirs_m.unsqueeze(0).repeat(self.N, 1, 1, 1).permute(0, 2, 1, 3).unsqueeze(0)
-            self.shapedirs = torch.cat((self.shapedirs_f, self.shapedirs_m), 0) #this is 2 x N x B x R x D
-            self.B = self.shapedirs.size()[2] #this is 10
-            self.R = self.shapedirs.size()[3] #this is 6890, or num of verts
-            self.D = self.shapedirs.size()[4] #this is 3, or num dimensions
-            self.R_used = 6890
-            self.shapedirs = self.shapedirs.permute(1,0,2,3,4).view(self.N, 2, self.B*self.R*self.D)
+            self.v_template_repeat_f = self.v_template_f.unsqueeze(0).repeat(self.N, 1, 1).unsqueeze(0)
+            self.v_template_repeat_m = self.v_template_m.unsqueeze(0).repeat(self.N, 1, 1).unsqueeze(0)
+            self.v_template_repeat = torch.cat((self.v_template_repeat_f, self.v_template_repeat_m), 0)#this is 2 x N x R x D
+            self.v_template_repeat = self.v_template_repeat.permute(1,0,2,3).view(self.N, 2, self.R*self.D)
 
-            print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p3"
+            self.J_regressor_repeat_f = self.J_regressor_f.unsqueeze(0).repeat(self.N, 1, 1).unsqueeze(0)
+            self.J_regressor_repeat_m = self.J_regressor_m.unsqueeze(0).repeat(self.N, 1, 1).unsqueeze(0)
+            self.J_regressor_repeat = torch.cat((self.J_regressor_repeat_f, self.J_regressor_repeat_m), 0)#this is 2 x N x R x 24
+            self.J_regressor_repeat = self.J_regressor_repeat.permute(1,0,2,3).view(self.N, 2, self.R*24)
 
 
-            self.v_template_f = self.v_template_f.unsqueeze(0).repeat(self.N, 1, 1).unsqueeze(0)
-            self.v_template_m = self.v_template_m.unsqueeze(0).repeat(self.N, 1, 1).unsqueeze(0)
-            self.v_template = torch.cat((self.v_template_f, self.v_template_m), 0)#this is 2 x N x R x D
-            self.v_template = self.v_template.permute(1,0,2,3).view(self.N, 2, self.R*self.D)
-
-            print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(),"p4"
-
-            self.J_regressor = torch.cat((self.J_regressor_f.unsqueeze(0).repeat(self.N, 1, 1).unsqueeze(0),
-                                          self.J_regressor_m.unsqueeze(0).repeat(self.N, 1, 1).unsqueeze(0)), 0)#this is 2 x N x R x 24
-            self.J_regressor = self.J_regressor.permute(1,0,2,3).view(self.N, 2, self.R*24)
-
-            print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(),"p5"
-
-            self.posedirs = torch.cat((self.posedirs_f.unsqueeze(0).repeat(self.N, 1, 1, 1).unsqueeze(0),
-                                       self.posedirs_m.unsqueeze(0).repeat(self.N, 1, 1, 1).unsqueeze(0)), 0)
-            # self.posedirs = self.posedirs.permute(1, 0, 2, 3, 4).view(self.N, 2, self.R*self.D*207)
-            self.posedirs = self.posedirs.permute(1, 0, 2, 3, 4).view(self.N, 2, self.R_used * self.D * 207)
+            self.posedirs_repeat_f = self.posedirs_f.unsqueeze(0).repeat(self.N, 1, 1, 1).unsqueeze(0)
+            self.posedirs_repeat_m = self.posedirs_m.unsqueeze(0).repeat(self.N, 1, 1, 1).unsqueeze(0)
+            self.posedirs_repeat = torch.cat((self.posedirs_repeat_f, self.posedirs_repeat_m), 0)
+            # self.posedirs_repeat = self.posedirs_repeat.permute(1, 0, 2, 3, 4).view(self.N, 2, self.R*self.D*207)
+            self.posedirs_repeat = self.posedirs_repeat.permute(1, 0, 2, 3, 4).view(self.N, 2, 10 * self.D * 207)
 
             self.weights_repeat_f = self.weights_f.unsqueeze(0).repeat(self.N, 1, 1).unsqueeze(0)
             self.weights_repeat_m = self.weights_m.unsqueeze(0).repeat(self.N, 1, 1).unsqueeze(0)
             self.weights_repeat = torch.cat((self.weights_repeat_f, self.weights_repeat_m), 0)
             # self.weights_repeat = self.weights_repeat.permute(1, 0, 2, 3).view(self.N, 2, self.R * 24)
-            self.weights_repeat = self.weights_repeat.permute(1, 0, 2, 3).view(self.N, 2, self.R_used * 24)
+            self.weights_repeat = self.weights_repeat.permute(1, 0, 2, 3).view(self.N, 2, 10 * 24)
 
-            self.zeros_cartesian = torch.zeros([batch_size, 24]).type(dtype)
-            self.ones_cartesian = torch.ones([batch_size, 24]).type(dtype)
-
-            print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(),"p6"
+            self.zeros_cartesian = torch.zeros([self.N, 24]).type(dtype)
+            self.ones_cartesian = torch.ones([self.N, 24]).type(dtype)
 
             if self.loss_vector_type == 'anglesDC':
                 self.bounds = torch.Tensor(np.array([[-np.pi/3, np.pi/3], [-np.pi/3, np.pi/3], [-np.pi/3, np.pi/3],
@@ -396,84 +420,13 @@ class CNN(nn.Module):
 
 
 
-    def compute_tensor_mesh(self, gender_switch, betas_est, Rs_est, root_shift_est, start_incr, end_incr):
-
-        sub_batch_size = end_incr - start_incr
-
-        shapedirs = torch.bmm(gender_switch[start_incr:end_incr, :, :],
-                                self.shapedirs[0:sub_batch_size, :, :])\
-                         .view(sub_batch_size, self.B, self.R*self.D)
 
 
-        betas_shapedirs_mult = torch.bmm(betas_est[start_incr:end_incr, :].unsqueeze(1), shapedirs)\
-                                    .squeeze(1)\
-                                    .view(sub_batch_size, self.R, self.D)
-
-        v_template = torch.bmm(gender_switch[start_incr:end_incr, :, :], self.v_template[0:sub_batch_size, :, :])\
-                          .view(sub_batch_size, self.R, self.D)
-
-        v_shaped = betas_shapedirs_mult + v_template
-
-        J_regressor = torch.bmm(gender_switch[start_incr:end_incr, :, :], self.J_regressor[0:sub_batch_size, :, :])\
-                                  .view(sub_batch_size, self.R, 24)
-
-        Jx = torch.bmm(v_shaped[:, :, 0].unsqueeze(1), J_regressor).squeeze(1)
-        Jy = torch.bmm(v_shaped[:, :, 1].unsqueeze(1), J_regressor).squeeze(1)
-        Jz = torch.bmm(v_shaped[:, :, 2].unsqueeze(1), J_regressor).squeeze(1)
-
-
-        J_est = torch.stack([Jx, Jy, Jz], dim=2)  # these are the joint locations with home pose (pose is 0 degree on all angles)
-        #J_est = J_est - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
-
-        targets_est, A_est = KinematicsLib().batch_global_rigid_transformation(Rs_est[start_incr:end_incr, :], J_est, self.parents, self.GPU, rotate_base=False)
-
-        targets_est = targets_est - J_est[:, 0:1, :] + root_shift_est[start_incr:end_incr, :].unsqueeze(1)
-
-        # assemble a reduced form of the transformed mesh
-        #v_shaped_red = torch.stack([v_shaped[:, 1325, :],
-        #                            v_shaped[:, 336, :],  # head
-        #                            v_shaped[:, 1032, :],  # l knee
-        #                            v_shaped[:, 4515, :],  # r knee
-        #                            v_shaped[:, 1374, :],  # l ankle
-        #                            v_shaped[:, 4848, :],  # r ankle
-        #                            v_shaped[:, 1739, :],  # l elbow
-        #                            v_shaped[:, 5209, :],  # r elbow
-        #                            v_shaped[:, 1960, :],  # l wrist
-        #                            v_shaped[:, 5423, :]]).permute(1, 0, 2)  # r wrist
-
-        pose_feature = (Rs_est[start_incr:end_incr, 1:, :, :]).sub(1.0, torch.eye(3).type(self.dtype)).view(-1, 207)
-        posedirs = torch.bmm(gender_switch[start_incr:end_incr, :, :], self.posedirs[0:sub_batch_size, :, :]) \
-            .view(sub_batch_size, self.R_used * self.D, 207) \
-            .permute(0, 2, 1)
-
-        v_posed = torch.bmm(pose_feature.unsqueeze(1), posedirs).view(-1, self.R_used, self.D)
-
-        v_posed = v_posed.clone() + v_shaped
-
-        weights_repeat = torch.bmm(gender_switch[start_incr:end_incr, :, :], self.weights_repeat[0:sub_batch_size, :, :]) \
-            .squeeze(1) \
-            .view(sub_batch_size, self.R_used, 24)
-        T = torch.bmm(weights_repeat, A_est.view(sub_batch_size, 24, 16)).view(sub_batch_size, -1, 4, 4)
-        v_posed_homo = torch.cat([v_posed, torch.ones(sub_batch_size, v_posed.shape[1], 1).type(self.dtype)], dim=2)
-        v_homo = torch.matmul(T, torch.unsqueeze(v_posed_homo, -1))
-
-        verts = v_homo[:, :, :3, 0] - J_est[:, 0:1, :] + root_shift_est[start_incr:end_incr, :].unsqueeze(1)
-
-        return verts, J_est, targets_est
-
-
-
-    def forward_kinematic_angles(self, images, gender_switch, synth_real_switch, targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None, reg_angles = False):
+    def forward_kinematic_angles(self, images, gender_switch, synth_real_switch, targets=None, targets_de_off = None, is_training = True, betas=None, angles_gt = None, root_shift = None, reg_angles = False):
         #self.GPU = False
         #self.dtype = torch.FloatTensor
 
-        print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p7b"
-
         scores_cnn = self.CNN_pack1(images)
-
-
-        print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p7c"
-
         scores_size = scores_cnn.size()
 
         # ''' # NOTE: Uncomment
@@ -490,8 +443,6 @@ class CNN(nn.Module):
         #print scores.size()
         #print scores[0, :]
 
-
-        print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p7d"
 
         #weight the outputs, which are already centered around 0. First make them uniformly smaller than the direct output, which is too large. 
         scores = torch.mul(scores.clone(), 0.01)
@@ -577,57 +528,66 @@ class CNN(nn.Module):
         gender_switch = gender_switch.unsqueeze(1)
         current_batch_size = gender_switch.size()[0]
 
-        #break things up into sub batches and pass through the mesh
-        num_normal_sub_batches = current_batch_size/self.N
-        if current_batch_size%self.N != 0:
-            sub_batch_incr_list = num_normal_sub_batches*[self.N] + [current_batch_size%self.N]
-        else:
-            sub_batch_incr_list = num_normal_sub_batches*[self.N]
-        start_incr, end_incr = 0, 0
-        for sub_batch_incr in sub_batch_incr_list:
-            end_incr += sub_batch_incr
-            verts_sub, J_est_sub, targets_est_sub = self.compute_tensor_mesh(gender_switch, betas_est, Rs_est, root_shift_est, start_incr, end_incr)
-            if start_incr == 0:
-                verts = verts_sub.clone()
-                J_est = J_est_sub.clone()
-                targets_est = targets_est_sub.clone()
-            else:
-                verts = torch.cat((verts, verts_sub), dim = 0)
-                J_est  = torch.cat((J_est, J_est_sub), dim = 0)
-                targets_est = torch.cat((targets_est, targets_est_sub), dim = 0)
-            start_incr += sub_batch_incr
+
+        shapedirs = torch.bmm(gender_switch, self.shapedirs_repeat[0:current_batch_size, :, :])\
+                         .view(current_batch_size, self.B, self.R*self.D)
+
+        betas_shapedirs_mult = torch.bmm(betas_est.unsqueeze(1), shapedirs)\
+                                    .squeeze(1)\
+                                    .view(current_batch_size, self.R, self.D)
+
+        v_template = torch.bmm(gender_switch, self.v_template_repeat[0:current_batch_size, :, :])\
+                          .view(current_batch_size, self.R, self.D)
+
+        v_shaped = betas_shapedirs_mult + v_template
+
+        J_regressor_repeat = torch.bmm(gender_switch, self.J_regressor_repeat[0:current_batch_size, :, :])\
+                                  .view(current_batch_size, self.R, 24)
+
+        Jx = torch.bmm(v_shaped[:, :, 0].unsqueeze(1), J_regressor_repeat).squeeze(1)
+        Jy = torch.bmm(v_shaped[:, :, 1].unsqueeze(1), J_regressor_repeat).squeeze(1)
+        Jz = torch.bmm(v_shaped[:, :, 2].unsqueeze(1), J_regressor_repeat).squeeze(1)
 
 
-        print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p9"
+        J_est = torch.stack([Jx, Jy, Jz], dim=2)  # these are the joint locations with home pose (pose is 0 degree on all angles)
+        #J_est = J_est - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
 
 
-        #compute the depth and contact maps from the mesh
-        print verts[0, :]
-        print verts.size()
-        verts_taxel = verts / 0.0286
-        verts_taxel[:, 2] *= 1000
-        vertices_taxel[:, 0] *= 1.04
+        targets_est, A_est = KinematicsLib().batch_global_rigid_transformation(Rs_est, J_est, self.parents, self.GPU, rotate_base=False)
+
+        targets_est = targets_est - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
+
+        # assemble a reduced form of the transformed mesh
+        v_shaped_red = torch.stack([v_shaped[:, 1325, :],
+                                    v_shaped[:, 336, :],  # head
+                                    v_shaped[:, 1032, :],  # l knee
+                                    v_shaped[:, 4515, :],  # r knee
+                                    v_shaped[:, 1374, :],  # l ankle
+                                    v_shaped[:, 4848, :],  # r ankle
+                                    v_shaped[:, 1739, :],  # l elbow
+                                    v_shaped[:, 5209, :],  # r elbow
+                                    v_shaped[:, 1960, :],  # l wrist
+                                    v_shaped[:, 5423, :]]).permute(1, 0, 2)  # r wrist
+        pose_feature = (Rs_est[:, 1:, :, :]).sub(1.0, torch.eye(3).type(self.dtype)).view(-1, 207)
+        posedirs_repeat = torch.bmm(gender_switch, self.posedirs_repeat[0:current_batch_size, :, :]) \
+            .view(current_batch_size, 10 * self.D, 207) \
+            .permute(0, 2, 1)
+        v_posed = torch.bmm(pose_feature.unsqueeze(1), posedirs_repeat).view(-1, 10, self.D)
+        v_posed = v_posed.clone() + v_shaped_red
+        weights_repeat = torch.bmm(gender_switch, self.weights_repeat[0:current_batch_size, :, :]) \
+            .squeeze(1) \
+            .view(current_batch_size, 10, 24)
+        T = torch.bmm(weights_repeat, A_est.view(current_batch_size, 24, 16)).view(current_batch_size, -1, 4, 4)
+        v_posed_homo = torch.cat([v_posed, torch.ones(current_batch_size, v_posed.shape[1], 1).type(self.dtype)], dim=2)
+        v_homo = torch.matmul(T, torch.unsqueeze(v_posed_homo, -1))
 
 
-        print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p10"
-
-        verts_red = torch.stack([verts[:, 1325, :],
-                                verts[:, 336, :],  # head
-                                verts[:, 1032, :],  # l knee
-                                verts[:, 4515, :],  # r knee
-                                verts[:, 1374, :],  # l ankle
-                                verts[:, 4848, :],  # r ankle
-                                verts[:, 1739, :],  # l elbow
-                                verts[:, 5209, :],  # r elbow
-                                verts[:, 1960, :],  # l wrist
-                                verts[:, 5423, :]]).permute(1, 0, 2)  # r wrist
+        verts = v_homo[:, :, :3, 0] - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
 
 
-
-        verts_offset = torch.Tensor(verts_red.clone().detach().cpu().numpy()).type(self.dtype)
+        verts_offset = torch.Tensor(verts.clone().detach().cpu().numpy()).type(self.dtype)
         targets_est_detached = torch.Tensor(targets_est.clone().detach().cpu().numpy()).type(self.dtype)
         synth_joint_addressed = [3, 15, 4, 5, 7, 8, 18, 19, 20, 21]
-
         for real_joint in range(10):
             verts_offset[:, real_joint, :] = verts_offset[:, real_joint, :] - targets_est_detached[:, synth_joint_addressed[real_joint], :]
 
@@ -697,12 +657,12 @@ class CNN(nn.Module):
                 scores[:, 34:106] = torch.mul(synth_real_switch.unsqueeze(1), scores[:, 34:106].clone())
 
             if self.GPU == True:
-                penetration_weights = torch.Tensor(KinematicsLib().get_penetration_weights(images, targets[:, 0:72])).cuda()
+                penetration_weights = torch.Tensor(KinematicsLib().get_penetration_weights(images, targets_de_off[:, 0:72])).cuda()
             else:
-                penetration_weights = torch.Tensor(KinematicsLib().get_penetration_weights(images, targets[:, 0:72]))
+                penetration_weights = torch.Tensor(KinematicsLib().get_penetration_weights(images, targets_de_off[:, 0:72]))
 
             #print np.shape(penetration_weights)
-            #print penetration_weights[0, :]
+            print penetration_weights[0, :]
 
             #compare the output joints to the target values
             scores[:, 34+add_idx:106+add_idx] = targets[:, 0:72]/1000 - scores[:, 34+add_idx:106+add_idx]
@@ -809,4 +769,147 @@ class CNN(nn.Module):
 
         #print scores[0, :]
         return  scores, targets_est_np, targets_est_reduced_np, betas_est_np
+
+
+
+
+
+    def forward_kinematic_R(self, images, gender_switch, targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None):
+
+        scores_cnn = self.CNN_pack1(images)
+        scores_size = scores_cnn.size()
+        # print scores_size, 'scores conv1'
+
+        # ''' # NOTE: Uncomment
+        # This combines the height, width, and filters into a single dimension
+        scores_cnn = scores_cnn.view(images.size(0),scores_size[1] *scores_size[2]*scores_size[3] )
+        #print 'size for fc layer:', scores_cnn.size()
+
+
+        scores = self.CNN_fc1(scores_cnn) #this is N x 229: betas, root shift, Rotation matrices
+
+        scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), 0.1)
+        scores[:, 10:] = torch.mul(scores[:, 10:].clone(), 0.01)
+
+
+        scores[:, 10] = torch.add(scores[:, 10].clone(), 0.6)
+        scores[:, 11] = torch.add(scores[:, 11].clone(), 1.2)
+        scores[:, 12] = torch.add(scores[:, 12].clone(), 0.1)
+
+        #print scores[34, :]
+
+        for rotation_matrix_num in range(24):
+            scores[:, 13+rotation_matrix_num*9+0] += 1
+            scores[:, 13+rotation_matrix_num*9+4] += 1
+            scores[:, 13+rotation_matrix_num*9+8] += 1
+
+
+        test_ground_truth = False
+
+        if test_ground_truth == False:
+            betas_est = scores[:, 0:10].clone()
+            root_shift_est = scores[:, 10:13].clone()
+            Rs_est = scores[:, 13:229].view(-1, 24, 3, 3).clone()
+        else:
+            #print betas[13, :], 'betas'
+            betas_est = betas
+            scores[:, 0:10] = betas
+            root_shift_est = root_shift
+            Rs_est = KinematicsLib().batch_rodrigues(angles_gt.view(-1, 24, 3)).view(-1, 24, 3, 3)
+
+
+
+        gender_switch = gender_switch.unsqueeze(1)
+        current_batch_size = gender_switch.size()[0]
+
+
+        shapedirs = torch.bmm(gender_switch, self.shapedirs_repeat[0:current_batch_size, :, :])\
+                         .view(current_batch_size, self.B, self.R*self.D)
+
+        betas_shapedirs_mult = torch.bmm(betas_est.unsqueeze(1), shapedirs) \
+                                    .squeeze(1)\
+                                    .view(current_batch_size, self.R, self.D) #NxRxD
+
+        v_template = torch.bmm(gender_switch, self.v_template_repeat[0:current_batch_size, :, :])\
+                          .view(current_batch_size, self.R, self.D)
+
+        v_shaped = betas_shapedirs_mult + v_template
+
+        J_regressor_repeat = torch.bmm(gender_switch, self.J_regressor_repeat[0:current_batch_size, :, :])\
+                                  .view(current_batch_size, self. R, 24)
+
+        Jx = torch.bmm(v_shaped[:, :, 0].unsqueeze(1), J_regressor_repeat).squeeze(1)
+        Jy = torch.bmm(v_shaped[:, :, 1].unsqueeze(1), J_regressor_repeat).squeeze(1)
+        Jz = torch.bmm(v_shaped[:, :, 2].unsqueeze(1), J_regressor_repeat).squeeze(1)
+
+
+
+        #v_shaped = torch.matmul(betas_est, self.shapedirs_f).permute(1, 0, 2) + self.v_template_f
+
+        #Jx = torch.matmul(v_shaped[:, :, 0], self.J_regressor_f)
+        #Jy = torch.matmul(v_shaped[:, :, 1], self.J_regressor_f)
+        #Jz = torch.matmul(v_shaped[:, :, 2], self.J_regressor_f)
+
+
+        J_est = torch.stack([Jx, Jy, Jz], dim=2)  # these are the joint locations with home pose (pose is 0 degree on all angles)
+        J_est = J_est - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
+
+        targets_est, A_est = KinematicsLib().batch_global_rigid_transformation(Rs_est, J_est, self.parents, self.GPU, rotate_base=False)
+
+        targets_est = targets_est.contiguous().view(-1, 72)
+
+        targets_est_np = targets_est.data*1000. #after it comes out of the forward kinematics
+        betas_est_np = betas_est.data*1000.
+
+        #tweak this to change the lengths vector
+        scores[:, 34:106] = torch.mul(targets_est[:, 0:72], 1.)
+
+        #print scores[13, 34:106]
+
+        if is_training == True:
+            scores[:, 34:106] = targets[:, 0:72]/1000 - scores[:, 34:106]
+            scores[:, 106:178] = ((scores[:, 34:106].clone())*1.).pow(2)
+
+            #print scores[13, 106:178]
+
+            for joint_num in range(24):
+                scores[:, 10+joint_num] = (scores[:, 106+joint_num*3] + scores[:, 107+joint_num*3] + scores[:, 108+joint_num*3]).sqrt()
+
+            scores = scores.unsqueeze(0)
+            scores = scores.unsqueeze(0)
+            scores = F.pad(scores, (0, -195, 0, 0))
+            scores = scores.squeeze(0)
+            scores = scores.squeeze(0)
+
+            targets_est_reduced_np = 0
+        else:
+            targets_est_reduced = torch.empty(targets_est.size()[0], 30, dtype=torch.float)
+            targets_est_reduced[:, 0:3] = scores[:, 79:82] #head 34 + 3*15 = 79
+            targets_est_reduced[:, 3:6] = scores[:, 43:46] #torso 34 + 3*3 = 45
+            targets_est_reduced[:, 6:9] = scores[:, 91:94] #right elbow 34 + 19*3 = 91
+            targets_est_reduced[:, 9:12] = scores[:, 88:91] #left elbow 34 + 18*3 = 88
+            targets_est_reduced[:, 12:15] = scores[:, 97:100] #right wrist 34 + 21*3 = 97
+            targets_est_reduced[:, 15:18] = scores[:, 94:97] #left wrist 34 + 20*3 = 94
+            targets_est_reduced[:, 18:21] = scores[:, 49:52] #right knee 34 + 3*5
+            targets_est_reduced[:, 21:24] = scores[:, 46:49] #left knee 34 + 3*4
+            targets_est_reduced[:, 24:27] = scores[:, 58:61] #right ankle 34 + 3*8
+            targets_est_reduced[:, 27:30] = scores[:, 55:58] #left ankle 34 + 3*7
+
+            targets_est_reduced_np = targets_est_reduced.data*1000.
+
+            scores[:, 10:40] = targets_est_reduced[:, 0:30].pow(2)
+
+
+            for joint_num in range(10):
+                    scores[:, joint_num] = (scores[:, 10+joint_num*3] + scores[:, 11+joint_num*3] + scores[:, 12+joint_num*3]).sqrt()
+
+
+            scores = scores.unsqueeze(0)
+            scores = scores.unsqueeze(0)
+            scores = F.pad(scores, (0, -219, 0, 0))
+            scores = scores.squeeze(0)
+            scores = scores.squeeze(0)
+
+        return  scores, targets_est_np, targets_est_reduced_np, betas_est_np
+
 

@@ -186,26 +186,26 @@ def reprocess_synth_data():
     # num_resting_poses = 3722
 
     # all_data_names = [["f", "sit", "upperbody", 1000, 1302]]
-    all_data_names = [  # ["f", "lay", "lowerbody", 2000, 2018],
-        # ["f", "lay", "upperbody", 2000, 2051]
-        # ["f", "lay", "leftside", 2000, 2034],
-        # ["f", "lay", "rightside", 2000, 2052],
-        # ["f", "lay", "none", 2000, 2029],
-        # ["f", "sit", "lowerbody", 1000, 1126],
-        ["f", "sit", "upperbody", 1000, 1168],
-        ["f", "sit", "leftside", 1000, 1133]]
-    # ["f", "sit", "rightside", 1000, 1121],
-    # ["f", "sit", "none", 1000, 1113]]
-    # ["m", "lay", "lowerbody", 2000, 2016],
-    # ["m", "lay", "upperbody", 2000, 2024],
-    # ["m", "lay", "leftside", 2000, 2015],
-    # ["m", "lay", "rightside", 2000, 2016],
-    # ["m", "lay", "none", 2000, 2008],
-    # ["m", "sit", "lowerbody", 1000, 1166],
-    # ["m", "sit", "upperbody", 1000, 1181],
-    # ["m", "sit", "leftside", 1000, 1183],
-    # ["m", "sit", "rightside", 1000, 1161],
-    # ["m", "sit", "none", 1000, 1155]]
+    all_data_names = [["f", "lay", "lowerbody", 2000, 2047],
+                    ["f", "lay", "upperbody", 2000, 2103],
+                    ["f", "lay", "leftside", 2000, 2072],
+                    ["f", "lay", "rightside", 2000, 2086],
+                    ["f", "lay", "none", 2000, 2067],
+                    ["f", "sit", "lowerbody", 1000, 1106],
+                    ["f", "sit", "upperbody", 1000, 1121],
+                    ["f", "sit", "leftside", 1000, 1102],
+                    ["f", "sit", "rightside", 1000, 1087],
+                    ["f", "sit", "none", 1000, 1096],
+                    ["m", "lay", "lowerbody", 2000, 2012],
+                    ["m", "lay", "upperbody", 2000, 2031],
+                    ["m", "lay", "leftside", 2000, 2016],
+                    ["m", "lay", "rightside", 2000, 2016],
+                    ["m", "lay", "none", 2000, 2006],
+                    ["m", "sit", "lowerbody", 1000, 1144],
+                    ["m", "sit", "upperbody", 1000, 1147],
+                    ["m", "sit", "leftside", 1000, 1152],
+                    ["m", "sit", "rightside", 1000, 1132],
+                    ["m", "sit", "none", 1000, 1126]]
 
     for gpsn in all_data_names:
         gender = gpsn[0]
@@ -255,12 +255,12 @@ def reprocess_synth_data():
         # print m.pose
         # print "J x trans", m.J_transformed[:, 0]
 
-        resting_pose_data_list = np.load('/media/henry/multimodal_data_2/data/resting_poses/side_up/resting_pose_'
+        resting_pose_data_list = np.load('/media/henry/multimodal_data_2/data/resting_poses/side_up_fw/resting_pose_'
                                          + gender + '_' + posture + '_' + str(num_resting_poses) + '_of_' + str(
             num_resting_poses_tried) + '_' + stiffness + '_stiff.npy',
                                          allow_pickle=True)
         training_database_pmat_height_list = np.load(
-            '/media/henry/multimodal_data_2/data/pmat_height/side_up/pmat_height_'
+            '/media/henry/multimodal_data_2/data/pmat_height/side_up_fw/pmat_height_'
             + gender + '_' + posture + '_' + str(num_resting_poses) + '_of_' + str(
                 num_resting_poses_tried) + '_' + stiffness + '_stiff.npy',
             allow_pickle=True)
@@ -274,6 +274,7 @@ def reprocess_synth_data():
             capsule_angles = resting_pose_data[0].tolist()
             root_joint_pos_list = resting_pose_data[1]
             body_shape_list = resting_pose_data[2]
+            body_mass = resting_pose_data[3]
 
             # print "shape", body_shape_list
 
@@ -284,6 +285,7 @@ def reprocess_synth_data():
                 m.betas[shape_param] = float(body_shape_list[shape_param])
 
             m.pose[:] = np.random.rand(m.pose.size) * 0.
+            '''
             dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture=posture, stiffness=None,
                                             check_only_distal=True, filepath_prefix='/home/henry', add_floor=False)
             # print self.m.pose
@@ -294,9 +296,13 @@ def reprocess_synth_data():
                                             check_only_distal=True, filepath_prefix='/home/henry', add_floor=False,
                                             volume=volumes)
             # print self.m.pose
-            training_data_dict['body_mass'].append(dss.body_mass)  # , "person's mass"
+            
+            #training_data_dict['body_mass'].append(dss.body_mass)  # , "person's mass"
             dss.world.reset()
             dss.world.destroy()
+            '''
+
+            training_data_dict['body_mass'].append(body_mass)
             training_data_dict['body_height'].append(np.abs(np.min(m.r[:, 1]) - np.max(m.r[:, 1])))
 
             print training_data_dict['body_mass'][-1] * 2.20462, 'MASS, lbs'
@@ -368,7 +374,7 @@ def reprocess_synth_data():
             training_data_dict['joint_angles'][entry][0:2]
 
         pickle.dump(training_data_dict, open(os.path.join(
-            '/home/henry/data/synth/train_' + gender + '_' + posture + '_' + str(num_resting_poses) + '_of_' + str(
+            '/home/henry/data/synth/side_up_fw/train_' + gender + '_' + posture + '_' + str(num_resting_poses) + '_of_' + str(
                 num_resting_poses_tried) + '_' + stiffness + '_stiff.p'), 'wb'))
 
     for item in training_data_dict:
@@ -450,15 +456,26 @@ def reprocess_real_data_height_wt():
 
 
 def get_contact_map_from_synth():
-    all_data_names = [
-        ["f", "lay", "lowerbody", 2000, 2018],
-        #["f", "lay", "upperbody", 2000, 2051],
-        # ["f", "lay", "leftside", 2000, 2034],
-        # ["f", "lay", "rightside", 2000, 2052],
-        ["f", "lay", "none", 2000, 2029]]#,
-        # ["f", "sit", "lowerbody", 1000, 1126],
-        #["f", "sit", "upperbody", 1000, 1168],
-        #["f", "sit", "leftside", 1000, 1133]]
+    all_data_names = [["f", "lay", "lowerbody", 2000, 2047],
+                    ["f", "lay", "upperbody", 2000, 2103],
+                    ["f", "lay", "leftside", 2000, 2072],
+                    ["f", "lay", "rightside", 2000, 2086],
+                    ["f", "lay", "none", 2000, 2067],
+                    ["f", "sit", "lowerbody", 1000, 1106],
+                    ["f", "sit", "upperbody", 1000, 1121],
+                    ["f", "sit", "leftside", 1000, 1102],
+                    ["f", "sit", "rightside", 1000, 1087],
+                    ["f", "sit", "none", 1000, 1096],
+                    ["m", "lay", "lowerbody", 2000, 2012],
+                    ["m", "lay", "upperbody", 2000, 2031],
+                    ["m", "lay", "leftside", 2000, 2016],
+                    ["m", "lay", "rightside", 2000, 2016],
+                    ["m", "lay", "none", 2000, 2006],
+                    ["m", "sit", "lowerbody", 1000, 1144],
+                    ["m", "sit", "upperbody", 1000, 1147],
+                    ["m", "sit", "leftside", 1000, 1152],
+                    ["m", "sit", "rightside", 1000, 1132],
+                    ["m", "sit", "none", 1000, 1126]]
     from visualization_lib import VisualizationLib
 
     filler_taxels = []
@@ -468,7 +485,7 @@ def get_contact_map_from_synth():
     filler_taxels = np.array(filler_taxels)
 
 
-    for gpsn in all_data_names:
+    for gpsn in all_data_names[19:20]:
         gender = gpsn[0]
         posture = gpsn[1]
         stiffness = gpsn[2]
@@ -482,7 +499,7 @@ def get_contact_map_from_synth():
         model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_' + gender + '_lbs_10_207_0_v1.0.0.pkl'
         m = load_model(model_path)
 
-        training_data_dict = load_pickle('/home/henry/data/synth/train_' + gender + '_' + posture + '_' + str(num_resting_poses) + '_of_' + str(
+        training_data_dict = load_pickle('/home/henry/data/synth/side_up_fw/train_' + gender + '_' + posture + '_' + str(num_resting_poses) + '_of_' + str(
                                 num_resting_poses_tried) + '_' + stiffness + '_stiff.p')
 
         betas = training_data_dict['body_shape']
@@ -592,7 +609,7 @@ def get_contact_map_from_synth():
 
         filename = '/home/henry/data/synth/train_' + gender + '_' + posture + '_' + str(num_resting_poses) + '_of_' + str(
                                 num_resting_poses_tried) + '_' + stiffness + '_stiff_new.p'
-        pickle.dump(training_data_dict, open(os.path.join(filename), 'wb'))
+        #pickle.dump(training_data_dict, open(os.path.join(filename), 'wb'))
 
 
 
