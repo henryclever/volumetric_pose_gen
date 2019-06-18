@@ -449,12 +449,155 @@ def reprocess_real_data_height_wt():
         pickle.dump(current_data, open(os.path.join(filepath_prefix+filename), 'wb'))
 
 
-def reprocess_real_offset_markers():
-    pass
-    #do inverse kinematics here
+def get_contact_map_from_synth():
+    all_data_names = [
+        ["f", "lay", "lowerbody", 2000, 2018],
+        #["f", "lay", "upperbody", 2000, 2051],
+        # ["f", "lay", "leftside", 2000, 2034],
+        # ["f", "lay", "rightside", 2000, 2052],
+        ["f", "lay", "none", 2000, 2029]]#,
+        # ["f", "sit", "lowerbody", 1000, 1126],
+        #["f", "sit", "upperbody", 1000, 1168],
+        #["f", "sit", "leftside", 1000, 1133]]
+    from visualization_lib import VisualizationLib
+
+    filler_taxels = []
+    for i in range(27):
+        for j in range(64):
+            filler_taxels.append([i, j, 20000])
+    filler_taxels = np.array(filler_taxels)
+
+
+    for gpsn in all_data_names:
+        gender = gpsn[0]
+        posture = gpsn[1]
+        stiffness = gpsn[2]
+        num_resting_poses = gpsn[3]
+        num_resting_poses_tried = gpsn[4]
+
+
+        # training_data_dict['v_template'] = []
+        # training_data_dict['shapedirs'] = []
+
+        model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_' + gender + '_lbs_10_207_0_v1.0.0.pkl'
+        m = load_model(model_path)
+
+        training_data_dict = load_pickle('/home/henry/data/synth/train_' + gender + '_' + posture + '_' + str(num_resting_poses) + '_of_' + str(
+                                num_resting_poses_tried) + '_' + stiffness + '_stiff.p')
+
+        betas = training_data_dict['body_shape']
+        pose = training_data_dict['joint_angles']
+        images = training_data_dict['images']
+        training_data_dict['mesh_depth'] = []
+        training_data_dict['mesh_contact'] = []
+        root_xyz_shift = training_data_dict['root_xyz_shift']
+
+        for index in range(len(betas)):
+            for beta_idx in range(10):
+                m.betas[beta_idx] = betas[index][beta_idx]
+            for pose_idx in range(72):
+                m.pose[pose_idx] = pose[index][pose_idx]
+
+            training_data_dict['images'][index] = images[index].astype(int8) #convert the original pmat to an int to save space
+
+            pmat = np.clip(images[index].reshape(64, 27)*5., 0, 100)
+            curr_root_shift = np.array(root_xyz_shift[index])
+
+            joints = np.array(m.J_transformed) + curr_root_shift + np.array([-0.286, 0.0, 0.0])
+            vertices = np.array(m.r) + curr_root_shift + np.array([-0.286, 0.0, -0.075])
+
+            joints_taxel = joints/0.0286
+            vertices_taxel = vertices/0.0286
+            vertices_taxel[:, 2] *= 1000
+            vertices_taxel[:, 0] *= 1.04
+
+            time_orig = time.time()
+
+            #joints_taxel_int = (joints_taxel).astype(int)
+            vertices_taxel_int = (vertices_taxel).astype(int)
+
+
+            vertices_taxel_int = np.concatenate((filler_taxels, vertices_taxel_int), axis = 0)
+
+            vertice_sorting_method = vertices_taxel_int[:, 0]*10000000 + vertices_taxel_int[:,1]*100000 + vertices_taxel_int[:,2]
+            vertices_taxel_int = vertices_taxel_int[vertice_sorting_method.argsort()]
+
+            vertice_sorting_method_2 = vertices_taxel_int[:, 0]*100 + vertices_taxel_int[:,1]
+
+            unique_keys, indices = np.unique(vertice_sorting_method_2, return_index=True)
+
+            vertices_taxel_int_unique = vertices_taxel_int[indices]
+
+
+            #print vertices_taxel_int_unique.shape
+
+            vertices_taxel_int_unique = vertices_taxel_int_unique[vertices_taxel_int_unique[:, 0] < 27, :]
+            vertices_taxel_int_unique = vertices_taxel_int_unique[vertices_taxel_int_unique[:, 0] >= 0, :]
+            vertices_taxel_int_unique = vertices_taxel_int_unique[vertices_taxel_int_unique[:, 1] < 64, :]
+            vertices_taxel_int_unique = vertices_taxel_int_unique[vertices_taxel_int_unique[:, 1] >= 0, :]
+            #print vertices_taxel_int_unique
+
+            mesh_matrix = np.flipud(vertices_taxel_int_unique[:, 2].reshape(27, 64).T).astype(float)
+
+            mesh_matrix[mesh_matrix == 20000] = 0
+            mesh_matrix *= 0.0286
+
+
+            #fix holes
+            abc = np.zeros((66, 29, 4))
+            abc[1:65, 1:28, 0] = np.copy(mesh_matrix)
+            abc[1:65, 1:28, 0][abc[1:65, 1:28, 0] > 0] = 0
+            abc[1:65, 1:28, 0] = abc[0:64, 0:27, 0] + abc[1:65, 0:27, 0] + abc[2:66, 0:27, 0] + \
+                                 abc[0:64, 1:28, 0] + abc[2:66, 1:28, 0] + \
+                                 abc[0:64, 2:29, 0] + abc[1:65, 2:29, 0] + abc[2:66, 2:29, 0]
+            abc = abc[1:65, 1:28, :]
+            abc[:, :, 0] /= 8
+            abc[:, :, 1] = np.copy(mesh_matrix)
+            abc[:, :, 1][abc[:, :, 1] < 0] = 0
+            abc[:, :, 1][abc[:, :, 1] > 0] = 1
+            abc[:, :, 2] = abc[:, :, 0]*abc[:, :, 1]
+            abc[:, :, 3] = np.copy(abc[:, :, 2])
+            abc[:, :, 3][abc[:, :, 3] != 0] = 1.
+            abc[:, :, 3] = 1-abc[:, :, 3]
+            mesh_matrix = mesh_matrix*abc[:, :, 3]
+            mesh_matrix += abc[:, :, 2]
+            #print np.min(mesh_matrix), np.max(mesh_matrix)
+            mesh_matrix = mesh_matrix.astype(int32)
+            #print np.min(mesh_matrix), np.max(mesh_matrix)
+
+            #make a contact matrix
+            contact_matrix = np.copy(mesh_matrix)
+            contact_matrix[contact_matrix >= 0] = 0
+            contact_matrix[contact_matrix >= 0] = 0
+            contact_matrix[contact_matrix < 0] = 1
+            contact_matrix = contact_matrix.astype(bool)
+
+            print time.time() - time_orig
+
+            training_data_dict['mesh_depth'].append(mesh_matrix)
+            training_data_dict['mesh_contact'].append(contact_matrix)
+
+            print training_data_dict['images'][index].dtype
+            print training_data_dict['mesh_depth'][index].dtype
+            print training_data_dict['mesh_contact'][index].dtype
+
+
+
+            #print m.J_transformed
+
+            #VisualizationLib().visualize_pressure_map(pmat, joints+np.array([0.286, 0.286, 0.0])+10., None, mesh_matrix, joints+np.array([0.286, 0.286, 0.0])+10.)
+            #time.sleep(5)
+
+            #break
+
+        filename = '/home/henry/data/synth/train_' + gender + '_' + posture + '_' + str(num_resting_poses) + '_of_' + str(
+                                num_resting_poses_tried) + '_' + stiffness + '_stiff_new.p'
+        pickle.dump(training_data_dict, open(os.path.join(filename), 'wb'))
+
+
 
 
 if __name__ == "__main__":
+    get_contact_map_from_synth()
     #reprocess_synth_data()
-    reprocess_real_data_height_wt()
 
