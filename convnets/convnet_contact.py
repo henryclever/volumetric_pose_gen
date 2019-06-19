@@ -104,7 +104,7 @@ class CNN(nn.Module):
         if loss_vector_type == 'anglesR' or loss_vector_type == 'anglesDC' or loss_vector_type == 'anglesEU':
 
 
-            print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p1"
+            #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p1"
 
             from smpl.smpl_webuser.serialization import load_model
 
@@ -126,7 +126,7 @@ class CNN(nn.Module):
             self.posedirs_m = torch.Tensor(np.array(human_m.posedirs)).type(dtype)
             self.weights_m = torch.Tensor(np.array(human_m.weights)).type(dtype)
 
-            print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(),"p2"
+            #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(),"p2"
 
             self.parents = np.array([4294967295, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9, 12, 13, 14, 16, 17, 18, 19, 20, 21]).astype(np.int32)
 
@@ -143,7 +143,7 @@ class CNN(nn.Module):
             self.R_used = 6890
             self.shapedirs = self.shapedirs.permute(1,0,2,3,4).view(self.N, 2, self.B*self.R*self.D)
 
-            print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p3"
+            #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p3"
 
 
             self.v_template_f = self.v_template_f.unsqueeze(0).repeat(self.N, 1, 1).unsqueeze(0)
@@ -151,13 +151,13 @@ class CNN(nn.Module):
             self.v_template = torch.cat((self.v_template_f, self.v_template_m), 0)#this is 2 x N x R x D
             self.v_template = self.v_template.permute(1,0,2,3).view(self.N, 2, self.R*self.D)
 
-            print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(),"p4"
+            #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(),"p4"
 
             self.J_regressor = torch.cat((self.J_regressor_f.unsqueeze(0).repeat(self.N, 1, 1).unsqueeze(0),
                                           self.J_regressor_m.unsqueeze(0).repeat(self.N, 1, 1).unsqueeze(0)), 0)#this is 2 x N x R x 24
             self.J_regressor = self.J_regressor.permute(1,0,2,3).view(self.N, 2, self.R*24)
 
-            print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(),"p5"
+            #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(),"p5"
 
             self.posedirs = torch.cat((self.posedirs_f.unsqueeze(0).repeat(self.N, 1, 1, 1).unsqueeze(0),
                                        self.posedirs_m.unsqueeze(0).repeat(self.N, 1, 1, 1).unsqueeze(0)), 0)
@@ -173,7 +173,13 @@ class CNN(nn.Module):
             self.zeros_cartesian = torch.zeros([batch_size, 24]).type(dtype)
             self.ones_cartesian = torch.ones([batch_size, 24]).type(dtype)
 
-            print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(),"p6"
+            self.filler_taxels = []
+            for i in range(27):
+                for j in range(64):
+                    self.filler_taxels.append([i, j, 20000])
+            self.filler_taxels = torch.Tensor(self.filler_taxels).type(torch.IntTensor).unsqueeze(0).repeat(batch_size, 1, 1)
+
+            #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(),"p6"
 
             if self.loss_vector_type == 'anglesDC':
                 self.bounds = torch.Tensor(np.array([[-np.pi/3, np.pi/3], [-np.pi/3, np.pi/3], [-np.pi/3, np.pi/3],
@@ -467,12 +473,12 @@ class CNN(nn.Module):
         #self.GPU = False
         #self.dtype = torch.FloatTensor
 
-        print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p7b"
+        #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p7b"
 
         scores_cnn = self.CNN_pack1(images)
 
 
-        print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p7c"
+        #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p7c"
 
         scores_size = scores_cnn.size()
 
@@ -491,7 +497,7 @@ class CNN(nn.Module):
         #print scores[0, :]
 
 
-        print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p7d"
+        #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p7d"
 
         #weight the outputs, which are already centered around 0. First make them uniformly smaller than the direct output, which is too large. 
         scores = torch.mul(scores.clone(), 0.01)
@@ -598,18 +604,71 @@ class CNN(nn.Module):
             start_incr += sub_batch_incr
 
 
-        print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p9"
+        #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p9"
 
 
         #compute the depth and contact maps from the mesh
         print verts[0, :]
         print verts.size()
         verts_taxel = verts / 0.0286
-        verts_taxel[:, 2] *= 1000
-        vertices_taxel[:, 0] *= 1.04
+        verts_taxel[:, :, 2] *= 1000
+        verts_taxel[:, :, 0] *= 1.04
+
+        verts_taxel_int = (verts_taxel).type(torch.IntTensor)
+        print verts_taxel_int.type()
+        print self.filler_taxels.type()
+
+        print verts_taxel_int.size()
+        print self.filler_taxels.size()
+        verts_taxel_int = torch.cat((self.filler_taxels, verts_taxel_int), dim=1)
+
+        print verts_taxel_int.size()
+        print torch.mul(100000, verts_taxel_int[:,:,1]).size()
+        vertice_sorting_method = verts_taxel_int[:, :, 0:1] * 10000000 + \
+                                 verts_taxel_int[:, :, 1:2] * 100000 + \
+                                 verts_taxel_int[:, :, 2:3]
 
 
-        print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p10"
+        print verts_taxel_int.size()
+        print vertice_sorting_method.size()
+
+        verts_taxel_int = torch.cat((vertice_sorting_method, verts_taxel_int), dim = 2)
+
+        #verts_taxel_int = verts_taxel_int[vertice_sorting_method.argsort()]
+
+        #verts_taxel_int = verts_taxel_int.unsqueeze(3)
+        print verts_taxel_int.size()
+
+
+        #verts_taxel_int.sort(dim=3)
+
+        #print
+        x, _ = torch.unique(verts_taxel_int[0, :, :], sorted = True, return_inverse=True, dim = 0)
+        for i in range(x.size()[0]):
+            print x[i, :]
+        print x.size()
+
+        #vertice_sorting_method_2 = verts_taxel_int[:, :, 1:2] * 100 + verts_taxel_int[:, :, 2:3]
+        vertice_sorting_method_2 = verts_taxel_int[:, :, 1:3]
+        print vertice_sorting_method_2[0, :, :], 'sort meth 2'
+        print vertice_sorting_method_2.size()
+        x2, keys = torch.unique(vertice_sorting_method_2[0, :, :], sorted = True, return_inverse=True, dim = 0)
+
+        print x2, "x2"
+        print x2.size()
+        print keys
+
+
+        #for item in range(unique_ind.size()[0]):
+        #    print unique_ind[item]
+
+        #for i in range(verts_taxel_int.size()[1]):
+        #    print verts_taxel_int[0, i, :]
+        print verts_taxel_int.size()
+
+
+
+        #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p10"
 
         verts_red = torch.stack([verts[:, 1325, :],
                                 verts[:, 336, :],  # head

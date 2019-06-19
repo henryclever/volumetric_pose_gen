@@ -540,7 +540,6 @@ def get_contact_map_from_synth():
             vertices_taxel_int = vertices_taxel_int[vertice_sorting_method.argsort()]
 
             vertice_sorting_method_2 = vertices_taxel_int[:, 0]*100 + vertices_taxel_int[:,1]
-
             unique_keys, indices = np.unique(vertice_sorting_method_2, return_index=True)
 
             vertices_taxel_int_unique = vertices_taxel_int[indices]
