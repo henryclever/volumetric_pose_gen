@@ -92,13 +92,16 @@ class CNN(nn.Module):
             self.GPU = True
             # Use for self.GPU
             dtype = torch.cuda.FloatTensor
+            dtypeInt = torch.cuda.IntTensor
             print('######################### CUDA is available! #############################')
         else:
             self.GPU = False
             # Use for CPU
             dtype = torch.FloatTensor
+            dtypeInt = torch.IntTensor
             print('############################## USING CPU #################################')
         self.dtype = dtype
+        self.dtypeInt = dtypeInt
 
 
         if loss_vector_type == 'anglesR' or loss_vector_type == 'anglesDC' or loss_vector_type == 'anglesEU':
@@ -174,10 +177,11 @@ class CNN(nn.Module):
             self.ones_cartesian = torch.ones([batch_size, 24]).type(dtype)
 
             self.filler_taxels = []
-            for i in range(27):
-                for j in range(64):
-                    self.filler_taxels.append([i, j, 20000])
-            self.filler_taxels = torch.Tensor(self.filler_taxels).type(torch.IntTensor).unsqueeze(0).repeat(batch_size, 1, 1)
+            for i in range(28):
+                for j in range(65):
+                    self.filler_taxels.append([i-1, j-1, 20000])
+            self.filler_taxels = torch.Tensor(self.filler_taxels).type(self.dtypeInt).unsqueeze(0).repeat(batch_size, 1, 1)
+            self.mesh_patching_array = torch.zeros((batch_size, 66, 29, 4)).type(self.dtype)
 
             #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(),"p6"
 
@@ -468,6 +472,90 @@ class CNN(nn.Module):
         return verts, J_est, targets_est
 
 
+    def compute_depth_contact_planes(self, verts):
+
+        cbs = verts.size()[0] #current batch size
+
+        #compute the depth and contact maps from the mesh
+        import time
+        verts_taxel = verts.clone() / 0.0286
+        verts_taxel[:, :, 0] -= 10
+        verts_taxel[:, :, 1] -= 10
+        verts_taxel[:, :, 2] *= 1000
+        verts_taxel[:, :, 0] *= 1.04
+
+        verts_taxel_int = (verts_taxel).type(self.dtypeInt)
+
+        print self.filler_taxels.size(), verts_taxel_int.size()
+
+        verts_taxel_int = torch.cat((self.filler_taxels[0:cbs, :, :], verts_taxel_int), dim=1)
+
+        vertice_sorting_method = (verts_taxel_int[:, :, 0:1]+1) * 10000000 + \
+                                 (verts_taxel_int[:, :, 1:2]+1) * 100000 + \
+                                  verts_taxel_int[:, :, 2:3]
+        verts_taxel_int = torch.cat((vertice_sorting_method, verts_taxel_int), dim = 2)
+        for i in range(cbs):
+            t1 = time.time()
+            x = torch.unique(verts_taxel_int[i, :, :], sorted = True, return_inverse=False, dim = 0) #this takes the most time
+            t2 = time.time()
+
+            x[1:, 0] = torch.abs((x[:-1, 1]-x[1:, 1]) + (x[:-1, 2]-x[1:, 2]))
+            x[1:, 1:4] = x[1:, 1:4]*x[1:, 0:1]
+            x = x[x[:, 0] != 0, :]
+            x = x[:, 1:]
+            x = x[x[:, 1] < 64, :]
+            x = x[x[:, 1] >= 0, :]
+            x = x[x[:, 0] < 27, :]
+            x = x[x[:, 0] >= 0, :]
+            mesh_matrix = x[:, 2].view(27, 64)
+
+            if i == 0:
+                #print mesh_matrix[0:15, 32:]
+                mesh_matrix = mesh_matrix.transpose(0, 1).flip(0).unsqueeze(0)
+                #print mesh_matrix[0, 1:32, 0:15]
+                mesh_matrix_batch = mesh_matrix.clone()
+            else:
+                mesh_matrix = mesh_matrix.transpose(0, 1).flip(0).unsqueeze(0)
+                mesh_matrix_batch = torch.cat((mesh_matrix_batch, mesh_matrix), dim = 0)
+
+            t3 = time.time()
+           # print i, t3 - t2, t2 - t1
+
+        mesh_matrix_batch[mesh_matrix_batch == 20000] = 0
+        mesh_matrix_batch = mesh_matrix_batch.type(self.dtype)
+        mesh_matrix_batch *= 0.0286# shouldn't need this. leave as int.
+
+        self.mesh_patching_array *= 0
+        self.mesh_patching_array[0:cbs, 1:65, 1:28, 0] = mesh_matrix_batch.clone()
+        self.mesh_patching_array[0:cbs, 1:65, 1:28, 0][self.mesh_patching_array[0:cbs, 1:65, 1:28, 0] > 0] = 0
+        self.mesh_patching_array[0:cbs, 1:65, 1:28, 0] = self.mesh_patching_array[0:cbs, 0:64, 0:27, 0] + \
+                                                                        self.mesh_patching_array[0:cbs, 1:65, 0:27, 0] + \
+                                                                        self.mesh_patching_array[0:cbs, 2:66, 0:27, 0] + \
+                                                                        self.mesh_patching_array[0:cbs, 0:64, 1:28, 0] + \
+                                                                        self.mesh_patching_array[0:cbs, 2:66, 1:28, 0] + \
+                                                                        self.mesh_patching_array[0:cbs, 0:64, 2:29, 0] + \
+                                                                        self.mesh_patching_array[0:cbs, 1:65, 2:29, 0] + \
+                                                                        self.mesh_patching_array[0:cbs, 2:66, 2:29, 0]
+        self.mesh_patching_array[0:cbs, :, :, 0] /= 8
+        self.mesh_patching_array[0:cbs, 1:65, 1:28, 1] = mesh_matrix_batch.clone()
+        self.mesh_patching_array[0:cbs, 1:65, 1:28, 1][self.mesh_patching_array[0:cbs, 1:65, 1:28, 1] < 0] = 0
+        self.mesh_patching_array[0:cbs, 1:65, 1:28, 1][self.mesh_patching_array[0:cbs, 1:65, 1:28, 1] > 0] = 1
+        self.mesh_patching_array[0:cbs, 1:65, 1:28, 2] = self.mesh_patching_array[0:cbs, 1:65, 1:28, 0] * self.mesh_patching_array[0:cbs, 1:65, 1:28, 1]
+        self.mesh_patching_array[0:cbs, 1:65, 1:28, 3] = self.mesh_patching_array[0:cbs, 1:65, 1:28, 2].clone()
+        self.mesh_patching_array[0:cbs, 1:65, 1:28, 3][self.mesh_patching_array[0:cbs, 1:65, 1:28, 3] != 0] = 1.
+        self.mesh_patching_array[0:cbs, 1:65, 1:28, 3] = 1 - self.mesh_patching_array[0:cbs, 1:65, 1:28, 3]
+        mesh_matrix_batch = mesh_matrix_batch * self.mesh_patching_array[0:cbs, 1:65, 1:28, 3]
+        mesh_matrix_batch += self.mesh_patching_array[0:cbs, 1:65, 1:28, 2]
+        mesh_matrix_batch = mesh_matrix_batch.type(self.dtypeInt)
+
+        contact_matrix_batch = mesh_matrix_batch.clone()
+        contact_matrix_batch[contact_matrix_batch >= 0] = 0
+        contact_matrix_batch[contact_matrix_batch < 0] = 1
+
+        return mesh_matrix_batch, contact_matrix_batch
+
+
+
 
     def forward_kinematic_angles(self, images, gender_switch, synth_real_switch, targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None, reg_angles = False):
         #self.GPU = False
@@ -604,71 +692,11 @@ class CNN(nn.Module):
             start_incr += sub_batch_incr
 
 
-        #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p9"
+        print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p9"
 
+        mesh_matrix_batch, contact_matrix_batch = self.compute_depth_contact_planes(verts)
 
-        #compute the depth and contact maps from the mesh
-        print verts[0, :]
-        print verts.size()
-        verts_taxel = verts / 0.0286
-        verts_taxel[:, :, 2] *= 1000
-        verts_taxel[:, :, 0] *= 1.04
-
-        verts_taxel_int = (verts_taxel).type(torch.IntTensor)
-        print verts_taxel_int.type()
-        print self.filler_taxels.type()
-
-        print verts_taxel_int.size()
-        print self.filler_taxels.size()
-        verts_taxel_int = torch.cat((self.filler_taxels, verts_taxel_int), dim=1)
-
-        print verts_taxel_int.size()
-        print torch.mul(100000, verts_taxel_int[:,:,1]).size()
-        vertice_sorting_method = verts_taxel_int[:, :, 0:1] * 10000000 + \
-                                 verts_taxel_int[:, :, 1:2] * 100000 + \
-                                 verts_taxel_int[:, :, 2:3]
-
-
-        print verts_taxel_int.size()
-        print vertice_sorting_method.size()
-
-        verts_taxel_int = torch.cat((vertice_sorting_method, verts_taxel_int), dim = 2)
-
-        #verts_taxel_int = verts_taxel_int[vertice_sorting_method.argsort()]
-
-        #verts_taxel_int = verts_taxel_int.unsqueeze(3)
-        print verts_taxel_int.size()
-
-
-        #verts_taxel_int.sort(dim=3)
-
-        #print
-        x, _ = torch.unique(verts_taxel_int[0, :, :], sorted = True, return_inverse=True, dim = 0)
-        for i in range(x.size()[0]):
-            print x[i, :]
-        print x.size()
-
-        #vertice_sorting_method_2 = verts_taxel_int[:, :, 1:2] * 100 + verts_taxel_int[:, :, 2:3]
-        vertice_sorting_method_2 = verts_taxel_int[:, :, 1:3]
-        print vertice_sorting_method_2[0, :, :], 'sort meth 2'
-        print vertice_sorting_method_2.size()
-        x2, keys = torch.unique(vertice_sorting_method_2[0, :, :], sorted = True, return_inverse=True, dim = 0)
-
-        print x2, "x2"
-        print x2.size()
-        print keys
-
-
-        #for item in range(unique_ind.size()[0]):
-        #    print unique_ind[item]
-
-        #for i in range(verts_taxel_int.size()[1]):
-        #    print verts_taxel_int[0, i, :]
-        print verts_taxel_int.size()
-
-
-
-        #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p10"
+        print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p10"
 
         verts_red = torch.stack([verts[:, 1325, :],
                                 verts[:, 336, :],  # head
@@ -680,8 +708,6 @@ class CNN(nn.Module):
                                 verts[:, 5209, :],  # r elbow
                                 verts[:, 1960, :],  # l wrist
                                 verts[:, 5423, :]]).permute(1, 0, 2)  # r wrist
-
-
 
         verts_offset = torch.Tensor(verts_red.clone().detach().cpu().numpy()).type(self.dtype)
         targets_est_detached = torch.Tensor(targets_est.clone().detach().cpu().numpy()).type(self.dtype)
@@ -867,5 +893,5 @@ class CNN(nn.Module):
             scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1./24)) #weight the joints by how many there are USE 24 EVEN ON REAL DATA
 
         #print scores[0, :]
-        return  scores, targets_est_np, targets_est_reduced_np, betas_est_np
+        return  scores, mesh_matrix_batch, contact_matrix_batch, targets_est_np, targets_est_reduced_np, betas_est_np
 

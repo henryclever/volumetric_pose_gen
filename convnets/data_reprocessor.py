@@ -174,7 +174,6 @@ def fix_angles_in_dataset():
     pickle.dump(laying_data, open(os.path.join(filename), 'wb'))
 
 
-
 def reprocess_synth_data():
     # fix_angles_in_dataset()
 

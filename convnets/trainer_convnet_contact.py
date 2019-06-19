@@ -100,7 +100,7 @@ class PhysicalTrainer():
         self.batch_size = 128
         self.num_epochs = 300
         self.include_inter = True
-        self.shuffle = True
+        self.shuffle = False
 
         self.count = 0
 
@@ -672,14 +672,7 @@ class PhysicalTrainer():
                         scores_zeros = np.zeros((batch[0].numpy().shape[0], 34)) #34 is 10 shape params and 24 joint euclidean errors
                     scores_zeros = Variable(torch.Tensor(scores_zeros).type(dtype))
 
-                    if self.loss_vector_type == 'anglesR':
-                        scores, targets_est, _, betas_est = self.model.forward_kinematic_R(images_up, gender_switch,
-                                                                                           targets, is_training = True,
-                                                                                           betas = betas,
-                                                                                           angles_gt = angles_gt,
-                                                                                           root_shift = root_shift) # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
-                    elif self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
-                        scores, targets_est, _, betas_est = self.model.forward_kinematic_angles(images_up, gender_switch,
+                    scores, mmb, cmb, targets_est, _, betas_est = self.model.forward_kinematic_angles(images_up, gender_switch,
                                                                                            synth_real_switch,
                                                                                            targets, is_training=True,
                                                                                            betas=betas,
@@ -758,6 +751,7 @@ class PhysicalTrainer():
                     self.im_sample = images.data
                     #self.im_sample = self.im_sample[:,1, :, :]
                     self.im_sample = self.im_sample[0, :].squeeze()
+                    self.im_sample = mmb[0, :, :] + 50
                     self.tar_sample = targets.data
                     self.tar_sample = self.tar_sample[0, :].squeeze()/1000
                     self.sc_sample = targets_est.clone()
@@ -860,11 +854,7 @@ class PhysicalTrainer():
 
                 scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].numpy().shape[0], 10))).type(dtype))
 
-                if self.loss_vector_type == 'anglesR':
-                    scores, targets_est, targets_est_reduced, betas_est = self.model.forward_kinematic_R(images_up, gender_switch,
-                                                                                                         0, targets, is_training=False)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
-                elif self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
-                    scores, targets_est, targets_est_reduced, betas_est = self.model.forward_kinematic_angles(images_up, gender_switch,
+                scores, mmb, cmb, targets_est, targets_est_reduced, betas_est = self.model.forward_kinematic_angles(images_up, gender_switch,
                                                                                                               0, targets, is_training=False,
                                                                                                               reg_angles = self.opt.reg_angles)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
 
@@ -998,8 +988,8 @@ if __name__ == "__main__":
 
 
     if opt.quick_test == True:
-        #training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff.p')
-        training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1087_rightside_stiff.p')
+        training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff.p')
+        #training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1087_rightside_stiff.p')
         #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
         #training_database_file_m.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
         #training_database_file_f.append(filepath_prefix_qt + 'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
