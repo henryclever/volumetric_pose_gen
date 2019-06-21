@@ -7,6 +7,7 @@ from kinematics_lib import KinematicsLib
 import scipy.stats as ss
 import torchvision
 import resnet
+import time
 
 class CNN(nn.Module):
     def __init__(self, mat_size, out_size, hidden_dim, kernel_size, loss_vector_type, batch_size, split = False, filepath = '/home/henry/'):
@@ -472,13 +473,62 @@ class CNN(nn.Module):
         return verts, J_est, targets_est
 
 
-    def compute_depth_contact_planes(self, verts):
 
+    def compute_depth_contact_planes(self, verts, bed_angle_batch):
         cbs = verts.size()[0] #current batch size
+        bend_taxel_loc = 41
+
+        bed_angle_batch = bed_angle_batch.mul(np.pi/180)
+        bed_angle_batch_sin = torch.sin(bed_angle_batch)
+        bed_angle_batch_cos = torch.cos(bed_angle_batch)
 
         #compute the depth and contact maps from the mesh
-        import time
-        verts_taxel = verts.clone() / 0.0286
+        verts_taxel = verts.clone()
+        verts_rot_taxel = verts.clone()
+
+        bend_loc = bend_taxel_loc*0.0286
+
+        # import matplotlib.pyplot as plt
+        # plt.plot(-vertices[:, 1], vertices[:, 2], 'r.')
+
+        #print bed_angle_batch_sin.size()
+        #print verts_taxel[:, :, 2].size()
+
+        #print bed_angle_batch_sin
+        #print verts_taxel[:, 0, 2]
+        #print torch.mul(bed_angle_batch_sin, verts_taxel[:, :, 2].permute(1, 0)).permute(1, 0)[:, 0]
+
+
+        verts_rot_taxel[:, :, 1] = torch.mul(bed_angle_batch_sin, verts_taxel[:, :, 2].permute(1, 0)).permute(1, 0) - \
+                                   torch.mul(bed_angle_batch_cos, (bend_loc - verts_taxel[:, :, 1]).permute(1, 0)).permute(1, 0) + bend_loc
+
+        verts_rot_taxel[:, :, 2] = torch.mul(bed_angle_batch_cos, verts_taxel[:, :, 2].permute(1, 0)).permute(1, 0) + \
+                                   torch.mul(bed_angle_batch_sin, (bend_loc - verts_taxel[:, :, 1]).permute(1, 0)).permute(1, 0)
+
+
+
+        #import matplotlib.pyplot as plt
+        #plt.plot(-verts_taxel.cpu().detach().numpy()[0, :, 1], verts_taxel.cpu().detach().numpy()[0, :, 2], 'r.')
+
+        verts_taxel = torch.cat((verts_taxel, verts_taxel[:, 0:3000, :]*0+3.0), dim = 1)
+
+        for i in range(cbs):
+            body_verts = verts_taxel[i, verts_taxel[i, :, 1] < bend_loc]
+            head_verts = verts_rot_taxel[i, verts_rot_taxel[i, :, 1] >= bend_loc]
+
+            verts_taxel[i, 0:body_verts.size()[0], :] = body_verts
+            #print verts_taxel[i, body_verts.size()[0]:(body_verts.size()[0]+head_verts.size()[0]), :].size()
+            #print verts_taxel[i, :, :].size()
+            verts_taxel[i, body_verts.size()[0]:(body_verts.size()[0]+head_verts.size()[0]), :] = head_verts
+            verts_taxel[i, body_verts.size()[0]+head_verts.size()[0]:, :] *= 0
+
+
+        #plt.plot(-verts_taxel.cpu().detach().numpy()[0, :, 1], verts_taxel.cpu().detach().numpy()[0, :, 2], 'k.')
+
+        #plt.axis([-1.8, -0.2, -0.3, 1.0])
+        #plt.show()
+
+        verts_taxel /= 0.0286
         verts_taxel[:, :, 0] -= 10
         verts_taxel[:, :, 1] -= 10
         verts_taxel[:, :, 2] *= 1000
@@ -486,21 +536,20 @@ class CNN(nn.Module):
 
         verts_taxel_int = (verts_taxel).type(self.dtypeInt)
 
-        print self.filler_taxels.size(), verts_taxel_int.size()
-
         verts_taxel_int = torch.cat((self.filler_taxels[0:cbs, :, :], verts_taxel_int), dim=1)
 
-        vertice_sorting_method = (verts_taxel_int[:, :, 0:1]+1) * 10000000 + \
-                                 (verts_taxel_int[:, :, 1:2]+1) * 100000 + \
-                                  verts_taxel_int[:, :, 2:3]
-        verts_taxel_int = torch.cat((vertice_sorting_method, verts_taxel_int), dim = 2)
+        vertice_sorting_method = (verts_taxel_int[:, :, 0:1] + 1) * 10000000 + \
+                                 (verts_taxel_int[:, :, 1:2] + 1) * 100000 + \
+                                 verts_taxel_int[:, :, 2:3]
+        verts_taxel_int = torch.cat((vertice_sorting_method, verts_taxel_int), dim=2)
         for i in range(cbs):
             t1 = time.time()
-            x = torch.unique(verts_taxel_int[i, :, :], sorted = True, return_inverse=False, dim = 0) #this takes the most time
+            x = torch.unique(verts_taxel_int[i, :, :], sorted=True, return_inverse=False,
+                             dim=0)  # this takes the most time
             t2 = time.time()
 
-            x[1:, 0] = torch.abs((x[:-1, 1]-x[1:, 1]) + (x[:-1, 2]-x[1:, 2]))
-            x[1:, 1:4] = x[1:, 1:4]*x[1:, 0:1]
+            x[1:, 0] = torch.abs((x[:-1, 1] - x[1:, 1]) + (x[:-1, 2] - x[1:, 2]))
+            x[1:, 1:4] = x[1:, 1:4] * x[1:, 0:1]
             x = x[x[:, 0] != 0, :]
             x = x[:, 1:]
             x = x[x[:, 1] < 64, :]
@@ -510,37 +559,38 @@ class CNN(nn.Module):
             mesh_matrix = x[:, 2].view(27, 64)
 
             if i == 0:
-                #print mesh_matrix[0:15, 32:]
+                # print mesh_matrix[0:15, 32:]
                 mesh_matrix = mesh_matrix.transpose(0, 1).flip(0).unsqueeze(0)
-                #print mesh_matrix[0, 1:32, 0:15]
+                # print mesh_matrix[0, 1:32, 0:15]
                 mesh_matrix_batch = mesh_matrix.clone()
             else:
                 mesh_matrix = mesh_matrix.transpose(0, 1).flip(0).unsqueeze(0)
-                mesh_matrix_batch = torch.cat((mesh_matrix_batch, mesh_matrix), dim = 0)
+                mesh_matrix_batch = torch.cat((mesh_matrix_batch, mesh_matrix), dim=0)
 
             t3 = time.time()
-           # print i, t3 - t2, t2 - t1
+        # print i, t3 - t2, t2 - t1
 
         mesh_matrix_batch[mesh_matrix_batch == 20000] = 0
         mesh_matrix_batch = mesh_matrix_batch.type(self.dtype)
-        mesh_matrix_batch *= 0.0286# shouldn't need this. leave as int.
+        mesh_matrix_batch *= 0.0286  # shouldn't need this. leave as int.
 
         self.mesh_patching_array *= 0
         self.mesh_patching_array[0:cbs, 1:65, 1:28, 0] = mesh_matrix_batch.clone()
         self.mesh_patching_array[0:cbs, 1:65, 1:28, 0][self.mesh_patching_array[0:cbs, 1:65, 1:28, 0] > 0] = 0
         self.mesh_patching_array[0:cbs, 1:65, 1:28, 0] = self.mesh_patching_array[0:cbs, 0:64, 0:27, 0] + \
-                                                                        self.mesh_patching_array[0:cbs, 1:65, 0:27, 0] + \
-                                                                        self.mesh_patching_array[0:cbs, 2:66, 0:27, 0] + \
-                                                                        self.mesh_patching_array[0:cbs, 0:64, 1:28, 0] + \
-                                                                        self.mesh_patching_array[0:cbs, 2:66, 1:28, 0] + \
-                                                                        self.mesh_patching_array[0:cbs, 0:64, 2:29, 0] + \
-                                                                        self.mesh_patching_array[0:cbs, 1:65, 2:29, 0] + \
-                                                                        self.mesh_patching_array[0:cbs, 2:66, 2:29, 0]
+                                                         self.mesh_patching_array[0:cbs, 1:65, 0:27, 0] + \
+                                                         self.mesh_patching_array[0:cbs, 2:66, 0:27, 0] + \
+                                                         self.mesh_patching_array[0:cbs, 0:64, 1:28, 0] + \
+                                                         self.mesh_patching_array[0:cbs, 2:66, 1:28, 0] + \
+                                                         self.mesh_patching_array[0:cbs, 0:64, 2:29, 0] + \
+                                                         self.mesh_patching_array[0:cbs, 1:65, 2:29, 0] + \
+                                                         self.mesh_patching_array[0:cbs, 2:66, 2:29, 0]
         self.mesh_patching_array[0:cbs, :, :, 0] /= 8
         self.mesh_patching_array[0:cbs, 1:65, 1:28, 1] = mesh_matrix_batch.clone()
         self.mesh_patching_array[0:cbs, 1:65, 1:28, 1][self.mesh_patching_array[0:cbs, 1:65, 1:28, 1] < 0] = 0
         self.mesh_patching_array[0:cbs, 1:65, 1:28, 1][self.mesh_patching_array[0:cbs, 1:65, 1:28, 1] > 0] = 1
-        self.mesh_patching_array[0:cbs, 1:65, 1:28, 2] = self.mesh_patching_array[0:cbs, 1:65, 1:28, 0] * self.mesh_patching_array[0:cbs, 1:65, 1:28, 1]
+        self.mesh_patching_array[0:cbs, 1:65, 1:28, 2] = self.mesh_patching_array[0:cbs, 1:65, 1:28,
+                                                         0] * self.mesh_patching_array[0:cbs, 1:65, 1:28, 1]
         self.mesh_patching_array[0:cbs, 1:65, 1:28, 3] = self.mesh_patching_array[0:cbs, 1:65, 1:28, 2].clone()
         self.mesh_patching_array[0:cbs, 1:65, 1:28, 3][self.mesh_patching_array[0:cbs, 1:65, 1:28, 3] != 0] = 1.
         self.mesh_patching_array[0:cbs, 1:65, 1:28, 3] = 1 - self.mesh_patching_array[0:cbs, 1:65, 1:28, 3]
@@ -694,7 +744,9 @@ class CNN(nn.Module):
 
         print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p9"
 
-        mesh_matrix_batch, contact_matrix_batch = self.compute_depth_contact_planes(verts)
+        bed_angle_batch = torch.mean(images[:, 2, 1:3, 0], dim = 1)
+
+        mesh_matrix_batch, contact_matrix_batch = self.compute_depth_contact_planes(verts, bed_angle_batch)
 
         print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p10"
 
