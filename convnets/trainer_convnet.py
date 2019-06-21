@@ -190,7 +190,10 @@ class PhysicalTrainer():
                                                                                 self.train_a_flat,
                                                                                 self.include_inter, self.mat_size,
                                                                                 self.verbose)
-        train_xa = np.array(train_xa)
+        train_xa = np.array(train_xa).astype(float32)
+        train_contact = np.copy(train_xa[:, 0:1, :, :])
+        train_contact[train_contact > 0] = 100.
+        train_xa = np.concatenate((train_contact, train_xa), axis = 1)
         self.train_x_tensor = torch.Tensor(train_xa)
 
         print self.train_x_tensor.shape, 'tensor shape'
@@ -207,7 +210,9 @@ class PhysicalTrainer():
                                         dat_f_synth['body_shape'][entry][0:10],
                                         dat_f_synth['joint_angles'][entry][0:72],
                                         dat_f_synth['root_xyz_shift'][entry][0:3] + np.array([0.0, 0.0, -0.0375]),
-                                        [1], [0], [1]), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
+                                        [1], [0], [1],
+                                        [dat_f_synth['body_mass'][entry]],
+                                        [(dat_f_synth['body_height'][entry]-1.)*100],), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
                     self.train_y_flat.append(c)
                 else:
                     # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
@@ -227,7 +232,9 @@ class PhysicalTrainer():
                                         dat_m_synth['body_shape'][entry][0:10],
                                         dat_m_synth['joint_angles'][entry][0:72],
                                         dat_m_synth['root_xyz_shift'][entry][0:3] + np.array([0.0, 0.0, -0.0375]),
-                                        [0], [1], [1]), axis=0)  # [x1], [x2], [x3]: male synth: 0, 1, 1.
+                                        [0], [1], [1],
+                                        [dat_m_synth['body_mass'][entry]],
+                                        [(dat_m_synth['body_height'][entry]-1.)*100],), axis=0)  # [x1], [x2], [x3]: male synth: 0, 1, 1.
                     self.train_y_flat.append(c)
                 else:
                     # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
@@ -268,7 +275,9 @@ class PhysicalTrainer():
                                     dat_f_real['markers_xyz_m'][entry][12:15] * 1000,  # R WRIST
                                     np.array(6 * [0]),
                                     np.array(85 * [0]),
-                                    [1], [0], [0]), axis=0)  # [x1], [x2], [x3]: female real: 1, 0, 0.
+                                    [1], [0], [0],
+                                    [dat_f_real['body_mass'][entry]],
+                                    [(dat_f_real['body_height'][entry]-1.)*100],), axis=0)  # [x1], [x2], [x3]: female real: 1, 0, 0.
                 self.train_y_flat.append(c)
                 self.train_y_flat.append(c)
                 self.train_y_flat.append(c)
@@ -301,7 +310,9 @@ class PhysicalTrainer():
                                     dat_m_real['markers_xyz_m'][entry][12:15] * 1000,  # R WRIST
                                     np.array(6 * [0]),
                                     np.array(85 * [0]),
-                                    [0], [1], [0]), axis=0)  # [x1], [x2], [x3]: male real: 0, 1, 0.
+                                    [0], [1], [0], #gender and is real or not
+                                    [dat_m_real['body_mass'][entry]],
+                                    [(dat_m_real['body_height'][entry]-1.)*100],), axis=0)  # [x1], [x2], [x3]: male real: 0, 1, 0.
                 self.train_y_flat.append(c)
                 self.train_y_flat.append(c)
                 self.train_y_flat.append(c)
@@ -351,7 +362,10 @@ class PhysicalTrainer():
         if len(self.test_x_flat) == 0: print("NO TESTING DATA INCLUDED")
 
         test_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.test_x_flat, self.test_a_flat, self.include_inter, self.mat_size, self.verbose)
-        test_xa = np.array(test_xa)
+        test_xa = np.array(test_xa).astype(float32)
+        test_contact = np.copy(test_xa[:, 0:1, :, :])
+        test_contact[test_contact > 0] = 100.
+        test_xa = np.concatenate((test_contact, test_xa), axis = 1)
         self.test_x_tensor = torch.Tensor(test_xa)
 
 
@@ -370,7 +384,9 @@ class PhysicalTrainer():
                     c = np.concatenate((fixed_head_markers,
                                         fixed_torso_markers,
                                         test_dat_f['markers_xyz_m'][entry][6:] * 1000,
-                                        [1], [0]), axis=0) # shapedirs (N, 6890, 3, 10)
+                                        [1], [0], [0],
+                                        [test_dat_f['body_mass'][entry]],
+                                        [(test_dat_f['body_height'][entry]-1.)*100]), axis=0) # shapedirs (N, 6890, 3, 10)
                     self.test_y_flat.append(c)
                 else:
                     self.test_y_flat.append(test_dat_f['markers_xyz_m'][entry] * 1000)
@@ -389,7 +405,9 @@ class PhysicalTrainer():
                     c = np.concatenate((fixed_head_markers,
                                         fixed_torso_markers,
                                         test_dat_m['markers_xyz_m'][entry][6:] * 1000,
-                                        [0], [1]), axis=0) # shapedirs (N, 6890, 3, 10)
+                                        [0], [1], [0],
+                                        [test_dat_m['body_mass'][entry]],
+                                        [(test_dat_m['body_height'][entry]-1.)*100]), axis=0) # shapedirs (N, 6890, 3, 10)
                     self.test_y_flat.append(c)
                 else:
                     self.test_y_flat.append(test_dat_m['markers_xyz_m'][entry] * 1000)
@@ -621,6 +639,8 @@ class PhysicalTrainer():
                     batch.append(batch[1][:, 154:157]) #root pos
                     batch.append(batch[1][:, 157:159]) #gender switch
                     batch.append(batch[1][:, 159]) #synth vs real switch
+                    batch.append(batch[1][:, 160:161]) #mass, kg
+                    batch.append(batch[1][:, 161:162]) #height, kg
 
                     #cut it off so batch[2] is only the xyz marker targets
                     batch[1] = batch[1][:, 0:72]
@@ -631,9 +651,19 @@ class PhysicalTrainer():
                                                                             include_inter=self.include_inter,
                                                                             loss_vector_type=self.loss_vector_type)
 
+                    images_up_non_tensor = np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple = 2))
+                    images_up_non_tensor[:, 1:, :, :] = PreprocessingLib().preprocessing_add_image_noise(images_up_non_tensor[:, 1:, :, :])
 
-                    images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple = 2)))
                     images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
+
+
+                    weight_input = torch.ones((images_up.size()[0], images_up.size()[2]*images_up.size()[3])).type(dtype)
+                    weight_input*=batch[7].type(dtype)
+                    weight_input = weight_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
+                    height_input = torch.ones((images_up.size()[0], images_up.size()[2]*images_up.size()[3])).type(dtype)
+                    height_input*=batch[8].type(dtype)
+                    height_input = height_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
+                    images_up = torch.cat((images_up, weight_input, height_input), 1)
 
                     images, targets, betas = Variable(batch[0].type(dtype), requires_grad = False), \
                                              Variable(batch[1].type(dtype), requires_grad = False), \
@@ -718,7 +748,7 @@ class PhysicalTrainer():
                 #print "got here"
                 #print batch_idx, opt.log_interval
 
-                if True:#batch_idx % opt.log_interval == 0:
+                if batch_idx % opt.log_interval == 0:
                     #if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC':
                         #print targets.data.size()
                         #print targets_est.shape
@@ -741,7 +771,7 @@ class PhysicalTrainer():
 
                     self.im_sample = images.data
                     #self.im_sample = self.im_sample[:,1, :, :]
-                    self.im_sample = self.im_sample[0, :].squeeze()
+                    self.im_sample = self.im_sample[0, 1:].squeeze()
                     self.tar_sample = targets.data
                     self.tar_sample = self.tar_sample[0, :].squeeze()/1000
                     self.sc_sample = targets_est.clone()
@@ -816,6 +846,8 @@ class PhysicalTrainer():
 
                 #get the direct joint locations
                 batch.append(batch[1][:, 30:32])
+                batch.append(batch[1][:, 33:34]) #mass, kg
+                batch.append(batch[1][:, 34:35]) #height, kg
                 batch[1] = batch[1][:, 0:30]
 
 
@@ -825,6 +857,14 @@ class PhysicalTrainer():
 
                 gender_switch = Variable(batch[2].type(dtype), requires_grad=False)
 
+
+                weight_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(dtype)
+                weight_input *= batch[3].type(dtype)
+                weight_input = weight_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
+                height_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(dtype)
+                height_input *= batch[4].type(dtype)
+                height_input = height_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
+                images_up = torch.cat((images_up, weight_input, height_input), 1)
 
                 self.optimizer.zero_grad()
 
@@ -887,7 +927,7 @@ class PhysicalTrainer():
         #print batch[0][0,2,10,10].item(), 'validation bed angle'
         self.im_sampleval = images.data
         # #self.im_sampleval = self.im_sampleval[:,0,:,:]
-        self.im_sampleval = self.im_sampleval[0, :].squeeze()
+        self.im_sampleval = self.im_sampleval[0, 1:].squeeze()
         self.tar_sampleval = targets.data #this is just 10 x 3
         self.tar_sampleval = self.tar_sampleval[0, :].squeeze() / 1000
         self.sc_sampleval = targets_est #score space is larger is 72 x3

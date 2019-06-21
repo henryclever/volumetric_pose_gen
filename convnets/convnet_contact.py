@@ -34,7 +34,7 @@ class CNN(nn.Module):
 
         self.CNN_pack1 = nn.Sequential(
 
-            nn.Conv2d(5, 256, kernel_size=7, stride=2, padding=3),
+            nn.Conv2d(6, 256, kernel_size=7, stride=2, padding=3),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.1, inplace=False),
             nn.MaxPool2d(3, stride=2),
@@ -53,7 +53,7 @@ class CNN(nn.Module):
 
         self.CNN_pack2 = nn.Sequential(
 
-            nn.Conv2d(5, 32, kernel_size = 7, stride = 2, padding = 3),
+            nn.Conv2d(6, 32, kernel_size = 7, stride = 2, padding = 3),
             nn.ReLU(inplace = True),
             nn.Dropout(p = 0.1, inplace=False),
             nn.MaxPool2d(3, stride=2),
@@ -190,19 +190,19 @@ class CNN(nn.Module):
                 self.bounds = torch.Tensor(np.array([[-np.pi/3, np.pi/3], [-np.pi/3, np.pi/3], [-np.pi/3, np.pi/3],
                                        [-2.753284558994594, -0.14634814003149707], [-1.0403111466710133, 1.1185343875601006], [-0.421484532214729, 0.810063927501682],
                                        [-2.753284558994594, -0.14634814003149707], [-1.1185343875601006, 1.0403111466710133],  [-0.810063927501682, 0.421484532214729],
-                                       [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
+                                       [-np.pi / 3, np.pi / 3], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
                                        [0.0, 2.7020409229712863], [-0.01, 0.01], [-0.01, 0.01],  # knee
                                        [0.0, 2.7020409229712863], [-0.01, 0.01], [-0.01, 0.01],
-                                       [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
+                                       [-np.pi / 3, np.pi / 3], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
                                        [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # ankle, pi/36 or 5 deg
                                        [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # ankle, pi/36 or 5 deg
-                                       [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
+                                       [-np.pi / 3, np.pi / 3], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
                                        [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01],  # foot
                                        [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01],  # foot
-                                       [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],  # neck
+                                       [-np.pi / 3, np.pi / 3], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],  # neck
                                        [-1.8674195346872975* 1 / 3, 1.410545172086535  * 1 / 3], [-1.530112726921327 * 1 / 3, 1.2074724617209949 * 1 / 3], [-1.9550515937478927 * 1 / 3, 1.7587935205169856 * 1 / 3],
                                        [-1.8674195346872975 * 1 / 3, 1.410545172086535  * 1 / 3], [-1.2074724617209949 * 1 / 3, 1.530112726921327 * 1 / 3], [-1.7587935205169856 * 1 / 3, 1.9550515937478927 * 1 / 3],
-                                       [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],  # head
+                                       [-np.pi / 3, np.pi / 3], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],  # head
                                        [-1.8674195346872975 * 2 / 3, 1.410545172086535  * 2 / 3], [-1.530112726921327 * 2 / 3, 1.2074724617209949 * 2 / 3], [-1.9550515937478927 * 2 / 3, 1.7587935205169856 * 2 / 3],
                                        [-1.8674195346872975 * 2 / 3, 1.410545172086535  * 2 / 3], [-1.2074724617209949 * 2 / 3, 1.530112726921327 * 2 / 3], [-1.7587935205169856 * 2 / 3, 1.9550515937478927 * 2 / 3],
                                        [-0.01, 0.01], [-2.463868908637374, 0.0], [-0.01, 0.01],  # elbow
@@ -438,7 +438,11 @@ class CNN(nn.Module):
 
         targets_est, A_est = KinematicsLib().batch_global_rigid_transformation(Rs_est[start_incr:end_incr, :], J_est, self.parents, self.GPU, rotate_base=False)
 
-        targets_est = targets_est - J_est[:, 0:1, :] + root_shift_est[start_incr:end_incr, :].unsqueeze(1)
+        #if start_incr == 0:
+        #    print root_shift_est[0, :], 'rootshift'
+        #    print J_est[0, :],'Jest'
+
+        targets_est = targets_est + root_shift_est[start_incr:end_incr, :].unsqueeze(1) - J_est[:, 0:1, :]
 
         # assemble a reduced form of the transformed mesh
         #v_shaped_red = torch.stack([v_shaped[:, 1325, :],
@@ -468,7 +472,7 @@ class CNN(nn.Module):
         v_posed_homo = torch.cat([v_posed, torch.ones(sub_batch_size, v_posed.shape[1], 1).type(self.dtype)], dim=2)
         v_homo = torch.matmul(T, torch.unsqueeze(v_posed_homo, -1))
 
-        verts = v_homo[:, :, :3, 0] - J_est[:, 0:1, :] + root_shift_est[start_incr:end_incr, :].unsqueeze(1)
+        verts = v_homo[:, :, :3, 0] + root_shift_est[start_incr:end_incr, :].unsqueeze(1) - J_est[:, 0:1, :]
 
         return verts, J_est, targets_est
 
@@ -476,11 +480,14 @@ class CNN(nn.Module):
 
     def compute_depth_contact_planes(self, verts, bed_angle_batch):
         cbs = verts.size()[0] #current batch size
-        bend_taxel_loc = 41
+        bend_taxel_loc = 48
+
+        #verts[:, :, 1] -= 10*0.0286
 
         bed_angle_batch = bed_angle_batch.mul(np.pi/180)
         bed_angle_batch_sin = torch.sin(bed_angle_batch)
         bed_angle_batch_cos = torch.cos(bed_angle_batch)
+
 
         #compute the depth and contact maps from the mesh
         verts_taxel = verts.clone()
@@ -510,7 +517,7 @@ class CNN(nn.Module):
         #import matplotlib.pyplot as plt
         #plt.plot(-verts_taxel.cpu().detach().numpy()[0, :, 1], verts_taxel.cpu().detach().numpy()[0, :, 2], 'r.')
 
-        verts_taxel = torch.cat((verts_taxel, verts_taxel[:, 0:3000, :]*0+3.0), dim = 1)
+        verts_taxel = torch.cat((verts_taxel, verts_taxel[:, 0:6000, :]*0+3.0), dim = 1)
 
         for i in range(cbs):
             body_verts = verts_taxel[i, verts_taxel[i, :, 1] < bend_loc]
@@ -526,7 +533,7 @@ class CNN(nn.Module):
         #plt.plot(-verts_taxel.cpu().detach().numpy()[0, :, 1], verts_taxel.cpu().detach().numpy()[0, :, 2], 'k.')
 
         #plt.axis([-1.8, -0.2, -0.3, 1.0])
-        #plt.show()
+       # plt.show()
 
         verts_taxel /= 0.0286
         verts_taxel[:, :, 0] -= 10
@@ -588,7 +595,7 @@ class CNN(nn.Module):
         self.mesh_patching_array[0:cbs, :, :, 0] /= 8
         self.mesh_patching_array[0:cbs, 1:65, 1:28, 1] = mesh_matrix_batch.clone()
         self.mesh_patching_array[0:cbs, 1:65, 1:28, 1][self.mesh_patching_array[0:cbs, 1:65, 1:28, 1] < 0] = 0
-        self.mesh_patching_array[0:cbs, 1:65, 1:28, 1][self.mesh_patching_array[0:cbs, 1:65, 1:28, 1] > 0] = 1
+        self.mesh_patching_array[0:cbs, 1:65, 1:28, 1][self.mesh_patching_array[0:cbs, 1:65, 1:28, 1] >= 0] = 1
         self.mesh_patching_array[0:cbs, 1:65, 1:28, 2] = self.mesh_patching_array[0:cbs, 1:65, 1:28,
                                                          0] * self.mesh_patching_array[0:cbs, 1:65, 1:28, 1]
         self.mesh_patching_array[0:cbs, 1:65, 1:28, 3] = self.mesh_patching_array[0:cbs, 1:65, 1:28, 2].clone()
@@ -601,6 +608,8 @@ class CNN(nn.Module):
         contact_matrix_batch = mesh_matrix_batch.clone()
         contact_matrix_batch[contact_matrix_batch >= 0] = 0
         contact_matrix_batch[contact_matrix_batch < 0] = 1
+
+        #print torch.min(mesh_matrix_batch[0, :, :]), torch.max(mesh_matrix_batch[0, :, :])
 
         return mesh_matrix_batch, contact_matrix_batch
 
@@ -690,13 +699,14 @@ class CNN(nn.Module):
             scores[:, 0:10] = betas.clone()
             scores[:, 13:85] = angles_gt.clone()
             root_shift_est = root_shift
+            #print root_shift[0, :], "root shift"
 
             if self.loss_vector_type == 'anglesDC':
 
                 #normalize for tan activation function
                 scores[:, 13:85] -= torch.mean(self.bounds[0:72,0:2], dim = 1)
                 scores[:, 13:85] *= (2. / torch.abs(self.bounds[0:72, 0] - self.bounds[0:72, 1]))
-                scores[:, 13:85] = scores[:, 13:85].tanh()
+                #scores[:, 13:85] = scores[:, 13:85].tanh()
                 scores[:, 13:85] /= (2. / torch.abs(self.bounds[0:72, 0] - self.bounds[0:72, 1]))
                 scores[:, 13:85] += torch.mean(self.bounds[0:72,0:2], dim = 1)
 
@@ -721,6 +731,8 @@ class CNN(nn.Module):
         gender_switch = gender_switch.unsqueeze(1)
         current_batch_size = gender_switch.size()[0]
 
+        #print root_shift_est[0, :], 'root shift'
+
         #break things up into sub batches and pass through the mesh
         num_normal_sub_batches = current_batch_size/self.N
         if current_batch_size%self.N != 0:
@@ -742,13 +754,15 @@ class CNN(nn.Module):
             start_incr += sub_batch_incr
 
 
-        print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p9"
+
+        #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p9"
+        #print verts[0, 0:10, :]
 
         bed_angle_batch = torch.mean(images[:, 2, 1:3, 0], dim = 1)
 
         mesh_matrix_batch, contact_matrix_batch = self.compute_depth_contact_planes(verts, bed_angle_batch)
 
-        print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p10"
+        #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p10"
 
         verts_red = torch.stack([verts[:, 1325, :],
                                 verts[:, 336, :],  # head
@@ -943,6 +957,9 @@ class CNN(nn.Module):
 
             scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1/0.1282715100608753)) #weight the 10 joints by std
             scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1./24)) #weight the joints by how many there are USE 24 EVEN ON REAL DATA
+
+        mesh_matrix_batch = mesh_matrix_batch.type(self.dtype)
+        contact_matrix_batch = contact_matrix_batch.type(self.dtype)
 
         #print scores[0, :]
         return  scores, mesh_matrix_batch, contact_matrix_batch, targets_est_np, targets_est_reduced_np, betas_est_np

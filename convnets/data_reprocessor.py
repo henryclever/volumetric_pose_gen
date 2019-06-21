@@ -455,14 +455,14 @@ def reprocess_real_data_height_wt():
 
 
 def get_contact_map_from_synth():
-    all_data_names = [#["f", "lay", "lowerbody", 2000, 2047],
-                    #["f", "lay", "upperbody", 2000, 2103],
-                    #["f", "lay", "leftside", 2000, 2072],
-                    #["f", "lay", "rightside", 2000, 2086],
-                    #["f", "lay", "none", 2000, 2067],
-                    #["f", "sit", "lowerbody", 1000, 1106],
-                    #["f", "sit", "upperbody", 1000, 1121],
-                    #["f", "sit", "leftside", 1000, 1102],
+    all_data_names = [["f", "lay", "lowerbody", 2000, 2047],
+                    ["f", "lay", "upperbody", 2000, 2103],
+                    ["f", "lay", "leftside", 2000, 2072],
+                    ["f", "lay", "rightside", 2000, 2086],
+                    ["f", "lay", "none", 2000, 2067],
+                    ["f", "sit", "lowerbody", 1000, 1106],
+                    ["f", "sit", "upperbody", 1000, 1121],
+                    ["f", "sit", "leftside", 1000, 1102],
                     ["f", "sit", "rightside", 1000, 1087],
                     ["f", "sit", "none", 1000, 1096],
                     ["m", "lay", "lowerbody", 2000, 2012],
@@ -484,7 +484,7 @@ def get_contact_map_from_synth():
     filler_taxels = np.array(filler_taxels)
 
 
-    for gpsn in all_data_names:
+    for gpsn in all_data_names[18:20]:
         gender = gpsn[0]
         posture = gpsn[1]
         stiffness = gpsn[2]
@@ -503,8 +503,10 @@ def get_contact_map_from_synth():
         model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_' + gender + '_lbs_10_207_0_v1.0.0.pkl'
         m = load_model(model_path)
 
-        training_data_dict = load_pickle('/home/henry/data/synth/side_up_fw/train_' + gender + '_' + posture + '_' + str(num_resting_poses) + '_of_' + str(
-                                num_resting_poses_tried) + '_' + stiffness + '_stiff.p')
+        filename = '/home/henry/data/synth/side_up_fw/train_' + gender + '_' + posture + '_' + str(num_resting_poses) + '_of_' + str(
+                                num_resting_poses_tried) + '_' + stiffness + '_stiff.p'
+        training_data_dict = load_pickle(filename)
+        print "loaded ", filename
 
         betas = training_data_dict['body_shape']
         pose = training_data_dict['joint_angles']
@@ -513,7 +515,9 @@ def get_contact_map_from_synth():
         training_data_dict['mesh_contact'] = []
         root_xyz_shift = training_data_dict['root_xyz_shift']
 
+
         for index in range(len(betas)):
+            #index += 4
             for beta_idx in range(10):
                 m.betas[beta_idx] = betas[index][beta_idx]
             for pose_idx in range(72):
@@ -524,20 +528,28 @@ def get_contact_map_from_synth():
             pmat = np.clip(images[index].reshape(64, 27)*5., 0, 100)
             curr_root_shift = np.array(root_xyz_shift[index])
 
-            joints = np.array(m.J_transformed) + curr_root_shift + np.array([-0.286, 0.0, 0.0])
-            vertices = np.array(m.r) + curr_root_shift + np.array([-0.286, 0.0, -0.075])
+            #print curr_root_shift,'currroot'
+            #print m.J_transformed, 'Jest'
+
+            joints = np.array(m.J_transformed) + curr_root_shift + np.array([0.0, 0.0, -0.075]) - np.array(m.J_transformed)[0:1, :]
+            vertices = np.array(m.r) + curr_root_shift + np.array([0.0, 0.0, -0.075]) - np.array(m.J_transformed)[0:1, :]
             vertices_rot = np.copy(vertices)
 
-            print vertices.shape
-            print vertices[0:10, :]
+            #print vertices.shape
+            #print vertices[0:10, :], 'verts'
+
+            #print curr_root_shift, 'curr shift' #[0.59753822 1.36742909 0.09295963]
+
+
             #vertices[0, :] = np.array([0.0, 1.173, -5.0])
 
-            bend_loc = 1.173
+            bend_loc = 48 * 0.0286
 
 
             #import matplotlib.pyplot as plt
             #plt.plot(-vertices[:, 1], vertices[:, 2], 'r.')
-
+            #print vertices.dtype
+            #vertices = vertices.astype(float32)
 
             vertices_rot[:, 1] = vertices[:, 2]*np.sin(bed_angle) - (bend_loc - vertices[:, 1])*np.cos(bed_angle) + bend_loc
             vertices_rot[:, 2] = vertices[:, 2]*np.cos(bed_angle) + (bend_loc - vertices[:, 1])*np.sin(bed_angle)
@@ -547,7 +559,7 @@ def get_contact_map_from_synth():
             vertices = np.concatenate((vertices[vertices[:, 1] < bend_loc], vertices_rot), axis = 0)
             #print vertices.shape
 
-            plt.plot(-vertices[:, 1], vertices[:, 2], 'k.')
+            #plt.plot(-vertices[:, 1], vertices[:, 2], 'k.')
 
             #plt.axis([-1.8, -0.2, -0.3, 1.0])
             #plt.show()
@@ -558,6 +570,8 @@ def get_contact_map_from_synth():
             vertices_taxel = vertices/0.0286
             vertices_taxel[:, 2] *= 1000
             vertices_taxel[:, 0] *= 1.04
+            vertices_taxel[:, 0] -= 10
+            vertices_taxel[:, 1] -= 10
 
             time_orig = time.time()
 
@@ -584,7 +598,7 @@ def get_contact_map_from_synth():
             vertices_taxel_int_unique = vertices_taxel_int_unique[vertices_taxel_int_unique[:, 1] >= 0, :]
             #print vertices_taxel_int_unique
 
-            print vertices_taxel_int_unique
+            #print vertices_taxel_int_unique
 
             mesh_matrix = np.flipud(vertices_taxel_int_unique[:, 2].reshape(27, 64).T).astype(float)
 
@@ -626,22 +640,24 @@ def get_contact_map_from_synth():
             training_data_dict['mesh_depth'].append(mesh_matrix)
             training_data_dict['mesh_contact'].append(contact_matrix)
 
-            print training_data_dict['images'][index].dtype
-            print training_data_dict['mesh_depth'][index].dtype
-            print training_data_dict['mesh_contact'][index].dtype
+            #print training_data_dict['images'][index].dtype
+            #print training_data_dict['mesh_depth'][index].dtype
+            #print training_data_dict['mesh_contact'][index].dtype
 
 
 
             #print m.J_transformed
 
-            VisualizationLib().visualize_pressure_map(pmat, joints+np.array([0.286, 0.286, 0.0])+10., None, mesh_matrix+50, joints+np.array([0.286, 0.286, 0.0])+10.)
-            time.sleep(5)
+            #print np.min(mesh_matrix), np.max(mesh_matrix)
+
+            #VisualizationLib().visualize_pressure_map(pmat, joints, None, mesh_matrix+50, joints)
+            #time.sleep(5)
 
             #break
 
         filename = '/home/henry/data/synth/train_' + gender + '_' + posture + '_' + str(num_resting_poses) + '_of_' + str(
-                                num_resting_poses_tried) + '_' + stiffness + '_stiff_new.p'
-        #pickle.dump(training_data_dict, open(os.path.join(filename), 'wb'))
+                                num_resting_poses_tried) + '_' + stiffness + '_stiff.p'
+        pickle.dump(training_data_dict, open(os.path.join(filename), 'wb'))
 
 
 
