@@ -9,6 +9,7 @@ import torchvision
 import resnet
 import time
 
+
 class CNN(nn.Module):
     def __init__(self, mat_size, out_size, hidden_dim, kernel_size, loss_vector_type, batch_size, split = False, filepath = '/home/henry/'):
         '''
@@ -92,17 +93,20 @@ class CNN(nn.Module):
         if torch.cuda.is_available():
             self.GPU = True
             # Use for self.GPU
-            dtype = torch.cuda.FloatTensor
-            dtypeInt = torch.cuda.IntTensor
+            dtype = torch.FloatTensor
+            dtypeInt = torch.IntTensor
+            device = torch.device('cuda:1')
             print('######################### CUDA is available! #############################')
         else:
             self.GPU = False
             # Use for CPU
             dtype = torch.FloatTensor
             dtypeInt = torch.IntTensor
+            device = torch.device('cpu')
             print('############################## USING CPU #################################')
-        self.dtype = dtype
-        self.dtypeInt = dtypeInt
+        self.dtype = torch.FloatTensor
+        self.dtypeInt = torch.IntTensor
+        self.device = device
 
 
         if loss_vector_type == 'anglesR' or loss_vector_type == 'anglesDC' or loss_vector_type == 'anglesEU':
@@ -114,21 +118,21 @@ class CNN(nn.Module):
 
             model_path_f = filepath+'git/SMPL_python_v.1.0.0/smpl/models/basicModel_f_lbs_10_207_0_v1.0.0.pkl'
             human_f = load_model(model_path_f)
-            self.v_template_f = torch.Tensor(np.array(human_f.v_template)).type(dtype)
-            self.shapedirs_f = torch.Tensor(np.array(human_f.shapedirs)).permute(0, 2, 1).type(dtype)
+            self.v_template_f = torch.Tensor(np.array(human_f.v_template)).type(dtype).to(self.device)
+            self.shapedirs_f = torch.Tensor(np.array(human_f.shapedirs)).permute(0, 2, 1).type(dtype).to(self.device)
             self.J_regressor_f = np.zeros((human_f.J_regressor.shape)) + human_f.J_regressor
-            self.J_regressor_f = torch.Tensor(np.array(self.J_regressor_f).astype(float)).permute(1, 0).type(dtype)
-            self.posedirs_f = torch.Tensor(np.array(human_f.posedirs)).type(dtype)
-            self.weights_f = torch.Tensor(np.array(human_f.weights)).type(dtype)
+            self.J_regressor_f = torch.Tensor(np.array(self.J_regressor_f).astype(float)).permute(1, 0).type(dtype).to(self.device)
+            self.posedirs_f = torch.Tensor(np.array(human_f.posedirs)).type(dtype).to(self.device)
+            self.weights_f = torch.Tensor(np.array(human_f.weights)).type(dtype).to(self.device)
 
             model_path_m = filepath+'/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
             human_m = load_model(model_path_m)
-            self.v_template_m = torch.Tensor(np.array(human_m.v_template)).type(dtype)
-            self.shapedirs_m = torch.Tensor(np.array(human_m.shapedirs)).permute(0, 2, 1).type(dtype)
+            self.v_template_m = torch.Tensor(np.array(human_m.v_template)).type(dtype).to(self.device)
+            self.shapedirs_m = torch.Tensor(np.array(human_m.shapedirs)).permute(0, 2, 1).type(dtype).to(self.device)
             self.J_regressor_m = np.zeros((human_m.J_regressor.shape)) + human_m.J_regressor
-            self.J_regressor_m = torch.Tensor(np.array(self.J_regressor_m).astype(float)).permute(1, 0).type(dtype)
-            self.posedirs_m = torch.Tensor(np.array(human_m.posedirs)).type(dtype)
-            self.weights_m = torch.Tensor(np.array(human_m.weights)).type(dtype)
+            self.J_regressor_m = torch.Tensor(np.array(self.J_regressor_m).astype(float)).permute(1, 0).type(dtype).to(self.device)
+            self.posedirs_m = torch.Tensor(np.array(human_m.posedirs)).type(dtype).to(self.device)
+            self.weights_m = torch.Tensor(np.array(human_m.weights)).type(dtype).to(self.device)
 
             #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(),"p2"
 
@@ -174,15 +178,15 @@ class CNN(nn.Module):
             # self.weights_repeat = self.weights_repeat.permute(1, 0, 2, 3).view(self.N, 2, self.R * 24)
             self.weights_repeat = self.weights_repeat.permute(1, 0, 2, 3).view(self.N, 2, self.R_used * 24)
 
-            self.zeros_cartesian = torch.zeros([batch_size, 24]).type(dtype)
-            self.ones_cartesian = torch.ones([batch_size, 24]).type(dtype)
+            self.zeros_cartesian = torch.zeros([batch_size, 24]).type(dtype).to(self.device)
+            self.ones_cartesian = torch.ones([batch_size, 24]).type(dtype).to(self.device)
 
             self.filler_taxels = []
             for i in range(28):
                 for j in range(65):
                     self.filler_taxels.append([i-1, j-1, 20000])
             self.filler_taxels = torch.Tensor(self.filler_taxels).type(self.dtypeInt).unsqueeze(0).repeat(batch_size, 1, 1)
-            self.mesh_patching_array = torch.zeros((batch_size, 66, 29, 4)).type(self.dtype)
+            self.mesh_patching_array = torch.zeros((batch_size, 66, 29, 4)).type(self.dtype).to(self.device)
 
             #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(),"p6"
 
@@ -210,7 +214,7 @@ class CNN(nn.Module):
                                        [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # wrist, pi/36 or 5 deg
                                        [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # wrist, pi/36 or 5 deg
                                        [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01],  # hand
-                                       [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01]])).type(dtype)
+                                       [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01]])).type(dtype).to(self.device)
 
             elif self.loss_vector_type == 'anglesEU':
                 self.bounds = torch.Tensor(np.array([[-np.pi/3, np.pi/3], [-np.pi/3, np.pi/3], [-np.pi/3, np.pi/3],
@@ -236,7 +240,7 @@ class CNN(nn.Module):
                                        [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # wrist, pi/36 or 5 deg
                                        [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6], [-np.pi / 6, np.pi / 6],  # wrist, pi/36 or 5 deg
                                        [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01],  # hand
-                                       [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01]])).type(dtype)
+                                       [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01]])).type(dtype).to(self.device)
 
 
 
@@ -456,7 +460,7 @@ class CNN(nn.Module):
         #                            v_shaped[:, 1960, :],  # l wrist
         #                            v_shaped[:, 5423, :]]).permute(1, 0, 2)  # r wrist
 
-        pose_feature = (Rs_est[start_incr:end_incr, 1:, :, :]).sub(1.0, torch.eye(3).type(self.dtype)).view(-1, 207)
+        pose_feature = (Rs_est[start_incr:end_incr, 1:, :, :]).sub(1.0, torch.eye(3).type(self.dtype).to(self.device)).view(-1, 207)
         posedirs = torch.bmm(gender_switch[start_incr:end_incr, :, :], self.posedirs[0:sub_batch_size, :, :]) \
             .view(sub_batch_size, self.R_used * self.D, 207) \
             .permute(0, 2, 1)
@@ -469,7 +473,7 @@ class CNN(nn.Module):
             .squeeze(1) \
             .view(sub_batch_size, self.R_used, 24)
         T = torch.bmm(weights_repeat, A_est.view(sub_batch_size, 24, 16)).view(sub_batch_size, -1, 4, 4)
-        v_posed_homo = torch.cat([v_posed, torch.ones(sub_batch_size, v_posed.shape[1], 1).type(self.dtype)], dim=2)
+        v_posed_homo = torch.cat([v_posed, torch.ones(sub_batch_size, v_posed.shape[1], 1).type(self.dtype).to(self.device)], dim=2)
         v_homo = torch.matmul(T, torch.unsqueeze(v_posed_homo, -1))
 
         verts = v_homo[:, :, :3, 0] + root_shift_est[start_incr:end_incr, :].unsqueeze(1) - J_est[:, 0:1, :]
@@ -517,7 +521,7 @@ class CNN(nn.Module):
         #import matplotlib.pyplot as plt
         #plt.plot(-verts_taxel.cpu().detach().numpy()[0, :, 1], verts_taxel.cpu().detach().numpy()[0, :, 2], 'r.')
 
-        verts_taxel = torch.cat((verts_taxel, verts_taxel[:, 0:8000, :]*0+3.0), dim = 1)
+        verts_taxel = torch.cat((verts_taxel, verts_taxel[:, 0:6000, :]*0+3.0), dim = 1)
 
         for i in range(cbs):
             body_verts = verts_taxel[i, verts_taxel[i, :, 1] < bend_loc]
@@ -578,7 +582,7 @@ class CNN(nn.Module):
         # print i, t3 - t2, t2 - t1
 
         mesh_matrix_batch[mesh_matrix_batch == 20000] = 0
-        mesh_matrix_batch = mesh_matrix_batch.type(self.dtype)
+        mesh_matrix_batch = mesh_matrix_batch.type(self.dtype).to(self.device)
         mesh_matrix_batch *= 0.0286  # shouldn't need this. leave as int.
 
         self.mesh_patching_array *= 0
@@ -775,8 +779,8 @@ class CNN(nn.Module):
                                 verts[:, 1960, :],  # l wrist
                                 verts[:, 5423, :]]).permute(1, 0, 2)  # r wrist
 
-        verts_offset = torch.Tensor(verts_red.clone().detach().cpu().numpy()).type(self.dtype)
-        targets_est_detached = torch.Tensor(targets_est.clone().detach().cpu().numpy()).type(self.dtype)
+        verts_offset = torch.Tensor(verts_red.clone().detach().cpu().numpy()).type(self.dtype).to(self.device)
+        targets_est_detached = torch.Tensor(targets_est.clone().detach().cpu().numpy()).type(self.dtype).to(self.device)
         synth_joint_addressed = [3, 15, 4, 5, 7, 8, 18, 19, 20, 21]
 
         for real_joint in range(10):
@@ -889,7 +893,7 @@ class CNN(nn.Module):
 
             #print scores[0, :]
             #here multiply by 24/10 when you are regressing to real data so it balances with the synthetic data
-            scores = torch.mul(torch.add(1.0, torch.mul(1.4, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
+            scores = torch.mul((1.0 + (1.4 * (1 - synth_real_switch))).unsqueeze(1), scores)
             #scores = torch.mul(torch.add(1.0, torch.mul(3.0, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
             #scores = torch.mul(torch.mul(2.4, torch.sub(1, synth_real_switch)).unsqueeze(1), scores)
 
@@ -914,10 +918,11 @@ class CNN(nn.Module):
             #if reg_angles == True: scores[:, 34:106] = torch.mul(scores[:, 34:106].clone(), (1./72)) #weight the angles by how many there are
 
         else:
-            if self.GPU == True:
-                targets_est_reduced = torch.empty(targets_est.size()[0], 30, dtype=torch.float).cuda()
-            else:    
-                targets_est_reduced = torch.empty(targets_est.size()[0], 30, dtype=torch.float)
+
+            #if self.GPU == True:
+            #    targets_est_reduced = torch.empty(targets_est.size()[0], 30, dtype=torch.float).cuda()
+            #else:
+            targets_est_reduced = torch.empty(targets_est.size()[0], 30, dtype=torch.float).to(self.device)
             #scores[:, 80] = torch.add(scores[:, 80], 0.2)
             #scores[:, 81] = torch.add(scores[:, 81], 0.2)
             targets_est_reduced[:, 0:3] = scores[:, 79+add_idx:82+add_idx] #head 34 + 3*15 = 79
@@ -940,7 +945,6 @@ class CNN(nn.Module):
 
             #print(scores.size(), scores[0, 10:40])
 
-
             for joint_num in range(10):
                 scores[:, joint_num] = (scores[:, 10+joint_num*3] + scores[:, 11+joint_num*3] + scores[:, 12+joint_num*3]).sqrt()
 
@@ -953,14 +957,15 @@ class CNN(nn.Module):
 
 
             #here multiply by 24/10 when you are regressing to real data so it balances with the synthetic data
-            scores = torch.mul(2.4, scores)
+            scores = 2.4*scores
 
             scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1/0.1282715100608753)) #weight the 10 joints by std
             scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1./24)) #weight the joints by how many there are USE 24 EVEN ON REAL DATA
 
-        mesh_matrix_batch = mesh_matrix_batch.type(self.dtype)
-        contact_matrix_batch = contact_matrix_batch.type(self.dtype)
+        mesh_matrix_batch = mesh_matrix_batch.type(self.dtype).to(self.device)
+        contact_matrix_batch = contact_matrix_batch.type(self.dtype).to(self.device)
 
         #print scores[0, :]
+
         return  scores, mesh_matrix_batch, contact_matrix_batch, targets_est_np, targets_est_reduced_np, betas_est_np
 

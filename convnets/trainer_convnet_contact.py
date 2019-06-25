@@ -458,11 +458,13 @@ class PhysicalTrainer():
             print 'Time taken by epoch',epoch,':',self.t2,' seconds'
 
             if self.opt.aws == True:
+                if epoch == 100: torch.save(self.model, '/home/ubuntu/data/synth/convnet'+self.save_name+'_100e.pt')
                 if epoch == 200: torch.save(self.model, '/home/ubuntu/data/synth/convnet'+self.save_name+'_200e.pt')
                 if epoch == 300: torch.save(self.model, '/home/ubuntu/data/synth/convnet'+self.save_name+'_300e.pt')
 
             else:
 
+                if epoch == 100: torch.save(self.model, '/home/henry/data/synth/convnet'+self.save_name+'_100e.pt')
                 if epoch == 200: torch.save(self.model, '/home/henry/data/synth/convnet'+self.save_name+'_200e.pt')
                 if epoch == 300: torch.save(self.model, '/home/henry/data/synth/convnet'+self.save_name+'_300e.pt')
 
@@ -619,8 +621,8 @@ class PhysicalTrainer():
 
                     print mmb.type(), mesh_depth_array.type()
 
-                    loss_mesh_depth = self.criterion(mmb, mesh_depth_array)/10
-                    loss_mesh_contact = self.criterion(cmb, mesh_contact_array)*10
+                    loss_mesh_depth = self.criterion(mmb, mesh_depth_array)/40
+                    loss_mesh_contact = self.criterion(cmb, mesh_contact_array)*2.5
 
                     #print torch.sum(torch.abs(mesh_depth_array[0, :])), torch.sum(mesh_contact_array[0, :])
                     print loss_eucl.data, loss_betas.data, loss_mesh_depth.data, loss_mesh_contact.data, "LOSSES"
@@ -629,7 +631,7 @@ class PhysicalTrainer():
                         loss_angs = self.criterion(scores[:, 34:106], scores_zeros[:, 34:106])
                         loss = loss_betas + loss_eucl + loss_angs
                     else:
-                        loss = loss_betas + loss_eucl + loss_mesh_contact
+                        loss = loss_betas + loss_eucl + loss_mesh_contact + loss_mesh_depth
 
 
                     if GPU == True:
