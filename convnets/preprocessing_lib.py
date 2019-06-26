@@ -97,16 +97,16 @@ class PreprocessingLib():
         if verbose: print len(p_map_dataset[0]),'x',len(p_map_dataset[0][0]), 'size of a resized pressure map'
         return p_map_dataset
 
-    def preprocessing_create_pressure_angle_stack_realtime(self, p_map, bedangle, mat_size):
+    def preprocessing_create_pressure_angle_stack_realtime(self, p_map, bedangle, mat_size, verbose = False):
         '''This is for creating a 2-channel input using the height of the bed. '''
         p_map = np.reshape(p_map, mat_size)
 
+        if verbose:
+            print np.shape(p_map)
+            print p_map.shape
+            print np.shape(bedangle), 'angle dat'
 
-        print np.shape(p_map)
-        print p_map.shape
-        print np.shape(bedangle), 'angle dat'
-
-        print 'calculating height matrix and sobel filter'
+            print 'calculating height matrix and sobel filter'
         p_map_dataset = []
 
 
@@ -145,15 +145,16 @@ class PreprocessingLib():
 
     def preprocessing_create_pressure_angle_stack(self,x_data, a_data, include_inter, mat_size, verbose):
         '''This is for creating a 2-channel input using the height of the bed. '''
-        print np.max(x_data)
+
+        if verbose: print np.max(x_data)
         x_data = np.clip(x_data, 0, 100)
-        print np.max(x_data)
 
-        print np.shape(x_data)
-        print np.shape(a_data), 'angle dat'
-        #print a_data
+        if verbose:
+            print np.shape(x_data)
+            print np.shape(a_data), 'angle dat'
+            #print a_data
 
-        print 'calculating height matrix and sobel filter'
+            print 'calculating height matrix and sobel filter'
         p_map_dataset = []
         for map_index in range(len(x_data)):
             # print map_index, self.mat_size, 'mapidx'

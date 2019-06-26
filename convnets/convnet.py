@@ -12,6 +12,7 @@ class CNN(nn.Module):
     def __init__(self, mat_size, out_size, hidden_dim, kernel_size, loss_vector_type, batch_size, split = False, filepath = '/home/henry/'):
         '''
         Create components of a CNN classifier and initialize their weights.
+
         Arguments:
             mat_size (tuple): A tuple of ints with (channels, height, width)
             hidden_dim (int): Number of hidden activations to use
@@ -33,7 +34,7 @@ class CNN(nn.Module):
 
         self.CNN_pack1 = nn.Sequential(
 
-            nn.Conv2d(6, 256, kernel_size=7, stride=2, padding=3),
+            nn.Conv2d(3, 256, kernel_size=7, stride=2, padding=3),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.1, inplace=False),
             nn.MaxPool2d(3, stride=2),
@@ -51,7 +52,7 @@ class CNN(nn.Module):
 
         self.CNN_pack2 = nn.Sequential(
 
-            nn.Conv2d(6, 32, kernel_size = 7, stride = 2, padding = 3),
+            nn.Conv2d(3, 32, kernel_size = 7, stride = 2, padding = 3),
             nn.ReLU(inplace = True),
             nn.Dropout(p = 0.1, inplace=False),
             nn.MaxPool2d(3, stride=2),
@@ -684,7 +685,7 @@ class CNN(nn.Module):
             #print scores[0, :]
             #here multiply by 24/10 when you are regressing to real data so it balances with the synthetic data
             scores = torch.mul(torch.add(1.0, torch.mul(1.4, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
-            #scores = torch.mul(torch.add(1.0, torch.mul(3.0, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
+            scores = torch.mul(torch.add(1.0, torch.mul(1.937984, torch.sub(1, synth_real_switch))).unsqueeze(1), scores) #data bag ratio. if you duplicate things get rid of this
             #scores = torch.mul(torch.mul(2.4, torch.sub(1, synth_real_switch)).unsqueeze(1), scores)
 
             # here multiply by 5 when you are regressing to real data because there is only 1/5 the amount of it
@@ -696,11 +697,13 @@ class CNN(nn.Module):
 
             targets_est_reduced_np = 0
 
-            scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1 / 1.7312621950698526))  # weight the betas by std
-            scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), (1 / 0.1282715100608753))  # weight the 24 joints by std
+            scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1/1.7312621950698526)) #weight the betas by std
+            scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), (1/0.1282715100608753)) #weight the 24 joints by std
+            if reg_angles == True: scores[:, 34:106] = torch.mul(scores[:, 34:106].clone(), (1/0.2130542427733348)) #weight the angles by how many there are
 
-            if reg_angles == True:
-                scores[:, 34:106] = torch.mul(scores[:, 34:106].clone(), (1 / 0.2130542427733348))  # weight the angles by how
+            #scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1./10)) #weight the betas by how many betas there are
+            #scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), (1./24)) #weight the joints by how many there are
+            #if reg_angles == True: scores[:, 34:106] = torch.mul(scores[:, 34:106].clone(), (1./72)) #weight the angles by how many there are
 
         else:
             if self.GPU == True:
@@ -749,6 +752,4 @@ class CNN(nn.Module):
 
         #print scores[0, :]
         return  scores, targets_est_np, targets_est_reduced_np, betas_est_np
-
-
 

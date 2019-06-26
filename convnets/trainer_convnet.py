@@ -34,6 +34,7 @@ def load_pickle(filename):
 from visualization_lib import VisualizationLib
 from preprocessing_lib import PreprocessingLib
 from synthetic_lib import SyntheticLib
+from tensorprep_lib import TensorPrepLib
 
 import cPickle as pkl
 import random
@@ -68,20 +69,19 @@ LOW_TAXEL_THRESH_X = 0
 LOW_TAXEL_THRESH_Y = 0
 HIGH_TAXEL_THRESH_X = (NUMOFTAXELS_X - 1)
 HIGH_TAXEL_THRESH_Y = (NUMOFTAXELS_Y - 1)
+TEST_SUBJECT = 9
 
 torch.set_num_threads(1)
 if torch.cuda.is_available():
     # Use for GPU
     GPU = True
     dtype = torch.cuda.FloatTensor
-    print
-    '######################### CUDA is available! #############################'
+    print '######################### CUDA is available! #############################'
 else:
     # Use for CPU
     GPU = False
     dtype = torch.FloatTensor
-    print
-    '############################## USING CPU #################################'
+    print '############################## USING CPU #################################'
 
 
 class PhysicalTrainer():
@@ -100,18 +100,17 @@ class PhysicalTrainer():
         self.verbose = opt.verbose
         self.opt = opt
         self.batch_size = 128
-        self.num_epochs = 300
+        self.num_epochs = 101
         self.include_inter = True
         self.shuffle = True
 
         self.count = 0
 
-        print testing_database_file_f
         print self.num_epochs, 'NUM EPOCHS!'
         # Entire pressure dataset with coordinates in world frame
 
-        self.save_name = '_' + opt.losstype + '_synthreal_s4_3xreal_4xsize_detach_' + str(self.batch_size) + 'b_' + str(
-            self.num_epochs) + 'e'
+        self.save_name = '_' + opt.losstype + '_synthreal_s' + str(TEST_SUBJECT) + '_3xreal_' + str(
+            self.batch_size) + 'b_' + str(self.num_epochs) + 'e'
         # self.save_name = '_' + opt.losstype+'_real_s9_alltest_' + str(self.batch_size) + 'b_'# + str(self.num_epochs) + 'e'
 
         print 'appending to', 'train' + self.save_name
@@ -123,395 +122,180 @@ class PhysicalTrainer():
         self.mat_size = (NUMOFTAXELS_X, NUMOFTAXELS_Y)
         self.output_size_train = (NUMOFOUTPUTNODES_TRAIN, NUMOFOUTPUTDIMS)
         self.output_size_val = (NUMOFOUTPUTNODES_TEST, NUMOFOUTPUTDIMS)
+        self.parents = np.array([4294967295, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9, 12, 13, 14, 16, 17, 18, 19, 20, 21]).astype(np.int32)
 
-        # for name in training_database_file_f:
-        #    print name
 
-        dat_f_synth = self.load_files_to_database(training_database_file_f, 'synth', 'training f synth')
-        dat_m_synth = self.load_files_to_database(training_database_file_m, 'synth', 'training m synth')
-        dat_f_real = self.load_files_to_database(training_database_file_f, 'real', 'training f real')
-        dat_m_real = self.load_files_to_database(training_database_file_m, 'real', 'training m real')
+
+        #################################### PREP TRAINING DATA ##########################################
+        #load training synth data
+        dat_f_synth = TensorPrepLib().load_files_to_database(training_database_file_f, 'synth')
+        dat_m_synth = TensorPrepLib().load_files_to_database(training_database_file_m, 'synth')
+        dat_f_real = TensorPrepLib().load_files_to_database(training_database_file_f, 'real')
+        dat_m_real = TensorPrepLib().load_files_to_database(training_database_file_m, 'real')
+
 
         self.train_x_flat = []  # Initialize the testing pressure mat list
-        if dat_f_synth is not None:
-            for entry in range(len(dat_f_synth['images'])):
-                self.train_x_flat.append(dat_f_synth['images'][entry])
-        if dat_m_synth is not None:
-            for entry in range(len(dat_m_synth['images'])):
-                self.train_x_flat.append(dat_m_synth['images'][entry])
-
+        self.train_x_flat = TensorPrepLib().prep_images(self.train_x_flat, dat_f_synth, num_repeats = 1)
+        self.train_x_flat = TensorPrepLib().prep_images(self.train_x_flat, dat_m_synth, num_repeats = 1)
         self.train_x_flat = np.clip(np.array(self.train_x_flat) * 5.0, a_min=0, a_max=100)
         self.train_x_flat = PreprocessingLib().preprocessing_blur_images(self.train_x_flat, self.mat_size, sigma=0.5)
 
         self.train_x_flat_real = []
-        if dat_f_real is not None:
-            for entry in range(len(dat_f_real['images'])):
-                self.train_x_flat_real.append(dat_f_real['images'][entry])
-                self.train_x_flat_real.append(dat_f_real['images'][entry])
-                self.train_x_flat_real.append(dat_f_real['images'][entry])
-        if dat_m_real is not None:
-            for entry in range(len(dat_m_real['images'])):
-                self.train_x_flat_real.append(dat_m_real['images'][entry])
-                self.train_x_flat_real.append(dat_m_real['images'][entry])
-                self.train_x_flat_real.append(dat_m_real['images'][entry])
-
+        self.train_x_flat_real = TensorPrepLib().prep_images(self.train_x_flat_real, dat_f_real, num_repeats = 1)
+        self.train_x_flat_real = TensorPrepLib().prep_images(self.train_x_flat_real, dat_m_real, num_repeats = 1)
         if len(self.train_x_flat_real) != 0:
-            self.train_x_flat_real = PreprocessingLib().preprocessing_blur_images(self.train_x_flat_real, self.mat_size,
-                                                                                  sigma=0.5)
+            self.train_x_flat_real = PreprocessingLib().preprocessing_blur_images(self.train_x_flat_real, self.mat_size, sigma=0.5)
             self.train_x_flat = np.concatenate((self.train_x_flat, self.train_x_flat_real), axis=0)
 
-        self.train_a_flat = []  # Initialize the testing pressure mat angle list
-        if dat_f_synth is not None:
-            for entry in range(len(dat_f_synth['images'])):
-                self.train_a_flat.append([dat_f_synth['bed_angle_deg'][entry]])
-        if dat_m_synth is not None:
-            for entry in range(len(dat_m_synth['images'])):
-                self.train_a_flat.append([dat_m_synth['bed_angle_deg'][entry]])
-
-        if dat_f_real is not None:
-            for entry in range(len(dat_f_real['images'])):
-                self.train_a_flat.append([dat_f_real['bed_angle_deg'][entry]])
-                self.train_a_flat.append([dat_f_real['bed_angle_deg'][entry]])
-                self.train_a_flat.append([dat_f_real['bed_angle_deg'][entry]])
-        if dat_m_real is not None:
-            for entry in range(len(dat_m_real['images'])):
-                self.train_a_flat.append([dat_m_real['bed_angle_deg'][entry]])
-                self.train_a_flat.append([dat_m_real['bed_angle_deg'][entry]])
-                self.train_a_flat.append([dat_m_real['bed_angle_deg'][entry]])
-
         if len(self.train_x_flat) == 0: print("NO TRAINING DATA INCLUDED")
+
+        self.train_a_flat = []  # Initialize the training pressure mat angle list
+        self.train_a_flat = TensorPrepLib().prep_angles(self.train_a_flat, dat_f_synth, num_repeats = 1)
+        self.train_a_flat = TensorPrepLib().prep_angles(self.train_a_flat, dat_m_synth, num_repeats = 1)
+        self.train_a_flat = TensorPrepLib().prep_angles(self.train_a_flat, dat_f_real, num_repeats = 1)
+        self.train_a_flat = TensorPrepLib().prep_angles(self.train_a_flat, dat_m_real, num_repeats = 1)
 
         train_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.train_x_flat,
                                                                                 self.train_a_flat,
                                                                                 self.include_inter, self.mat_size,
                                                                                 self.verbose)
-        train_xa = np.array(train_xa).astype(float32)
-        train_contact = np.copy(train_xa[:, 0:1, :, :])
-        train_contact[train_contact > 0] = 100.
-        train_xa = np.concatenate((train_contact, train_xa), axis=1)
+
+        train_xa = TensorPrepLib().append_input_depth_contact(np.array(train_xa),
+                                                              mesh_depth_contact_maps = None,
+                                                              include_mesh_depth_contact = False,
+                                                              include_pmat_contact = False)
         self.train_x_tensor = torch.Tensor(train_xa)
 
-        print self.train_x_tensor.shape, 'tensor shape'
 
         self.train_y_flat = []  # Initialize the training ground truth list
+        self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_f_synth, num_repeats = 1,
+                                                        z_adj = -0.075, gender = "f", is_synth = True, is_train = True)
+        self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_m_synth, num_repeats = 1,
+                                                        z_adj = -0.075, gender = "m", is_synth = True, is_train = True)
 
-        z_subt = np.array(24 * [0.0, 0.0, -37.5])
-
-        if dat_f_synth is not None:
-            for entry in range(len(dat_f_synth['markers_xyz_m'])):
-                if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
-                    # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                    c = np.concatenate((dat_f_synth['markers_xyz_m'][entry][0:72] * 1000 + z_subt,
-                                        dat_f_synth['body_shape'][entry][0:10],
-                                        dat_f_synth['joint_angles'][entry][0:72],
-                                        dat_f_synth['root_xyz_shift'][entry][0:3] + np.array([0.0, 0.0, -0.0375]),
-                                        [1], [0], [1],
-                                        [dat_f_synth['body_mass'][entry]],
-                                        [(dat_f_synth['body_height'][entry]-1.)*100],), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
-                    self.train_y_flat.append(c)
-                else:
-                    # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                    c = np.concatenate((dat_f_synth['markers_xyz_m'][entry][0:72] * 1000 + z_subt,
-                                        np.array(10 * [0]),
-                                        np.array(72 * [0]),
-                                        np.array(3 * [0]),
-                                        [1], [0], [1],
-                                        [dat_f_synth['body_mass'][entry]],
-                                        [(dat_f_synth['body_height'][entry]-1.)*100],), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
-                    self.train_y_flat.append(c)
-
-        if dat_m_synth is not None:
-            for entry in range(len(dat_m_synth['markers_xyz_m'])):
-                if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
-                    # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                    c = np.concatenate((dat_m_synth['markers_xyz_m'][entry][0:72] * 1000 + z_subt,
-                                        dat_m_synth['body_shape'][entry][0:10],
-                                        dat_m_synth['joint_angles'][entry][0:72],
-                                        dat_m_synth['root_xyz_shift'][entry][0:3] + np.array([0.0, 0.0, -0.0375]),
-                                        [0], [1], [1],
-                                        [dat_m_synth['body_mass'][entry]],
-                                        [(dat_m_synth['body_height'][entry]-1.)*100],), axis=0)  # [x1], [x2], [x3]: male synth: 0, 1, 1.
-                    self.train_y_flat.append(c)
-                else:
-                    # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                    c = np.concatenate((dat_m_synth['markers_xyz_m'][entry][0:72] * 1000 + z_subt,
-                                        np.array(10 * [0]),
-                                        np.array(72 * [0]),
-                                        np.array(3 * [0]),
-                                        [1], [0], [1],
-                                        [dat_m_synth['body_mass'][entry]],
-                                        [(dat_m_synth['body_height'][entry]-1.)*100],), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
-                    self.train_y_flat.append(c)
-
-        if dat_f_real is not None:
-            for entry in range(len(dat_f_real['markers_xyz_m'])):
-
-                c = np.concatenate((np.array(9 * [0]),
-                                    dat_f_real['markers_xyz_m'][entry][3:6] * 1000,  # TORSO
-                                    # fixed_torso_markers,  # TORSO
-                                    dat_f_real['markers_xyz_m'][entry][21:24] * 1000,  # L KNEE
-                                    dat_f_real['markers_xyz_m'][entry][18:21] * 1000,  # R KNEE
-                                    np.array(3 * [0]),
-                                    dat_f_real['markers_xyz_m'][entry][27:30] * 1000,  # L ANKLE
-                                    dat_f_real['markers_xyz_m'][entry][24:27] * 1000,  # R ANKLE
-                                    np.array(18 * [0]),
-                                    dat_f_real['markers_xyz_m'][entry][0:3] * 1000,  # HEAD
-                                    # fixed_head_markers,
-                                    np.array(6 * [0]),
-                                    dat_f_real['markers_xyz_m'][entry][9:12] * 1000,  # L ELBOW
-                                    dat_f_real['markers_xyz_m'][entry][6:9] * 1000,  # R ELBOW
-                                    dat_f_real['markers_xyz_m'][entry][15:18] * 1000,  # L WRIST
-                                    dat_f_real['markers_xyz_m'][entry][12:15] * 1000,  # R WRIST
-                                    np.array(6 * [0]),
-                                    np.array(85 * [0]),
-                                    [1], [0], [0],
-                                    [dat_f_real['body_mass'][entry]],
-                                    [(dat_f_real['body_height'][entry]-1.)*100],), axis=0)  # [x1], [x2], [x3]: female real: 1, 0, 0.
-                self.train_y_flat.append(c)
-                self.train_y_flat.append(c)
-                self.train_y_flat.append(c)
-
-        if dat_m_real is not None:
-            for entry in range(len(dat_m_real['markers_xyz_m'])):
-
-                c = np.concatenate((np.array(9 * [0]),
-                                    dat_m_real['markers_xyz_m'][entry][3:6] * 1000,  # TORSO
-                                    # fixed_torso_markers,
-                                    dat_m_real['markers_xyz_m'][entry][21:24] * 1000,  # L KNEE
-                                    dat_m_real['markers_xyz_m'][entry][18:21] * 1000,  # R KNEE
-                                    np.array(3 * [0]),
-                                    dat_m_real['markers_xyz_m'][entry][27:30] * 1000,  # L ANKLE
-                                    dat_m_real['markers_xyz_m'][entry][24:27] * 1000,  # R ANKLE
-                                    np.array(18 * [0]),
-                                    dat_m_real['markers_xyz_m'][entry][0:3] * 1000,  # HEAD
-                                    # fixed_head_markers,
-                                    np.array(6 * [0]),
-                                    dat_m_real['markers_xyz_m'][entry][9:12] * 1000,  # L ELBOW
-                                    dat_m_real['markers_xyz_m'][entry][6:9] * 1000,  # R ELBOW
-                                    dat_m_real['markers_xyz_m'][entry][15:18] * 1000,  # L WRIST
-                                    dat_m_real['markers_xyz_m'][entry][12:15] * 1000,  # R WRIST
-                                    np.array(6 * [0]),
-                                    np.array(85 * [0]),
-                                    [0], [1], [0], #gender and is real or not
-                                    [dat_m_real['body_mass'][entry]],
-                                    [(dat_m_real['body_height'][entry]-1.)*100],), axis=0)  # [x1], [x2], [x3]: male real: 0, 1, 0.
-                self.train_y_flat.append(c)
-                self.train_y_flat.append(c)
-                self.train_y_flat.append(c)
-
-        print np.shape(self.train_y_flat), 'shape flat !'
+        self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_f_real, num_repeats = 1,
+                                                        z_adj = 0.0, gender = "m", is_synth = False, is_train = True)
+        self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_m_real, num_repeats = 1,
+                                                        z_adj = 0.0, gender = "m", is_synth = False, is_train = True)
         self.train_y_tensor = torch.Tensor(self.train_y_flat)
 
+        print self.train_x_tensor.shape, 'Input training tensor shape'
+        print self.train_y_tensor.shape, 'Output training tensor shape'
+
+
+
+
+        #################################### PREP TESTING DATA ##########################################
         # load in the test file
-        test_dat_f = self.load_files_to_database(testing_database_file_f, 'real', 'training f real')
-        test_dat_m = self.load_files_to_database(testing_database_file_m, 'real', 'training f real')
+        test_dat_f = TensorPrepLib().load_files_to_database(testing_database_file_f, 'real')
+        test_dat_m = TensorPrepLib().load_files_to_database(testing_database_file_m, 'real')
 
-        # create a tensor for our testing dataset.  First print out how many input/output sets we have and what data we have
-        if test_dat_f is not None:
-            for key in test_dat_f:
-                print 'testing set: ', key, np.array(test_dat_f[key]).shape
-        if test_dat_m is not None:
-            for key in test_dat_m:
-                print 'testing set: ', key, np.array(test_dat_m[key]).shape
-
-        self.test_x_flat = []  # Initialize the testing pressure mat listhave
-        if test_dat_f is not None:
-            for entry in range(len(test_dat_f['images'])):
-                self.test_x_flat.append(test_dat_f['images'][entry])
-        if test_dat_m is not None:
-            for entry in range(len(test_dat_m['images'])):
-                self.test_x_flat.append(test_dat_m['images'][entry])
-
+        self.test_x_flat = []  # Initialize the testing pressure mat list
+        self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, test_dat_f, num_repeats = 1)
+        self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, test_dat_m, num_repeats = 1)
         self.test_x_flat = PreprocessingLib().preprocessing_blur_images(self.test_x_flat, self.mat_size, sigma=0.5)
-
-        self.test_a_flat = []  # Initialize the testing pressure mat angle listhave
-        if test_dat_f is not None:
-            for entry in range(len(test_dat_f['images'])):
-                self.test_a_flat.append([test_dat_f['bed_angle_deg'][entry]])
-        if test_dat_m is not None:
-            for entry in range(len(test_dat_m['images'])):
-                self.test_a_flat.append([test_dat_m['bed_angle_deg'][entry]])
 
         if len(self.test_x_flat) == 0: print("NO TESTING DATA INCLUDED")
 
-        test_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.test_x_flat, self.test_a_flat,
+        self.test_a_flat = []  # Initialize the testing pressure mat angle listhave
+        self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, test_dat_f, num_repeats = 1)
+        self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, test_dat_m, num_repeats = 1)
+
+
+        test_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.test_x_flat,
+                                                                               self.test_a_flat,
                                                                                self.include_inter, self.mat_size,
                                                                                self.verbose)
-        test_xa = np.array(test_xa).astype(float32)
-        test_contact = np.copy(test_xa[:, 0:1, :, :])
-        test_contact[test_contact > 0] = 100.
-        test_xa = np.concatenate((test_contact, test_xa), axis=1)
+
+        test_xa = TensorPrepLib().append_input_depth_contact(np.array(test_xa),
+                                                              mesh_depth_contact_maps = None,
+                                                              include_mesh_depth_contact = False,
+                                                              include_pmat_contact = False)
+
         self.test_x_tensor = torch.Tensor(test_xa)
 
+
         self.test_y_flat = []  # Initialize the ground truth listhave
-        if test_dat_f is not None:
-            for entry in range(len(test_dat_f['markers_xyz_m'])):
-                if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
-                    # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                    fixed_head_markers = test_dat_f['markers_xyz_m'][entry][0:3] * 1000  # + \
-                    # [0.0,
-                    # -141.4*np.cos(np.deg2rad(test_dat_f['bed_angle_deg'][entry]+45)),
-                    # -141.4*np.sin(np.deg2rad(test_dat_f['bed_angle_deg'][entry]+45))]
-
-                    fixed_torso_markers = test_dat_f['markers_xyz_m'][entry][3:6] * 1000  # + [0.0, 0.0, -100.0]
-
-                    c = np.concatenate((fixed_head_markers,
-                                        fixed_torso_markers,
-                                        test_dat_f['markers_xyz_m'][entry][6:] * 1000,
-                                        [1], [0], [0],
-                                        [test_dat_f['body_mass'][entry]],
-                                        [(test_dat_f['body_height'][entry]-1.)*100]), axis=0)  # shapedirs (N, 6890, 3, 10)
-                    self.test_y_flat.append(c)
-                else:
-                    self.test_y_flat.append(test_dat_f['markers_xyz_m'][entry] * 1000)
-
-        if test_dat_m is not None:
-            for entry in range(len(test_dat_m['markers_xyz_m'])):
-                if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
-                    # print dat['markers_xyz_m'][entry][0:2], dat['body_shape'][entry][0:2], dat['joint_angles'][entry][0:2]
-                    fixed_head_markers = test_dat_m['markers_xyz_m'][entry][0:3] * 1000  # + \
-                    # [0.0,
-                    # -141.4*np.cos(np.deg2rad(test_dat_m['bed_angle_deg'][entry]+45)),
-                    # -141.4*np.sin(np.deg2rad(test_dat_m['bed_angle_deg'][entry]+45))]
-
-                    fixed_torso_markers = test_dat_m['markers_xyz_m'][entry][3:6] * 1000  # + [0.0, 0.0, -100.0]
-
-                    c = np.concatenate((fixed_head_markers,
-                                        fixed_torso_markers,
-                                        test_dat_m['markers_xyz_m'][entry][6:] * 1000,
-                                        [0], [1], [0],
-                                        [test_dat_m['body_mass'][entry]],
-                                        [(test_dat_m['body_height'][entry]-1.)*100]), axis=0)  # shapedirs (N, 6890, 3, 10)
-                    self.test_y_flat.append(c)
-                else:
-                    self.test_y_flat.append(test_dat_m['markers_xyz_m'][entry] * 1000)
-
+        self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, test_dat_f, num_repeats = 1,
+                                                       z_adj = 0.0, gender = "f", is_synth = False, is_train = False)
+        self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, test_dat_m, num_repeats = 1,
+                                                       z_adj = 0.0, gender = "m", is_synth = False, is_train = False)
         self.test_y_tensor = torch.Tensor(self.test_y_flat)
 
-        self.parents = np.array(
-            [4294967295, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9, 12, 13, 14, 16, 17, 18, 19, 20, 21]).astype(np.int32)
 
-    def load_files_to_database(self, database_file, creation_type, descriptor):
-        # load in the training or testing files.  This may take a while.
-        try:
-            dat = None
-            for some_subject in database_file:
-                if creation_type in some_subject:
-                    dat_curr = load_pickle(some_subject)
-                    print some_subject, dat_curr['bed_angle_deg'][0]
-                    for key in dat_curr:
-                        if np.array(dat_curr[key]).shape[0] != 0:
-                            for inputgoalset in np.arange(len(dat_curr['markers_xyz_m'])):
-                                datcurr_to_append = dat_curr[key][inputgoalset]
-                                if key == 'images' and np.shape(datcurr_to_append)[0] == 3948:
-                                    datcurr_to_append = list(
-                                        np.array(datcurr_to_append).reshape(84, 47)[10:74, 10:37].reshape(1728))
-                                try:
-                                    dat[key].append(datcurr_to_append)
-                                except:
-                                    try:
-                                        dat[key] = []
-                                        dat[key].append(datcurr_to_append)
-                                    except:
-                                        dat = {}
-                                        dat[key] = []
-                                        dat[key].append(datcurr_to_append)
-                else:
-                    pass
+        print self.test_x_tensor.shape, 'Input testing tensor shape'
+        print self.test_y_tensor.shape, 'Output testing tensor shape'
 
-                # for key in dat:
-                #    print descriptor, key, np.array(dat[key]).shape
-        except:
-            dat = None
 
-        return dat
+
 
     def init_convnet_train(self):
-        # indices = torch.LongTensor([0])
-        # self.train_y_tensor = torch.index_select(self.train_y_tensor, 1, indices)
 
-        if self.verbose: print self.train_x_tensor.size(), 'size of the training database'
-        if self.verbose: print self.train_y_tensor.size(), 'size of the training database output'
-
-        if self.verbose: print self.test_x_tensor.size(), 'length of the testing dataset'
-        if self.verbose: print self.test_y_tensor.size(), 'size of the training database output'
-
-        num_epochs = self.num_epochs
         hidden_dim = 12
         kernel_size = 10
 
-        # self.train_x_tensor = self.train_x_tensor.unsqueeze(1)
+        #self.train_x_tensor = self.train_x_tensor.unsqueeze(1)
         self.train_dataset = torch.utils.data.TensorDataset(self.train_x_tensor, self.train_y_tensor)
         self.train_loader = torch.utils.data.DataLoader(self.train_dataset, self.batch_size, shuffle=self.shuffle)
 
-        # self.test_x_tensor = self.test_x_tensor.unsqueeze(1)
+        #self.test_x_tensor = self.test_x_tensor.unsqueeze(1)
         self.test_dataset = torch.utils.data.TensorDataset(self.test_x_tensor, self.test_y_tensor)
         self.test_loader = torch.utils.data.DataLoader(self.test_dataset, self.batch_size, shuffle=self.shuffle)
+
 
         if self.opt.aws == True:
             filepath_prefix = '/home/ubuntu/'
         else:
             filepath_prefix = '/home/henry/'
 
+
+        print "Loading convnet model................................"
         if self.loss_vector_type == 'direct':
             fc_output_size = 72
-
-            self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type,
-                                     self.batch_size, filepath=filepath_prefix)
-            print 'LOADED!!!!!!!!!!!!!!!!!1'
+            self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type, self.batch_size, filepath=filepath_prefix)
 
         elif self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
-            fc_output_size = 85  ## 10 + 3 + 24*3 --- betas, root shift, rotations
-            self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type,
-                                     self.batch_size, filepath=filepath_prefix)
-            # self.model = torch.load('/home/ubuntu/Autobed_OFFICIAL_Trials' + '/subject_' + str(self.opt.leave_out) + '/convnets/convnet_9to18_'+str(self.loss_vector_type)+'_sTrue_128b_200e_' + str(self.opt.leave_out) + '.pt', map_location=lambda storage, loc: storage)
-            print 'LOADED!!!!!!!!!!!!!!!!!1'
-            pp = 0
-            for p in list(self.model.parameters()):
-                nn = 1
-                for s in list(p.size()):
-                    nn = nn * s
-                pp += nn
-            print pp, 'num params'
+            fc_output_size = 85## 10 + 3 + 24*3 --- betas, root shift, rotations
+            self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type, self.batch_size, filepath=filepath_prefix)
+            #self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type, self.batch_size, filepath=filepath_prefix)
+            #self.model = torch.load('/home/ubuntu/Autobed_OFFICIAL_Trials' + '/subject_' + str(self.opt.leave_out) + '/convnets/convnet_9to18_'+str(self.loss_vector_type)+'_sTrue_128b_200e_' + str(self.opt.leave_out) + '.pt', map_location=lambda storage, loc: storage)
+
+        pp = 0
+        for p in list(self.model.parameters()):
+            nn = 1
+            for s in list(p.size()):
+                nn = nn * s
+            pp += nn
+        print 'LOADED. num params: ', pp
+
 
         # Run model on GPU if available
-        # if torch.cuda.is_available():
+        #if torch.cuda.is_available():
         if GPU == True:
             self.model = self.model.cuda()
-            # self.model = torch.load('/home/henry/data/training/convnet_direct_True128b_400e.pt')
+            #self.model = torch.load('/home/henry/data/training/convnet_direct_True128b_400e.pt')
+
 
         self.criterion = F.cross_entropy
 
-        if self.loss_vector_type == None:
-            self.optimizer2 = optim.Adam(self.model.parameters(), lr=0.00002, weight_decay=0.0005)
-        elif self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'direct' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
-            self.optimizer2 = optim.Adam(self.model.parameters(), lr=0.00002,
-                                         weight_decay=0.0005)  # 0.000002 does not converge even after 100 epochs on subjects 2-8 kin cons. use .00001
-        # self.optimizer = optim.RMSprop(self.model.parameters(), lr=0.000001, momentum=0.7, weight_decay=0.0005)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.00002, weight_decay=0.0005)  # start with .00005
+        self.optimizer = optim.Adam(self.model.parameters(), lr=0.00001, weight_decay=0.0005) #start with .00005
+
 
         # train the model one epoch at a time
-        for epoch in range(1, num_epochs + 1):
+        for epoch in range(1, self.num_epochs + 1):
             self.t1 = time.time()
-
             self.train_convnet(epoch)
-
-            if epoch > 5: self.optimizer = self.optimizer2
 
             try:
                 self.t2 = time.time() - self.t1
             except:
                 self.t2 = 0
-            print 'Time taken by epoch', epoch, ':', self.t2, ' seconds'
+            print 'Time taken by epoch',epoch,':',self.t2,' seconds'
 
-            if self.opt.aws == True:
-                if epoch == 200: torch.save(self.model, '/home/ubuntu/data/synth/convnet' + self.save_name + '_200e.pt')
-                if epoch == 300: torch.save(self.model, '/home/ubuntu/data/synth/convnet' + self.save_name + '_300e.pt')
+            if epoch == 100 or epoch == 200 or epoch == 300:
+                torch.save(self.model, filepath_prefix+'/data/synth/convnet'+self.save_name+'_'+str(epoch)+'e.pt')
+                pkl.dump(self.train_val_losses,open(filepath_prefix+'/data/synth/convnet_losses'+self.save_name+'_'+str(epoch)+'e.p', 'wb'))
 
-            else:
-
-                if epoch == 200: torch.save(self.model, '/home/henry/data/synth/convnet' + self.save_name + '_200e.pt')
-                if epoch == 300: torch.save(self.model, '/home/henry/data/synth/convnet' + self.save_name + '_300e.pt')
 
         print 'done with epochs, now evaluating'
         self.validate_convnet('test')
@@ -519,15 +303,8 @@ class PhysicalTrainer():
         print self.train_val_losses, 'trainval'
         # Save the model (architecture and weights)
 
-        if self.opt.aws == True:
-            torch.save(self.model, '/home/ubuntu/data/synth/convnet' + self.save_name + '_300e.pt')
-            pkl.dump(self.train_val_losses,
-                     open('/home/ubuntu/data/synth/convnet_losses' + self.save_name + '_300e.p', 'wb'))
 
-        else:
-            torch.save(self.model, '/home/henry/data/synth/convnet' + self.save_name + '_300e.pt')
-            pkl.dump(self.train_val_losses,
-                     open('/home/henry/data/synth/convnet_losses' + self.save_name + '_300e.p', 'wb'))
+
 
     def train_convnet(self, epoch):
         '''
@@ -587,8 +364,6 @@ class PhysicalTrainer():
                     batch.append(batch[1][:, 154:157])  # root pos
                     batch.append(batch[1][:, 157:159])  # gender switch
                     batch.append(batch[1][:, 159])  # synth vs real switch
-                    batch.append(batch[1][:, 160:161])  # mass, kg
-                    batch.append(batch[1][:, 161:162])  # height, kg
 
                     # cut it off so batch[2] is only the xyz marker targets
                     batch[1] = batch[1][:, 0:72]
@@ -599,18 +374,9 @@ class PhysicalTrainer():
                                                                          include_inter=self.include_inter,
                                                                          loss_vector_type=self.loss_vector_type)
 
-                    images_up_non_tensor = np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2))
-                    images_up_non_tensor[:, 1:, :, :] = PreprocessingLib().preprocessing_add_image_noise(images_up_non_tensor[:, 1:, :, :])
+                    images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(
+                        np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2)))
                     images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
-
-                    weight_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(dtype)
-                    weight_input *= batch[7].type(dtype)
-                    weight_input = weight_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
-                    height_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(dtype)
-                    height_input *= batch[8].type(dtype)
-                    height_input = height_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
-                    images_up = torch.cat((images_up, weight_input, height_input), 1)
-
 
                     images, targets, betas = Variable(batch[0].type(dtype), requires_grad=False), \
                                              Variable(batch[1].type(dtype), requires_grad=False), \
@@ -629,9 +395,11 @@ class PhysicalTrainer():
                     ground_truth[:, 10:82] = targets[:, 0:72] / 1000
 
                     if self.opt.reg_angles == True:
-                        scores_zeros = np.zeros((batch[0].numpy().shape[0], 106))  # 34 is 10 shape params and 24 joint euclidean errors
+                        scores_zeros = np.zeros(
+                            (batch[0].numpy().shape[0], 106))  # 34 is 10 shape params and 24 joint euclidean errors
                     else:
-                        scores_zeros = np.zeros((batch[0].numpy().shape[0], 34))  # 34 is 10 shape params and 24 joint euclidean errors
+                        scores_zeros = np.zeros(
+                            (batch[0].numpy().shape[0], 34))  # 34 is 10 shape params and 24 joint euclidean errors
                     scores_zeros = Variable(torch.Tensor(scores_zeros).type(dtype))
 
                     if self.loss_vector_type == 'anglesR':
@@ -651,35 +419,18 @@ class PhysicalTrainer():
                                                                                                 root_shift=root_shift,
                                                                                                 reg_angles=self.opt.reg_angles)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
 
+
                     self.criterion = nn.L1Loss()
 
                     loss_betas = self.criterion(scores[:, 0:10], scores_zeros[:, 0:10])
                     loss_eucl = self.criterion(scores[:, 10:34], scores_zeros[:, 10:34])
+
                     if self.opt.reg_angles == True:
                         loss_angs = self.criterion(scores[:, 34:106], scores_zeros[:, 34:106])
                         loss = loss_betas + loss_eucl + loss_angs
                     else:
                         loss = loss_betas + loss_eucl
 
-                    if GPU == True:
-                        if self.opt.reg_angles == True:
-                            loss_breakdown = [1000 * loss_betas.data,
-                                              1000 * loss_eucl.data,
-                                              1000 * loss_angs.data]
-                        else:
-                            loss_breakdown = [1000 * loss_betas.data,
-                                              1000 * loss_eucl.data]
-
-                    else:
-                        if self.opt.reg_angles == True:
-                            loss_breakdown = [
-                                1000 * np.sum(np.abs(scores[:, 0:10].data.numpy())) / (scores.size()[0] * 34),
-                                1000 * np.sum(np.abs(scores[:, 10:34].data.numpy())) / (scores.size()[0] * 34),
-                                1000 * np.sum(np.abs(scores[:, 34:106].data.numpy())) / (scores.size()[0] * 34)]
-                        else:
-                            loss_breakdown = [
-                                1000 * np.sum(np.abs(scores[:, 0:10].data.numpy())) / (scores.size()[0] * 34),
-                                1000 * np.sum(np.abs(scores[:, 10:34].data.numpy())) / (scores.size()[0] * 34)]
 
                 # print loss.data.numpy() * 1000, 'loss'
 
@@ -691,19 +442,7 @@ class PhysicalTrainer():
                 # print batch_idx, opt.log_interval
 
                 if batch_idx % opt.log_interval == 0:
-                    # if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC':
-                    # print targets.data.size()
-                    # print targets_est.shape
-                    # print targets.data[0,:].reshape(24,3)
 
-                    # VisualizationLib().print_error(targets.data, targets_est, self.output_size, self.loss_vector_type, data = 'train')
-                    # print angles_est[0, :], 'angles'
-                    # print batch[0][0,2,0,0], 'bed angle'
-
-                    # elif self.loss_vector_type == 'direct':
-                    #    pass
-
-                    # print targets.data.shape
                     if GPU == True:
                         VisualizationLib().print_error_train(targets.data.cpu(), targets_est.cpu(),
                                                              self.output_size_train, self.loss_vector_type,
@@ -737,14 +476,13 @@ class PhysicalTrainer():
                                   'Train Loss Joints: {:.2f}, Betas Loss: {:.2f}, Angles Loss: {:.2f}, Total Loss: {:.2f}\n\t\t\t\t'
                                   '   Val Loss Total: {:.2f}'.format(
                                 epoch, examples_this_epoch, len(self.train_loader.dataset),
-                                epoch_progress, loss_breakdown[1], loss_breakdown[0], loss_breakdown[2],
-                                train_loss * 106 / 34., val_loss))
+                                epoch_progress, 1000*loss_eucl.data, 1000*loss_betas.data, 1000*loss_angs.data, train_loss, val_loss))
                         else:
                             print('Train Epoch: {} [{}/{} ({:.0f}%)]\t'
                                   'Train Loss Joints: {:.2f}, Betas Loss: {:.2f}, Total Loss: {:.2f}\n\t\t\t\t'
                                   '   Val Loss Total: {:.2f}'.format(
                                 epoch, examples_this_epoch, len(self.train_loader.dataset),
-                                epoch_progress, loss_breakdown[1], loss_breakdown[0], train_loss, val_loss))
+                                epoch_progress, 1000*loss_eucl.data, 1000*loss_betas.data, train_loss, val_loss))
 
                     print 'appending to alldata losses'
                     self.train_val_losses['train' + self.save_name].append(train_loss)
@@ -787,28 +525,15 @@ class PhysicalTrainer():
 
                 # get the direct joint locations
                 batch.append(batch[1][:, 30:32])
-                batch.append(batch[1][:, 33:34])  # mass, kg
-                batch.append(batch[1][:, 34:35])  # height, kg
                 batch[1] = batch[1][:, 0:30]
 
-
-
-                images_up_non_tensor = np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2))
+                images_up_non_tensor = np.array(
+                    PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2))
                 images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
                 images, targets = Variable(batch[0].type(dtype), requires_grad=False), Variable(batch[1].type(dtype),
                                                                                                 requires_grad=False),
 
                 gender_switch = Variable(batch[2].type(dtype), requires_grad=False)
-
-
-                weight_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(dtype)
-                weight_input *= batch[3].type(dtype)
-                weight_input = weight_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
-                height_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(dtype)
-                height_input *= batch[4].type(dtype)
-                height_input = height_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
-                images_up = torch.cat((images_up, weight_input, height_input), 1)
-
 
                 self.optimizer.zero_grad()
 
@@ -830,6 +555,7 @@ class PhysicalTrainer():
                                                                                                               targets,
                                                                                                               is_training=False,
                                                                                                               reg_angles=self.opt.reg_angles)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
+
 
                 self.criterion = nn.L1Loss()
 
@@ -861,7 +587,7 @@ class PhysicalTrainer():
         if GPU == True:
             if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC':
                 # print angles_est[0, :], 'validation angles'
-                print betas_est[0, :] / 1000, 'validation betas'
+                print  betas_est[0, :] / 1000, 'validation betas'
             VisualizationLib().print_error_val(targets.data.cpu(), targets_est_reduced.cpu(), self.output_size_val,
                                                self.loss_vector_type, data='validate')
         else:
@@ -890,8 +616,6 @@ class PhysicalTrainer():
                                                           block=False)
 
         return loss
-
-
 
 
 if __name__ == "__main__":
@@ -954,10 +678,13 @@ if __name__ == "__main__":
 
     if opt.quick_test == True:
         training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff.p')
-        #training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1121_upperbody_stiff.p')
+        training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1121_upperbody_stiff.p')
         #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
         #training_database_file_m.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #training_database_file_m.append(filepath_prefix_qt+'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #training_database_file_m.append(filepath_prefix_qt+'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        training_database_file_m.append(filepath_prefix_qt+'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
         #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
         test_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
     else:
