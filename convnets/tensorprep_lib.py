@@ -57,9 +57,10 @@ class TensorPrepLib():
 
     def load_files_to_database(self, database_file, creation_type, verbose = False):
         # load in the training or testing files.  This may take a while.
-
+        print "GOT HERE!!"
         dat = None
         for some_subject in database_file:
+            print creation_type, some_subject, 'some subject'
             if creation_type in some_subject:
                 dat_curr = load_pickle(some_subject)
                 print some_subject, dat_curr['bed_angle_deg'][0]

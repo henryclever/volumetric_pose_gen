@@ -141,8 +141,8 @@ class PhysicalTrainer():
         self.train_x_flat = PreprocessingLib().preprocessing_blur_images(self.train_x_flat, self.mat_size, sigma=0.5)
 
         self.train_x_flat_real = []
-        self.train_x_flat_real = TensorPrepLib().prep_images(self.train_x_flat_real, dat_f_real, num_repeats = 1)
-        self.train_x_flat_real = TensorPrepLib().prep_images(self.train_x_flat_real, dat_m_real, num_repeats = 1)
+        self.train_x_flat_real = TensorPrepLib().prep_images(self.train_x_flat_real, dat_f_real, num_repeats = 3)
+        self.train_x_flat_real = TensorPrepLib().prep_images(self.train_x_flat_real, dat_m_real, num_repeats = 3)
         if len(self.train_x_flat_real) != 0:
             self.train_x_flat_real = PreprocessingLib().preprocessing_blur_images(self.train_x_flat_real, self.mat_size, sigma=0.5)
             self.train_x_flat = np.concatenate((self.train_x_flat, self.train_x_flat_real), axis=0)
@@ -152,8 +152,8 @@ class PhysicalTrainer():
         self.train_a_flat = []  # Initialize the training pressure mat angle list
         self.train_a_flat = TensorPrepLib().prep_angles(self.train_a_flat, dat_f_synth, num_repeats = 1)
         self.train_a_flat = TensorPrepLib().prep_angles(self.train_a_flat, dat_m_synth, num_repeats = 1)
-        self.train_a_flat = TensorPrepLib().prep_angles(self.train_a_flat, dat_f_real, num_repeats = 1)
-        self.train_a_flat = TensorPrepLib().prep_angles(self.train_a_flat, dat_m_real, num_repeats = 1)
+        self.train_a_flat = TensorPrepLib().prep_angles(self.train_a_flat, dat_f_real, num_repeats = 3)
+        self.train_a_flat = TensorPrepLib().prep_angles(self.train_a_flat, dat_m_real, num_repeats = 3)
 
         train_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.train_x_flat,
                                                                                 self.train_a_flat,
@@ -173,9 +173,9 @@ class PhysicalTrainer():
         self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_m_synth, num_repeats = 1,
                                                         z_adj = -0.075, gender = "m", is_synth = True, is_train = True)
 
-        self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_f_real, num_repeats = 1,
+        self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_f_real, num_repeats = 3,
                                                         z_adj = 0.0, gender = "m", is_synth = False, is_train = True)
-        self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_m_real, num_repeats = 1,
+        self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_m_real, num_repeats = 3,
                                                         z_adj = 0.0, gender = "m", is_synth = False, is_train = True)
         self.train_y_tensor = torch.Tensor(self.train_y_flat)
 
@@ -259,7 +259,6 @@ class PhysicalTrainer():
             self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type, self.batch_size, filepath=filepath_prefix)
             #self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type, self.batch_size, filepath=filepath_prefix)
             #self.model = torch.load('/home/ubuntu/Autobed_OFFICIAL_Trials' + '/subject_' + str(self.opt.leave_out) + '/convnets/convnet_9to18_'+str(self.loss_vector_type)+'_sTrue_128b_200e_' + str(self.opt.leave_out) + '.pt', map_location=lambda storage, loc: storage)
-
         pp = 0
         for p in list(self.model.parameters()):
             nn = 1
@@ -275,9 +274,7 @@ class PhysicalTrainer():
             self.model = self.model.cuda()
             #self.model = torch.load('/home/henry/data/training/convnet_direct_True128b_400e.pt')
 
-
         self.criterion = F.cross_entropy
-
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.00001, weight_decay=0.0005) #start with .00005
 
 
