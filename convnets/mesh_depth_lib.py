@@ -61,13 +61,13 @@ class MeshDepthLib():
             self.GPU = True
             # Use for self.GPU
             dtype = torch.cuda.FloatTensor
-            dtypeInt = torch.cuda.IntTensor
+            dtypeInt = torch.cuda.LongTensor
             print('######################### CUDA is available! #############################')
         else:
             self.GPU = False
             # Use for CPU
             dtype = torch.FloatTensor
-            dtypeInt = torch.IntTensor
+            dtypeInt = torch.LongTensor
             print('############################## USING CPU #################################')
         self.dtype = dtype
         self.dtypeInt = dtypeInt
@@ -381,6 +381,8 @@ class MeshDepthLib():
 
         verts_taxel_int = (verts_taxel).type(self.dtypeInt)
 
+        print self.filler_taxels.shape, 'filler shape'
+
         verts_taxel_int = torch.cat((self.filler_taxels[0:cbs, :, :], verts_taxel_int), dim=1)
 
         vertice_sorting_method = (verts_taxel_int[:, :, 0:1] + 1) * 10000000 + \
@@ -389,9 +391,16 @@ class MeshDepthLib():
         verts_taxel_int = torch.cat((vertice_sorting_method, verts_taxel_int), dim=2)
         for i in range(cbs):
             t1 = time.time()
+
+            #for k in range(verts_taxel_int[i, :, :].shape[0]):
+            #    print verts_taxel_int[i, k, :]
+
+            print torch.min(verts_taxel_int[i, :, 3]), torch.max(verts_taxel_int[i, :, 3]), verts_taxel_int[i, :, :].shape
+
             x = torch.unique(verts_taxel_int[i, :, :], sorted=True, return_inverse=False,
                              dim=0)  # this takes the most time
             t2 = time.time()
+
 
             x[1:, 0] = torch.abs((x[:-1, 1] - x[1:, 1]) + (x[:-1, 2] - x[1:, 2]))
             x[1:, 1:4] = x[1:, 1:4] * x[1:, 0:1]
@@ -401,6 +410,8 @@ class MeshDepthLib():
             x = x[x[:, 1] >= 0, :]
             x = x[x[:, 0] < 27, :]
             x = x[x[:, 0] >= 0, :]
+
+            print torch.min(x[:, 2]), torch.max(x[:, 2]), x.shape
             mesh_matrix = x[:, 2].view(27, 64)
 
             if i == 0:

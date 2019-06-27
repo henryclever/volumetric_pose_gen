@@ -163,8 +163,8 @@ class CNN(nn.Module):
 
 
     def forward_kinematic_angles(self, images, gender_switch, synth_real_switch, targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None, reg_angles = False):
-        #self.GPU = False
-        #self.dtype = torch.FloatTensor
+        self.GPU = False
+        self.dtype = torch.FloatTensor
 
         #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p7b"
 
@@ -311,6 +311,9 @@ class CNN(nn.Module):
 
         bed_angle_batch = torch.mean(images[:, 2, 1:3, 0], dim = 1)
 
+        print verts.size()
+        print bed_angle_batch.size()
+
         mesh_matrix_batch, contact_matrix_batch = self.meshDepthLib.compute_depth_contact_planes(verts, bed_angle_batch)
 
         #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p10"
@@ -326,8 +329,11 @@ class CNN(nn.Module):
                                 verts[:, 1960, :],  # l wrist
                                 verts[:, 5423, :]]).permute(1, 0, 2)  # r wrist
 
-        verts_offset = torch.Tensor(verts_red.clone().detach().cpu().numpy()).type(self.dtype)
+        verts_offset = verts_red.clone().detach().cpu()
+        verts_offset = torch.Tensor(verts_offset.numpy()).type(self.dtype)
         targets_est_detached = torch.Tensor(targets_est.clone().detach().cpu().numpy()).type(self.dtype)
+
+
         synth_joint_addressed = [3, 15, 4, 5, 7, 8, 18, 19, 20, 21]
 
         for real_joint in range(10):
@@ -371,143 +377,82 @@ class CNN(nn.Module):
 
 
 
-        if is_training == True:
-
-            #print targets_est_np.size()
-            for joint_num in range(24):
-                if joint_num in [0, 1, 2, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]: #if in this then mult by zero
-                    targets_est_np[:, joint_num * 3] = targets_est_np[:, joint_num * 3] * synth_real_switch.data
-                    targets_est_np[:, joint_num * 3 + 1] = targets_est_np[:, joint_num * 3 + 1] * synth_real_switch.data
-                    targets_est_np[:, joint_num * 3 + 2] = targets_est_np[:, joint_num * 3 + 2] * synth_real_switch.data
-
-
-
-
+        if betas is not None:
             scores[:, 0:10] = torch.mul(synth_real_switch.unsqueeze(1), torch.sub(scores[:, 0:10], betas))#*.2
 
-            #compare the output angles to the target values
-            if reg_angles == True:
-                if self.loss_vector_type == 'anglesDC':
-                    scores[:, 34:106] = angles_gt.clone().view(-1, 72) - scores[:, 13:85]
+        #compare the output angles to the target values
+        if reg_angles == True:
+            if self.loss_vector_type == 'anglesDC':
+                scores[:, 34:106] = angles_gt.clone().view(-1, 72) - scores[:, 13:85]
 
-                    scores[:, 34:106] = torch.mul(synth_real_switch.unsqueeze(1), torch.sub(scores[:, 34:106], angles_gt.clone().view(-1, 72)))
+                scores[:, 34:106] = torch.mul(synth_real_switch.unsqueeze(1), torch.sub(scores[:, 34:106], angles_gt.clone().view(-1, 72)))
 
 
-                elif self.loss_vector_type == 'anglesEU':
-                    scores[:, 34:106] = KinematicsLib().batch_euler_angles_from_dir_cos_angles(angles_gt.view(-1, 24, 3).clone()).contiguous().view(-1, 72) - scores[:, 13:85]
+            elif self.loss_vector_type == 'anglesEU':
+                scores[:, 34:106] = KinematicsLib().batch_euler_angles_from_dir_cos_angles(angles_gt.view(-1, 24, 3).clone()).contiguous().view(-1, 72) - scores[:, 13:85]
 
-                scores[:, 34:106] = torch.mul(synth_real_switch.unsqueeze(1), scores[:, 34:106].clone())
+            scores[:, 34:106] = torch.mul(synth_real_switch.unsqueeze(1), scores[:, 34:106].clone())
 
-            if self.GPU == True:
-                penetration_weights = torch.Tensor(KinematicsLib().get_penetration_weights(images, targets[:, 0:72])).cuda()
+
+
+        #compare the output joints to the target values
+        scores[:, 34+add_idx:106+add_idx] = targets[:, 0:72]/1000 - scores[:, 34+add_idx:106+add_idx]
+        scores[:, 106+add_idx:178+add_idx] = ((scores[:, 34+add_idx:106+add_idx].clone())+0.0000001).pow(2)
+
+
+        #print scores[13, 106:178]
+
+        for joint_num in range(24):
+            #print scores[:, 10+joint_num].size(), 'score size'
+            #print synth_real_switch.size(), 'switch size'
+            if joint_num in [0, 1, 2, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]: #torso is 3 but forget training it
+                scores[:, 10+joint_num] = torch.mul(synth_real_switch,
+                                                    (scores[:, 106+add_idx+joint_num*3] +
+                                                     scores[:, 107+add_idx+joint_num*3] +
+                                                     scores[:, 108+add_idx+joint_num*3]).sqrt())
+
             else:
-                penetration_weights = torch.Tensor(KinematicsLib().get_penetration_weights(images, targets[:, 0:72]))
+                scores[:, 10+joint_num] = (scores[:, 106+add_idx+joint_num*3] +
+                                           scores[:, 107+add_idx+joint_num*3] +
+                                           scores[:, 108+add_idx+joint_num*3]).sqrt()
 
-            #print np.shape(penetration_weights)
-            #print penetration_weights[0, :]
-
-            #compare the output joints to the target values
-            scores[:, 34+add_idx:106+add_idx] = targets[:, 0:72]/1000 - scores[:, 34+add_idx:106+add_idx]
-            scores[:, 106+add_idx:178+add_idx] = ((scores[:, 34+add_idx:106+add_idx].clone())+0.0000001).pow(2)
-
-
-            #print scores[13, 106:178]
-
-            for joint_num in range(24):
-                #print scores[:, 10+joint_num].size(), 'score size'
-                #print synth_real_switch.size(), 'switch size'
-                if joint_num in [0, 1, 2, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]: #torso is 3 but forget training it
-                    scores[:, 10+joint_num] = torch.mul(synth_real_switch,
-                                                        (scores[:, 106+add_idx+joint_num*3] +
-                                                         scores[:, 107+add_idx+joint_num*3] +
-                                                         scores[:, 108+add_idx+joint_num*3]).sqrt())
-
-                else:
-                    scores[:, 10+joint_num] = (scores[:, 106+add_idx+joint_num*3] +
-                                               scores[:, 107+add_idx+joint_num*3] +
-                                               scores[:, 108+add_idx+joint_num*3]).sqrt()
-
-                    #print scores[:, 10+joint_num], 'score size'
-                    #print synth_real_switch, 'switch size'
+                #print scores[:, 10+joint_num], 'score size'
+                #print synth_real_switch, 'switch size'
 
 
 
-            scores = scores.unsqueeze(0)
-            scores = scores.unsqueeze(0)
-            scores = F.pad(scores, (0, -151, 0, 0))
-            scores = scores.squeeze(0)
-            scores = scores.squeeze(0)
+        scores = scores.unsqueeze(0)
+        scores = scores.unsqueeze(0)
+        scores = F.pad(scores, (0, -151, 0, 0))
+        scores = scores.squeeze(0)
+        scores = scores.squeeze(0)
 
-            #print scores[0, :]
-            #here multiply by 24/10 when you are regressing to real data so it balances with the synthetic data
-            scores = torch.mul(torch.add(1.0, torch.mul(1.4, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
-            #scores = torch.mul(torch.add(1.0, torch.mul(3.0, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
-            #scores = torch.mul(torch.mul(2.4, torch.sub(1, synth_real_switch)).unsqueeze(1), scores)
+        #print scores[0, :]
+        #here multiply by 24/10 when you are regressing to real data so it balances with the synthetic data
+        scores = torch.mul(torch.add(1.0, torch.mul(1.4, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
+        #scores = torch.mul(torch.add(1.0, torch.mul(3.0, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
+        #scores = torch.mul(torch.mul(2.4, torch.sub(1, synth_real_switch)).unsqueeze(1), scores)
 
-            # here multiply by 5 when you are regressing to real data because there is only 1/5 the amount of it
-            #scores = torch.mul(torch.mul(5.0, torch.sub(1, synth_real_switch)).unsqueeze(1), scores)
+        # here multiply by 5 when you are regressing to real data because there is only 1/5 the amount of it
+        #scores = torch.mul(torch.mul(5.0, torch.sub(1, synth_real_switch)).unsqueeze(1), scores)
 
-            #print scores[0, :]
-            #print scores[7, :]
-
-
-            targets_est_reduced_np = 0
-
-            scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1/1.7312621950698526)) #weight the betas by std
-            scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), (1/0.1282715100608753)) #weight the 24 joints by std
-
-            #scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), penetration_weights)
-
-            if reg_angles == True: scores[:, 34:106] = torch.mul(scores[:, 34:106].clone(), (1/0.2130542427733348)) #weight the angles by how many there are
-
-            #scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1./10)) #weight the betas by how many betas there are
-            #scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), (1./24)) #weight the joints by how many there are
-            #if reg_angles == True: scores[:, 34:106] = torch.mul(scores[:, 34:106].clone(), (1./72)) #weight the angles by how many there are
-
-        else:
-            if self.GPU == True:
-                targets_est_reduced = torch.empty(targets_est.size()[0], 30, dtype=torch.float).cuda()
-            else:    
-                targets_est_reduced = torch.empty(targets_est.size()[0], 30, dtype=torch.float)
-            #scores[:, 80] = torch.add(scores[:, 80], 0.2)
-            #scores[:, 81] = torch.add(scores[:, 81], 0.2)
-            targets_est_reduced[:, 0:3] = scores[:, 79+add_idx:82+add_idx] #head 34 + 3*15 = 79
-            targets_est_reduced[:, 3:6] = scores[:, 43+add_idx:46+add_idx] #torso 34 + 3*3 = 45
-            targets_est_reduced[:, 6:9] = scores[:, 91+add_idx:94+add_idx] #right elbow 34 + 19*3 = 91
-            targets_est_reduced[:, 9:12] = scores[:, 88+add_idx:91+add_idx] #left elbow 34 + 18*3 = 88
-            targets_est_reduced[:, 12:15] = scores[:, 97+add_idx:100+add_idx] #right wrist 34 + 21*3 = 97
-            targets_est_reduced[:, 15:18] = scores[:, 94+add_idx:97+add_idx] #left wrist 34 + 20*3 = 94
-            targets_est_reduced[:, 18:21] = scores[:, 49+add_idx:52+add_idx] #right knee 34 + 3*5
-            targets_est_reduced[:, 21:24] = scores[:, 46+add_idx:49+add_idx] #left knee 34 + 3*4
-            targets_est_reduced[:, 24:27] = scores[:, 58+add_idx:61+add_idx] #right ankle 34 + 3*8
-            targets_est_reduced[:, 27:30] = scores[:, 55+add_idx:58+add_idx] #left ankle 34 + 3*7
-
-            targets_est_reduced_np = targets_est_reduced.data*1000.
-
-            #print(targets.size(), targets[0, :])
-
-            if targets is not None:
-                scores[:, 10:40] = (targets/1000. - targets_est_reduced[:, 0:30]).pow(2)
-
-            #print(scores.size(), scores[0, 10:40])
+        #print scores[0, :]
+        #print scores[7, :]
 
 
-            for joint_num in range(10):
-                scores[:, joint_num] = (scores[:, 10+joint_num*3] + scores[:, 11+joint_num*3] + scores[:, 12+joint_num*3]).sqrt()
+        targets_est_reduced_np = 0
 
+        scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1/1.7312621950698526)) #weight the betas by std
+        scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), (1/0.1282715100608753)) #weight the 24 joints by std
 
-            scores = scores.unsqueeze(0)
-            scores = scores.unsqueeze(0)
-            scores = F.pad(scores, (0, -175-add_idx, 0, 0))
-            scores = scores.squeeze(0)
-            scores = scores.squeeze(0)
+        #scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), penetration_weights)
 
+        if reg_angles == True: scores[:, 34:106] = torch.mul(scores[:, 34:106].clone(), (1/0.2130542427733348)) #weight the angles by how many there are
 
-            #here multiply by 24/10 when you are regressing to real data so it balances with the synthetic data
-            scores = torch.mul(2.4, scores)
+        #scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1./10)) #weight the betas by how many betas there are
+        #scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), (1./24)) #weight the joints by how many there are
+        #if reg_angles == True: scores[:, 34:106] = torch.mul(scores[:, 34:106].clone(), (1./72)) #weight the angles by how many there are
 
-            scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1/0.1282715100608753)) #weight the 10 joints by std
-            scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1./24)) #weight the joints by how many there are USE 24 EVEN ON REAL DATA
 
         mesh_matrix_batch = mesh_matrix_batch.type(self.dtype)
         contact_matrix_batch = contact_matrix_batch.type(self.dtype)

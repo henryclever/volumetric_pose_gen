@@ -110,6 +110,32 @@ class VisualizationLib():
 
     def print_error_val(self, target, score, output_size, loss_vector_type = None, data = None, printerror = True):
 
+        if target.shape[1] == 72:
+            target = target.reshape(-1, 24, 3)
+            target = np.stack((target[:, 15, :],
+                               target[:, 3, :],
+                               target[:, 19, :],
+                               target[:, 18, :],
+                               target[:, 21, :],
+                               target[:, 20, :],
+                               target[:, 5, :],
+                               target[:, 4, :],
+                               target[:, 8, :],
+                               target[:, 7, :],), axis = 1)
+
+            score = score.reshape(-1, 24, 3)
+            score = np.stack((score[:, 15, :],
+                               score[:, 3, :],
+                               score[:, 19, :],
+                               score[:, 18, :],
+                               score[:, 21, :],
+                               score[:, 20, :],
+                               score[:, 5, :],
+                               score[:, 4, :],
+                               score[:, 8, :],
+                               score[:, 7, :],), axis = 1)
+
+
         error = (score - target)
 
         #print error.shape
