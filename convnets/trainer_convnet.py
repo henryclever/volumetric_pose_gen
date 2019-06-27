@@ -103,9 +103,13 @@ class PhysicalTrainer():
         self.num_epochs = 101
         self.include_inter = True
         self.shuffle = True
-        repeat_real_data_ct = 1
+        self.include_height_weight_channels = True
+        self.num_input_channels = 3
+        repeat_real_data_ct = 3
 
         self.count = 0
+
+        if self.include_height_weight_channels == True: self.num_input_channels += 2
 
         print self.num_epochs, 'NUM EPOCHS!'
         # Entire pressure dataset with coordinates in world frame
@@ -254,12 +258,12 @@ class PhysicalTrainer():
         if self.loss_vector_type == 'direct':
             fc_output_size = 72
             self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type,
-                                     self.batch_size, filepath=filepath_prefix, in_channels=3)
+                                     self.batch_size, filepath=filepath_prefix, in_channels=self.num_input_channels)
 
         elif self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
             fc_output_size = 85## 10 + 3 + 24*3 --- betas, root shift, rotations
             self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type,
-                                     self.batch_size, filepath=filepath_prefix, in_channels=3)
+                                     self.batch_size, filepath=filepath_prefix, in_channels=self.num_input_channels)
             #self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type, self.batch_size, filepath=filepath_prefix)
             #self.model = torch.load('/home/ubuntu/Autobed_OFFICIAL_Trials' + '/subject_' + str(self.opt.leave_out) + '/convnets/convnet_9to18_'+str(self.loss_vector_type)+'_sTrue_128b_200e_' + str(self.opt.leave_out) + '.pt', map_location=lambda storage, loc: storage)
         pp = 0
@@ -502,6 +506,8 @@ class PhysicalTrainer():
         batch.append(batch[1][:, 154:157])  # root pos
         batch.append(batch[1][:, 157:159])  # gender switch
         batch.append(batch[1][:, 159])  # synth vs real switch
+        batch.append(batch[1][:, 160:161])  # mass, kg
+        batch.append(batch[1][:, 161:162])  # height, kg
 
         # cut it off so batch[2] is only the xyz marker targets
         batch[1] = batch[1][:, 0:72]
@@ -518,6 +524,14 @@ class PhysicalTrainer():
             images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(images_up_non_tensor))
 
         images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
+
+        weight_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(dtype)
+        weight_input *= batch[7].type(dtype)
+        weight_input = weight_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
+        height_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(dtype)
+        height_input *= batch[8].type(dtype)
+        height_input = height_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
+        images_up = torch.cat((images_up, weight_input, height_input), 1)
 
         images, targets, betas = Variable(batch[0].type(dtype), requires_grad=False), \
                                  Variable(batch[1].type(dtype), requires_grad=False), \
