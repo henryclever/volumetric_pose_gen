@@ -189,7 +189,15 @@ class MeshDepthLib():
                     np.int32)
 
                 # print batch_size
-                batch_sub_divider = 8
+
+                if batch_size == 128:
+                    batch_sub_divider = 8
+                elif batch_size == 64:
+                    batch_sub_divider = 4
+                elif batch_size == 32:
+                    batch_sub_divider = 2
+                else:
+                    batch_sub_divider = 1
 
                 self.N = batch_size / batch_sub_divider
                 self.shapedirs_f = self.shapedirs_f.unsqueeze(0).repeat(self.N, 1, 1, 1).permute(0, 2, 1, 3).unsqueeze(
@@ -395,7 +403,7 @@ class MeshDepthLib():
             #for k in range(verts_taxel_int[i, :, :].shape[0]):
             #    print verts_taxel_int[i, k, :]
 
-            print torch.min(verts_taxel_int[i, :, 3]), torch.max(verts_taxel_int[i, :, 3]), verts_taxel_int[i, :, :].shape
+            #print torch.min(verts_taxel_int[i, :, 3]), torch.max(verts_taxel_int[i, :, 3]), verts_taxel_int[i, :, :].shape
 
             x = torch.unique(verts_taxel_int[i, :, :], sorted=True, return_inverse=False,
                              dim=0)  # this takes the most time
@@ -411,7 +419,7 @@ class MeshDepthLib():
             x = x[x[:, 0] < 27, :]
             x = x[x[:, 0] >= 0, :]
 
-            print torch.min(x[:, 2]), torch.max(x[:, 2]), x.shape
+            #print torch.min(x[:, 2]), torch.max(x[:, 2]), x.shape
             mesh_matrix = x[:, 2].view(27, 64)
 
             if i == 0:

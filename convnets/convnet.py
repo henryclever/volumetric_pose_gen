@@ -198,7 +198,7 @@ class CNN(nn.Module):
             self.ones_cartesian = torch.ones([self.N, 24]).type(dtype)
 
             if self.loss_vector_type == 'anglesDC':
-                self.bounds = torch.Tensor(np.array([[-np.pi/3, np.pi/3], [-np.pi/3, np.pi/3], [-np.pi/3, np.pi/3],
+                self.bounds = torch.Tensor(np.array([[-np.pi/3, np.pi/3], [-np.pi/36, np.pi/36], [-np.pi/3, np.pi/3],
                                        [-2.753284558994594, -0.14634814003149707], [-1.0403111466710133, 1.1185343875601006], [-0.421484532214729, 0.810063927501682],
                                        [-2.753284558994594, -0.14634814003149707], [-1.1185343875601006, 1.0403111466710133],  [-0.810063927501682, 0.421484532214729],
                                        [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
@@ -224,7 +224,7 @@ class CNN(nn.Module):
                                        [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01]])).type(dtype)
 
             elif self.loss_vector_type == 'anglesEU':
-                self.bounds = torch.Tensor(np.array([[-np.pi/3, np.pi/3], [-np.pi/3, np.pi/3], [-np.pi/3, np.pi/3],
+                self.bounds = torch.Tensor(np.array([[-np.pi/3, np.pi/3], [-np.pi/36, np.pi/36], [-np.pi/3, np.pi/3],
                                        [-2.753284558994594, -0.2389229307048895], [-1.0047479181618846, 0.8034397361593714], [-0.8034397361593714, 1.0678805158941416],
                                        [-2.753284558994594, -0.2389229307048895], [-0.8034397361593714, 1.0047479181618846], [-1.0678805158941416, 0.8034397361593714],
                                        [-np.pi / 6, np.pi / 6], [-np.pi / 36, np.pi / 36], [-np.pi / 36, np.pi / 36],
@@ -586,15 +586,15 @@ class CNN(nn.Module):
 
 
         #here we need to the ground truth to make it a surface point for the mocap markers
-        if is_training == True:
-            synth_real_switch_repeated = synth_real_switch.unsqueeze(1).repeat(1, 3)
-            for real_joint in range(10):
-                targets_est[:, synth_joint_addressed[real_joint], :] = synth_real_switch_repeated * targets_est[:, synth_joint_addressed[real_joint], :].clone() \
-                                       + torch.add(-synth_real_switch_repeated, 1) * (targets_est[:, synth_joint_addressed[real_joint], :].clone() + verts_offset[:, real_joint, :])
+        #if is_training == True:
+        synth_real_switch_repeated = synth_real_switch.unsqueeze(1).repeat(1, 3)
+        for real_joint in range(10):
+            targets_est[:, synth_joint_addressed[real_joint], :] = synth_real_switch_repeated * targets_est[:, synth_joint_addressed[real_joint], :].clone() \
+                                   + torch.add(-synth_real_switch_repeated, 1) * (targets_est[:, synth_joint_addressed[real_joint], :].clone() + verts_offset[:, real_joint, :])
 
-        else:
-            for real_joint in range(10):
-                targets_est[:, synth_joint_addressed[real_joint], :] = targets_est[:, synth_joint_addressed[real_joint], :] + verts_offset[:, real_joint, :]
+        #else:
+        #    for real_joint in range(10):
+        #        targets_est[:, synth_joint_addressed[real_joint], :] = targets_est[:, synth_joint_addressed[real_joint], :] + verts_offset[:, real_joint, :]
 
 
 
@@ -615,9 +615,6 @@ class CNN(nn.Module):
 
         #tweak this to change the lengths vector
         scores[:, 34+add_idx:106+add_idx] = torch.mul(targets_est[:, 0:72], 1.)
-
-        #print scores[13, 34:106]
-
 
         scores[:, 0:10] = torch.mul(synth_real_switch.unsqueeze(1), torch.sub(scores[:, 0:10], betas))#*.2
 

@@ -99,10 +99,11 @@ class PhysicalTrainer():
 
         self.verbose = opt.verbose
         self.opt = opt
-        self.batch_size = 128
+        self.batch_size = 1
         self.num_epochs = 101
         self.include_inter = True
         self.shuffle = True
+        repeat_real_data_ct = 1
 
         self.count = 0
         self.include_mesh_depth_contact = False
@@ -129,8 +130,8 @@ class PhysicalTrainer():
         self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, dat_m_synth, num_repeats = 1)
         self.test_x_flat = list(np.clip(np.array(self.test_x_flat) * 5.0, a_min=0, a_max=100))
 
-        self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, dat_f_real, num_repeats = 3)
-        self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, dat_m_real, num_repeats = 3)
+        self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, dat_f_real, num_repeats = repeat_real_data_ct)
+        self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, dat_m_real, num_repeats = repeat_real_data_ct)
 
         self.test_x_flat = PreprocessingLib().preprocessing_blur_images(self.test_x_flat, self.mat_size, sigma=0.5)
 
@@ -139,8 +140,8 @@ class PhysicalTrainer():
         self.test_a_flat = []  # Initialize the testing pressure mat angle list
         self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, dat_f_synth, num_repeats = 1)
         self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, dat_m_synth, num_repeats = 1)
-        self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, dat_f_real, num_repeats = 3)
-        self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, dat_m_real, num_repeats = 3)
+        self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, dat_f_real, num_repeats = repeat_real_data_ct)
+        self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, dat_m_real, num_repeats = repeat_real_data_ct)
 
 
         test_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.test_x_flat,
@@ -151,7 +152,7 @@ class PhysicalTrainer():
         test_xa = TensorPrepLib().append_input_depth_contact(np.array(test_xa),
                                                               mesh_depth_contact_maps = None,
                                                               include_mesh_depth_contact = False,
-                                                              include_pmat_contact = True)
+                                                              include_pmat_contact = False)
         self.test_x_tensor = torch.Tensor(test_xa)
 
 
@@ -161,9 +162,9 @@ class PhysicalTrainer():
         self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_m_synth, num_repeats = 1,
                                                         z_adj = -0.075, gender = "m", is_synth = True, is_train = True)
 
-        self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_f_real, num_repeats = 3,
+        self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_f_real, num_repeats = repeat_real_data_ct,
                                                         z_adj = 0.0, gender = "m", is_synth = False, is_train = True)
-        self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_m_real, num_repeats = 3,
+        self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_m_real, num_repeats = repeat_real_data_ct,
                                                         z_adj = 0.0, gender = "m", is_synth = False, is_train = True)
         self.test_y_tensor = torch.Tensor(self.test_y_flat)
 
@@ -469,7 +470,8 @@ class PhysicalTrainer():
         elif self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
             fc_output_size = 85## 10 + 3 + 24*3 --- betas, root shift, rotations
             if GPU == True:
-                self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_planesreg_128b_100e.pt')
+                #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_planesreg_128b_100e.pt')
+                self.model = torch.load('/home/henry/data/convnets/epochs_set_3/convnet_anglesEU_synthreal_s12_3xreal_128b_101e_300e.pt')
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_300e.pt')
                 self.model = self.model.cuda()
             else:
@@ -559,7 +561,7 @@ class PhysicalTrainer():
                 height_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(dtype)
                 height_input *= batch[8].type(dtype)
                 height_input = height_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
-                images_up = torch.cat((images_up, weight_input, height_input), 1)
+                #images_up = torch.cat((images_up, weight_input, height_input), 1)
 
                 images, targets, betas = Variable(batch[0].type(dtype), requires_grad=False), \
                                          Variable(batch[1].type(dtype), requires_grad=False), \
@@ -577,9 +579,22 @@ class PhysicalTrainer():
 
                 scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].numpy().shape[0], 24))).type(dtype))
 
-                scores, _, _, targets_est, targets_est_reduced, betas_est = self.model.forward_kinematic_angles(images_up, gender_switch,
-                                                                                                          synth_real_switch, targets, is_training=False,
-                                                                                                          reg_angles = False)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
+                print synth_real_switch
+                print betas
+                #scores, _, _, targets_est, betas_est = self.model.forward_kinematic_angles(images_up, gender_switch,
+                #                                                                          synth_real_switch, targets,
+                #                                                                          is_training=False, betas = betas,
+                #                                                                          reg_angles = False)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
+
+                scores, targets_est, betas_est = self.model.forward_kinematic_angles(images_up,
+                                                                                     gender_switch,
+                                                                                     synth_real_switch,
+                                                                                     targets,
+                                                                                     is_training=False,
+                                                                                     betas=betas,
+                                                                                     angles_gt=angles_gt,
+                                                                                     root_shift=root_shift,
+                                                                                     reg_angles=False)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
 
                 self.criterion = nn.L1Loss()
 
@@ -605,11 +620,13 @@ class PhysicalTrainer():
 
             try:
                 targets_print = torch.cat([targets_print, torch.mean(targets.data, dim = 0).unsqueeze(0)], dim=0)
-                targets_est_print = torch.cat([targets_est_print, torch.mean(targets_est_reduced, dim = 0).unsqueeze(0)], dim=0)
+                targets_est_print = torch.cat([targets_est_print, torch.mean(targets_est, dim = 0).unsqueeze(0)], dim=0)
             except:
 
                 targets_print = torch.mean(targets.data, dim = 0).unsqueeze(0)
-                targets_est_print = torch.mean(targets_est_reduced, dim = 0).unsqueeze(0)
+                targets_est_print = torch.mean(targets_est, dim = 0).unsqueeze(0)
+
+
             if GPU == True:
                 error_norm, error_avg, _ = VisualizationLib().print_error_val(targets_print[-2:-1,:].cpu(),
                                                                                    targets_est_print[-2:-1,:].cpu(),
@@ -617,7 +634,8 @@ class PhysicalTrainer():
                                                                                    self.loss_vector_type,
                                                                                    data='validate')
             else:
-                error_norm, error_avg, _ = VisualizationLib().print_error_val(targets_print[-2:-1,:], targets_est_print[-2:-1,:],
+                error_norm, error_avg, _ = VisualizationLib().print_error_val(targets_print[-2:-1,:],
+                                                                              targets_est_print[-2:-1,:],
                                                                                    self.output_size_val,
                                                                                    self.loss_vector_type,
                                                                                    data='validate')
@@ -637,16 +655,12 @@ class PhysicalTrainer():
                 loss *= 100
                 loss *= 1000
 
-                if self.loss_vector_type == 'anglesR':
-                    #print angles_est[0, :], 'validation angles'
-                    print betas_est[0, :], 'validation betas'
-
-
+                print images.data.size()
                 NUM_IMAGES = images.data.size()[0]
 
                 for image_ct in range(NUM_IMAGES):
                     # #self.im_sampleval = self.im_sampleval[:,0,:,:]
-                    self.im_sampleval = images.data[image_ct, 1:].squeeze()
+                    self.im_sampleval = images.data[image_ct, 0:].squeeze()
                     self.tar_sampleval = targets.data[image_ct, :].squeeze() / 1000
                     self.sc_sampleval = targets_est[image_ct, :].squeeze() / 1000
                     self.sc_sampleval = self.sc_sampleval.view(24, 3)
@@ -706,11 +720,11 @@ if __name__ == "__main__":
 
     network_design = True
 
-    #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff.p')
+    test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff.p')
-    test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2067_none_stiff.p')
+    #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2067_none_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1121_upperbody_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1087_rightside_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1102_leftside_stiff.p')
@@ -781,6 +795,5 @@ if __name__ == "__main__":
 
     print "GOT HERE!"
     p.init_convnet_test()
-    #p.visualize_3d_data()
     #p.visualize_3d_data()
 

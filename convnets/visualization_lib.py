@@ -59,6 +59,9 @@ class VisualizationLib():
 
     def print_error_train(self, target, score, output_size, loss_vector_type = None, data = None, printerror = True):
 
+
+
+
         error = (score - target)
 
         error = np.reshape(error, (error.shape[0], output_size[0], output_size[1]))

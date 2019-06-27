@@ -277,9 +277,7 @@ class PhysicalTrainer():
             self.model = self.model.cuda()
             #self.model = torch.load('/home/henry/data/training/convnet_direct_True128b_400e.pt')
 
-        self.criterion = F.cross_entropy
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.00001, weight_decay=0.0005) #start with .00005
-
 
         # train the model one epoch at a time
         for epoch in range(1, self.num_epochs + 1):
@@ -320,37 +318,12 @@ class PhysicalTrainer():
             for batch_idx, batch in enumerate(self.train_loader):
 
                 if self.loss_vector_type == 'direct':
+                    scores, images, targets, targets_est = self.unpackage_batch_dir_pass(batch, is_training=True)
 
-                    batch.append(batch[1][:, 159])  # synth vs real switch
-
-                    # cut it off so batch[2] is only the xyz marker targets
-                    batch[1] = batch[1][:, 0:72]
-
-                    batch[0], batch[1] = SyntheticLib().synthetic_master(batch[0], batch[1], batch[2],
-                                                                         flip=True, shift=True, scale=False,
-                                                                         bedangle=True,
-                                                                         include_inter=self.include_inter,
-                                                                         loss_vector_type=self.loss_vector_type)
-
-                    synth_real_switch = Variable(batch[2].type(dtype), requires_grad=True)
-
-                    images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(
-                        PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy()[:, :, :, :],
-                                                                               multiple=2)))
-                    images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
-                    images, targets = Variable(batch[0].type(dtype), requires_grad=False), Variable(
-                        batch[1].type(dtype), requires_grad=False)
-
+                    self.criterion = nn.L1Loss()
                     scores_zeros = np.zeros((batch[0].numpy().shape[0], 24))  # 24 is joint euclidean errors
                     scores_zeros = Variable(torch.Tensor(scores_zeros).type(dtype))
 
-                    self.optimizer.zero_grad()
-                    scores, targets_est, _ = self.model.forward_direct(images_up, synth_real_switch, targets,
-                                                                       is_training=True)
-
-                    # print targets_est[0, :]
-
-                    self.criterion = nn.L1Loss()
                     loss = self.criterion(scores, scores_zeros) * 24. / 34
 
 
@@ -371,8 +344,6 @@ class PhysicalTrainer():
                     else:
                         loss = loss_betas + loss_eucl
 
-
-                # print loss.data.numpy() * 1000, 'loss'
 
                 loss.backward()
                 self.optimizer.step()
@@ -440,34 +411,17 @@ class PhysicalTrainer():
             self.model.eval()
 
             if self.loss_vector_type == 'direct':
-
-                images_up_non_tensor = np.array(
-                    PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy()[:, :, :, :], multiple=2))
-                images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
-                images, targets = Variable(batch[0].type(dtype), requires_grad=False), Variable(batch[1].type(dtype),
-                                                                                                requires_grad=False)
-
-                scores_zeros = Variable(torch.Tensor(np.zeros((batch[1].shape[0], 10))).type(dtype),
-                                        requires_grad=False)
-
-                scores, targets_est, targets_est_reduced = self.model.forward_direct(images_up, 0, targets,
-                                                                                     is_training=False)
-
+                scores, images, targets, targets_est = self.unpackage_batch_kin_pass(batch, is_training=False)
                 self.criterion = nn.L1Loss()
-
+                scores_zeros = Variable(torch.Tensor(np.zeros((batch[1].shape[0], scores.size()[1]))).type(dtype),
+                                        requires_grad=False)
                 loss += self.criterion(scores, scores_zeros).data.item()
-
-
 
             elif self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
                 scores, images, targets, targets_est = self.unpackage_batch_kin_pass(batch, is_training=False)
-
                 self.criterion = nn.L1Loss()
-                scores_zeros = np.zeros((batch[0].numpy().shape[0],
-                                         scores.size()[1]))  # 34 is 10 shape params and 24 joint euclidean errors
-                scores_zeros = Variable(torch.Tensor(scores_zeros).type(dtype))
-
-                self.criterion = nn.L1Loss()
+                scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].shape[0], scores.size()[1]))).type(dtype),
+                                        requires_grad=False)
                 loss += self.criterion(scores[:, 10:34], scores_zeros[:, 10:34]).data.item()/10.
 
             n_examples += self.batch_size
@@ -477,15 +431,9 @@ class PhysicalTrainer():
 
             batch_ct += 1
 
-        # print(loss)
-
-        # loss /= n_examples
         loss /= batch_ct
-        # print(loss)
         loss *= 1000
-        # print(loss)
         loss *= 10. / 34
-        # print(loss)
 
         if GPU == True:
             VisualizationLib().print_error_val(targets.data.cpu(), targets_est.cpu(), self.output_size_val,
@@ -516,6 +464,35 @@ class PhysicalTrainer():
                                                           block=False)
 
         return loss
+
+    def unpackage_batch_dir_pass(self, batch, is_training):
+
+        batch.append(batch[1][:, 159])  # synth vs real switch
+
+        # cut it off so batch[2] is only the xyz marker targets
+        batch[1] = batch[1][:, 0:72]
+
+        if is_training == True:
+            batch[0], batch[1] = SyntheticLib().synthetic_master(batch[0], batch[1], batch[2],
+                                                                 flip=True, shift=True, scale=False,
+                                                                 bedangle=True,
+                                                                 include_inter=self.include_inter,
+                                                                 loss_vector_type=self.loss_vector_type)
+
+        synth_real_switch = Variable(batch[2].type(dtype), requires_grad=is_training)
+
+        images_up_non_tensor = PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2)
+        if is_training == True:
+            images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(images_up_non_tensor))
+
+        images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
+        images, targets = Variable(batch[0].type(dtype), requires_grad=False), Variable(batch[1].type(dtype), requires_grad=False)
+
+        self.optimizer.zero_grad()
+        scores, targets_est, _ = self.model.forward_direct(images_up, synth_real_switch, targets, is_training=is_training)
+
+        return scores, images, targets, targets_est
+
 
     def unpackage_batch_kin_pass(self, batch, is_training):
 

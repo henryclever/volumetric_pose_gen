@@ -163,8 +163,8 @@ class CNN(nn.Module):
 
 
     def forward_kinematic_angles(self, images, gender_switch, synth_real_switch, targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None, reg_angles = False):
-        self.GPU = False
-        self.dtype = torch.FloatTensor
+        #self.GPU = False
+        #self.dtype = torch.FloatTensor
 
         #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p7b"
 
@@ -311,8 +311,8 @@ class CNN(nn.Module):
 
         bed_angle_batch = torch.mean(images[:, 2, 1:3, 0], dim = 1)
 
-        print verts.size()
-        print bed_angle_batch.size()
+        #print verts.size()
+       # print bed_angle_batch.size()
 
         mesh_matrix_batch, contact_matrix_batch = self.meshDepthLib.compute_depth_contact_planes(verts, bed_angle_batch)
 
@@ -440,8 +440,6 @@ class CNN(nn.Module):
         #print scores[7, :]
 
 
-        targets_est_reduced_np = 0
-
         scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1/1.7312621950698526)) #weight the betas by std
         scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), (1/0.1282715100608753)) #weight the 24 joints by std
 
@@ -458,5 +456,5 @@ class CNN(nn.Module):
         contact_matrix_batch = contact_matrix_batch.type(self.dtype)
 
         #print scores[0, :]
-        return  scores, mesh_matrix_batch, contact_matrix_batch, targets_est_np, targets_est_reduced_np, betas_est_np
+        return  scores, mesh_matrix_batch, contact_matrix_batch, targets_est_np, betas_est_np
 
