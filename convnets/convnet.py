@@ -110,26 +110,9 @@ class CNN(nn.Module):
             self.J_regressor_f = np.zeros((human_f.J_regressor.shape)) + human_f.J_regressor
             self.J_regressor_f = torch.Tensor(np.array(self.J_regressor_f).astype(float)).permute(1, 0).type(dtype)
 
-            self.posedirs_f = torch.Tensor(np.stack([human_f.posedirs[1325, :, :],
-                                                    human_f.posedirs[336, :, :],
-                                                    human_f.posedirs[1032, :, :],
-                                                    human_f.posedirs[4515, :, :],
-                                                    human_f.posedirs[1374, :, :],
-                                                    human_f.posedirs[4848, :, :],
-                                                    human_f.posedirs[1739, :, :],
-                                                    human_f.posedirs[5209, :, :],
-                                                    human_f.posedirs[1960, :, :],
-                                                    human_f.posedirs[5423, :, :]])).type(dtype)
-            self.weights_f = torch.Tensor(np.stack([human_f.weights[1325, :],
-                                                    human_f.weights[336, :],
-                                                    human_f.weights[1032, :],
-                                                    human_f.weights[4515, :],
-                                                    human_f.weights[1374, :],
-                                                    human_f.weights[4848, :],
-                                                    human_f.weights[1739, :],
-                                                    human_f.weights[5209, :],
-                                                    human_f.weights[1960, :],
-                                                    human_f.weights[5423, :]])).type(dtype)
+            self.posedirs_f = torch.Tensor(np.array([human_f.posedirs[self.vertice_regression_list, :, :]])).type(dtype)
+            self.weights_f = torch.Tensor(np.array([human_f.weights[self.vertice_regression_list, :, :]])).type(dtype)
+            print self.weights_f.size()
 
             model_path_m = filepath+'/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
             human_m = load_model(model_path_m)

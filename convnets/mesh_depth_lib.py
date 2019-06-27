@@ -55,7 +55,7 @@ def load_pickle(filename):
 
 class MeshDepthLib():
 
-    def __init__(self, loss_vector_type, filepath, batch_size, verts_type = "all"):
+    def __init__(self, loss_vector_type, filepath, batch_size, verts_type):
 
         if torch.cuda.is_available():
             self.GPU = True
