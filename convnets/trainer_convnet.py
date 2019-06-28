@@ -136,8 +136,11 @@ class PhysicalTrainer():
                          '_synth_s' + str(TEST_SUBJECT) + \
                          '_3xreal_' + \
                          str(self.CTRL_PNL['batch_size']) + 'b_' +\
-                         str(self.CTRL_PNL['num_epochs']) + 'e_' +\
-                         self.opt.j_d_ratio + 'ratio'
+                         str(self.CTRL_PNL['num_epochs']) + 'e'
+
+        if self.CTRL_PNL['regr_depth_maps'] == True:
+        self.save_name += '_'+str(self.opt.j_d_ratio) + 'r'
+
         # self.save_name = '_' + opt.losstype+'_real_s9_alltest_' + str(self.CTRL_PNL['batch_size']) + 'b_'# + str(self.CTRL_PNL['num_epochs']) + 'e'
 
         print 'appending to', 'train' + self.save_name
