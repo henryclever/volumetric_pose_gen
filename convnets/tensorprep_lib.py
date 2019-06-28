@@ -121,7 +121,7 @@ class TensorPrepLib():
             train_xa = np.concatenate((train_contact, train_xa), axis=1)
         return train_xa
 
-    def prep_labels(self, y_flat, dat, num_repeats, z_adj, gender, is_synth, is_train):
+    def prep_labels(self, y_flat, dat, num_repeats, z_adj, gender, is_synth):
         if gender == "f":
             g1 = 1
             g2 = 0
@@ -134,7 +134,7 @@ class TensorPrepLib():
             s1 = 0
         z_adj_all = np.array(24 * [0.0, 0.0, z_adj*1000])
 
-        if is_synth == True and is_train == True:
+        if is_synth == True:
             if dat is not None:
                 for entry in range(len(dat['markers_xyz_m'])):
                     c = np.concatenate((dat['markers_xyz_m'][entry][0:72] * 1000 + z_adj_all,
@@ -148,7 +148,7 @@ class TensorPrepLib():
                         y_flat.append(c)
 
 
-        elif is_synth == False and is_train == True:
+        elif is_synth == False:
             if dat is not None:
                 for entry in range(len(dat['markers_xyz_m'])):
                     c = np.concatenate((np.array(9 * [0]),
@@ -175,17 +175,6 @@ class TensorPrepLib():
                     for i in range(num_repeats):
                         y_flat.append(c)
 
-
-        elif is_synth == False and is_train == False:
-            if dat is not None:
-                for entry in range(len(dat['markers_xyz_m'])):
-                    c = np.concatenate((dat['markers_xyz_m'][entry] * 1000,
-                                        [g1], [g2], [s1],
-                                        [dat['body_mass'][entry]],
-                                        [(dat['body_height'][entry] - 1.) * 100]),
-                                       axis=0)  # shapedirs (N, 6890, 3, 10)
-                    for i in range(num_repeats):
-                        y_flat.append(c)
 
         return y_flat
 

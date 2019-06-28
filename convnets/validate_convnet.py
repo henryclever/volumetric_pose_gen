@@ -174,14 +174,14 @@ class PhysicalTrainer():
 
         self.test_y_flat = []  # Initialize the testing ground truth list
         self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_f_synth, num_repeats = 1,
-                                                        z_adj = -0.075, gender = "f", is_synth = True, is_train = True)
+                                                        z_adj = -0.075, gender = "f", is_synth = True)
         self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_m_synth, num_repeats = 1,
-                                                        z_adj = -0.075, gender = "m", is_synth = True, is_train = True)
+                                                        z_adj = -0.075, gender = "m", is_synth = True)
 
         self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_f_real, num_repeats = self.ctrl_pnl['repeat_real_data_ct'],
-                                                        z_adj = 0.0, gender = "m", is_synth = False, is_train = True)
+                                                        z_adj = 0.0, gender = "m", is_synth = False)
         self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_m_real, num_repeats = self.ctrl_pnl['repeat_real_data_ct'],
-                                                        z_adj = 0.0, gender = "m", is_synth = False, is_train = True)
+                                                        z_adj = 0.0, gender = "m", is_synth = False)
         self.test_y_tensor = torch.Tensor(self.test_y_flat)
 
         print self.test_x_tensor.shape, 'Input testing tensor shape'

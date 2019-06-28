@@ -209,14 +209,14 @@ class PhysicalTrainer():
 
         self.train_y_flat = []  # Initialize the training ground truth list
         self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_f_synth, num_repeats = 1,
-                                                        z_adj = -0.075, gender = "f", is_synth = True, is_train = True)
+                                                        z_adj = -0.075, gender = "f", is_synth = True)
         self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_m_synth, num_repeats = 1,
-                                                        z_adj = -0.075, gender = "m", is_synth = True, is_train = True)
+                                                        z_adj = -0.075, gender = "m", is_synth = True)
 
         self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_f_real, num_repeats = repeat_real_data_ct,
-                                                        z_adj = 0.0, gender = "m", is_synth = False, is_train = True)
+                                                        z_adj = 0.0, gender = "m", is_synth = False)
         self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_m_real, num_repeats = repeat_real_data_ct,
-                                                        z_adj = 0.0, gender = "m", is_synth = False, is_train = True)
+                                                        z_adj = 0.0, gender = "m", is_synth = False)
         self.train_y_tensor = torch.Tensor(self.train_y_flat)
 
         print self.train_x_tensor.shape, 'Input training tensor shape'
@@ -257,9 +257,9 @@ class PhysicalTrainer():
 
         self.test_y_flat = []  # Initialize the ground truth listhave
         self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, test_dat_f, num_repeats = 1,
-                                                       z_adj = 0.0, gender = "f", is_synth = False, is_train = True)
+                                                       z_adj = 0.0, gender = "f", is_synth = False)
         self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, test_dat_m, num_repeats = 1,
-                                                       z_adj = 0.0, gender = "m", is_synth = False, is_train = True)
+                                                       z_adj = 0.0, gender = "m", is_synth = False)
         self.test_y_tensor = torch.Tensor(self.test_y_flat)
 
 
@@ -360,7 +360,8 @@ class PhysicalTrainer():
 
                     self.optimizer.zero_grad()
 
-                    scores, images, targets, targets_est = self.unpackage_batch_dir_pass(batch, is_training=True)
+                    scores, images, targets, targets_est = \
+                        UnpackBatchLib().unpackage_batch_dir_pass(batch, is_training=True, model=self.model, CTRL_PNL = self.CTRL_PNL)
 
                     self.criterion = nn.L1Loss()
                     scores_zeros = np.zeros((batch[0].numpy().shape[0], 24))  # 24 is joint euclidean errors
@@ -392,8 +393,8 @@ class PhysicalTrainer():
                     if self.CTRL_PNL['regr_depth_maps'] == True:
                         loss_mesh_depth = self.criterion(mmb, mmb_est)*self.weight_depth_planes / 25
                         loss_mesh_contact = self.criterion(cmb, cmb_est)*self.weight_depth_planes * 5.0
-                        loss += loss_mesh_depth*self.weight_depth_planes
-                        loss += loss_mesh_contact*self.weight_depth_planes
+                        loss += loss_mesh_depth
+                        loss += loss_mesh_contact
 
 
                 loss.backward()
@@ -476,7 +477,8 @@ class PhysicalTrainer():
             self.model.eval()
 
             if self.CTRL_PNL['loss_vector_type'] == 'direct':
-                scores, images, targets, targets_est = self.unpackage_batch_kin_pass(batch, is_training=False)
+                scores, images, targets, targets_est = \
+                    UnpackBatchLib().unpackage_batch_dir_pass(batch, is_training=False, model=self.model, CTRL_PNL = self.CTRL_PNL)
                 self.criterion = nn.L1Loss()
                 scores_zeros = Variable(torch.Tensor(np.zeros((batch[1].shape[0], scores.size()[1]))).type(dtype),
                                         requires_grad=False)
@@ -531,34 +533,6 @@ class PhysicalTrainer():
                                                           block=False)
 
         return loss
-
-    def unpackage_batch_dir_pass(self, batch, is_training):
-
-        batch.append(batch[1][:, 159])  # synth vs real switch
-
-        # cut it off so batch[2] is only the xyz marker targets
-        batch[1] = batch[1][:, 0:72]
-
-        if is_training == True:
-            batch[0], batch[1] = SyntheticLib().synthetic_master(batch[0], batch[1], batch[2],
-                                                                 flip=True, shift=True, scale=False,
-                                                                 bedangle=True,
-                                                                 include_inter=self.CTRL_PNL['incl_inter'],
-                                                                 loss_vector_type=self.CTRL_PNL['loss_vector_type'])
-
-        synth_real_switch = Variable(batch[2].type(dtype), requires_grad=is_training)
-
-        images_up_non_tensor = PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2)
-        if is_training == True:
-            images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(images_up_non_tensor))
-
-        images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
-        images, targets = Variable(batch[0].type(dtype), requires_grad=False), Variable(batch[1].type(dtype), requires_grad=False)
-
-        self.optimizer.zero_grad()
-        scores, targets_est, _ = self.model.forward_direct(images_up, synth_real_switch, targets, is_training=is_training)
-
-        return scores, images, targets, targets_est
 
 
 

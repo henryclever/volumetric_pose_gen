@@ -134,3 +134,45 @@ class UnpackBatchLib():
 
 
         return scores, images, targets, targets_est, mmb, mmb_est, cmb, cmb_est
+
+
+    def unpackage_batch_dir_pass(self, batch, is_training, model, CTRL_PNL):
+
+        batch.append(batch[1][:, 159])  # synth vs real switch
+        batch.append(batch[1][:, 160:161])  # mass, kg
+        batch.append(batch[1][:, 161:162])  # height, kg
+
+        # cut it off so batch[2] is only the xyz marker targets
+        batch[1] = batch[1][:, 0:72]
+
+        if is_training == True:
+            batch[0], batch[1] = SyntheticLib().synthetic_master(batch[0], batch[1], batch[2],
+                                                                 flip=True, shift=True, scale=False,
+                                                                 bedangle=True,
+                                                                 include_inter=CTRL_PNL['incl_inter'],
+                                                                 loss_vector_type=CTRL_PNL['loss_vector_type'])
+
+        synth_real_switch = Variable(batch[2].type(CTRL_PNL['dtype']), requires_grad=is_training)
+
+        images_up_non_tensor = PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2)
+        if is_training == True:
+            images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(images_up_non_tensor))
+
+        images_up = Variable(torch.Tensor(images_up_non_tensor).type(CTRL_PNL['dtype']), requires_grad=False)
+
+
+        if CTRL_PNL['incl_ht_wt_channels'] == True: #make images full of stuff
+            weight_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(CTRL_PNL['dtype'])
+            weight_input *= batch[7].type(CTRL_PNL['dtype'])
+            weight_input = weight_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
+            height_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(CTRL_PNL['dtype'])
+            height_input *= batch[8].type(CTRL_PNL['dtype'])
+            height_input = height_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
+            images_up = torch.cat((images_up, weight_input, height_input), 1)
+
+
+        images, targets = Variable(batch[0].type(CTRL_PNL['dtype']), requires_grad=False), Variable(batch[1].type(CTRL_PNL['dtype']), requires_grad=False)
+
+        scores, targets_est, _ = model.forward_direct(images_up, synth_real_switch, targets, is_training=is_training)
+
+        return scores, images, targets, targets_est
