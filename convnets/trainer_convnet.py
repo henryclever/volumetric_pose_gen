@@ -132,8 +132,12 @@ class PhysicalTrainer():
         print self.CTRL_PNL['num_epochs'], 'NUM EPOCHS!'
         # Entire pressure dataset with coordinates in world frame
 
-        self.save_name = '_' + opt.losstype + '_synth_s' + str(TEST_SUBJECT) + '_3xreal_' + str(
-            self.CTRL_PNL['batch_size']) + 'b_' + str(self.CTRL_PNL['num_epochs']) + 'e'
+        self.save_name = '_' + opt.losstype + \
+                         '_synth_s' + str(TEST_SUBJECT) + \
+                         '_3xreal_' + \
+                         str(self.CTRL_PNL['batch_size']) + 'b_' +\
+                         str(self.CTRL_PNL['num_epochs']) + 'e_' +\
+                         self.opt.j_d_ratio + 'ratio'
         # self.save_name = '_' + opt.losstype+'_real_s9_alltest_' + str(self.CTRL_PNL['batch_size']) + 'b_'# + str(self.CTRL_PNL['num_epochs']) + 'e'
 
         print 'appending to', 'train' + self.save_name
@@ -368,7 +372,7 @@ class PhysicalTrainer():
                     self.optimizer.zero_grad()
                     scores, images, targets, targets_est, mmb, mmb_est, cmb, cmb_est = \
                         UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=True, model = self.model, CTRL_PNL=self.CTRL_PNL)
-                    
+
                     self.criterion = nn.L1Loss()
                     scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].shape[0], scores.size()[1]))).type(dtype),
                                             requires_grad=True)
