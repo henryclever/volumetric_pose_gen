@@ -270,7 +270,7 @@ class CNN(nn.Module):
 
         try:
              x = self.meshDepthLib.bounds
-             print "mesh embedding already loaded!"
+             #print "mesh embedding already loaded!"
         except:
             self.GPU = False
             self.dtype = torch.FloatTensor
