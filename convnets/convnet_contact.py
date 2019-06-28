@@ -105,7 +105,7 @@ class CNN(nn.Module):
         self.dtype = dtype
         self.dtypeInt = dtypeInt
 
-        self.meshDepthLib = MeshDepthLib(loss_vector_type, filepath, batch_size, verts_type = "all")
+        self.meshDepthLib = MeshDepthLib(loss_vector_type, filepath, batch_size, verts_list = "all")
 
     def forward_kinematic_angles_realtime(self, images):
         scores_cnn = self.CNN_pack1(images)
@@ -162,10 +162,10 @@ class CNN(nn.Module):
 
 
 
-    def forward_kinematic_angles(self, images, gender_switch, synth_real_switch, targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None, reg_angles = False):
-        #self.GPU = False
-        #self.dtype = torch.FloatTensor
-
+    def forward_kinematic_angles(self, images, gender_switch, synth_real_switch,
+                                 targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None,
+                                 reg_angles = False):
+        #
         #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p7b"
 
         scores_cnn = self.CNN_pack1(images)
@@ -174,7 +174,9 @@ class CNN(nn.Module):
              x = self.meshDepthLib.bounds
              print "GOT HERE!"
         except:
-            self.meshDepthLib = MeshDepthLib(loss_vector_type=self.loss_vector_type, filepath='/home/henry/', batch_size=images.size(0), verts_type = "all")
+            self.GPU = False
+            self.dtype = torch.FloatTensor
+            self.meshDepthLib = MeshDepthLib(loss_vector_type=self.loss_vector_type, filepath='/home/henry/', batch_size=images.size(0), verts_list = "all")
 
         #print torch.cuda.max_memory_allocated(), torch.cuda.memory_allocated(), torch.cuda.memory_cached(), "p7c"
 
@@ -250,7 +252,6 @@ class CNN(nn.Module):
             scores[:, 0:10] = betas.clone()
             scores[:, 13:85] = angles_gt.clone()
             root_shift_est = root_shift
-            #print root_shift[0, :], "root shift"
 
             if self.loss_vector_type == 'anglesDC':
 
@@ -329,30 +330,23 @@ class CNN(nn.Module):
                                 verts[:, 1960, :],  # l wrist
                                 verts[:, 5423, :]]).permute(1, 0, 2)  # r wrist
 
+
+
         verts_offset = verts_red.clone().detach().cpu()
         verts_offset = torch.Tensor(verts_offset.numpy()).type(self.dtype)
+
+
         targets_est_detached = torch.Tensor(targets_est.clone().detach().cpu().numpy()).type(self.dtype)
-
-
         synth_joint_addressed = [3, 15, 4, 5, 7, 8, 18, 19, 20, 21]
-
         for real_joint in range(10):
             verts_offset[:, real_joint, :] = verts_offset[:, real_joint, :] - targets_est_detached[:, synth_joint_addressed[real_joint], :]
 
 
         #here we need to the ground truth to make it a surface point for the mocap markers
-        if is_training == True:
-            synth_real_switch_repeated = synth_real_switch.unsqueeze(1).repeat(1, 3)
-            for real_joint in range(10):
-                targets_est[:, synth_joint_addressed[real_joint], :] = synth_real_switch_repeated * targets_est[:, synth_joint_addressed[real_joint], :].clone() \
-                                       + torch.add(-synth_real_switch_repeated, 1) * (targets_est[:, synth_joint_addressed[real_joint], :].clone() + verts_offset[:, real_joint, :])
-
-        else:
-            for real_joint in range(10):
-                targets_est[:, synth_joint_addressed[real_joint], :] = targets_est[:, synth_joint_addressed[real_joint], :] + verts_offset[:, real_joint, :]
-
-
-
+        synth_real_switch_repeated = synth_real_switch.unsqueeze(1).repeat(1, 3)
+        for real_joint in range(10):
+            targets_est[:, synth_joint_addressed[real_joint], :] = synth_real_switch_repeated * targets_est[:, synth_joint_addressed[real_joint], :].clone() \
+                                   + torch.add(-synth_real_switch_repeated, 1) * (targets_est[:, synth_joint_addressed[real_joint], :].clone() + verts_offset[:, real_joint, :])
 
 
         targets_est = targets_est.contiguous().view(-1, 72)

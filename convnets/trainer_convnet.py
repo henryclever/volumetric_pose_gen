@@ -104,17 +104,31 @@ class PhysicalTrainer():
         self.include_inter = True
         self.shuffle = True
         self.include_height_weight_channels = True
+        self.include_pmat_contact_input = False
         self.num_input_channels = 3
-        repeat_real_data_ct = 3
+        repeat_real_data_ct = 1
+        self.regress_depth_maps = True #can only be true if we have 100% synthetic data for training
+
+        self.weight_joints = self.opt.j_d_ratio*2
+        self.weight_depth_planes = (1-self.opt.j_d_ratio)*2
 
         self.count = 0
 
-        if self.include_height_weight_channels == True: self.num_input_channels += 2
+        if self.include_pmat_contact_input == True:
+            self.num_input_channels += 1
+        self.num_input_channels_batch0 = np.copy(self.num_input_channels)
+        if self.include_height_weight_channels == True:
+            self.num_input_channels += 2
+
+        if self.regress_depth_maps == True: #we need all the vertices if we're going to regress the depth maps
+            self.verts_list = "all"
+        else:
+            self.verts_list = [1325, 336, 1032, 4515, 1374, 4848, 1739, 5209, 1960, 5423]
 
         print self.num_epochs, 'NUM EPOCHS!'
         # Entire pressure dataset with coordinates in world frame
 
-        self.save_name = '_' + opt.losstype + '_synthreal_s' + str(TEST_SUBJECT) + '_3xreal_' + str(
+        self.save_name = '_' + opt.losstype + '_synth_s' + str(TEST_SUBJECT) + '_3xreal_' + str(
             self.batch_size) + 'b_' + str(self.num_epochs) + 'e'
         # self.save_name = '_' + opt.losstype+'_real_s9_alltest_' + str(self.batch_size) + 'b_'# + str(self.num_epochs) + 'e'
 
@@ -132,7 +146,7 @@ class PhysicalTrainer():
 
 
         #################################### PREP TRAINING DATA ##########################################
-        #load training synth data
+        #load training ysnth data
         dat_f_synth = TensorPrepLib().load_files_to_database(training_database_file_f, 'synth')
         dat_m_synth = TensorPrepLib().load_files_to_database(training_database_file_m, 'synth')
         dat_f_real = TensorPrepLib().load_files_to_database(training_database_file_f, 'real')
@@ -160,15 +174,25 @@ class PhysicalTrainer():
         self.train_a_flat = TensorPrepLib().prep_angles(self.train_a_flat, dat_f_real, num_repeats = repeat_real_data_ct)
         self.train_a_flat = TensorPrepLib().prep_angles(self.train_a_flat, dat_m_real, num_repeats = repeat_real_data_ct)
 
+        if self.regress_depth_maps == True:
+            self.depth_contact_maps = [] #Initialize the precomputed depth and contact maps
+            self.depth_contact_maps = TensorPrepLib().prep_depth_contact(self.depth_contact_maps, dat_f_synth, num_repeats = 1)
+            self.depth_contact_maps = TensorPrepLib().prep_depth_contact(self.depth_contact_maps, dat_m_synth, num_repeats = 1)
+        else:
+            self.depth_contact_maps = None
+
+        #stack the bed height array on the pressure image as well as a sobel filtered image
         train_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.train_x_flat,
                                                                                 self.train_a_flat,
                                                                                 self.include_inter, self.mat_size,
                                                                                 self.verbose)
 
+        #stack the depth and contact mesh images (and possible a pmat contact image) together
         train_xa = TensorPrepLib().append_input_depth_contact(np.array(train_xa),
-                                                              mesh_depth_contact_maps = None,
-                                                              include_mesh_depth_contact = False,
-                                                              include_pmat_contact = False)
+                                                              mesh_depth_contact_maps = self.depth_contact_maps,
+                                                              include_mesh_depth_contact = self.regress_depth_maps,
+                                                              include_pmat_contact = self.include_pmat_contact_input)
+
         self.train_x_tensor = torch.Tensor(train_xa)
 
 
@@ -215,7 +239,7 @@ class PhysicalTrainer():
         test_xa = TensorPrepLib().append_input_depth_contact(np.array(test_xa),
                                                               mesh_depth_contact_maps = None,
                                                               include_mesh_depth_contact = False,
-                                                              include_pmat_contact = False)
+                                                              include_pmat_contact = self.include_pmat_contact_input)
 
         self.test_x_tensor = torch.Tensor(test_xa)
 
@@ -257,13 +281,13 @@ class PhysicalTrainer():
         print "Loading convnet model................................"
         if self.loss_vector_type == 'direct':
             fc_output_size = 72
-            self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type,
-                                     self.batch_size, filepath=filepath_prefix, in_channels=self.num_input_channels)
+            self.model = convnet.CNN(fc_output_size, self.loss_vector_type, self.batch_size,
+                                     verts_list = self.verts_list, filepath=filepath_prefix, in_channels=self.num_input_channels)
 
         elif self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
             fc_output_size = 85## 10 + 3 + 24*3 --- betas, root shift, rotations
-            self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type,
-                                     self.batch_size, filepath=filepath_prefix, in_channels=self.num_input_channels)
+            self.model = convnet.CNN(fc_output_size, self.loss_vector_type, self.batch_size,
+                                     verts_list = self.verts_list, filepath=filepath_prefix, in_channels=self.num_input_channels)
             #self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type, self.batch_size, filepath=filepath_prefix)
             #self.model = torch.load('/home/ubuntu/Autobed_OFFICIAL_Trials' + '/subject_' + str(self.opt.leave_out) + '/convnets/convnet_9to18_'+str(self.loss_vector_type)+'_sTrue_128b_200e_' + str(self.opt.leave_out) + '.pt', map_location=lambda storage, loc: storage)
         pp = 0
@@ -333,20 +357,25 @@ class PhysicalTrainer():
 
 
                 elif self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
-                    scores, images, targets, targets_est = self.unpackage_batch_kin_pass(batch, is_training=True)
-
+                    scores, images, targets, targets_est, mmb, mmb_est, cmb, cmb_est = self.unpackage_batch_kin_pass(batch, is_training=True)
                     self.criterion = nn.L1Loss()
-                    scores_zeros = np.zeros((batch[0].numpy().shape[0], scores.size()[1]))  # 34 is 10 shape params and 24 joint euclidean errors
-                    scores_zeros = Variable(torch.Tensor(scores_zeros).type(dtype))
+                    scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].shape[0], scores.size()[1]))).type(dtype),
+                                            requires_grad=True)
 
-                    loss_betas = self.criterion(scores[:, 0:10], scores_zeros[:, 0:10])
-                    loss_eucl = self.criterion(scores[:, 10:34], scores_zeros[:, 10:34])
+                    loss_betas = self.criterion(scores[:, 0:10], scores_zeros[:, 0:10])*self.weight_joints
+                    loss_eucl = self.criterion(scores[:, 10:34], scores_zeros[:, 10:34])*self.weight_joints*2
 
                     if self.opt.reg_angles == True:
-                        loss_angs = self.criterion(scores[:, 34:106], scores_zeros[:, 34:106])
-                        loss = loss_betas + loss_eucl + loss_angs
+                        loss_angs = self.criterion(scores[:, 34:106], scores_zeros[:, 34:106])*self.weight_joints
+                        loss = (loss_betas + loss_eucl + loss_angs)
                     else:
-                        loss = loss_betas + loss_eucl
+                        loss = (loss_betas + loss_eucl)
+
+                    if self.regress_depth_maps == True:
+                        loss_mesh_depth = self.criterion(mmb, mmb_est)*self.weight_depth_planes / 25
+                        loss_mesh_contact = self.criterion(cmb, cmb_est)*self.weight_depth_planes * 5.0
+                        loss += loss_mesh_depth*self.weight_depth_planes
+                        loss += loss_mesh_contact*self.weight_depth_planes
 
 
                 loss.backward()
@@ -379,25 +408,39 @@ class PhysicalTrainer():
                     train_loss = loss.data.item()
                     examples_this_epoch = batch_idx * len(images)
                     epoch_progress = 100. * batch_idx / len(self.train_loader)
-                    if self.loss_vector_type == 'direct':
-                        print('Train Epoch: {} [{}/{} ({:.0f}%)]\t'
-                              'Total Loss: {:.2f}\n\t\t\t\t'
-                              '   Val Loss: {:.2f}'.format(
-                            epoch, examples_this_epoch, len(self.train_loader.dataset),
-                            epoch_progress, train_loss, val_loss))
-                    else:
+
+                    print_text_list = [ 'Train Epoch: {} ',
+                                        '[{}',
+                                        '/{} ',
+                                        '({:.0f}%)]\t']
+                    print_vals_list = [epoch,
+                                      examples_this_epoch,
+                                      len(self.train_loader.dataset),
+                                      epoch_progress]
+                    if self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
+                        print_text_list.append('Train Loss Joints: {:.2f}')
+                        print_vals_list.append(1000*loss_eucl.data)
+                        print_text_list.append('\n\t\t\t\t\t\t   Betas Loss: {:.2f}')
+                        print_vals_list.append(1000*loss_betas.data)
                         if self.opt.reg_angles == True:
-                            print('Train Epoch: {} [{}/{} ({:.0f}%)]\t'
-                                  'Train Loss Joints: {:.2f}, Betas Loss: {:.2f}, Angles Loss: {:.2f}, Total Loss: {:.2f}\n\t\t\t\t'
-                                  '   Val Loss Total: {:.2f}'.format(
-                                epoch, examples_this_epoch, len(self.train_loader.dataset),
-                                epoch_progress, 1000*loss_eucl.data, 1000*loss_betas.data, 1000*loss_angs.data, train_loss, val_loss))
-                        else:
-                            print('Train Epoch: {} [{}/{} ({:.0f}%)]\t'
-                                  'Train Loss Joints: {:.2f}, Betas Loss: {:.2f}, Total Loss: {:.2f}\n\t\t\t\t'
-                                  '   Val Loss Total: {:.2f}'.format(
-                                epoch, examples_this_epoch, len(self.train_loader.dataset),
-                                epoch_progress, 1000*loss_eucl.data, 1000*loss_betas.data, train_loss, val_loss))
+                            print_text_list.append('\n\t\t\t\t\t\t  Angles Loss: {:.2f}')
+                            print_vals_list.append(1000*loss_angs.data)
+                        if self.regress_depth_maps == True:
+                            print_text_list.append('\n\t\t\t\t\t\t   Mesh Depth: {:.2f}')
+                            print_vals_list.append(1000*loss_mesh_depth.data)
+                            print_text_list.append('\n\t\t\t\t\t\t Mesh Contact: {:.2f}')
+                            print_vals_list.append(1000*loss_mesh_contact.data)
+
+                    print_text_list.append('\n\t\t\t\t\t\t   Total Loss: {:.2f}')
+                    print_vals_list.append(train_loss)
+                    print_text_list.append('\n\t\t\t\t   Val Loss Total: {:.2f}')
+                    print_vals_list.append(val_loss)
+
+                    print_text = ''
+                    for item in print_text_list:
+                        print_text += item
+                    print(print_text.format(*print_vals_list))
+
 
                     print 'appending to alldata losses'
                     self.train_val_losses['train' + self.save_name].append(train_loss)
@@ -422,11 +465,12 @@ class PhysicalTrainer():
                 loss += self.criterion(scores, scores_zeros).data.item()
 
             elif self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
-                scores, images, targets, targets_est = self.unpackage_batch_kin_pass(batch, is_training=False)
+                scores, images, targets, targets_est, mmb, mmb_est, cmb, cmb_est = self.unpackage_batch_kin_pass(batch, is_training=False)
                 self.criterion = nn.L1Loss()
                 scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].shape[0], scores.size()[1]))).type(dtype),
                                         requires_grad=False)
-                loss += self.criterion(scores[:, 10:34], scores_zeros[:, 10:34]).data.item()/10.
+
+                loss += self.criterion(scores[:, 10:34], scores_zeros[:, 10:34]).data.item() / 10.
 
             n_examples += self.batch_size
 
@@ -509,10 +553,17 @@ class PhysicalTrainer():
         batch.append(batch[1][:, 160:161])  # mass, kg
         batch.append(batch[1][:, 161:162])  # height, kg
 
+        if self.regress_depth_maps == True and is_training == True:
+            batch.append(batch[0][:, self.num_input_channels_batch0, : ,:]) #mesh depth matrix
+            batch.append(batch[0][:, self.num_input_channels_batch0+1, : ,:]) #mesh contact matrix
+
+            #cut off batch 0 so we don't have depth or contact on the input
+            batch[0] = batch[0][:, 0:self.num_input_channels_batch0, :, :]
+
         # cut it off so batch[2] is only the xyz marker targets
         batch[1] = batch[1][:, 0:72]
 
-        if is_training == True:
+        if is_training == True: #only do augmentation for real data that is in training mode
             batch[0], batch[1], _ = SyntheticLib().synthetic_master(batch[0], batch[1], batch[6],
                                                                     flip=True, shift=True, scale=False,
                                                                     bedangle=True,
@@ -520,18 +571,20 @@ class PhysicalTrainer():
                                                                     loss_vector_type=self.loss_vector_type)
 
         images_up_non_tensor = PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2)
-        if is_training == True:
+
+        if is_training == True: #only add noise to training images
             images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(images_up_non_tensor))
 
         images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
 
-        weight_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(dtype)
-        weight_input *= batch[7].type(dtype)
-        weight_input = weight_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
-        height_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(dtype)
-        height_input *= batch[8].type(dtype)
-        height_input = height_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
-        images_up = torch.cat((images_up, weight_input, height_input), 1)
+        if self.include_height_weight_channels == True: #make images full of stuff
+            weight_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(dtype)
+            weight_input *= batch[7].type(dtype)
+            weight_input = weight_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
+            height_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(dtype)
+            height_input *= batch[8].type(dtype)
+            height_input = height_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
+            images_up = torch.cat((images_up, weight_input, height_input), 1)
 
         images, targets, betas = Variable(batch[0].type(dtype), requires_grad=False), \
                                  Variable(batch[1].type(dtype), requires_grad=False), \
@@ -542,6 +595,13 @@ class PhysicalTrainer():
         gender_switch = Variable(batch[5].type(dtype), requires_grad=is_training)
         synth_real_switch = Variable(batch[6].type(dtype), requires_grad=is_training)
 
+        if self.regress_depth_maps == True and is_training == True:
+            mmb = batch[9].type(dtype)
+            cmb = batch[10].type(dtype)
+        else:
+            mmb = None
+            cmb = None
+
         self.optimizer.zero_grad()
         ground_truth = np.zeros(
             (batch[0].numpy().shape[0], 82))  # 82 is 10 shape params and 72 joint locations x,y,z
@@ -549,7 +609,7 @@ class PhysicalTrainer():
         ground_truth[:, 0:10] = betas[:, 0:10] / 100
         ground_truth[:, 10:82] = targets[:, 0:72] / 1000
 
-        scores, targets_est, betas_est = self.model.forward_kinematic_angles(images_up,
+        scores, mmb_est, cmb_est, targets_est, betas_est = self.model.forward_kinematic_angles(images_up,
                                                                              gender_switch,
                                                                              synth_real_switch,
                                                                              targets,
@@ -557,9 +617,11 @@ class PhysicalTrainer():
                                                                              betas=betas,
                                                                              angles_gt=angles_gt,
                                                                              root_shift=root_shift,
-                                                                             reg_angles=self.opt.reg_angles)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
+                                                                             reg_angles=self.opt.reg_angles,
+                                                                             reg_depth_maps = self.regress_depth_maps)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
 
-        return scores, images, targets, targets_est
+
+        return scores, images, targets, targets_est, mmb, mmb_est, cmb, cmb_est
 
 if __name__ == "__main__":
     #Initialize trainer with a training database file
@@ -582,6 +644,10 @@ if __name__ == "__main__":
                  dest='losstype', \
                  default='direct', \
                  help='Set if you want to do baseline ML or convnet.')
+    p.add_option('--j_d_ratio', action='store', type = 'float',
+                 dest='j_d_ratio', \
+                 default=0.5, \
+                 help='Set the loss mix: joints to depth planes.')
     p.add_option('--qt', action='store_true',
                  dest='quick_test', \
                  default=False, \
@@ -601,7 +667,7 @@ if __name__ == "__main__":
     p.add_option('--verbose', '--v',  action='store_true', dest='verbose',
                  default=True, help='Printout everything (under construction).')
 
-    p.add_option('--log_interval', type=int, default=5, metavar='N',
+    p.add_option('--log_interval', type=int, default=10, metavar='N',
                  help='number of batches between logging train status')
 
     opt, args = p.parse_args()
@@ -627,7 +693,7 @@ if __name__ == "__main__":
         #training_database_file_f.append(filepath_prefix_qt + 'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
         #training_database_file_m.append(filepath_prefix_qt+'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
         #training_database_file_m.append(filepath_prefix_qt+'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-        training_database_file_m.append(filepath_prefix_qt+'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        #training_database_file_m.append(filepath_prefix_qt+'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
         #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
         test_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
     else:
@@ -643,8 +709,8 @@ if __name__ == "__main__":
             training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1102_leftside_stiff.p')
             training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1106_lowerbody_stiff.p')
             training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1096_none_stiff.p')
-            training_database_file_f.append(filepath_prefix_qt+'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-            training_database_file_f.append(filepath_prefix_qt+'data/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+            #training_database_file_f.append(filepath_prefix_qt+'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+            #training_database_file_f.append(filepath_prefix_qt+'data/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
                     
             #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval8_150rh1_sit120rh.p')
 
@@ -658,11 +724,11 @@ if __name__ == "__main__":
             training_database_file_m.append(filepath_prefix_qt+'data/synth/side_up_fw/train_m_sit_1000_of_1152_leftside_stiff.p')
             training_database_file_m.append(filepath_prefix_qt+'data/synth/side_up_fw/train_m_sit_1000_of_1144_lowerbody_stiff.p')
             training_database_file_m.append(filepath_prefix_qt+'data/synth/side_up_fw/train_m_sit_1000_of_1126_none_stiff.p')
-            training_database_file_m.append(filepath_prefix_qt+'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+            #training_database_file_m.append(filepath_prefix_qt+'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
             #training_database_file_m.append(filepath_prefix_qt+'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-            training_database_file_m.append(filepath_prefix_qt+'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-            training_database_file_m.append(filepath_prefix_qt+'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-            training_database_file_m.append(filepath_prefix_qt+'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+            #training_database_file_m.append(filepath_prefix_qt+'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+            #training_database_file_m.append(filepath_prefix_qt+'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+            #training_database_file_m.append(filepath_prefix_qt+'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
 
             #training_database_file_m.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
             #training_database_file_m.append(filepath_prefix_qt+'data/synth/train_m_sit_95_rightside_stiff.p')

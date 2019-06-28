@@ -19,7 +19,7 @@ from torch.autograd import Variable
 import chumpy as ch
 
 
-import convnet as convnet
+import convnet_contact as convnet
 import tf.transformations as tft
 
 # import hrl_lib.util as ut
@@ -103,10 +103,19 @@ class PhysicalTrainer():
         self.num_epochs = 101
         self.include_inter = True
         self.shuffle = True
+        self.include_height_weight_channels = True
+        self.include_pmat_contact_input = True
+        self.num_input_channels = 3
         repeat_real_data_ct = 1
 
         self.count = 0
-        self.include_mesh_depth_contact = False
+        self.regress_depth_maps = False
+
+        if self.include_pmat_contact_input == True:
+            self.num_input_channels += 1
+        self.num_input_channels_batch0 = np.copy(self.num_input_channels)
+        if self.include_height_weight_channels == True:
+            self.num_input_channels += 2
 
 
 
@@ -143,6 +152,13 @@ class PhysicalTrainer():
         self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, dat_f_real, num_repeats = repeat_real_data_ct)
         self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, dat_m_real, num_repeats = repeat_real_data_ct)
 
+        if self.regress_depth_maps == True:
+            self.depth_contact_maps = [] #Initialize the precomputed depth and contact maps
+            self.depth_contact_maps = TensorPrepLib().prep_depth_contact(self.depth_contact_maps, dat_f_synth, num_repeats = 1)
+            self.depth_contact_maps = TensorPrepLib().prep_depth_contact(self.depth_contact_maps, dat_m_synth, num_repeats = 1)
+        else:
+            self.depth_contact_maps = None
+
 
         test_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.test_x_flat,
                                                                                 self.test_a_flat,
@@ -150,9 +166,9 @@ class PhysicalTrainer():
                                                                                 self.verbose)
 
         test_xa = TensorPrepLib().append_input_depth_contact(np.array(test_xa),
-                                                              mesh_depth_contact_maps = None,
-                                                              include_mesh_depth_contact = False,
-                                                              include_pmat_contact = False)
+                                                              mesh_depth_contact_maps = self.depth_contact_maps,
+                                                              include_mesh_depth_contact = self.regress_depth_maps,
+                                                              include_pmat_contact = self.include_pmat_contact_input)
         self.test_x_tensor = torch.Tensor(test_xa)
 
 
@@ -479,6 +495,7 @@ class PhysicalTrainer():
 
                 self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_planesreg_128b_100e.pt', map_location='cpu')
                 #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
+                #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/2.0xsize/convnet_anglesEU_synthreal_tanh_s8ang_sig0p5_5xreal_voloff_128b_300e.pt', map_location='cpu')
 
             print 'LOADED anglesEU !!!!!!!!!!!!!!!!!1'
@@ -534,6 +551,7 @@ class PhysicalTrainer():
 
 
             elif self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
+                is_training = False
                 # 0:72: positions.
                 batch.append(batch[1][:, 72:82])  # betas
                 batch.append(batch[1][:, 82:154])  # angles
@@ -543,58 +561,74 @@ class PhysicalTrainer():
                 batch.append(batch[1][:, 160:161])  # mass, kg
                 batch.append(batch[1][:, 161:162])  # height, kg
 
-                # cut off batch 0 so we don't have depth or contact on the input
-                batch[0] = batch[0][:, 0:4, :, :]
+                if self.regress_depth_maps == True and is_training == True:
+                    batch.append(batch[0][:, self.num_input_channels_batch0, :, :])  # mesh depth matrix
+                    batch.append(batch[0][:, self.num_input_channels_batch0 + 1, :, :])  # mesh contact matrix
+
+                    # cut off batch 0 so we don't have depth or contact on the input
+                    batch[0] = batch[0][:, 0:self.num_input_channels_batch0, :, :]
 
                 # cut it off so batch[2] is only the xyz marker targets
                 batch[1] = batch[1][:, 0:72]
 
-                # print batch[0].size(), 'batch 0 size'
+                if is_training == True:  # only do augmentation for real data that is in training mode
+                    batch[0], batch[1], _ = SyntheticLib().synthetic_master(batch[0], batch[1], batch[6],
+                                                                            flip=True, shift=True, scale=False,
+                                                                            bedangle=True,
+                                                                            include_inter=self.include_inter,
+                                                                            loss_vector_type=self.loss_vector_type)
 
-                images_up_non_tensor = np.array(
-                    PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2))
+                images_up_non_tensor = PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(),
+                                                                                              multiple=2)
+
+                if is_training == True:  # only add noise to training images
+                    images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(
+                        np.array(images_up_non_tensor))
+
                 images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
 
-                weight_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(dtype)
-                weight_input *= batch[7].type(dtype)
-                weight_input = weight_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
-                height_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(dtype)
-                height_input *= batch[8].type(dtype)
-                height_input = height_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
-                #images_up = torch.cat((images_up, weight_input, height_input), 1)
+                if self.include_height_weight_channels == True:
+                    weight_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(
+                        dtype)
+                    weight_input *= batch[7].type(dtype)
+                    weight_input = weight_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
+                    height_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(
+                        dtype)
+                    height_input *= batch[8].type(dtype)
+                    height_input = height_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
+                    images_up = torch.cat((images_up, weight_input, height_input), 1)
 
                 images, targets, betas = Variable(batch[0].type(dtype), requires_grad=False), \
                                          Variable(batch[1].type(dtype), requires_grad=False), \
                                          Variable(batch[2].type(dtype), requires_grad=False)
 
-                angles_gt = Variable(batch[3].type(dtype), requires_grad=True)
-                root_shift = Variable(batch[4].type(dtype), requires_grad=True)
-                gender_switch = Variable(batch[5].type(dtype), requires_grad=True)
-                synth_real_switch = Variable(batch[6].type(dtype), requires_grad=True)
+                angles_gt = Variable(batch[3].type(dtype), requires_grad=is_training)
+                root_shift = Variable(batch[4].type(dtype), requires_grad=is_training)
+                gender_switch = Variable(batch[5].type(dtype), requires_grad=is_training)
+                synth_real_switch = Variable(batch[6].type(dtype), requires_grad=is_training)
 
+                if self.regress_depth_maps == True and is_training == True:
+                    mesh_depth_array = batch[9].type(dtype)
+                    mesh_contact_array = batch[10].type(dtype)
 
-                ground_truth = np.zeros((batch[0].numpy().shape[0], 30))
+                ground_truth = np.zeros(
+                    (batch[0].numpy().shape[0], 82))  # 82 is 10 shape params and 72 joint locations x,y,z
                 ground_truth = Variable(torch.Tensor(ground_truth).type(dtype))
-                ground_truth[:, 0:30] = targets[:, 0:30]/1000
+                ground_truth[:, 0:10] = betas[:, 0:10] / 100
+                ground_truth[:, 10:82] = targets[:, 0:72] / 1000
 
-                scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].numpy().shape[0], 24))).type(dtype))
-
-                print synth_real_switch
-                print betas
-                #scores, _, _, targets_est, betas_est = self.model.forward_kinematic_angles(images_up, gender_switch,
-                #                                                                          synth_real_switch, targets,
-                #                                                                          is_training=False, betas = betas,
-                #                                                                          reg_angles = False)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
-
-                scores, targets_est, betas_est = self.model.forward_kinematic_angles(images_up,
+                scores, _, _, targets_est, betas_est = self.model.forward_kinematic_angles(images_up,
                                                                                      gender_switch,
                                                                                      synth_real_switch,
                                                                                      targets,
-                                                                                     is_training=False,
+                                                                                     is_training=is_training,
                                                                                      betas=betas,
                                                                                      angles_gt=angles_gt,
                                                                                      root_shift=root_shift,
                                                                                      reg_angles=False)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
+
+
+                scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].numpy().shape[0], 24))).type(dtype))
 
                 self.criterion = nn.L1Loss()
 
@@ -660,7 +694,7 @@ class PhysicalTrainer():
 
                 for image_ct in range(NUM_IMAGES):
                     # #self.im_sampleval = self.im_sampleval[:,0,:,:]
-                    self.im_sampleval = images.data[image_ct, 0:].squeeze()
+                    self.im_sampleval = images.data[image_ct, 1:].squeeze()
                     self.tar_sampleval = targets.data[image_ct, :].squeeze() / 1000
                     self.sc_sampleval = targets_est[image_ct, :].squeeze() / 1000
                     self.sc_sampleval = self.sc_sampleval.view(24, 3)
@@ -720,11 +754,11 @@ if __name__ == "__main__":
 
     network_design = True
 
-    test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff.p')
+    #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff.p')
-    #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2067_none_stiff.p')
+    test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2067_none_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1121_upperbody_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1087_rightside_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1102_leftside_stiff.p')
