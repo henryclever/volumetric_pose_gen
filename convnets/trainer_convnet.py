@@ -329,7 +329,7 @@ class PhysicalTrainer():
                 self.t2 = 0
             print 'Time taken by epoch',epoch,':',self.t2,' seconds'
 
-            if epoch == 100 or epoch == 200 or epoch == 300:
+            if epoch == 50 or epoch == 100 or epoch == 200 or epoch == 300:
                 torch.save(self.model, filepath_prefix+'/data/synth/convnet'+self.save_name+'_'+str(epoch)+'e.pt')
                 pkl.dump(self.train_val_losses,open(filepath_prefix+'/data/synth/convnet_losses'+self.save_name+'_'+str(epoch)+'e.p', 'wb'))
 
