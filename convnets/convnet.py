@@ -118,7 +118,7 @@ class CNN(nn.Module):
             scores[:, fc_output_ct*3 + 2] = torch.add(scores[:, fc_output_ct*3 + 2], 0.1)
 
 
-        zero_joint_filler = torch.zeros(scores.size()[0], 3)
+        zero_joint_filler = torch.zeros(scores.size()[0], 3).type(self.dtype)
         print scores.shape
 
         targets_est = scores.clone().detach()*1000

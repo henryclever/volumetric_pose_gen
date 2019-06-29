@@ -518,8 +518,6 @@ class PhysicalTrainer():
         loss = 0.
         n_examples = 0
 
-        error_list = []
-
         for batch_i, batch in enumerate(self.test_loader):
 
             if DROPOUT == True:
@@ -528,105 +526,25 @@ class PhysicalTrainer():
             #self.model.train()
 
             if self.ctrl_pnl['loss_vector_type'] == 'direct':
-
-
-                images_up_non_tensor = np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy()[:, :, :, :], multiple = 2))
-                images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
-                images, targets, scores_zeros = Variable(batch[0].type(dtype), requires_grad=False), Variable(batch[1].type(dtype), requires_grad=False), Variable(torch.Tensor(np.zeros((batch[1].shape[0], batch[1].shape[1] / 3))).type(dtype), requires_grad=False)
-
-                scores, targets_est, targets_est_reduced = self.model.forward_direct(images_up, 0, targets, is_training = False)
-
+                scores, images, targets, targets_est = \
+                    UnpackBatchLib().unpackage_batch_dir_pass(batch, is_training=False, model=self.model,
+                                                              CTRL_PNL=self.CTRL_PNL)
                 self.criterion = nn.L1Loss()
-
-                loss = self.criterion(scores, scores_zeros)
-                loss = loss.data.item()
-
+                scores_zeros = Variable(torch.Tensor(np.zeros((batch[1].shape[0], scores.size()[1]))).type(dtype),
+                                        requires_grad=False)
+                loss += self.criterion(scores, scores_zeros).data.item()
 
 
 
             elif self.ctrl_pnl['loss_vector_type'] == 'anglesR' or self.ctrl_pnl['loss_vector_type'] == 'anglesDC' or self.ctrl_pnl['loss_vector_type'] == 'anglesEU':
-                is_training = False
-                # 0:72: positions.
-                batch.append(batch[1][:, 72:82])  # betas
-                batch.append(batch[1][:, 82:154])  # angles
-                batch.append(batch[1][:, 154:157])  # root pos
-                batch.append(batch[1][:, 157:159])  # gender switch
-                batch.append(batch[1][:, 159])  # synth vs real switch
-                batch.append(batch[1][:, 160:161])  # mass, kg
-                batch.append(batch[1][:, 161:162])  # height, kg
-
-                if self.regress_depth_maps == True and is_training == True:
-                    batch.append(batch[0][:, self.ctrl_pnl['num_input_channels_bat0'], :, :])  # mesh depth matrix
-                    batch.append(batch[0][:, self.ctrl_pnl['num_input_channels_bat0'] + 1, :, :])  # mesh contact matrix
-
-                    # cut off batch 0 so we don't have depth or contact on the input
-                    batch[0] = batch[0][:, 0:self.ctrl_pnl['num_input_channels_bat0'], :, :]
-
-                # cut it off so batch[2] is only the xyz marker targets
-                batch[1] = batch[1][:, 0:72]
-
-                if is_training == True:  # only do augmentation for real data that is in training mode
-                    batch[0], batch[1], _ = SyntheticLib().synthetic_master(batch[0], batch[1], batch[6],
-                                                                            flip=True, shift=True, scale=False,
-                                                                            bedangle=True,
-                                                                            include_inter=self.ctrl_pnl['incl_inter'],
-                                                                            loss_vector_type=self.ctrl_pnl['loss_vector_type'])
-
-                images_up_non_tensor = PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(),
-                                                                                              multiple=2)
-
-                if is_training == True:  # only add noise to training images
-                    images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(
-                        np.array(images_up_non_tensor))
-
-                images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
-
-                if self.ctrl_pnl['incl_ht_wt_channels'] == True:
-                    weight_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(
-                        dtype)
-                    weight_input *= batch[7].type(dtype)
-                    weight_input = weight_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
-                    height_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(
-                        dtype)
-                    height_input *= batch[8].type(dtype)
-                    height_input = height_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
-                    images_up = torch.cat((images_up, weight_input, height_input), 1)
-
-                images, targets, betas = Variable(batch[0].type(dtype), requires_grad=False), \
-                                         Variable(batch[1].type(dtype), requires_grad=False), \
-                                         Variable(batch[2].type(dtype), requires_grad=False)
-
-                angles_gt = Variable(batch[3].type(dtype), requires_grad=is_training)
-                root_shift = Variable(batch[4].type(dtype), requires_grad=is_training)
-                gender_switch = Variable(batch[5].type(dtype), requires_grad=is_training)
-                synth_real_switch = Variable(batch[6].type(dtype), requires_grad=is_training)
-
-                if self.regress_depth_maps == True and is_training == True:
-                    mesh_depth_array = batch[9].type(dtype)
-                    mesh_contact_array = batch[10].type(dtype)
-
-                ground_truth = np.zeros(
-                    (batch[0].numpy().shape[0], 82))  # 82 is 10 shape params and 72 joint locations x,y,z
-                ground_truth = Variable(torch.Tensor(ground_truth).type(dtype))
-                ground_truth[:, 0:10] = betas[:, 0:10] / 100
-                ground_truth[:, 10:82] = targets[:, 0:72] / 1000
-
-                scores, _, _, targets_est, betas_est = self.model.forward_kinematic_angles(images_up,
-                                                                                     gender_switch,
-                                                                                     synth_real_switch,
-                                                                                     targets,
-                                                                                     is_training=is_training,
-                                                                                     betas=betas,
-                                                                                     angles_gt=angles_gt,
-                                                                                     root_shift=root_shift,
-                                                                                     reg_angles=False)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
-
-
-                scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].numpy().shape[0], 24))).type(dtype))
-
+                scores, images, targets, targets_est, mmb, mmb_est, cmb, cmb_est = \
+                    UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model=self.model,
+                                                              CTRL_PNL=self.CTRL_PNL)
                 self.criterion = nn.L1Loss()
+                scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].shape[0], scores.size()[1]))).type(dtype),
+                                        requires_grad=False)
 
-                loss += self.criterion(scores[:, 10:], scores_zeros).data.item()
+                loss = self.criterion(scores[:, 10:34], scores_zeros[:, 10:34]).data.item() / 10.
 
                 print loss, 'loss', self.criterion(scores[:, 10:], scores_zeros).data.item()
                 #print("VAL SCORES",
