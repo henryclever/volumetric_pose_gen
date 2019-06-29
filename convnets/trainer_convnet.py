@@ -111,7 +111,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['num_input_channels'] = 3
         self.CTRL_PNL['GPU'] = GPU
         self.CTRL_PNL['dtype'] = dtype
-        repeat_real_data_ct = 1
+        repeat_real_data_ct = 3
         self.CTRL_PNL['regr_depth_maps'] = True #can only be true if we have 100% synthetic data for training
         self.CTRL_PNL['regr_angles'] = opt.reg_angles
 
