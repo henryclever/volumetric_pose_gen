@@ -118,6 +118,8 @@ class PhysicalTrainer():
         self.weight_joints = self.opt.j_d_ratio*2
         self.weight_depth_planes = (1-self.opt.j_d_ratio)*2
 
+        if opt.losstype == 'direct':
+            self.CTRL_PNL['regr_depth_maps'] = False
         if self.CTRL_PNL['incl_pmat_cntct_input'] == True:
             self.CTRL_PNL['num_input_channels'] += 1
         self.CTRL_PNL['num_input_channels_batch0'] = np.copy(self.CTRL_PNL['num_input_channels'])
@@ -209,14 +211,18 @@ class PhysicalTrainer():
 
         self.train_y_flat = []  # Initialize the training ground truth list
         self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_f_synth, num_repeats = 1,
-                                                        z_adj = -0.075, gender = "f", is_synth = True)
+                                                        z_adj = -0.075, gender = "f", is_synth = True,
+                                                        loss_vector_type = self.CTRL_PNL['loss_vector_type'])
         self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_m_synth, num_repeats = 1,
-                                                        z_adj = -0.075, gender = "m", is_synth = True)
+                                                        z_adj = -0.075, gender = "m", is_synth = True,
+                                                        loss_vector_type = self.CTRL_PNL['loss_vector_type'])
 
         self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_f_real, num_repeats = repeat_real_data_ct,
-                                                        z_adj = 0.0, gender = "m", is_synth = False)
+                                                        z_adj = 0.0, gender = "m", is_synth = False,
+                                                        loss_vector_type = self.CTRL_PNL['loss_vector_type'])
         self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_m_real, num_repeats = repeat_real_data_ct,
-                                                        z_adj = 0.0, gender = "m", is_synth = False)
+                                                        z_adj = 0.0, gender = "m", is_synth = False,
+                                                        loss_vector_type = self.CTRL_PNL['loss_vector_type'])
         self.train_y_tensor = torch.Tensor(self.train_y_flat)
 
         print self.train_x_tensor.shape, 'Input training tensor shape'
@@ -257,9 +263,11 @@ class PhysicalTrainer():
 
         self.test_y_flat = []  # Initialize the ground truth listhave
         self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, test_dat_f, num_repeats = 1,
-                                                       z_adj = 0.0, gender = "f", is_synth = False)
+                                                        z_adj = 0.0, gender = "f", is_synth = False,
+                                                        loss_vector_type = self.CTRL_PNL['loss_vector_type'])
         self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, test_dat_m, num_repeats = 1,
-                                                       z_adj = 0.0, gender = "m", is_synth = False)
+                                                        z_adj = 0.0, gender = "m", is_synth = False,
+                                                        loss_vector_type = self.CTRL_PNL['loss_vector_type'])
         self.test_y_tensor = torch.Tensor(self.test_y_flat)
 
 
@@ -270,9 +278,6 @@ class PhysicalTrainer():
 
 
     def init_convnet_train(self):
-
-        hidden_dim = 12
-        kernel_size = 10
 
         #self.train_x_tensor = self.train_x_tensor.unsqueeze(1)
         self.train_dataset = torch.utils.data.TensorDataset(self.train_x_tensor, self.train_y_tensor)
@@ -291,7 +296,7 @@ class PhysicalTrainer():
 
         print "Loading convnet model................................"
         if self.CTRL_PNL['loss_vector_type'] == 'direct':
-            fc_output_size = 72
+            fc_output_size = 30
             self.model = convnet.CNN(fc_output_size, self.CTRL_PNL['loss_vector_type'], self.CTRL_PNL['batch_size'],
                                      verts_list = self.verts_list, filepath=filepath_prefix, in_channels=self.CTRL_PNL['num_input_channels'])
 
@@ -359,15 +364,14 @@ class PhysicalTrainer():
                 if self.CTRL_PNL['loss_vector_type'] == 'direct':
 
                     self.optimizer.zero_grad()
-
                     scores, images, targets, targets_est = \
                         UnpackBatchLib().unpackage_batch_dir_pass(batch, is_training=True, model=self.model, CTRL_PNL = self.CTRL_PNL)
 
                     self.criterion = nn.L1Loss()
-                    scores_zeros = np.zeros((batch[0].numpy().shape[0], 24))  # 24 is joint euclidean errors
+                    scores_zeros = np.zeros((batch[0].numpy().shape[0], 10))  # 24 is joint euclidean errors
                     scores_zeros = Variable(torch.Tensor(scores_zeros).type(dtype))
 
-                    loss = self.criterion(scores, scores_zeros) * 24. / 34
+                    loss = self.criterion(scores, scores_zeros)
 
 
 
@@ -580,7 +584,7 @@ if __name__ == "__main__":
     p.add_option('--verbose', '--v',  action='store_true', dest='verbose',
                  default=True, help='Printout everything (under construction).')
 
-    p.add_option('--log_interval', type=int, default=10, metavar='N',
+    p.add_option('--log_interval', type=int, default=1, metavar='N',
                  help='number of batches between logging train status')
 
     opt, args = p.parse_args()
@@ -603,7 +607,7 @@ if __name__ == "__main__":
         #training_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1121_upperbody_stiff.p')
         #training_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
         #training_database_file_m.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
-        #training_database_file_f.append(filepath_prefix_qt + 'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+        training_database_file_f.append(filepath_prefix_qt + 'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
         #training_database_file_m.append(filepath_prefix_qt+'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
         #training_database_file_m.append(filepath_prefix_qt+'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
         #training_database_file_m.append(filepath_prefix_qt+'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')

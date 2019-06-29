@@ -404,6 +404,131 @@ def reprocess_synth_data():
         visualize_pressure_map(training_pmat, training_targets, None, validate_pmat, validate_targets)
     '''
 
+def get_direct_synth_marker_offsets():
+
+
+    all_data_names = [["f", "lay", "lowerbody", 2000, 2047],
+                    ["f", "lay", "upperbody", 2000, 2103],
+                    ["f", "lay", "leftside", 2000, 2072],
+                    ["f", "lay", "rightside", 2000, 2086],
+                    ["f", "lay", "none", 2000, 2067],
+                    ["f", "sit", "lowerbody", 1000, 1106],
+                    ["f", "sit", "upperbody", 1000, 1121],
+                    ["f", "sit", "leftside", 1000, 1102],
+                    ["f", "sit", "rightside", 1000, 1087],
+                    ["f", "sit", "none", 1000, 1096],
+                    ["m", "lay", "lowerbody", 2000, 2012],
+                    ["m", "lay", "upperbody", 2000, 2031],
+                    ["m", "lay", "leftside", 2000, 2016],
+                    ["m", "lay", "rightside", 2000, 2016],
+                    ["m", "lay", "none", 2000, 2006],
+                    ["m", "sit", "lowerbody", 1000, 1144],
+                    ["m", "sit", "upperbody", 1000, 1147],
+                    ["m", "sit", "leftside", 1000, 1152],
+                    ["m", "sit", "rightside", 1000, 1132],
+                    ["m", "sit", "none", 1000, 1126]]
+
+    for gpsn in all_data_names:
+        gender = gpsn[0]
+        posture = gpsn[1]
+        stiffness = gpsn[2]
+        num_resting_poses = gpsn[3]
+        num_resting_poses_tried = gpsn[4]
+
+        # training_data_dict['v_template'] = []
+        # training_data_dict['shapedirs'] = []
+
+        model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_' + gender + '_lbs_10_207_0_v1.0.0.pkl'
+        m = load_model(model_path)
+
+        filename = '/home/henry/data/synth/side_up_fw/train_' + gender + '_' + posture + '_' + str(num_resting_poses) + '_of_' + str(
+                                num_resting_poses_tried) + '_' + stiffness + '_stiff.p'
+        training_data_dict = load_pickle(filename)
+        print "loaded ", filename
+
+        betas = training_data_dict['body_shape']
+        pose = training_data_dict['joint_angles']
+        images = training_data_dict['images']
+        root_xyz_shift = training_data_dict['root_xyz_shift']
+        markers_xyz_m = training_data_dict['markers_xyz_m']
+        training_data_dict['markers_xyz_m_offset'] = []
+        #from visualization_lib import VisualizationLib
+
+
+        #import rospy
+        #rospy.init_node('blah')
+
+        for marker_set_idx in range(len(markers_xyz_m)):
+            joint_angles = pose[marker_set_idx]
+            root_joint_pos = np.array(root_xyz_shift[marker_set_idx])
+            #root_joint_pos = np.array(markers_xyz_m[marker_set_idx][0:3]) + np.array([0.0, 0.286-0.04, 0.0])
+
+
+            body_shape = betas[marker_set_idx]
+            curr_marker = markers_xyz_m[marker_set_idx]
+            curr_image = images[marker_set_idx]
+
+            # print "shape", body_shape_list
+
+            #print np.shape(joint_angles), np.shape(root_joint_pos), np.shape(body_shape)
+
+            for shape_param in range(10):
+                m.betas[shape_param] = float(body_shape[shape_param])
+
+            for pose_param in range(72):
+                m.pose[pose_param] = float(joint_angles[pose_param])
+
+            root_shift_x = root_joint_pos[0]
+            root_shift_y = root_joint_pos[1]
+            root_shift_z = root_joint_pos[2]
+
+            curr_marker = curr_marker.reshape(24, 3)
+
+            curr_markers_reduced = np.stack((curr_marker[15, :],
+                                             curr_marker[3, :],
+                                             curr_marker[19, :],
+                                             curr_marker[18, :],
+                                             curr_marker[21, :],
+                                             curr_marker[20, :],
+                                             curr_marker[5, :],
+                                             curr_marker[4, :],
+                                             curr_marker[8, :],
+                                             curr_marker[7, :],
+                                             ), axis = 0)
+
+            root_shift_x = root_joint_pos[0] - np.asarray(m.J_transformed)[0, 0]
+            root_shift_y = root_joint_pos[1] - np.asarray(m.J_transformed)[0, 1]
+            root_shift_z = root_joint_pos[2] - np.asarray(m.J_transformed)[0, 2]
+
+
+            vertices = np.array(m.r) + np.array([root_shift_x, root_shift_y, root_shift_z])
+            verts_reduced = np.stack((vertices[336, :],
+                                      vertices[1325, :],
+                                      vertices[5209, :],
+                                      vertices[1739, :],
+                                      vertices[5432, :],
+                                      vertices[1960, :],
+                                      vertices[4515, :],
+                                      vertices[1032, :],
+                                      vertices[4848, :],
+                                      vertices[1374, :],), axis = 0)
+
+            #print curr_image.shape
+            #VisualizationLib().rviz_publish_input(curr_image.reshape(64, 27), 0)
+            #VisualizationLib().rviz_publish_output(verts_reduced, curr_marker)
+            #print root_joint_pos
+            #print curr_markers_reduced
+            #print verts_reduced, 'verts'
+            #import time
+            #time.sleep(10)
+            training_data_dict['markers_xyz_m_offset'].append(verts_reduced.flatten())
+
+
+
+        pickle.dump(training_data_dict, open(os.path.join(filename), 'wb'))
+
+
+
 def reprocess_real_data_height_wt():
     #filepath_prefix = '/home/henry/'
     filepath_prefix = '/media/henry/multimodal_data_2/'
@@ -663,6 +788,7 @@ def get_contact_map_from_synth():
 
 
 if __name__ == "__main__":
-    get_contact_map_from_synth()
+    #get_contact_map_from_synth()
     #reprocess_synth_data()
+    get_direct_synth_marker_offsets()
 

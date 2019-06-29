@@ -121,7 +121,7 @@ class TensorPrepLib():
             train_xa = np.concatenate((train_contact, train_xa), axis=1)
         return train_xa
 
-    def prep_labels(self, y_flat, dat, num_repeats, z_adj, gender, is_synth):
+    def prep_labels(self, y_flat, dat, num_repeats, z_adj, gender, is_synth, loss_vector_type):
         if gender == "f":
             g1 = 1
             g2 = 0
@@ -133,14 +133,43 @@ class TensorPrepLib():
         else:
             s1 = 0
         z_adj_all = np.array(24 * [0.0, 0.0, z_adj*1000])
+        z_adj_one = np.array(1 * [0.0, 0.0, z_adj*1000])
 
-        if is_synth == True:
+        if is_synth == True and loss_vector_type != 'direct':
             if dat is not None:
                 for entry in range(len(dat['markers_xyz_m'])):
                     c = np.concatenate((dat['markers_xyz_m'][entry][0:72] * 1000 + z_adj_all,
                                         dat['body_shape'][entry][0:10],
                                         dat['joint_angles'][entry][0:72],
                                         dat['root_xyz_shift'][entry][0:3] + np.array([0.0, 0.0, z_adj]),
+                                        [g1], [g2], [s1],
+                                        [dat['body_mass'][entry]],
+                                        [(dat['body_height'][entry]-1.)*100],), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
+                    for i in range(num_repeats):
+                        y_flat.append(c)
+
+
+        elif is_synth == True and loss_vector_type == 'direct':
+            if dat is not None:
+                for entry in range(len(dat['markers_xyz_m_offset'])):
+                    c = np.concatenate((np.array(9 * [0]),
+                                        dat['markers_xyz_m_offset'][entry][3:6] * 1000 + z_adj_one,  # TORSO
+                                        # fixed_torso_markers,  # TORSO
+                                        dat['markers_xyz_m_offset'][entry][21:24] * 1000 + z_adj_one,  # L KNEE
+                                        dat['markers_xyz_m_offset'][entry][18:21] * 1000 + z_adj_one,  # R KNEE
+                                        np.array(3 * [0]),
+                                        dat['markers_xyz_m_offset'][entry][27:30] * 1000 + z_adj_one,  # L ANKLE
+                                        dat['markers_xyz_m_offset'][entry][24:27] * 1000 + z_adj_one,  # R ANKLE
+                                        np.array(18 * [0]),
+                                        dat['markers_xyz_m_offset'][entry][0:3] * 1000 + z_adj_one,  # HEAD
+                                        # fixed_head_markers,
+                                        np.array(6 * [0]),
+                                        dat['markers_xyz_m_offset'][entry][9:12] * 1000 + z_adj_one,  # L ELBOW
+                                        dat['markers_xyz_m_offset'][entry][6:9] * 1000 + z_adj_one,  # R ELBOW
+                                        dat['markers_xyz_m_offset'][entry][15:18] * 1000 + z_adj_one,  # L WRIST
+                                        dat['markers_xyz_m_offset'][entry][12:15] * 1000 + z_adj_one,  # R WRIST
+                                        np.array(6 * [0]),
+                                        np.array(85 * [0]),
                                         [g1], [g2], [s1],
                                         [dat['body_mass'][entry]],
                                         [(dat['body_height'][entry]-1.)*100],), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
@@ -174,6 +203,8 @@ class TensorPrepLib():
                                         [(dat['body_height'][entry]-1.)*100],), axis=0)  # [x1], [x2], [x3]: female real: 1, 0, 0.
                     for i in range(num_repeats):
                         y_flat.append(c)
+
+
 
 
         return y_flat

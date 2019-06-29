@@ -95,18 +95,18 @@ class CNN(nn.Module):
 
 
 
-    def forward_direct(self, images, synth_real_switch, targets, is_training = True):
+    def forward_direct(self, images, targets, is_training = True):
 
-        #pass through convnet for feature extraction
-        scores = self.CNN_pack1(images)
-        scores_size = scores.size()
-        scores = scores.view(images.size(0),scores_size[1]*scores_size[2]*scores_size[3])
+        scores_cnn = self.CNN_pack1(images)
+        scores_size = scores_cnn.size()
 
-        #collect in linear layer
-        scores = self.CNN_fc1(scores)
+        # This combines the height, width, and filters into a single dimension
+        scores_cnn = scores_cnn.view(images.size(0),scores_size[1] *scores_size[2]*scores_size[3])
 
+        # this output is N x 85: betas, root shift, angles
+        scores = self.CNN_fc1(scores_cnn)
 
-        #scale things so the model starts close to the home position. Has nothing to do with weighting.
+        # weight the outputs, which are already centered around 0. First make them uniformly smaller than the direct output, which is too large.
         scores = torch.mul(scores.clone(), 0.01)
 
         num_joints = scores.shape[1]/3
@@ -117,94 +117,61 @@ class CNN(nn.Module):
             scores[:, fc_output_ct*3 + 1] = torch.add(scores[:, fc_output_ct*3 + 1], 1.2)
             scores[:, fc_output_ct*3 + 2] = torch.add(scores[:, fc_output_ct*3 + 2], 0.1)
 
-        #print scores.size(), 'SCORE SIZE', targets.size()
+
+        zero_joint_filler = torch.zeros(scores.size()[0], 3)
+        print scores.shape
+
+        targets_est = scores.clone().detach()*1000
+        targets_est = torch.cat((zero_joint_filler,
+                                        zero_joint_filler,
+                                        zero_joint_filler,
+                                        targets_est[:, 3:6],
+                                        targets_est[:, 21:24],
+                                        targets_est[:, 18:21],
+                                        zero_joint_filler,
+                                        targets_est[:, 27:30],
+                                        targets_est[:, 24:27],
+                                        zero_joint_filler,
+                                        zero_joint_filler,
+                                        zero_joint_filler,
+                                        zero_joint_filler,
+                                        zero_joint_filler,
+                                        zero_joint_filler,
+                                        targets_est[:, 0:3],
+                                        zero_joint_filler,
+                                        zero_joint_filler,
+                                        targets_est[:, 9:12],
+                                        targets_est[:, 6:9],
+                                        targets_est[:, 15:18],
+                                        targets_est[:, 12:15],
+                                        zero_joint_filler,
+                                        zero_joint_filler,
+                                        ),dim = 1)
 
 
-        #print scores.shape
-        if is_training == True:
+        targets_reduced = torch.cat((targets[:, 45:48],
+                                   targets[:, 9:12],
+                                   targets[:, 57:60],
+                                   targets[:, 54:57],
+                                   targets[:, 63:66],
+                                   targets[:, 60:63],
+                                   targets[:, 15:18],
+                                   targets[:, 12:15],
+                                   targets[:, 24:27],
+                                   targets[:, 21:24]), dim =1)
 
-            targets_est_np = scores.clone().data * 1000.
-            #print synth_real_switch
-            #print targets_est_np.size()
-            for joint_num in range(24):
-                if joint_num in [0, 1, 2, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]:
-                    targets_est_np[:, joint_num * 3 + 0] = targets_est_np[:, joint_num * 3 + 0] * synth_real_switch.data
-                    targets_est_np[:, joint_num * 3 + 1] = targets_est_np[:, joint_num * 3 + 1] * synth_real_switch.data
-                    targets_est_np[:, joint_num * 3 + 2] = targets_est_np[:, joint_num * 3 + 2] * synth_real_switch.data
+        # here we want to compute our score as the Euclidean distance between the estimated x,y,z points and the target.
+        scores = targets_reduced / 1000. - scores
+        scores = scores.pow(2)
 
-            targets_est_reduced_np = 0
+        for joint_num in range(10):
+            scores[:, joint_num] = (scores[:, joint_num*3 + 0] +
+                                    scores[:, joint_num*3 + 1] +
+                                    scores[:, joint_num*3 + 2]).sqrt()
 
-            # here we want to compute our score as the Euclidean distance between the estimated x,y,z points and the target.
-            scores = targets / 1000. - scores
-            scores = scores.pow(2)
+        scores = scores[:, 0:10]
 
-
-            for joint_num in range(24):
-                #print scores[:, 10+joint_num].size(), 'score size'
-                #print synth_real_switch.size(), 'switch size'
-                if joint_num in [0, 1, 2, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]: #torso is 3 but forget training it
-                    scores[:, joint_num] = torch.mul(synth_real_switch,
-                                                        (scores[:, joint_num*3 + 0] +
-                                                         scores[:, joint_num*3 + 1] +
-                                                         scores[:, joint_num*3 + 2]).sqrt())
-
-                else:
-                    scores[:, joint_num] = (scores[:, joint_num*3 + 0] +
-                                            scores[:, joint_num*3 + 1] +
-                                            scores[:, joint_num*3 + 2]).sqrt()
-
-
-            #print scores.size(), scores[0, :]
-
-            scores = scores[:, 0:24]
-
-            #print scores.size(), scores[0, :]
-            scores = torch.mul(torch.add(1.0, torch.mul(1.4, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
-            #print scores.size(), scores[0, :]
-            scores[:, 0:24] = torch.mul(scores[:, 0:24].clone(), (1/0.1282715100608753)) #weight the 24 joints by std
-            scores[:, 0:24] = torch.mul(scores[:, 0:24].clone(), (1./24)) #weight the joints by how many there are
-
-            #print scores.size(), scores[0, :]
-
-        else:
-
-            targets_est_np = scores.clone().data*1000.
-
-            scores = torch.cat((scores[:, 45:48],
-                               scores[:, 9:12],
-                               scores[:, 57:60],
-                               scores[:, 54:57],
-                               scores[:, 63:66],
-                               scores[:, 60:63],
-                               scores[:, 15:18],
-                               scores[:, 12:15],
-                               scores[:, 24:27],
-                               scores[:, 21:24]), dim =1)
-
-            targets_est_reduced_np = scores.clone().data*1000.
-
-            #here we want to compute our score as the Euclidean distance between the estimated x,y,z points and the target.
-            scores = targets/1000. - scores
-            scores = scores.pow(2)
-
-
-            num_joints = scores.shape[1] / 3
-            for fc_output_ct in range(num_joints):
-                scores[:, fc_output_ct] = scores[:, fc_output_ct*3 + 0] +  scores[:, fc_output_ct*3 + 1] +  scores[:, fc_output_ct*3 + 2]
-
-            scores = scores[:, 0:10]
-            scores = scores.sqrt()
-
-
-            #here multiply by 24/10 when you are regressing to real data so it balances with the synthetic data
-            scores = torch.mul(2.4, scores)
-            scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1/0.1282715100608753)) #weight the 10 joints by std
-            scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1./24)) #weight the joints by how many there are USE 24 EVEN ON REAL DATA
-
-
-        #print scores.size(), scores[0, :]
-
-        return scores, targets_est_np, targets_est_reduced_np
+        return scores, targets_est
 
 
 
@@ -212,12 +179,9 @@ class CNN(nn.Module):
     def forward_kinematic_angles_realtime(self, images):
         scores_cnn = self.CNN_pack1(images)
         scores_size = scores_cnn.size()
-        # print scores_size, 'scores conv1'
 
-        # ''' # NOTE: Uncomment
         # This combines the height, width, and filters into a single dimension
         scores_cnn = scores_cnn.view(images.size(0), scores_size[1] * scores_size[2] * scores_size[3])
-        # print 'size for fc layer:', scores_cnn.size()
 
         scores = self.CNN_fc1(scores_cnn)  # this is N x 229: betas, root shift, Rotation matrices
 
@@ -285,19 +249,14 @@ class CNN(nn.Module):
 
         scores_cnn = self.CNN_pack1(images)
         scores_size = scores_cnn.size()
-        # print scores_size, 'scores conv1'
 
-
-        # ''' # NOTE: Uncomment
         # This combines the height, width, and filters into a single dimension
         scores_cnn = scores_cnn.view(images.size(0),scores_size[1] *scores_size[2]*scores_size[3])
-        #print 'size for fc layer:', scores_cnn.size()
 
+        # this output is N x 85: betas, root shift, angles
+        scores = self.CNN_fc1(scores_cnn)
 
-        scores = self.CNN_fc1(scores_cnn) #this is N x 229: betas, root shift, Rotation matrices
-
-
-        #weight the outputs, which are already centered around 0. First make them uniformly smaller than the direct output, which is too large.
+        # weight the outputs, which are already centered around 0. First make them uniformly smaller than the direct output, which is too large.
         scores = torch.mul(scores.clone(), 0.01)
 
         #normalize the output of the network based on the range of the parameters
