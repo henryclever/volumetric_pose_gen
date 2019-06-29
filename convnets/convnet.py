@@ -228,9 +228,12 @@ class CNN(nn.Module):
 
 
 
-    def forward_kinematic_angles(self, images, gender_switch, synth_real_switch,
-                                 targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None,
-                                 reg_angles = False, reg_depth_maps = False):
+    def forward_kinematic_angles(self, images, gender_switch, synth_real_switch, CTRL_PNL,
+                                 targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None):
+
+        reg_angles = CTRL_PNL['regr_angles'],
+        reg_depth_maps = CTRL_PNL['regr_depth_maps']
+        filepath_prefix = CTRL_PNL['filepath_prefix']
 
         try:
              x = self.meshDepthLib.bounds
@@ -242,7 +245,7 @@ class CNN(nn.Module):
                 self.verts_list = "all"
             else:
                 self.verts_list = [1325, 336, 1032, 4515, 1374, 4848, 1739, 5209, 1960, 5423]
-            self.meshDepthLib = MeshDepthLib(loss_vector_type=self.loss_vector_type, filepath='/home/henry/',
+            self.meshDepthLib = MeshDepthLib(loss_vector_type=self.loss_vector_type, filepath_prefix=filepath_prefix,
                                              batch_size=images.size(0), verts_list = self.verts_list)
 
 

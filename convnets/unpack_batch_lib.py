@@ -116,13 +116,13 @@ class UnpackBatchLib():
         scores, mmb_est, cmb_est, targets_est, betas_est = model.forward_kinematic_angles(images_up,
                                                              gender_switch,
                                                              synth_real_switch,
+                                                             CTRL_PNL,
                                                              targets,
                                                              is_training=is_training,
                                                              betas=betas,
                                                              angles_gt=angles_gt,
                                                              root_shift=root_shift,
-                                                             reg_angles=CTRL_PNL['regr_angles'],
-                                                             reg_depth_maps = CTRL_PNL['regr_depth_maps'])  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
+                                                             )  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
 
 
         return scores, images, targets, targets_est, mmb, mmb_est, cmb, cmb_est
