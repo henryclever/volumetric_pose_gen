@@ -115,6 +115,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['dtype'] = dtype
         repeat_real_data_ct = 3
         self.CTRL_PNL['regr_angles'] = opt.reg_angles
+        self.CTRL_PNL['aws'] = self.opt.aws
 
         self.weight_joints = self.opt.j_d_ratio*2
         self.weight_depth_planes = (1-self.opt.j_d_ratio)*2

@@ -239,8 +239,12 @@ class CNN(nn.Module):
              x = self.meshDepthLib.bounds
              #print "mesh embedding already loaded!"
         except:
-            self.GPU = False
-            self.dtype = torch.FloatTensor
+            if CTRL_PNL['aws'] == True:
+                self.GPU = True
+                self.dtype = torch.cuda.FloatTensor
+            else:
+                self.GPU = False
+                self.dtype = torch.FloatTensor
             if reg_depth_maps == True:
                 self.verts_list = "all"
             else:
