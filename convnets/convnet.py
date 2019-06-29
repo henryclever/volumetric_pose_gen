@@ -119,7 +119,7 @@ class CNN(nn.Module):
 
 
         zero_joint_filler = torch.zeros(scores.size()[0], 3).type(self.dtype)
-        print scores.shape
+        #print scores.shape
 
         targets_est = scores.clone().detach()*1000
         targets_est = torch.cat((zero_joint_filler,
@@ -243,8 +243,8 @@ class CNN(nn.Module):
                 self.GPU = True
                 self.dtype = torch.cuda.FloatTensor
             else:
-                self.GPU = False
-                self.dtype = torch.FloatTensor
+                self.GPU = True
+                self.dtype = torch.cuda.FloatTensor
             if reg_depth_maps == True:
                 self.verts_list = "all"
             else:
