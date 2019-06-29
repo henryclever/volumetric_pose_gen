@@ -272,9 +272,16 @@ class CNN(nn.Module):
 
 
         #add a factor so the model starts close to the home position. Has nothing to do with weighting.
-        scores[:, 10] = torch.add(scores[:, 10].clone(), 0.6)
-        scores[:, 11] = torch.add(scores[:, 11].clone(), 1.2)
-        scores[:, 12] = torch.add(scores[:, 12].clone(), 0.1)
+
+        if CTRL_PNL['lock_root'] == True:
+            scores[:, 10] = torch.add(scores[:, 10].clone(), 0.6).detach()
+            scores[:, 11] = torch.add(scores[:, 11].clone(), 1.2).detach()
+            scores[:, 12] = torch.add(scores[:, 12].clone(), 0.1).detach()
+        else:
+            scores[:, 10] = torch.add(scores[:, 10].clone(), 0.6)
+            scores[:, 11] = torch.add(scores[:, 11].clone(), 1.2)
+            scores[:, 12] = torch.add(scores[:, 12].clone(), 0.1)
+
 
         #print scores[34, :]
 
