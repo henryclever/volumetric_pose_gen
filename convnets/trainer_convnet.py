@@ -184,14 +184,10 @@ class PhysicalTrainer():
 
         self.train_x_flat = []  # Initialize the testing pressure mat list
         self.train_x_flat = TensorPrepLib().prep_images(self.train_x_flat, dat_f_synth, dat_m_synth, num_repeats = 1)
-        self.train_x_flat = np.clip(np.array(self.train_x_flat) * 5.0, a_min=0, a_max=100)
-        self.train_x_flat = PreprocessingLib().preprocessing_blur_images(self.train_x_flat, self.mat_size, sigma=0.5)
+        self.train_x_flat = list(np.clip(np.array(self.train_x_flat) * 5.0, a_min=0, a_max=100))
 
-        self.train_x_flat_real = []
-        self.train_x_flat_real = TensorPrepLib().prep_images(self.train_x_flat_real, dat_f_real, dat_m_real, num_repeats = repeat_real_data_ct)
-        if len(self.train_x_flat_real) != 0:
-            self.train_x_flat_real = PreprocessingLib().preprocessing_blur_images(self.train_x_flat_real, self.mat_size, sigma=0.5)
-            self.train_x_flat = np.concatenate((self.train_x_flat, self.train_x_flat_real), axis=0)
+        self.train_x_flat = TensorPrepLib().prep_images(self.train_x_flat, dat_f_real, dat_m_real, num_repeats = repeat_real_data_ct)
+        self.train_x_flat = PreprocessingLib().preprocessing_blur_images(self.train_x_flat, self.mat_size, sigma=0.5)
 
         if len(self.train_x_flat) == 0: print("NO TRAINING DATA INCLUDED")
 
@@ -431,8 +427,8 @@ class PhysicalTrainer():
                         loss += loss_mesh_contact
 
 
-                #loss.backward()
-                #self.optimizer.step()
+                loss.backward()
+                self.optimizer.step()
                 loss *= 1000
 
                 # print "got here"
@@ -638,11 +634,11 @@ if __name__ == "__main__":
 
 
     if opt.quick_test == True:
-        training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff'+filepath_suffix+'.p')
+        #training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff'+filepath_suffix+'.p')
         #training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_sit_1000_of_1121_upperbody_stiff'+filepath_suffix+'.p')
         #training_database_file_f.append(filepath_prefix+'real/trainval4_150rh1_sit120rh'+filepath_suffix+'.p')
         #training_database_file_m.append(filepath_prefix+'real/trainval4_150rh1_sit120rh'+filepath_suffix+'.p')
-       # training_database_file_f.append(filepath_prefix + 'real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix + 'real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
         #training_database_file_f.append(filepath_prefix + 'real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
         #training_database_file_m.append(filepath_prefix+'real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
         #training_database_file_m.append(filepath_prefix+'real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
