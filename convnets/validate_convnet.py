@@ -15,11 +15,9 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import transforms
 from torch.autograd import Variable
-
 import chumpy as ch
 
-
-import convnet_contact as convnet
+import convnet as convnet
 import tf.transformations as tft
 
 # import hrl_lib.util as ut
@@ -103,8 +101,7 @@ class PhysicalTrainer():
         self.opt = opt
         self.CTRL_PNL['num_epochs'] = 101
         self.CTRL_PNL['incl_inter'] = True
-        self.CTRL_PNL['shuffle'] = True
-        self.CTRL_PNL['regr_depth_maps'] = False
+        self.CTRL_PNL['shuffle'] = False
         self.CTRL_PNL['incl_ht_wt_channels'] = False
         self.CTRL_PNL['incl_pmat_cntct_input'] = False
         self.CTRL_PNL['num_input_channels'] = 3
@@ -112,9 +109,12 @@ class PhysicalTrainer():
         self.CTRL_PNL['dtype'] = dtype
         self.CTRL_PNL['repeat_real_data_ct'] = 1
         self.CTRL_PNL['regr_angles'] = 1
+        self.CTRL_PNL['depth_map_labels'] = False
+        self.CTRL_PNL['depth_map_output'] = True
+        self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
+        self.CTRL_PNL['adjust_ang_from_estimate'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
 
         self.count = 0
-        self.regress_depth_maps = False
 
         if self.CTRL_PNL['incl_pmat_cntct_input'] == True:
             self.CTRL_PNL['num_input_channels'] += 1
@@ -122,6 +122,9 @@ class PhysicalTrainer():
         if self.CTRL_PNL['incl_ht_wt_channels'] == True:
             self.CTRL_PNL['num_input_channels'] += 2
 
+        self.CTRL_PNL['filepath_prefix'] = '/home/henry/'
+        self.CTRL_PNL['aws'] = False
+        self.CTRL_PNL['lock_root'] = False
 
 
         self.mat_size = (NUMOFTAXELS_X, NUMOFTAXELS_Y)
@@ -138,32 +141,25 @@ class PhysicalTrainer():
         dat_f_real = TensorPrepLib().load_files_to_database(testing_database_file_f, 'real')
         dat_m_real = TensorPrepLib().load_files_to_database(testing_database_file_m, 'real')
 
-
         self.test_x_flat = []  # Initialize the testing pressure mat list
-        self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, dat_f_synth, num_repeats = 1)
-        self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, dat_m_synth, num_repeats = 1)
+        self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, dat_f_synth, dat_m_synth, num_repeats = 1)
         self.test_x_flat = list(np.clip(np.array(self.test_x_flat) * 5.0, a_min=0, a_max=100))
 
-        self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, dat_f_real, num_repeats = self.CTRL_PNL['repeat_real_data_ct'])
-        self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, dat_m_real, num_repeats = self.CTRL_PNL['repeat_real_data_ct'])
+        self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, dat_f_real, dat_m_real, num_repeats = self.CTRL_PNL['repeat_real_data_ct'])
 
         self.test_x_flat = PreprocessingLib().preprocessing_blur_images(self.test_x_flat, self.mat_size, sigma=0.5)
 
         if len(self.test_x_flat) == 0: print("NO testing DATA INCLUDED")
 
         self.test_a_flat = []  # Initialize the testing pressure mat angle list
-        self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, dat_f_synth, num_repeats = 1)
-        self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, dat_m_synth, num_repeats = 1)
-        self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, dat_f_real, num_repeats = self.CTRL_PNL['repeat_real_data_ct'])
-        self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, dat_m_real, num_repeats = self.CTRL_PNL['repeat_real_data_ct'])
+        self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, dat_f_synth, dat_m_real, num_repeats = 1)
+        self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, dat_f_real, dat_m_real, num_repeats = self.CTRL_PNL['repeat_real_data_ct'])
 
-        if self.regress_depth_maps == True:
+        if self.CTRL_PNL['depth_map_labels'] == True:
             self.depth_contact_maps = [] #Initialize the precomputed depth and contact maps
-            self.depth_contact_maps = TensorPrepLib().prep_depth_contact(self.depth_contact_maps, dat_f_synth, num_repeats = 1)
-            self.depth_contact_maps = TensorPrepLib().prep_depth_contact(self.depth_contact_maps, dat_m_synth, num_repeats = 1)
+            self.depth_contact_maps = TensorPrepLib().prep_depth_contact(self.depth_contact_maps, dat_f_synth, dat_m_synth, num_repeats = 1)
         else:
             self.depth_contact_maps = None
-
 
         test_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.test_x_flat,
                                                                                 self.test_a_flat,
@@ -171,38 +167,37 @@ class PhysicalTrainer():
                                                                                 self.CTRL_PNL['verbose'])
 
         test_xa = TensorPrepLib().append_input_depth_contact(np.array(test_xa),
+                                                              include_pmat_contact = self.CTRL_PNL['incl_pmat_cntct_input'],
                                                               mesh_depth_contact_maps = self.depth_contact_maps,
-                                                              include_mesh_depth_contact = self.regress_depth_maps,
-                                                              include_pmat_contact = self.CTRL_PNL['incl_pmat_cntct_input'])
-        self.test_x_tensor = torch.Tensor(test_xa)
+                                                              include_mesh_depth_contact = self.CTRL_PNL['depth_map_labels'])
 
+        self.test_x_tensor = torch.Tensor(test_xa)
 
         self.test_y_flat = []  # Initialize the testing ground truth list
         self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_f_synth, num_repeats = 1,
                                                         z_adj = -0.075, gender = "f", is_synth = True,
-                                                        loss_vector_type = self.CTRL_PNL['loss_vector_type'])
+                                                        loss_vector_type = self.CTRL_PNL['loss_vector_type'],
+                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_estimate'])
         self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_m_synth, num_repeats = 1,
                                                         z_adj = -0.075, gender = "m", is_synth = True,
-                                                        loss_vector_type = self.CTRL_PNL['loss_vector_type'])
+                                                        loss_vector_type = self.CTRL_PNL['loss_vector_type'],
+                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_estimate'])
 
         self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_f_real, num_repeats = self.CTRL_PNL['repeat_real_data_ct'],
                                                         z_adj = 0.0, gender = "m", is_synth = False,
-                                                        loss_vector_type = self.CTRL_PNL['loss_vector_type'])
+                                                        loss_vector_type = self.CTRL_PNL['loss_vector_type'],
+                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_estimate'])
         self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_m_real, num_repeats = self.CTRL_PNL['repeat_real_data_ct'],
                                                         z_adj = 0.0, gender = "m", is_synth = False,
-                                                        loss_vector_type = self.CTRL_PNL['loss_vector_type'])
+                                                        loss_vector_type = self.CTRL_PNL['loss_vector_type'],
+                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_estimate'])
         self.test_y_tensor = torch.Tensor(self.test_y_flat)
 
         print self.test_x_tensor.shape, 'Input testing tensor shape'
         print self.test_y_tensor.shape, 'Output testing tensor shape'
 
 
-
-
-
-
     def visualize_3d_data(self):
-
 
         p_mat_array = self.test_x_tensor.numpy()[:, 0, :, :]
         bedangle_array = self.test_x_tensor.numpy()[:, 2, 0, 0]
@@ -212,17 +207,11 @@ class PhysicalTrainer():
         joint_loc_array = self.test_y_tensor.numpy()[:, 0:72].reshape(-1, 24, 3)/1000
         root_loc_array = self.test_y_tensor.numpy()[:, 154:157]
 
-
-
-
-
         import rospy
         rospy.init_node('real_time_pose')
 
-
         print p_mat_array.shape
         print joint_loc_array.shape
-
 
         VizLib = VisualizationLib()
         for ct in range(p_mat_array.shape[0]):
@@ -438,19 +427,6 @@ class PhysicalTrainer():
 
                 print joint_loc_array[ct], 'all joints'
                 print targets_est[ct, :]
-                #offset_targets = np.stack([verts[ct, 1325, :], #torso
-                #                          verts[ct, 336, :], #head
-                #                          verts[ct, 1046, :], #l knee
-                #                          verts[ct, 4530, :], #r knee
-                #                          verts[ct, 3333, :], #l ankle
-                ##                          verts[ct, 6732, :], #r ankle
-                 #                         verts[ct, 1664, :], #l elbow
-                 #                         verts[ct, 5121, :], #r elbow
-                 #                         verts[ct, 2208, :], #l wrist
-                 #                         verts[ct, 5669, :]]) #r wrist
-
-                #print offset_targets
-
 
                 #VizLib.rviz_publish_input(p_mat_array[ct, :, :], bedangle_array[ct])
                 #VizLib.rviz_publish_output_mesh(verts.numpy()[ct], verts.numpy()[ct], offset_targets)
@@ -535,7 +511,7 @@ class PhysicalTrainer():
             #self.model.train()
 
             if self.CTRL_PNL['loss_vector_type'] == 'direct':
-                scores, images, targets, targets_est = \
+                scores, INPUT_DICT, OUTPUT_DICT = \
                     UnpackBatchLib().unpackage_batch_dir_pass(batch, is_training=False, model=self.model,
                                                               CTRL_PNL=self.CTRL_PNL)
                 self.criterion = nn.L1Loss()
@@ -546,7 +522,7 @@ class PhysicalTrainer():
 
 
             elif self.CTRL_PNL['loss_vector_type'] == 'anglesR' or self.CTRL_PNL['loss_vector_type'] == 'anglesDC' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU':
-                scores, images, targets, targets_est, mmb, mmb_est, cmb, cmb_est = \
+                scores, INPUT_DICT, OUTPUT_DICT = \
                     UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model=self.model,
                                                               CTRL_PNL=self.CTRL_PNL)
                 self.criterion = nn.L1Loss()
@@ -560,6 +536,9 @@ class PhysicalTrainer():
                 loss += loss_curr
 
 
+
+            print angles_est.shape, n_examples
+
             n_examples += self.CTRL_PNL['batch_size']
             #print n_examples
 
@@ -568,16 +547,16 @@ class PhysicalTrainer():
 
 
             try:
-                targets_print = torch.cat([targets_print, torch.mean(targets.data, dim = 0).unsqueeze(0)], dim=0)
-                targets_est_print = torch.cat([targets_est_print, torch.mean(targets_est, dim = 0).unsqueeze(0)], dim=0)
+                targets_print = torch.cat([targets_print, torch.mean(INPUT_DICT['batch_targets'], dim = 0).unsqueeze(0)], dim=0)
+                targets_est_print = torch.cat([targets_est_print, torch.mean(OUTPUT_DICT['batch_targets_est'], dim = 0).unsqueeze(0)], dim=0)
             except:
 
-                targets_print = torch.mean(targets.data, dim = 0).unsqueeze(0)
-                targets_est_print = torch.mean(targets_est, dim = 0).unsqueeze(0)
+                targets_print = torch.mean(INPUT_DICT['batch_targets'], dim = 0).unsqueeze(0)
+                targets_est_print = torch.mean(OUTPUT_DICT['batch_targets_est'], dim = 0).unsqueeze(0)
 
 
-            print targets_print.shape, targets.data.shape
-            print targets_est_print.shape, targets_est.shape
+            print targets_print.shape, INPUT_DICT['batch_targets'].shape
+            print targets_est_print.shape, OUTPUT_DICT['batch_targets_est'].shape
 
 
             if GPU == True:
@@ -593,36 +572,29 @@ class PhysicalTrainer():
                                                                                    self.CTRL_PNL['loss_vector_type'],
                                                                                    data='validate')
 
-            #error_list.append(np.mean(error_norm))
-
-            #try:
-            #    error_norm_flat = np.concatenate((error_norm_flat, error_norm.flatten()), axis=0)
-            #except:
-            #    error_norm_flat = error_norm.flatten()
-
-
-
 
             if self.opt.visualize == True:
                 loss /= n_examples
                 loss *= 100
                 loss *= 1000
 
-                print images.data.size()
-                NUM_IMAGES = images.data.size()[0]
+                print INPUT_DICT['batch_images'].size()
+                NUM_IMAGES = INPUT_DICT['batch_images'].size()[0]
 
                 for image_ct in range(NUM_IMAGES):
                     # #self.im_sampleval = self.im_sampleval[:,0,:,:]
-                    self.im_sampleval = images.data[image_ct, :].squeeze()
-                    self.tar_sampleval = targets.data[image_ct, :].squeeze() / 1000
-                    self.sc_sampleval = targets_est[image_ct, :].squeeze() / 1000
+                    self.im_sampleval = INPUT_DICT['batch_images'][image_ct, :].squeeze()
+                    self.tar_sampleval = INPUT_DICT['batch_targets'][image_ct, :].squeeze() / 1000
+                    self.sc_sampleval = OUTPUT_DICT['batch_targets_est'][image_ct, :].squeeze() / 1000
                     self.sc_sampleval = self.sc_sampleval.view(24, 3)
+
+                    self.im_sample2 = OUTPUT_DICT['batch_mdm_est'].data[image_ct, :].squeeze()
 
 
                     if GPU == True:
                         VisualizationLib().visualize_pressure_map(self.im_sampleval.cpu(), self.tar_sampleval.cpu(), self.sc_sampleval.cpu(), block=False)
                     else:
-                        VisualizationLib().visualize_pressure_map(self.im_sampleval, self.tar_sampleval, self.sc_sampleval, block=False)
+                        VisualizationLib().visualize_pressure_map(self.im_sampleval, self.tar_sampleval, self.sc_sampleval, self.im_sample2+50, block=False)
                     time.sleep(1)
 
         if GPU == True:
@@ -674,7 +646,7 @@ if __name__ == "__main__":
     network_design = True
 
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff.p')
-    #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
+    test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2067_none_stiff.p')
@@ -699,7 +671,7 @@ if __name__ == "__main__":
     #test_database_file_m.append(filepath_prefix_qt+'data/synth/side_up_fw/train_m_sit_1000_of_1144_lowerbody_stiff.p')
     #test_database_file_m.append(filepath_prefix_qt+'data/synth/side_up_fw/train_m_sit_1000_of_1126_none_stiff.p')
     #test_database_file_m.append(filepath_prefix_qt + 'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    test_database_file_m.append(filepath_prefix_qt+'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    #test_database_file_m.append(filepath_prefix_qt+'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + 'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + 'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + 'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')

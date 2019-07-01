@@ -89,39 +89,68 @@ class TensorPrepLib():
                 print 'all data keys and shape', key, np.array(dat[key]).shape
         return dat
 
-    def prep_images(self, im_list, dat, num_repeats):
-        if dat is not None:
-            for entry in range(len(dat['images'])):
-                for i in range(num_repeats):
-                    im_list.append(dat['images'][entry])
+    def prep_images(self, im_list, dat_f, dat_m, num_repeats):
+        for dat in [dat_f, dat_m]:
+            if dat is not None:
+                for entry in range(len(dat['images'])):
+                    for i in range(num_repeats):
+                        im_list.append(dat['images'][entry])
         return im_list
 
-    def prep_angles(self, ang_list, dat, num_repeats):
-        if dat is not None:
-            for entry in range(len(dat['images'])):
-                for i in range(num_repeats):
-                    ang_list.append([dat['bed_angle_deg'][entry]])
+    def prep_angles(self, ang_list, dat_f, dat_m, num_repeats):
+        for dat in [dat_f, dat_m]:
+            if dat is not None:
+                for entry in range(len(dat['images'])):
+                    for i in range(num_repeats):
+                        ang_list.append([dat['bed_angle_deg'][entry]])
         return ang_list
 
-    def prep_depth_contact(self, depth_contact_list, dat, num_repeats):
-        if dat is not None:
-            for entry in range(len(dat['images'])):
-                for i in range(num_repeats):
-                    depth_contact_list.append([dat['mesh_depth'][entry], dat['mesh_contact'][entry], ])
+    def prep_depth_contact(self, depth_contact_list, dat_f, dat_m, num_repeats):
+        for dat in [dat_f, dat_m]:
+            if dat is not None:
+                for entry in range(len(dat['images'])):
+                    for i in range(num_repeats):
+                        depth_contact_list.append([dat['mesh_depth'][entry], dat['mesh_contact'][entry], ])
         return depth_contact_list
 
-    def append_input_depth_contact(self, train_xa, mesh_depth_contact_maps = None, include_mesh_depth_contact = False, include_pmat_contact = False):
+    def prep_depth_contact_input_est(self, depth_contact_input_est_list, dat_f, dat_m, num_repeats):
+        for dat in [dat_f, dat_m]:
+            if dat is not None:
+                for entry in range(len(dat['images'])):
+                    for i in range(num_repeats):
+                        mdm_est_pos = np.copy(dat['mdm_est'][entry])
+                        mdm_est_neg = np.copy(dat['mdm_est'][entry])
+                        mdm_est_pos[mdm_est_pos < 0] = 0
+                        mdm_est_neg[mdm_est_neg > 0] = 0
+                        mdm_est_neg *= -1
+                        #depth_contact_input_est_list.append([dat['mdm_est'][entry], dat['cm_est'][entry], ])
+                        depth_contact_input_est_list.append([mdm_est_pos, mdm_est_neg, dat['cm_est'][entry]*100, ])
+        return depth_contact_input_est_list
+
+    def append_input_depth_contact(self, train_xa, include_pmat_contact = False,
+                                   mesh_depth_contact_maps_input_est = None, include_mesh_depth_contact_input_est = False,
+                                   mesh_depth_contact_maps = None, include_mesh_depth_contact = False):
 
         train_contact = np.copy(train_xa[:, 0:1, :, :]) #get the pmat contact map
         train_contact[train_contact > 0] = 100.
+
+
+        if include_mesh_depth_contact_input_est == True:
+            mesh_depth_contact_maps_input_est = np.array(mesh_depth_contact_maps_input_est)
+            print mesh_depth_contact_maps_input_est.shape
+            print train_xa.shape
+            train_xa = np.concatenate((mesh_depth_contact_maps_input_est, train_xa), axis = 1)
+
+        if include_pmat_contact == True:
+            train_xa = np.concatenate((train_contact, train_xa), axis=1)
+
         if include_mesh_depth_contact == True:
             mesh_depth_contact_maps = np.array(mesh_depth_contact_maps)
             train_xa = np.concatenate((train_xa, mesh_depth_contact_maps), axis=1)
-        if include_pmat_contact == True:
-            train_xa = np.concatenate((train_contact, train_xa), axis=1)
+
         return train_xa
 
-    def prep_labels(self, y_flat, dat, num_repeats, z_adj, gender, is_synth, loss_vector_type):
+    def prep_labels(self, y_flat, dat, num_repeats, z_adj, gender, is_synth, loss_vector_type, initial_angle_est):
         if gender == "f":
             g1 = 1
             g2 = 0
@@ -145,9 +174,13 @@ class TensorPrepLib():
                                         [g1], [g2], [s1],
                                         [dat['body_mass'][entry]],
                                         [(dat['body_height'][entry]-1.)*100],), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
+                    if initial_angle_est == True:
+                        c = np.concatenate((c,
+                                            dat['betas_est'][entry][0:10],
+                                            dat['angles_est'][entry][0:72],
+                                            dat['root_xyz_est'][entry][0:3]), axis = 0)
                     for i in range(num_repeats):
                         y_flat.append(c)
-
 
         elif is_synth == True and loss_vector_type == 'direct':
             if dat is not None:
@@ -173,6 +206,11 @@ class TensorPrepLib():
                                         [g1], [g2], [s1],
                                         [dat['body_mass'][entry]],
                                         [(dat['body_height'][entry]-1.)*100],), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
+                    if initial_angle_est == True:
+                        c = np.concatenate((c,
+                                            dat['betas_est'][entry][0:10],
+                                            dat['angles_est'][entry][0:72],
+                                            dat['root_xyz_est'][entry][0:3]), axis = 0)
                     for i in range(num_repeats):
                         y_flat.append(c)
 
@@ -201,6 +239,11 @@ class TensorPrepLib():
                                         [g1], [g2], [s1],
                                         [dat['body_mass'][entry]],
                                         [(dat['body_height'][entry]-1.)*100],), axis=0)  # [x1], [x2], [x3]: female real: 1, 0, 0.
+                    if initial_angle_est == True:
+                        c = np.concatenate((c,
+                                            dat['betas_est'][entry][0:10],
+                                            dat['angles_est'][entry][0:72],
+                                            dat['root_xyz_est'][entry][0:3]), axis = 0)
                     for i in range(num_repeats):
                         y_flat.append(c)
 

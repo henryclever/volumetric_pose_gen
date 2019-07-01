@@ -97,6 +97,7 @@ class CNN(nn.Module):
 
     def forward_direct(self, images, targets, is_training = True):
 
+        OUTPUT_DICT = {}
         scores_cnn = self.CNN_pack1(images)
         scores_size = scores_cnn.size()
 
@@ -119,7 +120,7 @@ class CNN(nn.Module):
 
 
         zero_joint_filler = torch.zeros(scores.size()[0], 3).type(self.dtype)
-        #print scores.shape
+        print scores.shape
 
         targets_est = scores.clone().detach()*1000
         targets_est = torch.cat((zero_joint_filler,
@@ -171,7 +172,9 @@ class CNN(nn.Module):
 
         scores = scores[:, 0:10]
 
-        return scores, targets_est
+        OUTPUT_DICT['batch_targets_est'] = targets_est
+
+        return scores, OUTPUT_DICT
 
 
 
@@ -228,12 +231,12 @@ class CNN(nn.Module):
 
 
 
-    def forward_kinematic_angles(self, images, gender_switch, synth_real_switch, CTRL_PNL,
+    def forward_kinematic_angles(self, images, gender_switch, synth_real_switch, CTRL_PNL, OUTPUT_EST_DICT,
                                  targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None):
 
         reg_angles = CTRL_PNL['regr_angles'],
-        reg_depth_maps = CTRL_PNL['regr_depth_maps']
         filepath_prefix = CTRL_PNL['filepath_prefix']
+        OUTPUT_DICT = {}
 
         try:
              x = self.meshDepthLib.bounds
@@ -243,9 +246,9 @@ class CNN(nn.Module):
                 self.GPU = True
                 self.dtype = torch.cuda.FloatTensor
             else:
-                self.GPU = True
-                self.dtype = torch.cuda.FloatTensor
-            if reg_depth_maps == True:
+                self.GPU = False
+                self.dtype = torch.FloatTensor
+            if CTRL_PNL['depth_map_output'] == True:
                 self.verts_list = "all"
             else:
                 self.verts_list = [1325, 336, 1032, 4515, 1374, 4848, 1739, 5209, 1960, 5423]
@@ -286,17 +289,22 @@ class CNN(nn.Module):
             scores[:, 11] = torch.add(scores[:, 11].clone(), 1.2)
             scores[:, 12] = torch.add(scores[:, 12].clone(), 0.1)
 
-
-        #print scores[34, :]
+        #print scores[0, 0:10]
+        if CTRL_PNL['adjust_ang_from_est'] == True:
+            scores[:, 0:10] = OUTPUT_EST_DICT['betas']/1000
+            scores[:, 10:13] = OUTPUT_EST_DICT['root_shift']
+            scores[:, 13:85] = scores[:, 13:85].clone() + OUTPUT_EST_DICT['angles']
 
         if reg_angles == True:
             add_idx = 72
         else:
             add_idx = 0
 
+        OUTPUT_DICT['batch_angles_est']  = scores[:, 13:85].clone().data
+        OUTPUT_DICT['batch_root_xyz_est'] = scores[:, 10:13].clone().data
+
 
         test_ground_truth = False #can only use True when the dataset is entirely synthetic AND when we use anglesDC
-
 
         if test_ground_truth == False or is_training == False:
             betas_est = scores[:, 0:10].clone()#.detach() #make sure to detach so the gradient flow of joints doesn't corrupt the betas
@@ -308,6 +316,7 @@ class CNN(nn.Module):
             scores[:, 13:85] = scores[:, 13:85].tanh()
             scores[:, 13:85] /= (2. / torch.abs(self.meshDepthLib.bounds[0:72, 0] - self.meshDepthLib.bounds[0:72, 1]))
             scores[:, 13:85] += torch.mean(self.meshDepthLib.bounds[0:72, 0:2], dim=1)
+
 
             if self.loss_vector_type == 'anglesDC':
 
@@ -351,10 +360,11 @@ class CNN(nn.Module):
 
         #print Rs_est[0, :]
 
+
         gender_switch = gender_switch.unsqueeze(1)
         current_batch_size = gender_switch.size()[0]
 
-        if reg_depth_maps == True:
+        if CTRL_PNL['depth_map_output'] == True:
             # break things up into sub batches and pass through the mesh
             num_normal_sub_batches = current_batch_size / self.meshDepthLib.N
             if current_batch_size % self.meshDepthLib.N != 0:
@@ -379,10 +389,10 @@ class CNN(nn.Module):
                 start_incr += sub_batch_incr
 
             bed_angle_batch = torch.mean(images[:, 2, 1:3, 0], dim=1)
-            mesh_matrix_batch, contact_matrix_batch = self.meshDepthLib.compute_depth_contact_planes(verts, bed_angle_batch)
+            OUTPUT_DICT['batch_mdm_est'], OUTPUT_DICT['batch_cm_est'] = self.meshDepthLib.compute_depth_contact_planes(verts, bed_angle_batch)
 
-            mesh_matrix_batch = mesh_matrix_batch.type(self.dtype)
-            contact_matrix_batch = contact_matrix_batch.type(self.dtype)
+            OUTPUT_DICT['batch_mdm_est'] = OUTPUT_DICT['batch_mdm_est'].type(self.dtype)
+            OUTPUT_DICT['batch_cm_est'] = OUTPUT_DICT['batch_cm_est'].type(self.dtype)
 
             verts_red = torch.stack([verts[:, 1325, :],
                                      verts[:, 336, :],  # head
@@ -458,8 +468,8 @@ class CNN(nn.Module):
 
             verts_offset = torch.Tensor(verts.clone().detach().cpu().numpy()).type(self.dtype)
 
-            mesh_matrix_batch = None
-            contact_matrix_batch = None
+            OUTPUT_DICT['batch_mdm_est'] = None
+            OUTPUT_DICT['batch_cm_est'] = None
 
 
 
@@ -479,9 +489,8 @@ class CNN(nn.Module):
 
         targets_est = targets_est.contiguous().view(-1, 72)
 
-        targets_est_np = targets_est.data*1000. #after it comes out of the forward kinematics
-
-        betas_est_np = betas_est.data*1000.
+        OUTPUT_DICT['batch_targets_est'] = targets_est.data*1000. #after it comes out of the forward kinematics
+        OUTPUT_DICT['batch_betas_est'] = betas_est.data*1000.
 
         scores = scores.unsqueeze(0)
         scores = scores.unsqueeze(0)
@@ -560,5 +569,5 @@ class CNN(nn.Module):
         #scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), (1./24)) #weight the joints by how many there are
         #if reg_angles == True: scores[:, 34:106] = torch.mul(scores[:, 34:106].clone(), (1./72)) #weight the angles by how many there are
 
-        return scores, mesh_matrix_batch, contact_matrix_batch, targets_est_np, betas_est_np
+        return scores, OUTPUT_DICT
 

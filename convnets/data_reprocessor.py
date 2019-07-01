@@ -458,11 +458,12 @@ def get_direct_synth_marker_offsets():
         #import rospy
         #rospy.init_node('blah')
 
+        import time
         for marker_set_idx in range(len(markers_xyz_m)):
             joint_angles = pose[marker_set_idx]
             root_joint_pos = np.array(root_xyz_shift[marker_set_idx])
             #root_joint_pos = np.array(markers_xyz_m[marker_set_idx][0:3]) + np.array([0.0, 0.286-0.04, 0.0])
-
+            t0 = time.time()
 
             body_shape = betas[marker_set_idx]
             curr_marker = markers_xyz_m[marker_set_idx]
@@ -521,11 +522,13 @@ def get_direct_synth_marker_offsets():
             #print verts_reduced, 'verts'
             #import time
             #time.sleep(10)
+
+            print time.time() - t0
             training_data_dict['markers_xyz_m_offset'].append(verts_reduced.flatten())
 
 
 
-        pickle.dump(training_data_dict, open(os.path.join(filename), 'wb'))
+        #pickle.dump(training_data_dict, open(os.path.join(filename), 'wb'))
 
 
 

@@ -57,6 +57,8 @@ def load_pickle(filename):
 class UnpackBatchLib():
     def unpackage_batch_kin_pass(self, batch, is_training, model, CTRL_PNL):
 
+        INPUT_DICT = {}
+
         # 0:72: positions.
         batch.append(batch[1][:, 72:82])  # betas
         batch.append(batch[1][:, 82:154])  # angles
@@ -66,7 +68,17 @@ class UnpackBatchLib():
         batch.append(batch[1][:, 160:161])  # mass, kg
         batch.append(batch[1][:, 161:162])  # height, kg
 
-        if CTRL_PNL['regr_depth_maps'] == True and is_training == True:
+        if CTRL_PNL['adjust_ang_from_est'] == True:
+            batch.append(batch[1][:, 162:172]) #betas est
+            batch.append(batch[1][:, 172:244]) #angles est
+            batch.append(batch[1][:, 244:247]) #root pos est
+            extra_smpl_angles = batch[10]
+            extra_targets = batch[11]
+        else:
+            extra_smpl_angles = None
+            extra_targets = None
+
+        if CTRL_PNL['depth_map_labels'] == True and is_training == True:
             batch.append(batch[0][:, CTRL_PNL['num_input_channels_batch0'], : ,:]) #mesh depth matrix
             batch.append(batch[0][:, CTRL_PNL['num_input_channels_batch0']+1, : ,:]) #mesh contact matrix
 
@@ -77,15 +89,19 @@ class UnpackBatchLib():
         batch[1] = batch[1][:, 0:72]
 
         if is_training == True: #only do augmentation for real data that is in training mode
-            batch[0], batch[1], _ = SyntheticLib().synthetic_master(batch[0], batch[1], batch[6],
+            batch[0], batch[1], extra_targets, extra_smpl_angles = SyntheticLib().synthetic_master(batch[0], batch[1], batch[6],
+                                                                    num_images_manip = (CTRL_PNL['num_input_channels_batch0']-1),
                                                                     flip=True, shift=True, scale=False,
-                                                                    bedangle=True,
                                                                     include_inter=CTRL_PNL['incl_inter'],
-                                                                    loss_vector_type=CTRL_PNL['loss_vector_type'])
+                                                                    loss_vector_type=CTRL_PNL['loss_vector_type'],
+                                                                    extra_targets=extra_targets,
+                                                                    extra_smpl_angles = extra_smpl_angles)
 
         images_up_non_tensor = PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2)
+
         if is_training == True: #only add noise to training images
-            images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(images_up_non_tensor))
+            images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(images_up_non_tensor),
+                                                                                    pmat_chan_idx = (CTRL_PNL['num_input_channels_batch0']-3))
         images_up = Variable(torch.Tensor(images_up_non_tensor).type(CTRL_PNL['dtype']), requires_grad=False)
 
         if CTRL_PNL['incl_ht_wt_channels'] == True: #make images full of stuff
@@ -106,26 +122,38 @@ class UnpackBatchLib():
         gender_switch = Variable(batch[5].type(CTRL_PNL['dtype']), requires_grad=is_training)
         synth_real_switch = Variable(batch[6].type(CTRL_PNL['dtype']), requires_grad=is_training)
 
-        if CTRL_PNL['regr_depth_maps'] == True and is_training == True:
-            mmb = batch[9].type(CTRL_PNL['dtype'])
-            cmb = batch[10].type(CTRL_PNL['dtype'])
-        else:
-            mmb = None
-            cmb = None
+        OUTPUT_EST_DICT = {}
+        if CTRL_PNL['adjust_ang_from_est'] == True:
+            OUTPUT_EST_DICT['betas'] = Variable(batch[9].type(CTRL_PNL['dtype']), requires_grad=is_training)
+            OUTPUT_EST_DICT['angles'] = Variable(extra_smpl_angles.type(CTRL_PNL['dtype']), requires_grad=is_training)
+            OUTPUT_EST_DICT['root_shift'] = Variable(extra_targets.type(CTRL_PNL['dtype']), requires_grad=is_training)
 
-        scores, mmb_est, cmb_est, targets_est, betas_est = model.forward_kinematic_angles(images_up,
-                                                             gender_switch,
-                                                             synth_real_switch,
-                                                             CTRL_PNL,
-                                                             targets,
+        if CTRL_PNL['depth_map_labels'] == True and is_training == True:
+            INPUT_DICT['batch_mdm'] = batch[9].type(CTRL_PNL['dtype'])
+            INPUT_DICT['batch_cm'] = batch[10].type(CTRL_PNL['dtype'])
+        else:
+            INPUT_DICT['batch_mdm'] = None
+            INPUT_DICT['batch_cm'] = None
+
+        scores, OUTPUT_DICT = model.forward_kinematic_angles(images=images_up,
+                                                             gender_switch=gender_switch,
+                                                             synth_real_switch=synth_real_switch,
+                                                             CTRL_PNL=CTRL_PNL,
+                                                             OUTPUT_EST_DICT=OUTPUT_EST_DICT,
+                                                             targets=targets,
                                                              is_training=is_training,
                                                              betas=betas,
                                                              angles_gt=angles_gt,
                                                              root_shift=root_shift,
                                                              )  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
 
+        #print OUTPUT_DICT['batch_angles_est'][0, :], "est"
+        #print angles_gt[0, :], "GT"
+        INPUT_DICT['batch_images'] = images.data
+        INPUT_DICT['batch_targets'] = targets.data
 
-        return scores, images, targets, targets_est, mmb, mmb_est, cmb, cmb_est
+
+        return scores, INPUT_DICT, OUTPUT_DICT
 
 
     def unpackage_batch_dir_pass(self, batch, is_training, model, CTRL_PNL):
@@ -139,8 +167,8 @@ class UnpackBatchLib():
 
         if is_training == True:
             batch[0], batch[1], _ = SyntheticLib().synthetic_master(batch[0], batch[1], batch[2],
+                                                                 num_images_manip = (CTRL_PNL['num_input_channels_batch0']-1),
                                                                  flip=False, shift=True, scale=False,
-                                                                 bedangle=True,
                                                                  include_inter=CTRL_PNL['incl_inter'],
                                                                  loss_vector_type=CTRL_PNL['loss_vector_type'])
 
@@ -161,6 +189,10 @@ class UnpackBatchLib():
         images, targets = Variable(batch[0].type(CTRL_PNL['dtype']), requires_grad=False), \
                           Variable(batch[1].type(CTRL_PNL['dtype']), requires_grad=False)
 
-        scores, targets_est = model.forward_direct(images_up, targets, is_training=is_training)
+        scores, OUTPUT_DICT = model.forward_direct(images_up, targets, is_training=is_training)
 
-        return scores, images, targets, targets_est
+        INPUT_DICT = {}
+        INPUT_DICT['batch_images'] = images.data
+        INPUT_DICT['batch_targets'] = targets.data
+
+        return scores, INPUT_DICT, OUTPUT_DICT

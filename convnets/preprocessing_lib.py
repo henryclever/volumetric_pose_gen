@@ -59,7 +59,7 @@ class PreprocessingLib():
 
 
 
-    def preprocessing_add_image_noise(self, images):
+    def preprocessing_add_image_noise(self, images, pmat_chan_idx):
 
         queue = np.copy(images[:, 0:2, :, :])
         queue[queue != 0] = 1.
@@ -68,17 +68,17 @@ class PreprocessingLib():
         xU, xL = x + 0.5, x - 0.5
         prob = ss.norm.cdf(xU, scale=1) - ss.norm.cdf(xL,scale=1)  # scale is the standard deviation using a cumulative density function
         prob = prob / prob.sum()  # normalize the probabilities so their sum is 1
-        image_noise = np.random.choice(x, size=(images.shape[0], images.shape[1]-1, images.shape[2], images.shape[3]), p=prob)
+        image_noise = np.random.choice(x, size=(images.shape[0], 2, images.shape[2], images.shape[3]), p=prob)
 
 
         #image_noise = image_noise*queue
-        images[:, 0:2, :, :] += image_noise
+        images[:, pmat_chan_idx:pmat_chan_idx+2, :, :] += image_noise
 
         #print images[0, 0, 50, 10:25], 'added noise'
 
         #clip noise so we dont go outside sensor limits
-        images[:, 0, :, :] = np.clip(images[:, 0, :, :], 0, 100)
-        images[:, 1, :, :] = np.clip(images[:, 1, :, :], 0, 10000)
+        images[:, pmat_chan_idx, :, :] = np.clip(images[:, pmat_chan_idx, :, :], 0, 100)
+        images[:, pmat_chan_idx+1, :, :] = np.clip(images[:, pmat_chan_idx+1, :, :], 0, 10000)
         return images
 
 

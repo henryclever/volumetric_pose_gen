@@ -196,7 +196,7 @@ class SyntheticLib():
 
         #use bed angles to keep it from shifting in the x and y directions
 
-        x = np.arange(-5, 6)
+        x = np.arange(-15, 16)
         xU, xL = x + 0.5, x - 0.5
         prob = ss.norm.cdf(xU, scale=2) - ss.norm.cdf(xL, scale=2) #scale is the standard deviation using a cumulative density function
         prob = prob / prob.sum()  # normalize the probabilities so their sum is 1
@@ -270,9 +270,12 @@ class SyntheticLib():
         return images, targets, extra_targets
 
 
-    def synthetic_fliplr(self, images, targets, synth_real_switch, extra_targets = None):
+    def synthetic_fliplr(self, images, targets, synth_real_switch, extra_targets = None, extra_smpl_angles = None):
         coin = np.random.randint(2, size=images.shape[0])
         coin[synth_real_switch == 1] = 0
+
+        coin[0] = 1
+        coin[1] = 0
 
         modified = coin
         original = 1 - coin
@@ -289,11 +292,8 @@ class SyntheticLib():
             im_mod = im_mod[:, :, ::-1]
 
 
-
         tar_orig = np.multiply(targets, original[:, np.newaxis])
         tar_mod = np.multiply(targets, modified[:, np.newaxis])
-
-        #print pcons.shape, 'pconshape'
 
         # change the left and right tags on the target in the z, flip x target left to right
         tar_mod = np.reshape(tar_mod, (tar_mod.shape[0], tar_mod.shape[1] / 3, 3))
@@ -301,17 +301,26 @@ class SyntheticLib():
         # flip the x left to right
         tar_mod[:, :, 0] = (tar_mod[:, :, 0] - 657.8) * -1 + 657.8
 
-        #print tar_mod.shape
-        #print tar_mod[0, :, :]
+        X_smpl_angles_orig = np.multiply(extra_smpl_angles, original[:, np.newaxis])
+        X_smpl_angles_mod = np.multiply(extra_smpl_angles, modified[:, np.newaxis])
+        X_smpl_angles_mod = X_smpl_angles_mod.reshape(X_smpl_angles_mod.shape[0], X_smpl_angles_mod.shape[1]/3, 3)
+
+        dummy_smpl = zeros((X_smpl_angles_mod.shape))
+        dummy_smpl[:, [1, 4, 7, 10, 13, 16, 18, 20, 22], :] = X_smpl_angles_mod[:, [1, 4, 7, 10, 13, 16, 18, 20, 22], :]
+        X_smpl_angles_mod[:, [1, 4, 7, 10, 13, 16, 18, 20, 22], :] = X_smpl_angles_mod[:, [2, 5, 8, 11, 14, 17, 19, 21, 23], :]
+        X_smpl_angles_mod[:, [2, 5, 8, 11, 14, 17, 19, 21, 23], :] = dummy_smpl[:, [1, 4, 7, 10, 13, 16, 18, 20, 22], :]
+
+        X_smpl_angles_mod[:, :, 1:3] *= -1
+
+        X_smpl_angles_mod = X_smpl_angles_mod.reshape(X_smpl_angles_mod.shape[0], X_smpl_angles_mod.shape[1]*X_smpl_angles_mod.shape[2])
+
+        extra_smpl_angles = X_smpl_angles_orig + X_smpl_angles_mod
 
         # swap in the z
         dummy = zeros((tar_mod.shape))
-
-
         dummy[:, [4, 7, 18, 20], :] = tar_mod[:, [4, 7, 18, 20], :]
         tar_mod[:, [4, 7, 18, 20], :] = tar_mod[:, [5, 8, 19, 21], :]
         tar_mod[:, [5, 8, 19, 21], :] = dummy[:, [4, 7, 18, 20], :]
-
 
 
         tar_mod = np.reshape(tar_mod, (tar_mod.shape[0], tar_orig.shape[1]))
@@ -338,10 +347,10 @@ class SyntheticLib():
             # swap in the z
             dummy = zeros((extra_tar_mod.shape))
 
-
-            dummy[:, [4, 7, 18, 20], :] = extra_tar_mod[:, [4, 7, 18, 20], :]
-            extra_tar_mod[:, [4, 7, 18, 20], :] = extra_tar_mod[:, [5, 8, 19, 21], :]
-            extra_tar_mod[:, [5, 8, 19, 21], :] = dummy[:, [4, 7, 18, 20], :]
+            if extra_tar_mod.shape[1] > 1:
+                dummy[:, [4, 7, 18, 20], :] = extra_tar_mod[:, [4, 7, 18, 20], :]
+                extra_tar_mod[:, [4, 7, 18, 20], :] = extra_tar_mod[:, [5, 8, 19, 21], :]
+                extra_tar_mod[:, [5, 8, 19, 21], :] = dummy[:, [4, 7, 18, 20], :]
 
 
 
@@ -351,12 +360,12 @@ class SyntheticLib():
             extra_targets = extra_tar_orig + extra_tar_mod
 
 
-        return images, targets, extra_targets
+        return images, targets, extra_targets, extra_smpl_angles
 
 
-    def synthetic_master(self, images_tensor, targets_tensor, synth_real_switch_tensor, flip=False, shift=False,
-                         scale=False, bedangle = False, include_inter = False, loss_vector_type = False,
-                         extra_targets = None):
+    def synthetic_master(self, images_tensor, targets_tensor, synth_real_switch_tensor, num_images_manip,
+                         flip=False, shift=False, scale=False, include_inter = False, loss_vector_type = False,
+                         extra_targets = None, extra_smpl_angles = None):
         self.loss_vector_type = loss_vector_type
         self.include_inter = include_inter
         self.t1 = time.time()
@@ -365,33 +374,30 @@ class SyntheticLib():
         imagesangles = images_tensor.numpy()
         targets = targets_tensor.numpy()
         if extra_targets is not None:
-            extra_targets = extra_targets.numpy()
+            extra_targets = extra_targets.numpy()*1000.
+        if extra_smpl_angles is not None:
+            extra_smpl_angles = extra_smpl_angles.numpy()
         synth_real_switch = synth_real_switch_tensor.numpy()
-
 
         if len(imagesangles.shape) < 4:
             imagesangles = np.expand_dims(imagesangles, 0)
 
+        #print num_images_manip, "NUMBER OF IMAGES TO MANIPULATE"
 
-        if bedangle == True:
-            if include_inter == True:
-                images = imagesangles[:, 0:2, :, :]
-                bedangles = imagesangles[:, 2, :, :]
-            else:
-                images = imagesangles[:,0,:,:]
-                bedangles = imagesangles[:,1,20,20]
-                #print bedangles.shape
-                #print targets.shape,'targets for synthetic code'
+        if include_inter == True:
+            images = imagesangles[:, 0:num_images_manip, :, :]
+            bedangles = imagesangles[:, num_images_manip, :, :]
         else:
-            images = imagesangles
-            bedangles = None
-        #print images.shape, targets.shape, 'shapes'
+            images = imagesangles[:,0:num_images_manip-1,:,:]
+            bedangles = imagesangles[:,num_images_manip-1,20,20]
+            #print bedangles.shape
+            #print targets.shape,'targets for synthetic code'
 
 
         if scale == True:
             images, targets, extra_targets = self.synthetic_scale(images, targets, bedangles, synth_real_switch, extra_targets)
         if flip == True:
-            images, targets, extra_targets = self.synthetic_fliplr(images, targets, synth_real_switch, extra_targets)
+            images, targets, extra_targets, extra_smpl_angles = self.synthetic_fliplr(images, targets, synth_real_switch, extra_targets, extra_smpl_angles)
         if shift == True:
             images, targets, extra_targets = self.synthetic_shiftxy(images, targets, bedangles, synth_real_switch, extra_targets)
 
@@ -404,34 +410,32 @@ class SyntheticLib():
                 targets[:, joint_num * 3 + 1] = targets[:, joint_num * 3 + 1] * synth_real_switch
                 targets[:, joint_num * 3 + 2] = targets[:, joint_num * 3 + 2] * synth_real_switch
                 if extra_targets is not None:
-                    extra_targets[:, joint_num * 3] = extra_targets[:, joint_num * 3] * synth_real_switch
-                    extra_targets[:, joint_num * 3 + 1] = extra_targets[:, joint_num * 3 + 1] * synth_real_switch
-                    extra_targets[:, joint_num * 3 + 2] = extra_targets[:, joint_num * 3 + 2] * synth_real_switch
+                    if extra_targets.shape[1] > 3:
+                        extra_targets[:, joint_num * 3] = extra_targets[:, joint_num * 3] * synth_real_switch
+                        extra_targets[:, joint_num * 3 + 1] = extra_targets[:, joint_num * 3 + 1] * synth_real_switch
+                        extra_targets[:, joint_num * 3 + 2] = extra_targets[:, joint_num * 3 + 2] * synth_real_switch
 
-        if bedangle == True:
-            if include_inter == True:
-                imagesangles[:,0:2,:,:] = images
-            else:
-                imagesangles[:,0,:,:] = images
-            images_tensor = torch.Tensor(imagesangles)
+
+        if include_inter == True:
+            imagesangles[:,0:num_images_manip,:,:] = images
         else:
-            imagesangles = images
-            images_tensor = torch.Tensor(imagesangles)
-            images_tensor = images_tensor.unsqueeze(1)
+            imagesangles[:,0:num_images_manip-1,:,:] = images
+        images_tensor = torch.Tensor(imagesangles)
 
 
         targets_tensor = torch.Tensor(targets)
 
-        if extra_targets is not None:
-            extra_targets_tensor = torch.Tensor(extra_targets)
-        else:
-            extra_targets_tensor = None
+        if extra_targets is not None: extra_targets_tensor = torch.Tensor(extra_targets/1000.)
+        else: extra_targets_tensor = None
+        if extra_smpl_angles is not None: extra_smpl_angles = torch.Tensor(extra_smpl_angles)
+        else: extra_smpl_angles = None
 
         # images_tensor.torch.Tensor.permute(2, 0, 1)
         try:
             self.t2 = time.time() - self.t1
         except:
             self.t2 = 0
+
         # print self.t2, 'elapsed time'
-        return images_tensor, targets_tensor, extra_targets_tensor
+        return images_tensor, targets_tensor, extra_targets_tensor, extra_smpl_angles
 
