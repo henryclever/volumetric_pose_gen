@@ -470,7 +470,7 @@ if __name__ == "__main__":
 
         test_database_file_f = []
         test_database_file_m = []
-        test_database_file_f.append(filepath_prefix_qt + filename + '.p')
+        test_database_file_m.append(filepath_prefix_qt + filename + '.p')
 
         p = PhysicalTrainer(test_database_file_f, test_database_file_m, opt, filename)
 

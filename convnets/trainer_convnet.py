@@ -112,12 +112,12 @@ class PhysicalTrainer():
         self.CTRL_PNL['num_input_channels'] = 3
         self.CTRL_PNL['GPU'] = GPU
         self.CTRL_PNL['dtype'] = dtype
-        repeat_real_data_ct = 3
+        repeat_real_data_ct = 1
         self.CTRL_PNL['regr_angles'] = opt.reg_angles
         self.CTRL_PNL['aws'] = self.opt.aws
-        self.CTRL_PNL['depth_map_labels'] = True #can only be true if we have 100% synthetic data for training
+        self.CTRL_PNL['depth_map_labels'] = False #can only be true if we have 100% synthetic data for training
         self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
-        self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
+        self.CTRL_PNL['depth_map_input_est'] = True #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
 
         self.weight_joints = self.opt.j_d_ratio*2
@@ -447,8 +447,8 @@ class PhysicalTrainer():
 
                     print INPUT_DICT['batch_images'].shape
                     self.im_sample = INPUT_DICT['batch_images']
-                    #self.im_sampleval = self.im_sample[0, 3:, :].squeeze()
-                    self.im_sample = self.im_sample[0, 0:, :].squeeze()
+                    self.im_sampleval = self.im_sample[0, 1:, :].squeeze()
+                    self.im_sample = self.im_sample[0, 3:, :].squeeze()
                     self.tar_sample = INPUT_DICT['batch_targets']
                     self.tar_sample = self.tar_sample[0, :].squeeze() / 1000
                     self.sc_sample = OUTPUT_DICT['batch_targets_est'].clone()
@@ -543,8 +543,8 @@ class PhysicalTrainer():
                                                self.CTRL_PNL['loss_vector_type'], data='validate')
 
 
-        self.im_sampleval = INPUT_DICT_VAL['batch_images']
-        self.im_sampleval = self.im_sampleval[0, 0:].squeeze()
+        #self.im_sampleval = INPUT_DICT_VAL['batch_images']
+        #self.im_sampleval = self.im_sampleval[0, 1:].squeeze()
         self.tar_sampleval = INPUT_DICT_VAL['batch_targets']  # this is just 10 x 3
         self.tar_sampleval = self.tar_sampleval[0, :].squeeze() / 1000
         self.sc_sampleval = OUTPUT_DICT_VAL['batch_targets_est']  # score space is larger is 72 x3
@@ -555,7 +555,7 @@ class PhysicalTrainer():
             if GPU == True:
                 VisualizationLib().visualize_pressure_map(self.im_sample.cpu(), self.tar_sample.cpu(),
                                                           self.sc_sample.cpu(), self.im_sampleval.cpu(),
-                                                          self.tar_sampleval.cpu(), self.sc_sampleval.cpu(),
+                                                          self.tar_sample.cpu(), self.sc_sample.cpu(),
                                                           block=False)
             else:
                 VisualizationLib().visualize_pressure_map(self.im_sample, self.tar_sample, self.sc_sample,
@@ -624,7 +624,7 @@ if __name__ == "__main__":
         filepath_suffix = ''
 
     #filepath_prefix = '/media/henry/multimodal_data_2/data/'
-    #filepath_suffix = '_outputA'
+    filepath_suffix = '_outputB'
 
     training_database_file_f = []
     training_database_file_m = []
@@ -649,7 +649,7 @@ if __name__ == "__main__":
         network_design = True
         if network_design == True:
             incl_synth = True
-            incl_real = False
+            incl_real = True
             if incl_synth == True:
                 training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff'+filepath_suffix+'.p')
                 training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff'+filepath_suffix+'.p')
