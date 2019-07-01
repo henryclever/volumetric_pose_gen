@@ -107,7 +107,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['incl_inter'] = True
         self.CTRL_PNL['shuffle'] = True
         self.CTRL_PNL['incl_ht_wt_channels'] = True
-        self.CTRL_PNL['incl_pmat_cntct_input'] = False
+        self.CTRL_PNL['incl_pmat_cntct_input'] = True
         self.CTRL_PNL['lock_root'] = False
         self.CTRL_PNL['num_input_channels'] = 3
         self.CTRL_PNL['GPU'] = GPU
@@ -447,8 +447,8 @@ class PhysicalTrainer():
 
                     print INPUT_DICT['batch_images'].shape
                     self.im_sample = INPUT_DICT['batch_images']
-                    self.im_sampleval = self.im_sample[0, 1:, :].squeeze()
-                    self.im_sample = self.im_sample[0, 3:, :].squeeze()
+                    self.im_sampleval = self.im_sample[0, 2:, :].squeeze()
+                    self.im_sample = self.im_sample[0, 0:, :].squeeze()
                     self.tar_sample = INPUT_DICT['batch_targets']
                     self.tar_sample = self.tar_sample[0, :].squeeze() / 1000
                     self.sc_sample = OUTPUT_DICT['batch_targets_est'].clone()

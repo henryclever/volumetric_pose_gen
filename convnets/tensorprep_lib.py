@@ -137,8 +137,6 @@ class TensorPrepLib():
 
         if include_mesh_depth_contact_input_est == True:
             mesh_depth_contact_maps_input_est = np.array(mesh_depth_contact_maps_input_est)
-            print mesh_depth_contact_maps_input_est.shape
-            print train_xa.shape
             train_xa = np.concatenate((mesh_depth_contact_maps_input_est, train_xa), axis = 1)
 
         if include_pmat_contact == True:
