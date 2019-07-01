@@ -95,7 +95,7 @@ class PhysicalTrainer():
 
         # change this to 'direct' when you are doing baseline methods
         self.CTRL_PNL = {}
-        self.CTRL_PNL['batch_size'] = 128
+        self.CTRL_PNL['batch_size'] = 64
         self.CTRL_PNL['loss_vector_type'] = opt.losstype
         self.CTRL_PNL['verbose'] = opt.verbose
         self.opt = opt
@@ -111,6 +111,9 @@ class PhysicalTrainer():
         self.CTRL_PNL['regr_angles'] = 1
         self.CTRL_PNL['depth_map_labels'] = False
         self.CTRL_PNL['depth_map_output'] = True
+        self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
+        self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
+
 
         self.filename = filename
 
@@ -316,11 +319,11 @@ class PhysicalTrainer():
 
                 print OUTPUT_DICT['batch_angles_est'].shape, n_examples
                 for item in range(OUTPUT_DICT['batch_angles_est'].shape[0]):
-                    self.dat['mdm_est'].append(OUTPUT_DICT['batch_mdm_est'][item].numpy().astype(float32))
-                    self.dat['cm_est'].append(OUTPUT_DICT['batch_cm_est'][item].numpy().astype(int16))
-                    self.dat['angles_est'].append(OUTPUT_DICT['batch_angles_est'][item].numpy().astype(float32))
-                    self.dat['root_xyz_est'].append(OUTPUT_DICT['batch_root_xyz_est'][item].numpy().astype(float32))
-                    self.dat['betas_est'].append(OUTPUT_DICT['batch_betas_est'][item].numpy().astype(float32))
+                    self.dat['mdm_est'].append(OUTPUT_DICT['batch_mdm_est'][item].cpu().numpy().astype(float32))
+                    self.dat['cm_est'].append(OUTPUT_DICT['batch_cm_est'][item].cpu().numpy().astype(int16))
+                    self.dat['angles_est'].append(OUTPUT_DICT['batch_angles_est'][item].cpu().numpy().astype(float32))
+                    self.dat['root_xyz_est'].append(OUTPUT_DICT['batch_root_xyz_est'][item].cpu().numpy().astype(float32))
+                    self.dat['betas_est'].append(OUTPUT_DICT['batch_betas_est'][item].cpu().numpy().astype(float32))
 
             n_examples += self.CTRL_PNL['batch_size']
             #print n_examples
