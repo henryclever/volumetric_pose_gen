@@ -107,7 +107,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['incl_inter'] = True
         self.CTRL_PNL['shuffle'] = True
         self.CTRL_PNL['incl_ht_wt_channels'] = True
-        self.CTRL_PNL['incl_pmat_cntct_input'] = True
+        self.CTRL_PNL['incl_pmat_cntct_input'] = False
         self.CTRL_PNL['lock_root'] = False
         self.CTRL_PNL['num_input_channels'] = 3
         self.CTRL_PNL['GPU'] = GPU
@@ -118,7 +118,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['depth_map_labels'] = False #can only be true if we have 100% synthetic data for training
         self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
         self.CTRL_PNL['depth_map_input_est'] = True #do this if we're working in a two-part regression
-        self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
+        self.CTRL_PNL['adjust_ang_from_est'] = True#self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
 
         self.weight_joints = self.opt.j_d_ratio*2
         self.weight_depth_planes = (1-self.opt.j_d_ratio)*2
@@ -156,8 +156,12 @@ class PhysicalTrainer():
 
         if self.CTRL_PNL['depth_map_labels'] == True:
             self.save_name += '_' + str(self.opt.j_d_ratio) + 'r'
+        if self.CTRL_PNL['incl_pmat_cntct_input'] == True:
+            self.save_name += '_pmatcntin'
         if self.CTRL_PNL['depth_map_input_est'] == True:
-            self.save_name += '_pretr_both'
+            self.save_name += '_depthestin'
+        if self.CTRL_PNL['adjust_ang_from_est'] == True:
+            self.save_name += '_angleadj'
 
         # self.save_name = '_' + opt.losstype+'_real_s9_alltest_' + str(self.CTRL_PNL['batch_size']) + 'b_'# + str(self.CTRL_PNL['num_epochs']) + 'e'
 
