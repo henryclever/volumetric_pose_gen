@@ -106,7 +106,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['num_epochs'] = 101
         self.CTRL_PNL['incl_inter'] = True
         self.CTRL_PNL['shuffle'] = True
-        self.CTRL_PNL['incl_ht_wt_channels'] = False
+        self.CTRL_PNL['incl_ht_wt_channels'] = True
         self.CTRL_PNL['incl_pmat_cntct_input'] = False
         self.CTRL_PNL['lock_root'] = False
         self.CTRL_PNL['num_input_channels'] = 3
@@ -115,9 +115,9 @@ class PhysicalTrainer():
         repeat_real_data_ct = 3
         self.CTRL_PNL['regr_angles'] = opt.reg_angles
         self.CTRL_PNL['aws'] = self.opt.aws
-        self.CTRL_PNL['depth_map_labels'] = False #can only be true if we have 100% synthetic data for training
+        self.CTRL_PNL['depth_map_labels'] = True #can only be true if we have 100% synthetic data for training
         self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
-        self.CTRL_PNL['depth_map_input_est'] = True #do this if we're working in a two-part regression
+        self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
 
         self.weight_joints = self.opt.j_d_ratio*2
@@ -362,7 +362,7 @@ class PhysicalTrainer():
                 self.t2 = 0
             print 'Time taken by epoch',epoch,':',self.t2,' seconds'
 
-            if epoch == 50 or epoch == 100 or epoch == 200 or epoch == 300:
+            if epoch == 25 or epoch == 50 or epoch == 100 or epoch == 200 or epoch == 300:
                 torch.save(self.model, filepath_prefix+'/data/synth/convnet'+self.save_name+'_'+str(epoch)+'e.pt')
                 pkl.dump(self.train_val_losses,open(filepath_prefix+'/data/synth/convnet_losses'+self.save_name+'_'+str(epoch)+'e.p', 'wb'))
 
@@ -449,8 +449,8 @@ class PhysicalTrainer():
 
                     print INPUT_DICT['batch_images'].shape
                     self.im_sample = INPUT_DICT['batch_images']
-                    self.im_sampleval = self.im_sample[0, 3:, :].squeeze()
-                    self.im_sample = self.im_sample[0, 1:, :].squeeze()
+                    #self.im_sampleval = self.im_sample[0, 3:, :].squeeze()
+                    self.im_sample = self.im_sample[0, 0:, :].squeeze()
                     self.tar_sample = INPUT_DICT['batch_targets']
                     self.tar_sample = self.tar_sample[0, :].squeeze() / 1000
                     self.sc_sample = OUTPUT_DICT['batch_targets_est'].clone()
@@ -545,8 +545,8 @@ class PhysicalTrainer():
                                                self.CTRL_PNL['loss_vector_type'], data='validate')
 
 
-        #self.im_sampleval = INPUT_DICT_VAL['batch_images']
-        #self.im_sampleval = self.im_sampleval[2, :].squeeze()
+        self.im_sampleval = INPUT_DICT_VAL['batch_images']
+        self.im_sampleval = self.im_sampleval[0, 0:].squeeze()
         self.tar_sampleval = INPUT_DICT_VAL['batch_targets']  # this is just 10 x 3
         self.tar_sampleval = self.tar_sampleval[0, :].squeeze() / 1000
         self.sc_sampleval = OUTPUT_DICT_VAL['batch_targets_est']  # score space is larger is 72 x3
@@ -620,11 +620,13 @@ if __name__ == "__main__":
 
     if opt.aws == True:
         filepath_prefix = '/home/ubuntu/data/'
+        filepath_suffix = ''
     else:
         filepath_prefix = '/home/henry/data/'
+        filepath_suffix = ''
 
-    filepath_prefix = '/media/henry/multimodal_data_2/data/'
-    filepath_suffix = '_outputA'
+    #filepath_prefix = '/media/henry/multimodal_data_2/data/'
+    #filepath_suffix = '_outputA'
 
     training_database_file_f = []
     training_database_file_m = []
@@ -638,7 +640,7 @@ if __name__ == "__main__":
         #training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_sit_1000_of_1121_upperbody_stiff'+filepath_suffix+'.p')
         #training_database_file_f.append(filepath_prefix+'real/trainval4_150rh1_sit120rh'+filepath_suffix+'.p')
         #training_database_file_m.append(filepath_prefix+'real/trainval4_150rh1_sit120rh'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix + 'real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
+       # training_database_file_f.append(filepath_prefix + 'real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
         #training_database_file_f.append(filepath_prefix + 'real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
         #training_database_file_m.append(filepath_prefix+'real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
         #training_database_file_m.append(filepath_prefix+'real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')

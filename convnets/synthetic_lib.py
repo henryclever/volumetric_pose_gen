@@ -294,27 +294,12 @@ class SyntheticLib():
 
         tar_orig = np.multiply(targets, original[:, np.newaxis])
         tar_mod = np.multiply(targets, modified[:, np.newaxis])
-
         # change the left and right tags on the target in the z, flip x target left to right
         tar_mod = np.reshape(tar_mod, (tar_mod.shape[0], tar_mod.shape[1] / 3, 3))
 
         # flip the x left to right
         tar_mod[:, :, 0] = (tar_mod[:, :, 0] - 657.8) * -1 + 657.8
 
-        X_smpl_angles_orig = np.multiply(extra_smpl_angles, original[:, np.newaxis])
-        X_smpl_angles_mod = np.multiply(extra_smpl_angles, modified[:, np.newaxis])
-        X_smpl_angles_mod = X_smpl_angles_mod.reshape(X_smpl_angles_mod.shape[0], X_smpl_angles_mod.shape[1]/3, 3)
-
-        dummy_smpl = zeros((X_smpl_angles_mod.shape))
-        dummy_smpl[:, [1, 4, 7, 10, 13, 16, 18, 20, 22], :] = X_smpl_angles_mod[:, [1, 4, 7, 10, 13, 16, 18, 20, 22], :]
-        X_smpl_angles_mod[:, [1, 4, 7, 10, 13, 16, 18, 20, 22], :] = X_smpl_angles_mod[:, [2, 5, 8, 11, 14, 17, 19, 21, 23], :]
-        X_smpl_angles_mod[:, [2, 5, 8, 11, 14, 17, 19, 21, 23], :] = dummy_smpl[:, [1, 4, 7, 10, 13, 16, 18, 20, 22], :]
-
-        X_smpl_angles_mod[:, :, 1:3] *= -1
-
-        X_smpl_angles_mod = X_smpl_angles_mod.reshape(X_smpl_angles_mod.shape[0], X_smpl_angles_mod.shape[1]*X_smpl_angles_mod.shape[2])
-
-        extra_smpl_angles = X_smpl_angles_orig + X_smpl_angles_mod
 
         # swap in the z
         dummy = zeros((tar_mod.shape))
@@ -328,6 +313,26 @@ class SyntheticLib():
 
         images = im_orig + im_mod
         targets = tar_orig + tar_mod
+
+        if extra_smpl_angles is not None:
+            X_smpl_angles_orig = np.multiply(extra_smpl_angles, original[:, np.newaxis])
+            X_smpl_angles_mod = np.multiply(extra_smpl_angles, modified[:, np.newaxis])
+            X_smpl_angles_mod = X_smpl_angles_mod.reshape(X_smpl_angles_mod.shape[0], X_smpl_angles_mod.shape[1] / 3, 3)
+
+            dummy_smpl = zeros((X_smpl_angles_mod.shape))
+            dummy_smpl[:, [1, 4, 7, 10, 13, 16, 18, 20, 22], :] = X_smpl_angles_mod[:,
+                                                                  [1, 4, 7, 10, 13, 16, 18, 20, 22], :]
+            X_smpl_angles_mod[:, [1, 4, 7, 10, 13, 16, 18, 20, 22], :] = X_smpl_angles_mod[:,
+                                                                         [2, 5, 8, 11, 14, 17, 19, 21, 23], :]
+            X_smpl_angles_mod[:, [2, 5, 8, 11, 14, 17, 19, 21, 23], :] = dummy_smpl[:,
+                                                                         [1, 4, 7, 10, 13, 16, 18, 20, 22], :]
+
+            X_smpl_angles_mod[:, :, 1:3] *= -1
+
+            X_smpl_angles_mod = X_smpl_angles_mod.reshape(X_smpl_angles_mod.shape[0],
+                                                          X_smpl_angles_mod.shape[1] * X_smpl_angles_mod.shape[2])
+
+            extra_smpl_angles = X_smpl_angles_orig + X_smpl_angles_mod
 
         if extra_targets is not None:
             extra_tar_orig = np.multiply(extra_targets, original[:, np.newaxis])
