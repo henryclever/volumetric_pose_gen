@@ -149,13 +149,15 @@ class PhysicalTrainer():
 
         self.save_name = '_' + opt.losstype + \
                          '_synth_s' + str(TEST_SUBJECT) + \
-                         '_3xreal_' + \
-                         str(self.CTRL_PNL['batch_size']) + 'b_' +\
-                         str(self.CTRL_PNL['num_epochs']) + 'e_' +\
-                         'pretr_both'
+                         '_3xreal' + \
+                         '_' + str(self.CTRL_PNL['batch_size']) + 'b' + \
+                         '_' + str(self.CTRL_PNL['num_epochs']) + 'e'
+
 
         if self.CTRL_PNL['depth_map_labels'] == True:
-            self.save_name += '_'+str(self.opt.j_d_ratio) + 'r'
+            self.save_name += '_' + str(self.opt.j_d_ratio) + 'r'
+        if self.CTRL_PNL['depth_map_input_est'] == True:
+            self.save_name += '_pretr_both'
 
         # self.save_name = '_' + opt.losstype+'_real_s9_alltest_' + str(self.CTRL_PNL['batch_size']) + 'b_'# + str(self.CTRL_PNL['num_epochs']) + 'e'
 
