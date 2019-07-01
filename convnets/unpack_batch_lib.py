@@ -166,7 +166,7 @@ class UnpackBatchLib():
         batch[1] = batch[1][:, 0:72]
 
         if is_training == True:
-            batch[0], batch[1], _ = SyntheticLib().synthetic_master(batch[0], batch[1], batch[2],
+            batch[0], batch[1], _, _ = SyntheticLib().synthetic_master(batch[0], batch[1], batch[2],
                                                                  num_images_manip = (CTRL_PNL['num_input_channels_batch0']-1),
                                                                  flip=False, shift=True, scale=False,
                                                                  include_inter=CTRL_PNL['incl_inter'],
@@ -174,7 +174,8 @@ class UnpackBatchLib():
 
         images_up_non_tensor = PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2)
         if is_training == True: #only add noise to training images
-            images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(images_up_non_tensor))
+            images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(images_up_non_tensor),
+                                                                                    pmat_chan_idx = (CTRL_PNL['num_input_channels_batch0']-3))
         images_up = Variable(torch.Tensor(images_up_non_tensor).type(CTRL_PNL['dtype']), requires_grad=False)
 
         if CTRL_PNL['incl_ht_wt_channels'] == True: #make images full of stuff

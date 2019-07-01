@@ -110,15 +110,21 @@ class PhysicalTrainer():
         self.CTRL_PNL['repeat_real_data_ct'] = 1
         self.CTRL_PNL['regr_angles'] = 1
         self.CTRL_PNL['depth_map_labels'] = False
-        self.CTRL_PNL['depth_map_output'] = True
+        self.CTRL_PNL['depth_map_output'] = False
         self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
-        self.CTRL_PNL['adjust_ang_from_estimate'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
+        self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
+
 
         self.count = 0
 
+        if opt.losstype == 'direct':
+            self.CTRL_PNL['depth_map_labels'] = False
+            self.CTRL_PNL['depth_map_output'] = False
         if self.CTRL_PNL['incl_pmat_cntct_input'] == True:
             self.CTRL_PNL['num_input_channels'] += 1
-        self.CTRL_PNL['num_input_channels_bat0'] = np.copy(self.CTRL_PNL['num_input_channels'])
+        if self.CTRL_PNL['depth_map_input_est'] == True: #for a two part regression
+            self.CTRL_PNL['num_input_channels'] += 3
+        self.CTRL_PNL['num_input_channels_batch0'] = np.copy(self.CTRL_PNL['num_input_channels'])
         if self.CTRL_PNL['incl_ht_wt_channels'] == True:
             self.CTRL_PNL['num_input_channels'] += 2
 
@@ -177,20 +183,20 @@ class PhysicalTrainer():
         self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_f_synth, num_repeats = 1,
                                                         z_adj = -0.075, gender = "f", is_synth = True,
                                                         loss_vector_type = self.CTRL_PNL['loss_vector_type'],
-                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_estimate'])
+                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
         self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_m_synth, num_repeats = 1,
                                                         z_adj = -0.075, gender = "m", is_synth = True,
                                                         loss_vector_type = self.CTRL_PNL['loss_vector_type'],
-                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_estimate'])
+                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
 
         self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_f_real, num_repeats = self.CTRL_PNL['repeat_real_data_ct'],
                                                         z_adj = 0.0, gender = "m", is_synth = False,
                                                         loss_vector_type = self.CTRL_PNL['loss_vector_type'],
-                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_estimate'])
+                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
         self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_m_real, num_repeats = self.CTRL_PNL['repeat_real_data_ct'],
                                                         z_adj = 0.0, gender = "m", is_synth = False,
                                                         loss_vector_type = self.CTRL_PNL['loss_vector_type'],
-                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_estimate'])
+                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
         self.test_y_tensor = torch.Tensor(self.test_y_flat)
 
         print self.test_x_tensor.shape, 'Input testing tensor shape'
@@ -466,7 +472,8 @@ class PhysicalTrainer():
             fc_output_size = 85## 10 + 3 + 24*3 --- betas, root shift, rotations
             if GPU == True:
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_planesreg_128b_100e.pt')
-                self.model = torch.load('/home/henry/data/convnets/epochs_set_3/convnet_anglesEU_synthreal_s12_3xreal_128b_101e_300e.pt')
+                #self.model = torch.load('/home/henry/data/convnets/epochs_set_3/convnet_anglesEU_synthreal_s12_3xreal_128b_101e_300e.pt')
+                self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_128b_200e.pt')
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_300e.pt')
                 self.model = self.model.cuda()
             else:
@@ -537,8 +544,6 @@ class PhysicalTrainer():
 
 
 
-            print angles_est.shape, n_examples
-
             n_examples += self.CTRL_PNL['batch_size']
             #print n_examples
 
@@ -588,7 +593,7 @@ class PhysicalTrainer():
                     self.sc_sampleval = OUTPUT_DICT['batch_targets_est'][image_ct, :].squeeze() / 1000
                     self.sc_sampleval = self.sc_sampleval.view(24, 3)
 
-                    self.im_sample2 = OUTPUT_DICT['batch_mdm_est'].data[image_ct, :].squeeze()
+                    #self.im_sample2 = OUTPUT_DICT['batch_mdm_est'].data[image_ct, :].squeeze()
 
 
                     if GPU == True:

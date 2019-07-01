@@ -116,11 +116,17 @@ class PhysicalTrainer():
 
         self.count = 0
 
+        if opt.losstype == 'direct':
+            self.CTRL_PNL['depth_map_labels'] = False
+            self.CTRL_PNL['depth_map_output'] = False
         if self.CTRL_PNL['incl_pmat_cntct_input'] == True:
             self.CTRL_PNL['num_input_channels'] += 1
-        self.CTRL_PNL['num_input_channels_bat0'] = np.copy(self.CTRL_PNL['num_input_channels'])
+        if self.CTRL_PNL['depth_map_input_est'] == True: #for a two part regression
+            self.CTRL_PNL['num_input_channels'] += 3
+        self.CTRL_PNL['num_input_channels_batch0'] = np.copy(self.CTRL_PNL['num_input_channels'])
         if self.CTRL_PNL['incl_ht_wt_channels'] == True:
             self.CTRL_PNL['num_input_channels'] += 2
+
 
         self.CTRL_PNL['filepath_prefix'] = '/home/henry/'
         self.CTRL_PNL['aws'] = False
@@ -235,7 +241,8 @@ class PhysicalTrainer():
             fc_output_size = 85## 10 + 3 + 24*3 --- betas, root shift, rotations
             if GPU == True:
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_planesreg_128b_100e.pt')
-                self.model = torch.load('/home/henry/data/convnets/epochs_set_3/convnet_anglesEU_synthreal_s12_3xreal_128b_101e_300e.pt')
+                #self.model = torch.load('/home/henry/data/convnets/epochs_set_3/convnet_anglesEU_synthreal_s12_3xreal_128b_101e_300e.pt')
+                self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_128b_200e.pt')
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_300e.pt')
                 self.model = self.model.cuda()
             else:
@@ -376,7 +383,8 @@ class PhysicalTrainer():
                     time.sleep(1)
 
 
-        pkl.dump(self.dat,open('/media/henry/multimodal_data_2/'+self.filename+'_outputA.p', 'wb'))
+        #pkl.dump(self.dat,open('/media/henry/multimodal_data_2/'+self.filename+'_outputB.p', 'wb'))
+        pkl.dump(self.dat,open('/home/henry/'+self.filename+'_outputB.p', 'wb'))
 
 
         #if GPU == True:
