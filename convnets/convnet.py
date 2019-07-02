@@ -246,8 +246,8 @@ class CNN(nn.Module):
                 self.GPU = True
                 self.dtype = torch.cuda.FloatTensor
             else:
-                self.GPU = True
-                self.dtype = torch.cuda.FloatTensor
+                self.GPU = False
+                self.dtype = torch.FloatTensor
             if CTRL_PNL['depth_map_output'] == True:
                 self.verts_list = "all"
             else:

@@ -32,6 +32,7 @@ from visualization_lib import VisualizationLib
 from preprocessing_lib import PreprocessingLib
 from tensorprep_lib import TensorPrepLib
 from unpack_batch_lib import UnpackBatchLib
+from gauss_fit_lib import GaussFitLib
 
 
 import cPickle as pkl
@@ -95,7 +96,7 @@ class PhysicalTrainer():
 
         # change this to 'direct' when you are doing baseline methods
         self.CTRL_PNL = {}
-        self.CTRL_PNL['batch_size'] = 128
+        self.CTRL_PNL['batch_size'] = 1
         self.CTRL_PNL['loss_vector_type'] = opt.losstype
         self.CTRL_PNL['verbose'] = opt.verbose
         self.opt = opt
@@ -110,7 +111,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['repeat_real_data_ct'] = 1
         self.CTRL_PNL['regr_angles'] = 1
         self.CTRL_PNL['depth_map_labels'] = False
-        self.CTRL_PNL['depth_map_output'] = False
+        self.CTRL_PNL['depth_map_output'] = True
         self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
 
@@ -480,7 +481,9 @@ class PhysicalTrainer():
                 #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s6ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
 
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_planesreg_128b_100e.pt', map_location='cpu')
-                self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
+                #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
+
+                self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_4xsize_128b_200e.pt', map_location = 'cpu')
                 #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/2.0xsize/convnet_anglesEU_synthreal_tanh_s8ang_sig0p5_5xreal_voloff_128b_300e.pt', map_location='cpu')
 
@@ -593,13 +596,18 @@ class PhysicalTrainer():
                     self.sc_sampleval = OUTPUT_DICT['batch_targets_est'][image_ct, :].squeeze() / 1000
                     self.sc_sampleval = self.sc_sampleval.view(24, 3)
 
-                    #self.im_sample2 = OUTPUT_DICT['batch_mdm_est'].data[image_ct, :].squeeze()
+
+
+                    self.im_sample2 = GaussFitLib().get_pressure_under_legs(self.im_sampleval[0, :, :], np.copy(self.sc_sampleval))
+
+
+                    #self.im_sample2 = OUTPUT_DICT['batch_mdm_est'].data[image_ct, :].squeeze()*-1
 
 
                     if GPU == True:
                         VisualizationLib().visualize_pressure_map(self.im_sampleval.cpu(), self.tar_sampleval.cpu(), self.sc_sampleval.cpu(), block=False)
                     else:
-                        VisualizationLib().visualize_pressure_map(self.im_sampleval, self.tar_sampleval, self.sc_sampleval, self.im_sample2+50, block=False)
+                        VisualizationLib().visualize_pressure_map(self.im_sampleval, self.tar_sampleval, self.sc_sampleval, self.im_sample2, block=False)
                     time.sleep(1)
 
         if GPU == True:
@@ -650,8 +658,8 @@ if __name__ == "__main__":
 
     network_design = True
 
-    #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff.p')
-    test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
+    test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff.p')
+   # test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2067_none_stiff.p')
