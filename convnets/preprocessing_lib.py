@@ -61,7 +61,7 @@ class PreprocessingLib():
 
     def preprocessing_add_image_noise(self, images, pmat_chan_idx):
 
-        queue = np.copy(images[:, 0:2, :, :])
+        queue = np.copy(images[:, pmat_chan_idx:pmat_chan_idx+2, :, :])
         queue[queue != 0] = 1.
 
         x = np.arange(-10, 10)

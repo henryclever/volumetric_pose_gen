@@ -272,7 +272,7 @@ class GeneratePose():
             pmat_stack = PreprocessingLib().preprocessing_create_pressure_angle_stack_realtime(pmat, self.bedangle, mat_size)
             pmat_stack = torch.Tensor(pmat_stack)
 
-            images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(PreprocessingLib().preprocessing_pressure_map_upsample(pmat_stack.numpy(), multiple=2)))
+            images_up_non_tensor = np.array(PreprocessingLib().preprocessing_pressure_map_upsample(pmat_stack.numpy(), multiple=2))
             images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
 
             betas_est, root_shift_est, angles_est = model.forward_kinematic_angles_realtime(images_up)
@@ -314,9 +314,10 @@ class GeneratePose():
 
             #break
 
-if __name__ == "__main__":
+if __name__ == 
+"__main__":
 
-    gender = "m"
+    gender = "f"
     filepath_prefix = "/home/henry"
 
 

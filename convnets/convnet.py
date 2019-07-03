@@ -234,6 +234,7 @@ class CNN(nn.Module):
     def forward_kinematic_angles(self, images, gender_switch, synth_real_switch, CTRL_PNL, OUTPUT_EST_DICT,
                                  targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None):
 
+
         reg_angles = CTRL_PNL['regr_angles'],
         filepath_prefix = CTRL_PNL['filepath_prefix']
         OUTPUT_DICT = {}
