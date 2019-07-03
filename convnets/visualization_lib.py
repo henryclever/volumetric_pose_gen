@@ -293,7 +293,7 @@ class VisualizationLib():
             num_subplots += 1
 
 
-        fig = plt.figure(figsize = (4*num_subplots, 6))
+        fig = plt.figure(figsize = (3*num_subplots, 5))
         mngr = plt.get_current_fig_manager()
         # to put it into the upper left corner for example:
         #mngr.window.setGeometry(50, 100, 840, 705)
@@ -331,8 +331,6 @@ class VisualizationLib():
             ax3.imshow(p_map_ext, interpolation='nearest', cmap=
             plt.cm.jet, origin='upper', vmin=0, vmax=100)
             ax3.set_title('Validation Sample \n Targets and Estimates')
-
-        print p_map_ext2.shape
 
         if p_map_ext2 is not None:
             ax4 = fig.add_subplot(1, num_subplots, 4)

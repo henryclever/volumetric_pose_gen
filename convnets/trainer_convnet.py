@@ -564,8 +564,9 @@ class PhysicalTrainer():
         if self.opt.visualize == True:
             if GPU == True:
                 VisualizationLib().visualize_pressure_map(self.im_sample.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),
-                                                          self.im_sample_val.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),
-                                                          self.im_sample_ext.cpu(),
+                                                          self.im_sample_ext.cpu(), None, None,
+                                                          self.im_sample_ext2.cpu(), None, None,
+                                                          self.im_sample_val.cpu(), self.tar_sample_val.cpu(), self.sc_sample_val.cpu(),
                                                           block=False)
             else:
                 VisualizationLib().visualize_pressure_map(self.im_sample, self.tar_sample, self.sc_sample,
@@ -635,7 +636,7 @@ if __name__ == "__main__":
         filepath_prefix = '/home/henry/data/'
         filepath_suffix = ''
 
-    filepath_prefix = '/media/henry/multimodal_data_2/data/'
+    #filepath_prefix = '/media/henry/multimodal_data_2/data/'
     filepath_suffix = '_outputB'
 
     training_database_file_f = []
