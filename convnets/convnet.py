@@ -310,6 +310,12 @@ class CNN(nn.Module):
 
         test_ground_truth = False #can only use True when the dataset is entirely synthetic AND when we use anglesDC
 
+        #make sure the estimated betas are reasonable.
+        scores[:, 0:10] /= 3.
+        scores[:, 0:10] = scores[:, 0:10].tanh()
+        scores[:, 0:10] *= 3.
+
+
         if test_ground_truth == False or is_training == False:
             betas_est = scores[:, 0:10].clone()#.detach() #make sure to detach so the gradient flow of joints doesn't corrupt the betas
             root_shift_est = scores[:, 10:13].clone()

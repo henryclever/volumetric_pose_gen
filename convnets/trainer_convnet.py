@@ -635,7 +635,7 @@ if __name__ == "__main__":
         filepath_prefix = '/home/henry/data/'
         filepath_suffix = ''
 
-    #filepath_prefix = '/media/henry/multimodal_data_2/data/'
+    filepath_prefix = '/media/henry/multimodal_data_2/data/'
     filepath_suffix = '_outputB'
 
     training_database_file_f = []
