@@ -259,6 +259,7 @@ class VisualizationLib():
     def visualize_pressure_map(self, p_map, targets_raw=None, scores_raw = None,
                                 p_map_val = None, targets_val = None, scores_val = None,
                                 p_map_ext = None, targets_ext = None, scores_ext = None,
+                                p_map_ext2 = None, targets_ext2 = None, scores_ext2 = None,
                                 block = False, title = ' '):
 
         try:
@@ -284,6 +285,12 @@ class VisualizationLib():
             except:
                 pass
             num_subplots += 1
+        if p_map_ext2 is not None:
+            try:
+                p_map_ext2 = p_map_ext2[0, :, :]  # select the original image matrix from the intermediate amplifier matrix and the height matrix
+            except:
+                pass
+            num_subplots += 1
 
 
         fig = plt.figure(figsize = (4*num_subplots, 6))
@@ -303,6 +310,9 @@ class VisualizationLib():
         ax1.imshow(p_map, interpolation='nearest', cmap=
         plt.cm.jet, origin='upper', vmin=0, vmax=100)
         ax1.set_title('Sample \n Targets and Estimates')
+        ax2 = None
+        ax3 = None
+        ax4 = None
 
         if p_map_val is not None:
             ax2 = fig.add_subplot(1, num_subplots, 2)
@@ -318,9 +328,20 @@ class VisualizationLib():
             ax3.set_xlim(xlim)
             ax3.set_ylim(ylim)
             ax3.set_facecolor('cyan')
-            ax3.imshow(p_map_val, interpolation='nearest', cmap=
+            ax3.imshow(p_map_ext, interpolation='nearest', cmap=
             plt.cm.jet, origin='upper', vmin=0, vmax=100)
             ax3.set_title('Validation Sample \n Targets and Estimates')
+
+        print p_map_ext2.shape
+
+        if p_map_ext2 is not None:
+            ax4 = fig.add_subplot(1, num_subplots, 4)
+            ax4.set_xlim(xlim)
+            ax4.set_ylim(ylim)
+            ax4.set_facecolor('cyan')
+            ax4.imshow(p_map_ext2, interpolation='nearest', cmap=
+            plt.cm.jet, origin='upper', vmin=0, vmax=100)
+            ax4.set_title('Validation Sample \n Targets and Estimates')
 
 
         # Visualize targets of training set
@@ -340,6 +361,12 @@ class VisualizationLib():
 
         # Visualize estimated from extra set
         self.plot_joint_markers(scores_ext, ax3, 'yellow')
+
+        # Visualize targets of extra set
+        self.plot_joint_markers(targets_ext2, ax4, 'green')
+
+        # Visualize estimated from extra set
+        self.plot_joint_markers(scores_ext2, ax4, 'yellow')
 
         axkeep = plt.axes([0.01, 0.05, 0.15, 0.075])
         axdisc = plt.axes([0.01, 0.15, 0.15, 0.075])

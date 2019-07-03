@@ -107,7 +107,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['incl_inter'] = True
         self.CTRL_PNL['shuffle'] = True
         self.CTRL_PNL['incl_ht_wt_channels'] = True
-        self.CTRL_PNL['incl_pmat_cntct_input'] = False
+        self.CTRL_PNL['incl_pmat_cntct_input'] = True
         self.CTRL_PNL['lock_root'] = False
         self.CTRL_PNL['num_input_channels'] = 3
         self.CTRL_PNL['GPU'] = GPU
@@ -115,10 +115,10 @@ class PhysicalTrainer():
         repeat_real_data_ct = 1
         self.CTRL_PNL['regr_angles'] = opt.reg_angles
         self.CTRL_PNL['aws'] = self.opt.aws
-        self.CTRL_PNL['depth_map_labels'] = False #can only be true if we have 100% synthetic data for training
+        self.CTRL_PNL['depth_map_labels'] = True #can only be true if we have 100% synthetic data for training
         self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
-        self.CTRL_PNL['depth_map_input_est'] = True #do this if we're working in a two-part regression
-        self.CTRL_PNL['adjust_ang_from_est'] = True#self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
+        self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
+        self.CTRL_PNL['adjust_ang_from_est'] = False#self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
 
         self.weight_joints = self.opt.j_d_ratio*2
         self.weight_depth_planes = (1-self.opt.j_d_ratio)*2
@@ -155,7 +155,7 @@ class PhysicalTrainer():
 
 
         if self.CTRL_PNL['depth_map_labels'] == True:
-            self.save_name += '_' + str(self.opt.j_d_ratio) + 'r'
+            self.save_name += '_' + str(self.opt.j_d_ratio) + 'rtojtdpth'
         if self.CTRL_PNL['incl_pmat_cntct_input'] == True:
             self.save_name += '_pmatcntin'
         if self.CTRL_PNL['depth_map_input_est'] == True:
@@ -364,13 +364,14 @@ class PhysicalTrainer():
                 self.t2 = 0
             print 'Time taken by epoch',epoch,':',self.t2,' seconds'
 
-            if epoch == 25 or epoch == 50 or epoch == 100 or epoch == 200 or epoch == 300:
-                torch.save(self.model, filepath_prefix+'synth/convnet'+self.save_name+'_'+str(epoch)+'e.pt')
-                pkl.dump(self.train_val_losses,open(filepath_prefix+'synth/convnet_losses'+self.save_name+'_'+str(epoch)+'e.p', 'wb'))
+            break
+            #if epoch == 25 or epoch == 50 or epoch == 100 or epoch == 200 or epoch == 300:
+            #    torch.save(self.model, filepath_prefix+'synth/convnet'+self.save_name+'_'+str(epoch)+'e.pt')
+            #    pkl.dump(self.train_val_losses,open(filepath_prefix+'synth/convnet_losses'+self.save_name+'_'+str(epoch)+'e.p', 'wb'))
 
 
         print 'done with epochs, now evaluating'
-        self.validate_convnet('test')
+        #self.validate_convnet('test')
 
         print self.train_val_losses, 'trainval'
         # Save the model (architecture and weights)
@@ -424,8 +425,11 @@ class PhysicalTrainer():
                     else:
                         loss = (loss_betas + loss_eucl)
 
+
                     if self.CTRL_PNL['depth_map_labels'] == True:
-                        loss_mesh_depth = self.criterion(INPUT_DICT['batch_mdm'], OUTPUT_DICT['batch_mdm_est'])*self.weight_depth_planes / 25
+                        INPUT_DICT['batch_mdm'][INPUT_DICT['batch_mdm'] > 0] = 0
+                        OUTPUT_DICT['batch_mdm_est'][OUTPUT_DICT['batch_mdm_est'] > 0] = 0
+                        loss_mesh_depth = self.criterion(INPUT_DICT['batch_mdm'], OUTPUT_DICT['batch_mdm_est'])*self.weight_depth_planes / 15
                         loss_mesh_contact = self.criterion(INPUT_DICT['batch_cm'], OUTPUT_DICT['batch_cm_est'])*self.weight_depth_planes * 5.0
                         loss += loss_mesh_depth
                         loss += loss_mesh_contact
@@ -435,10 +439,9 @@ class PhysicalTrainer():
                 self.optimizer.step()
                 loss *= 1000
 
-                # print "got here"
-                # print batch_idx, opt.log_interval
-
                 if batch_idx % opt.log_interval == 0:
+                    val_n_batches = 1
+                    print "evaluating on ", val_n_batches
 
                     if GPU == True:
                         VisualizationLib().print_error_train(INPUT_DICT['batch_targets'].cpu(), OUTPUT_DICT['batch_targets_est'].cpu(),
@@ -450,16 +453,16 @@ class PhysicalTrainer():
                                                              data='train')
 
                     print INPUT_DICT['batch_images'].shape
-                    self.im_sample = INPUT_DICT['batch_images']
-                    self.im_sampleval = self.im_sample[0, 2:, :].squeeze()
-                    self.im_sample = self.im_sample[0, 0:, :].squeeze()
+                    self.im_sample = INPUT_DICT['batch_images'][0, 1:, :].squeeze()
+                    self.im_sample_ext = INPUT_DICT['batch_mdm'][0, :, :].squeeze().unsqueeze(0)*-1
+                    self.im_sample_ext2 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().unsqueeze(0)*-1
                     self.tar_sample = INPUT_DICT['batch_targets']
                     self.tar_sample = self.tar_sample[0, :].squeeze() / 1000
                     self.sc_sample = OUTPUT_DICT['batch_targets_est'].clone()
                     self.sc_sample = self.sc_sample[0, :].squeeze() / 1000
                     self.sc_sample = self.sc_sample.view(self.output_size_train)
 
-                    val_loss = self.validate_convnet(n_batches=4)
+                    val_loss = self.validate_convnet(n_batches=val_n_batches)
                     train_loss = loss.data.item()
                     examples_this_epoch = batch_idx * len(INPUT_DICT['batch_images'])
                     epoch_progress = 100. * batch_idx / len(self.train_loader)
@@ -501,6 +504,7 @@ class PhysicalTrainer():
                     self.train_val_losses['train' + self.save_name].append(train_loss)
                     self.train_val_losses['val' + self.save_name].append(val_loss)
                     self.train_val_losses['epoch' + self.save_name].append(epoch)
+
 
     def validate_convnet(self, verbose=False, n_batches=None):
 
@@ -547,23 +551,27 @@ class PhysicalTrainer():
                                                self.CTRL_PNL['loss_vector_type'], data='validate')
 
 
-        #self.im_sampleval = INPUT_DICT_VAL['batch_images']
-        #self.im_sampleval = self.im_sampleval[0, 1:].squeeze()
-        self.tar_sampleval = INPUT_DICT_VAL['batch_targets']  # this is just 10 x 3
-        self.tar_sampleval = self.tar_sampleval[0, :].squeeze() / 1000
-        self.sc_sampleval = OUTPUT_DICT_VAL['batch_targets_est']  # score space is larger is 72 x3
-        self.sc_sampleval = self.sc_sampleval[0, :].squeeze() / 1000
-        self.sc_sampleval = self.sc_sampleval.view(24, 3)
+        self.im_sample_val = INPUT_DICT_VAL['batch_images']
+        self.im_sample_val = self.im_sample_val[0, 1:, :].squeeze()
+        self.tar_sample_val = INPUT_DICT_VAL['batch_targets']  # this is just 10 x 3
+        self.tar_sample_val = self.tar_sample_val[0, :].squeeze() / 1000
+        self.sc_sample_val = OUTPUT_DICT_VAL['batch_targets_est']  # score space is larger is 72 x3
+        self.sc_sample_val = self.sc_sample_val[0, :].squeeze() / 1000
+        self.sc_sample_val = self.sc_sample_val.view(24, 3)
+
+        print self.im_sample.shape, self.im_sample_val.shape, self.im_sample_ext.shape, self.im_sample_ext2.shape
 
         if self.opt.visualize == True:
             if GPU == True:
-                VisualizationLib().visualize_pressure_map(self.im_sample.cpu(), self.tar_sample.cpu(),
-                                                          self.sc_sample.cpu(), self.im_sampleval.cpu(),
-                                                          self.tar_sample.cpu(), self.sc_sample.cpu(),
+                VisualizationLib().visualize_pressure_map(self.im_sample.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),
+                                                          self.im_sample_val.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),
+                                                          self.im_sample_ext.cpu(),
                                                           block=False)
             else:
                 VisualizationLib().visualize_pressure_map(self.im_sample, self.tar_sample, self.sc_sample,
-                                                          self.im_sampleval, self.tar_sampleval, self.sc_sampleval,
+                                                          self.im_sample_ext, None, None,
+                                                          self.im_sample_ext2, None, None,
+                                                          self.im_sample_val, self.tar_sample_val, self.sc_sample_val,
                                                           block=False)
 
         return loss
@@ -614,7 +622,7 @@ if __name__ == "__main__":
     p.add_option('--verbose', '--v',  action='store_true', dest='verbose',
                  default=True, help='Printout everything (under construction).')
 
-    p.add_option('--log_interval', type=int, default=1, metavar='N',
+    p.add_option('--log_interval', type=int, default=10, metavar='N',
                  help='number of batches between logging train status')
 
     opt, args = p.parse_args()
@@ -627,7 +635,7 @@ if __name__ == "__main__":
         filepath_prefix = '/home/henry/data/'
         filepath_suffix = ''
 
-    #filepath_prefix = '/media/henry/multimodal_data_2/data/'
+    filepath_prefix = '/media/henry/multimodal_data_2/data/'
     filepath_suffix = '_outputB'
 
     training_database_file_f = []

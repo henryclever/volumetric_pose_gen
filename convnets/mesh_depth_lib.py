@@ -281,8 +281,7 @@ class MeshDepthLib():
                                                         human_f.weights[verts_list[6], :],
                                                         human_f.weights[verts_list[7], :],
                                                         human_f.weights[verts_list[8], :],
-                                                        human_f.weights[verts_list[9], :]])).type(
-                    dtype)
+                                                        human_f.weights[verts_list[9], :]])).type(dtype)
 
                 model_path_m = filepath_prefix + '/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
                 human_m = load_model(model_path_m)
