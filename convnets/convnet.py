@@ -392,7 +392,10 @@ class CNN(nn.Module):
                     targets_est = torch.cat((targets_est, targets_est_sub), dim=0)
                 start_incr += sub_batch_incr
 
-            bed_angle_batch = torch.mean(images[:, 2, 1:3, 0], dim=1)
+            bed_ang_idx = -1
+            if CTRL_PNL['incl_ht_wt_channels'] == True: bed_ang_idx -= 2
+            bed_angle_batch = torch.mean(images[:, bed_ang_idx, 1:3, 0], dim=1)
+
             OUTPUT_DICT['batch_mdm_est'], OUTPUT_DICT['batch_cm_est'] = self.meshDepthLib.compute_depth_contact_planes(verts, bed_angle_batch)
 
             OUTPUT_DICT['batch_mdm_est'] = OUTPUT_DICT['batch_mdm_est'].type(self.dtype)
