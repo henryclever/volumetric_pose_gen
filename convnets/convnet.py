@@ -295,28 +295,32 @@ class CNN(nn.Module):
 
         #print scores[0, 0:10]
         if CTRL_PNL['adjust_ang_from_est'] == True:
-            scores[:, 0:10] = OUTPUT_EST_DICT['betas']/1000
+            scores[:, 0:10] = OUTPUT_EST_DICT['betas']
             scores[:, 10:13] = OUTPUT_EST_DICT['root_shift']
             scores[:, 13:85] = scores[:, 13:85].clone() + OUTPUT_EST_DICT['angles']
+
+
+        OUTPUT_DICT['batch_betas_est'] = scores[:, 0:10].clone().data
+        OUTPUT_DICT['batch_angles_est']  = scores[:, 13:85].clone().data
+        OUTPUT_DICT['batch_root_xyz_est'] = scores[:, 10:13].clone().data
+
 
         if reg_angles == True:
             add_idx = 72
         else:
             add_idx = 0
 
-        OUTPUT_DICT['batch_angles_est']  = scores[:, 13:85].clone().data
-        OUTPUT_DICT['batch_root_xyz_est'] = scores[:, 10:13].clone().data
 
 
-        test_ground_truth = False #can only use True when the dataset is entirely synthetic AND when we use anglesDC
-
-        #make sure the estimated betas are reasonable.
         scores[:, 0:10] /= 3.
         scores[:, 0:10] = scores[:, 0:10].tanh()
         scores[:, 0:10] *= 3.
 
+        test_ground_truth = False #can only use True when the dataset is entirely synthetic AND when we use anglesDC
 
         if test_ground_truth == False or is_training == False:
+            # make sure the estimated betas are reasonable.
+
             betas_est = scores[:, 0:10].clone()#.detach() #make sure to detach so the gradient flow of joints doesn't corrupt the betas
             root_shift_est = scores[:, 10:13].clone()
 
@@ -503,7 +507,6 @@ class CNN(nn.Module):
         targets_est = targets_est.contiguous().view(-1, 72)
 
         OUTPUT_DICT['batch_targets_est'] = targets_est.data*1000. #after it comes out of the forward kinematics
-        OUTPUT_DICT['batch_betas_est'] = betas_est.data*1000.
 
         scores = scores.unsqueeze(0)
         scores = scores.unsqueeze(0)

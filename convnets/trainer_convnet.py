@@ -112,10 +112,10 @@ class PhysicalTrainer():
         self.CTRL_PNL['num_input_channels'] = 3
         self.CTRL_PNL['GPU'] = GPU
         self.CTRL_PNL['dtype'] = dtype
-        repeat_real_data_ct = 1
+        repeat_real_data_ct = 3
         self.CTRL_PNL['regr_angles'] = opt.reg_angles
         self.CTRL_PNL['aws'] = self.opt.aws
-        self.CTRL_PNL['depth_map_labels'] = True #can only be true if we have 100% synthetic data for training
+        self.CTRL_PNL['depth_map_labels'] = False #can only be true if we have 100% synthetic data for training
         self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
         self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = False#self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
@@ -453,8 +453,8 @@ class PhysicalTrainer():
 
                     print INPUT_DICT['batch_images'].shape
                     self.im_sample = INPUT_DICT['batch_images'][0, 1:, :].squeeze()
-                    self.im_sample_ext = INPUT_DICT['batch_mdm'][0, :, :].squeeze().unsqueeze(0)*-1
-                    self.im_sample_ext2 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().unsqueeze(0)*-1
+                    #self.im_sample_ext = INPUT_DICT['batch_mdm'][0, :, :].squeeze().unsqueeze(0)*-1
+                    #self.im_sample_ext2 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().unsqueeze(0)*-1
                     self.tar_sample = INPUT_DICT['batch_targets']
                     self.tar_sample = self.tar_sample[0, :].squeeze() / 1000
                     self.sc_sample = OUTPUT_DICT['batch_targets_est'].clone()
@@ -558,19 +558,19 @@ class PhysicalTrainer():
         self.sc_sample_val = self.sc_sample_val[0, :].squeeze() / 1000
         self.sc_sample_val = self.sc_sample_val.view(24, 3)
 
-        print self.im_sample.shape, self.im_sample_val.shape, self.im_sample_ext.shape, self.im_sample_ext2.shape
+        #print self.im_sample.shape, self.im_sample_val.shape, self.im_sample_ext.shape, self.im_sample_ext2.shape
 
         if self.opt.visualize == True:
             if GPU == True:
                 VisualizationLib().visualize_pressure_map(self.im_sample.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),
-                                                          self.im_sample_ext.cpu(), None, None,
-                                                          self.im_sample_ext2.cpu(), None, None,
+                                                          #self.im_sample_ext.cpu(), None, None,
+                                                          #self.im_sample_ext2.cpu(), None, None,
                                                           self.im_sample_val.cpu(), self.tar_sample_val.cpu(), self.sc_sample_val.cpu(),
                                                           block=False)
             else:
                 VisualizationLib().visualize_pressure_map(self.im_sample, self.tar_sample, self.sc_sample,
-                                                          self.im_sample_ext, None, None,
-                                                          self.im_sample_ext2, None, None,
+                                                          #self.im_sample_ext, None, None,
+                                                          #self.im_sample_ext2, None, None,
                                                           self.im_sample_val, self.tar_sample_val, self.sc_sample_val,
                                                           block=False)
 
@@ -635,7 +635,7 @@ if __name__ == "__main__":
         filepath_prefix = '/home/henry/data/'
         filepath_suffix = ''
 
-    filepath_prefix = '/media/henry/multimodal_data_2/data/'
+    #filepath_prefix = '/media/henry/multimodal_data_2/data/'
     filepath_suffix = '_outputB'
 
     training_database_file_f = []
@@ -661,7 +661,7 @@ if __name__ == "__main__":
         network_design = True
         if network_design == True:
             incl_synth = True
-            incl_real = False
+            incl_real = True
             if incl_synth == True:
                 training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff'+filepath_suffix+'.p')
                 training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff'+filepath_suffix+'.p')
