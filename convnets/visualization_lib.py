@@ -256,8 +256,10 @@ class VisualizationLib():
         plt.show()
 
 
-    def visualize_pressure_map(self, p_map, targets_raw=None, scores_raw = None, p_map_val = None, targets_val = None, scores_val = None, block = False, title = ' '):
-        #p_map_val[0, :, :] = p_map[1, : ,:]
+    def visualize_pressure_map(self, p_map, targets_raw=None, scores_raw = None,
+                                p_map_val = None, targets_val = None, scores_val = None,
+                                p_map_ext = None, targets_ext = None, scores_ext = None,
+                                block = False, title = ' '):
 
         try:
             p_map = p_map[0,:,:] #select the original image matrix from the intermediate amplifier matrix and the height matrix
@@ -267,93 +269,77 @@ class VisualizationLib():
         plt.close()
         plt.pause(0.0001)
 
-        fig = plt.figure()
+
+        # set options
+        num_subplots = 1
+        if p_map_val is not None:
+            try:
+                p_map_val = p_map_val[0, :, :]  # select the original image matrix from the intermediate amplifier matrix and the height matrix
+            except:
+                pass
+            num_subplots += 1
+        if p_map_ext is not None:
+            try:
+                p_map_ext = p_map_ext[0, :, :]  # select the original image matrix from the intermediate amplifier matrix and the height matrix
+            except:
+                pass
+            num_subplots += 1
+
+
+        fig = plt.figure(figsize = (4*num_subplots, 6))
         mngr = plt.get_current_fig_manager()
         # to put it into the upper left corner for example:
         #mngr.window.setGeometry(50, 100, 840, 705)
 
         plt.pause(0.0001)
 
-        # set options
+        xlim = [-10.0, 37.0]
+        ylim = [74.0, -10.0]
+
+        ax1 = fig.add_subplot(1, num_subplots, 1)
+        ax1.set_xlim(xlim)
+        ax1.set_ylim(ylim)
+        ax1.set_facecolor('cyan')
+        ax1.imshow(p_map, interpolation='nearest', cmap=
+        plt.cm.jet, origin='upper', vmin=0, vmax=100)
+        ax1.set_title('Sample \n Targets and Estimates')
+
         if p_map_val is not None:
-            try:
-                p_map_val = p_map_val[0, :, :] #select the original image matrix from the intermediate amplifier matrix and the height matrix
-            except:
-                pass
-            ax1 = fig.add_subplot(1, 2, 1)
-            ax2 = fig.add_subplot(1, 2, 2)
-            xlim = [-10.0, 37.0]
-            ylim = [74.0, -10.0]
-            ax1.set_xlim(xlim)
-            ax1.set_ylim(ylim)
+            ax2 = fig.add_subplot(1, num_subplots, 2)
             ax2.set_xlim(xlim)
             ax2.set_ylim(ylim)
-            ax1.set_facecolor('cyan')
             ax2.set_facecolor('cyan')
-            ax1.imshow(p_map, interpolation='nearest', cmap=
-            plt.cm.jet, origin='upper', vmin=0, vmax=100)
             ax2.imshow(p_map_val, interpolation='nearest', cmap=
             plt.cm.jet, origin='upper', vmin=0, vmax=100)
-            ax1.set_title('Training Sample \n Targets and Estimates')
             ax2.set_title('Validation Sample \n Targets and Estimates')
 
-
-        else:
-            ax1 = fig.add_subplot(1, 1, 1)
-            xlim = [-10.0, 37.0]
-            ylim = [74.0, -10.0]
-            ax1.set_xlim(xlim)
-            ax1.set_ylim(ylim)
-            ax1.set_facecolor('cyan')
-            ax1.imshow(p_map, interpolation='nearest', cmap=
+        if p_map_ext is not None:
+            ax3 = fig.add_subplot(1, num_subplots, 3)
+            ax3.set_xlim(xlim)
+            ax3.set_ylim(ylim)
+            ax3.set_facecolor('cyan')
+            ax3.imshow(p_map_val, interpolation='nearest', cmap=
             plt.cm.jet, origin='upper', vmin=0, vmax=100)
-            ax1.set_title('Validation Sample \n Targets and Estimates \n'+title)
+            ax3.set_title('Validation Sample \n Targets and Estimates')
+
 
         # Visualize targets of training set
-        if targets_raw is not None:
-            if len(np.shape(targets_raw)) == 1:
-                targets_raw = np.reshape(targets_raw, (len(targets_raw) / 3, 3))
-            target_coord = np.array(targets_raw[:, :2]) / INTER_SENSOR_DISTANCE
-            target_coord[:, 0] -= 10
-            target_coord[:, 1] -= (NUMOFTAXELS_X - 1)
-            target_coord[:, 1] *= -1.0
-
-
-            ax1.plot(target_coord[:, 0], target_coord[:, 1], marker = 'o', linestyle='None', markerfacecolor = 'green',markeredgecolor='black', ms=8)
-        plt.pause(0.0001)
+        self.plot_joint_markers(targets_raw, ax1, 'green')
 
         #Visualize estimated from training set
-        if scores_raw is not None:
-            if len(np.shape(scores_raw)) == 1:
-                scores_raw = np.reshape(scores_raw, (len(scores_raw) / 3, 3))
-            target_coord = np.array(scores_raw[:, :2]) / INTER_SENSOR_DISTANCE
-            target_coord[:, 0] -= 10
-            target_coord[:, 1] -= (NUMOFTAXELS_X - 1)
-            target_coord[:, 1] *= -1.0
-            ax1.plot(target_coord[:, 0], target_coord[:, 1], marker = 'o', linestyle='None', markerfacecolor = 'yellow',markeredgecolor='black', ms=8)
-        plt.pause(0.0001)
+        self.plot_joint_markers(scores_raw, ax1, 'yellow')
 
         # Visualize targets of validation set
-        if targets_val is not None:
-            if len(np.shape(targets_val)) == 1:
-                targets_val = np.reshape(targets_val, (len(targets_val) / 3, 3))
-            target_coord = np.array(targets_val[:, :2]) / INTER_SENSOR_DISTANCE
-            target_coord[:, 0] -= 10
-            target_coord[:, 1] -= (NUMOFTAXELS_X - 1)
-            target_coord[:, 1] *= -1.0
-            ax2.plot(target_coord[:, 0], target_coord[:, 1], marker = 'o', linestyle='None', markerfacecolor = 'green',markeredgecolor='black', ms=8)
-        plt.pause(0.0001)
+        self.plot_joint_markers(targets_val, ax2, 'green')
 
-        # Visualize estimated from training set
-        if scores_val is not None:
-            if len(np.shape(scores_val)) == 1:
-                scores_val = np.reshape(scores_val, (len(scores_val) / 3, 3))
-            target_coord = np.array(scores_val[:, :2]) / INTER_SENSOR_DISTANCE
-            target_coord[:, 0] -= 10
-            target_coord[:, 1] -= (NUMOFTAXELS_X - 1)
-            target_coord[:, 1] *= -1.0
-            ax2.plot(target_coord[:, 0], target_coord[:, 1], marker = 'o', linestyle='None', markerfacecolor = 'yellow',markeredgecolor='black', ms=8)
-        plt.pause(0.0001)
+        # Visualize estimated from val set
+        self.plot_joint_markers(scores_val, ax2, 'yellow')
+
+        # Visualize targets of extra set
+        self.plot_joint_markers(targets_ext, ax3, 'green')
+
+        # Visualize estimated from extra set
+        self.plot_joint_markers(scores_ext, ax3, 'yellow')
 
         axkeep = plt.axes([0.01, 0.05, 0.15, 0.075])
         axdisc = plt.axes([0.01, 0.15, 0.15, 0.075])
@@ -366,6 +352,18 @@ class VisualizationLib():
         plt.show(block=block)
 
         return self.skip_image
+
+
+    def plot_joint_markers(self, markers, ax, color):
+        if markers is not None:
+            if len(np.shape(markers)) == 1:
+                markers = np.reshape(markers, (len(markers) / 3, 3))
+            target_coord = np.array(markers[:, :2]) / INTER_SENSOR_DISTANCE
+            target_coord[:, 0] -= 10
+            target_coord[:, 1] -= (NUMOFTAXELS_X - 1)
+            target_coord[:, 1] *= -1.0
+            ax.plot(target_coord[:, 0], target_coord[:, 1], marker = 'o', linestyle='None', markerfacecolor = color, markeredgecolor='black', ms=8)
+        plt.pause(0.0001)
 
 
     def skip(self, event):

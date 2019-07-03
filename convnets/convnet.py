@@ -240,8 +240,11 @@ class CNN(nn.Module):
         OUTPUT_DICT = {}
 
         try:
-             x = self.meshDepthLib.bounds
+            x = self.meshDepthLib.bounds
              #print "mesh embedding already loaded!"
+            self.GPU = False
+            self.dtype = torch.FloatTensor
+
         except:
             if CTRL_PNL['aws'] == True:
                 self.GPU = True

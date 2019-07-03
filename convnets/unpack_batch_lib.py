@@ -135,32 +135,31 @@ class UnpackBatchLib():
             INPUT_DICT['batch_mdm'] = None
             INPUT_DICT['batch_cm'] = None
 
-        #scores, OUTPUT_DICT = model.forward_kinematic_angles(images=images_up,
-        #                                                     gender_switch=gender_switch,
-        #                                                     synth_real_switch=synth_real_switch,
-        #                                                     CTRL_PNL=CTRL_PNL,
-        #                                                     OUTPUT_EST_DICT=OUTPUT_EST_DICT,
-        #                                                     targets=targets,
-        #                                                     is_training=is_training,
-        #                                                     betas=betas,
-        #                                                     angles_gt=angles_gt,
-        #                                                     root_shift=root_shift,
-        #                                                     )  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
+        scores, OUTPUT_DICT = model.forward_kinematic_angles(images=images_up,
+                                                             gender_switch=gender_switch,
+                                                             synth_real_switch=synth_real_switch,
+                                                             CTRL_PNL=CTRL_PNL,
+                                                             OUTPUT_EST_DICT=OUTPUT_EST_DICT,
+                                                             targets=targets,
+                                                             is_training=is_training,
+                                                             betas=betas,
+                                                             angles_gt=angles_gt,
+                                                             root_shift=root_shift,
+                                                             )  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
 
 
-
-        scores, targets_est_np, targets_est_reduced_np, betas_est_np = model.forward_kinematic_angles(images_up,
-                                                                                                      gender_switch,
-                                                                                                      synth_real_switch,
-                                                                                                      targets,
-                                                                                                      is_training,
-                                                                                                      betas,
-                                                                                                      angles_gt,
-                                                                                                      root_shift,
-                                                                                                      False)
-        OUTPUT_DICT = {}
-        OUTPUT_DICT['batch_targets_est'] = targets_est_np
-        OUTPUT_DICT['batch_betas_est'] = betas_est_np
+        #scores, targets_est_np, targets_est_reduced_np, betas_est_np = model.forward_kinematic_angles(images_up,
+        #                                                                                              gender_switch,
+        #                                                                                              synth_real_switch,
+        #                                                                                              targets,
+        #                                                                                              is_training,
+        #                                                                                              betas,
+        #                                                                                              angles_gt,
+        #                                                                                              root_shift,
+        #                                                                                              False)
+        #OUTPUT_DICT = {}
+        #OUTPUT_DICT['batch_targets_est'] = targets_est_np
+        #OUTPUT_DICT['batch_betas_est'] = betas_est_np
 
 
         #print OUTPUT_DICT['batch_angles_est'][0, :], "est"
