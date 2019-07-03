@@ -364,10 +364,9 @@ class PhysicalTrainer():
                 self.t2 = 0
             print 'Time taken by epoch',epoch,':',self.t2,' seconds'
 
-            break
-            #if epoch == 25 or epoch == 50 or epoch == 100 or epoch == 200 or epoch == 300:
-            #    torch.save(self.model, filepath_prefix+'synth/convnet'+self.save_name+'_'+str(epoch)+'e.pt')
-            #    pkl.dump(self.train_val_losses,open(filepath_prefix+'synth/convnet_losses'+self.save_name+'_'+str(epoch)+'e.p', 'wb'))
+            if epoch == 25 or epoch == 50 or epoch == 100 or epoch == 200 or epoch == 300:
+                torch.save(self.model, filepath_prefix+'synth/convnet'+self.save_name+'_'+str(epoch)+'e.pt')
+                pkl.dump(self.train_val_losses,open(filepath_prefix+'synth/convnet_losses'+self.save_name+'_'+str(epoch)+'e.p', 'wb'))
 
 
         print 'done with epochs, now evaluating'
@@ -429,7 +428,7 @@ class PhysicalTrainer():
                     if self.CTRL_PNL['depth_map_labels'] == True:
                         INPUT_DICT['batch_mdm'][INPUT_DICT['batch_mdm'] > 0] = 0
                         OUTPUT_DICT['batch_mdm_est'][OUTPUT_DICT['batch_mdm_est'] > 0] = 0
-                        loss_mesh_depth = self.criterion(INPUT_DICT['batch_mdm'], OUTPUT_DICT['batch_mdm_est'])*self.weight_depth_planes / 10
+                        loss_mesh_depth = self.criterion(INPUT_DICT['batch_mdm'], OUTPUT_DICT['batch_mdm_est'])*self.weight_depth_planes / 20
                         loss_mesh_contact = self.criterion(INPUT_DICT['batch_cm'], OUTPUT_DICT['batch_cm_est'])*self.weight_depth_planes * 2.0
                         loss += loss_mesh_depth
                         loss += loss_mesh_contact
@@ -662,7 +661,7 @@ if __name__ == "__main__":
         network_design = True
         if network_design == True:
             incl_synth = True
-            incl_real = True
+            incl_real = False
             if incl_synth == True:
                 training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff'+filepath_suffix+'.p')
                 training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff'+filepath_suffix+'.p')
