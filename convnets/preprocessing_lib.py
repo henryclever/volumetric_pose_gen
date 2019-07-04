@@ -182,6 +182,7 @@ class PreprocessingLib():
                 sx = ndimage.sobel(p_map, axis=0, mode='constant')
                 sy = ndimage.sobel(p_map, axis=1, mode='constant')
                 p_map_inter = np.hypot(sx, sy)
+                p_map_inter = np.clip(p_map_inter, a_min=0, a_max = 100)
                 p_map_dataset.append([p_map, p_map_inter, a_map])
             else:
                 p_map_dataset.append([p_map, a_map])

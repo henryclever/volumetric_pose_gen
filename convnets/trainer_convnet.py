@@ -107,7 +107,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['incl_inter'] = True
         self.CTRL_PNL['shuffle'] = True
         self.CTRL_PNL['incl_ht_wt_channels'] = True
-        self.CTRL_PNL['incl_pmat_cntct_input'] = True
+        self.CTRL_PNL['incl_pmat_cntct_input'] = False
         self.CTRL_PNL['lock_root'] = False
         self.CTRL_PNL['num_input_channels'] = 3
         self.CTRL_PNL['GPU'] = GPU
@@ -635,7 +635,7 @@ if __name__ == "__main__":
         filepath_prefix = '/home/henry/data/'
         filepath_suffix = ''
 
-    #filepath_prefix = '/media/henry/multimodal_data_2/data/'
+    filepath_prefix = '/media/henry/multimodal_data_2/data/'
     filepath_suffix = '_outputB'
 
     training_database_file_f = []
@@ -646,8 +646,8 @@ if __name__ == "__main__":
 
 
     if opt.quick_test == True:
-        #training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_sit_1000_of_1121_upperbody_stiff'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff'+filepath_suffix+'.p')
+        #training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_sit_1000_of_1121_upperbody_stiff'+filepath_suffix+'.p')
         #training_database_file_f.append(filepath_prefix+'real/trainval4_150rh1_sit120rh'+filepath_suffix+'.p')
         #training_database_file_m.append(filepath_prefix+'real/trainval4_150rh1_sit120rh'+filepath_suffix+'.p')
         #training_database_file_f.append(filepath_prefix + 'real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
