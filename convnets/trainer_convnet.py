@@ -107,7 +107,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['incl_inter'] = True
         self.CTRL_PNL['shuffle'] = True
         self.CTRL_PNL['incl_ht_wt_channels'] = True
-        self.CTRL_PNL['incl_pmat_cntct_input'] = False
+        self.CTRL_PNL['incl_pmat_cntct_input'] = True
         self.CTRL_PNL['lock_root'] = False
         self.CTRL_PNL['num_input_channels'] = 3
         self.CTRL_PNL['GPU'] = GPU
@@ -115,7 +115,7 @@ class PhysicalTrainer():
         repeat_real_data_ct = 3
         self.CTRL_PNL['regr_angles'] = opt.reg_angles
         self.CTRL_PNL['aws'] = self.opt.aws
-        self.CTRL_PNL['depth_map_labels'] = False #can only be true if we have 100% synthetic data for training
+        self.CTRL_PNL['depth_map_labels'] = True #can only be true if we have 100% synthetic data for training
         self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
         self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = False#self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
@@ -428,8 +428,8 @@ class PhysicalTrainer():
                     if self.CTRL_PNL['depth_map_labels'] == True:
                         INPUT_DICT['batch_mdm'][INPUT_DICT['batch_mdm'] > 0] = 0
                         OUTPUT_DICT['batch_mdm_est'][OUTPUT_DICT['batch_mdm_est'] > 0] = 0
-                        loss_mesh_depth = self.criterion(INPUT_DICT['batch_mdm'], OUTPUT_DICT['batch_mdm_est'])*self.weight_depth_planes / 20
-                        loss_mesh_contact = self.criterion(INPUT_DICT['batch_cm'], OUTPUT_DICT['batch_cm_est'])*self.weight_depth_planes * 2.0
+                        loss_mesh_depth = self.criterion(INPUT_DICT['batch_mdm'], OUTPUT_DICT['batch_mdm_est'])*self.weight_depth_planes / 40
+                        loss_mesh_contact = self.criterion(INPUT_DICT['batch_cm'], OUTPUT_DICT['batch_cm_est'])*self.weight_depth_planes * 1.0
                         loss += loss_mesh_depth
                         loss += loss_mesh_contact
 
@@ -635,7 +635,7 @@ if __name__ == "__main__":
         filepath_prefix = '/home/henry/data/'
         filepath_suffix = ''
 
-    filepath_prefix = '/media/henry/multimodal_data_2/data/'
+    #filepath_prefix = '/media/henry/multimodal_data_2/data/'
     filepath_suffix = '_outputB'
 
     training_database_file_f = []
@@ -661,7 +661,7 @@ if __name__ == "__main__":
         network_design = True
         if network_design == True:
             incl_synth = True
-            incl_real = True
+            incl_real = False
             if incl_synth == True:
                 training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff'+filepath_suffix+'.p')
                 training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff'+filepath_suffix+'.p')
