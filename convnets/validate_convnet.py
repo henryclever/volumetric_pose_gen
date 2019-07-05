@@ -104,15 +104,15 @@ class PhysicalTrainer():
         self.CTRL_PNL['incl_inter'] = True
         self.CTRL_PNL['shuffle'] = False
         self.CTRL_PNL['incl_ht_wt_channels'] = True
-        self.CTRL_PNL['incl_pmat_cntct_input'] = False
+        self.CTRL_PNL['incl_pmat_cntct_input'] = True
         self.CTRL_PNL['num_input_channels'] = 3
         self.CTRL_PNL['GPU'] = GPU
         self.CTRL_PNL['dtype'] = dtype
         self.CTRL_PNL['repeat_real_data_ct'] = 1
         self.CTRL_PNL['regr_angles'] = 1
-        self.CTRL_PNL['depth_map_labels'] = False
-        self.CTRL_PNL['depth_map_output'] = False
-        self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
+        self.CTRL_PNL['depth_map_labels'] = True
+        self.CTRL_PNL['depth_map_output'] = True
+        self.CTRL_PNL['depth_map_input_est'] = False#rue #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
 
 
@@ -475,7 +475,8 @@ class PhysicalTrainer():
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_planesreg_128b_100e.pt')
                 #self.model = torch.load('/home/henry/data/convnets/epochs_set_3/convnet_anglesEU_synthreal_s12_3xreal_128b_101e_300e.pt')
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_128b_200e.pt')
-                self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_128b_101e_htwt_legacy.pt')
+                #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_128b_101e_htwt_legacy.pt')
+                self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_s9_3xreal_128b_101e_0.5rtojtdpth_pmatcntin_100e.pt')
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_300e.pt')
                 self.model = self.model.cuda()
             else:
@@ -515,7 +516,7 @@ class PhysicalTrainer():
         n_examples = 0
 
         for batch_i, batch in enumerate(self.test_loader):
-
+            time.sleep(10)
             if DROPOUT == True:
                 batch[0] = batch[0].repeat(25, 1, 1, 1)
                 batch[1] = batch[1].repeat(25, 1)
@@ -534,7 +535,7 @@ class PhysicalTrainer():
 
             elif self.CTRL_PNL['loss_vector_type'] == 'anglesR' or self.CTRL_PNL['loss_vector_type'] == 'anglesDC' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU':
                 scores, INPUT_DICT, OUTPUT_DICT = \
-                    UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model=self.model,
+                    UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=True, model=self.model,
                                                               CTRL_PNL=self.CTRL_PNL)
                 self.criterion = nn.L1Loss()
                 scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].shape[0], scores.size()[1]))).type(dtype),
@@ -544,6 +545,10 @@ class PhysicalTrainer():
 
                 print loss_curr, 'loss'
 
+
+                if self.CTRL_PNL['depth_map_labels'] == True:
+                    INPUT_DICT['batch_mdm'][INPUT_DICT['batch_mdm'] > 0] = 0
+                    OUTPUT_DICT['batch_mdm_est'][OUTPUT_DICT['batch_mdm_est'] > 0] = 0
                 loss += loss_curr
 
 
@@ -592,7 +597,12 @@ class PhysicalTrainer():
 
                 for image_ct in range(NUM_IMAGES):
                     # #self.im_sampleval = self.im_sampleval[:,0,:,:]
-                    self.im_sampleval = INPUT_DICT['batch_images'][image_ct, :].squeeze()
+                    self.im_sampleval = INPUT_DICT['batch_images'][image_ct, 1:].squeeze()
+                    self.im_sample_ext = INPUT_DICT['batch_mdm'][0, :, :].squeeze().cpu().unsqueeze(0)*-1
+
+                    #print self.im_sample_ext.size()
+                    self.im_sample_ext2 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().cpu().unsqueeze(0)*-1
+
                     self.tar_sampleval = INPUT_DICT['batch_targets'][image_ct, :].squeeze() / 1000
                     self.sc_sampleval = OUTPUT_DICT['batch_targets_est'][image_ct, :].squeeze() / 1000
                     self.sc_sampleval = self.sc_sampleval.view(24, 3)
@@ -606,7 +616,11 @@ class PhysicalTrainer():
 
 
                     if GPU == True:
-                        VisualizationLib().visualize_pressure_map(self.im_sampleval.cpu(), self.tar_sampleval.cpu(), self.sc_sampleval.cpu(), block=False)
+                        VisualizationLib().visualize_pressure_map(self.im_sampleval.cpu(), self.tar_sampleval.cpu(), self.sc_sampleval.cpu(),
+                                                                    self.im_sampleval.cpu(), None, None, 
+                                                                    self.im_sample_ext2, None, None, 
+                                                                    self.im_sample_ext, None, None,
+                                                                     block=False)
                     else:
                         VisualizationLib().visualize_pressure_map(self.im_sampleval, self.tar_sampleval, self.sc_sampleval, block=False)
                     time.sleep(1)
@@ -660,7 +674,7 @@ if __name__ == "__main__":
     network_design = True
 
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff.p')
-   # test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
+    test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff_outputB.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2067_none_stiff.p')
@@ -685,7 +699,7 @@ if __name__ == "__main__":
     #test_database_file_m.append(filepath_prefix_qt+'data/synth/side_up_fw/train_m_sit_1000_of_1144_lowerbody_stiff.p')
     #test_database_file_m.append(filepath_prefix_qt+'data/synth/side_up_fw/train_m_sit_1000_of_1126_none_stiff.p')
     #test_database_file_m.append(filepath_prefix_qt + 'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
-    test_database_file_m.append(filepath_prefix_qt+'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
+    #test_database_file_m.append(filepath_prefix_qt+'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + 'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + 'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_m.append(filepath_prefix_qt + 'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')

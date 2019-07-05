@@ -309,7 +309,7 @@ class VisualizationLib():
         ax1.set_facecolor('cyan')
         ax1.imshow(p_map, interpolation='nearest', cmap=
         plt.cm.jet, origin='upper', vmin=0, vmax=100)
-        ax1.set_title('Sample \n Targets and Estimates')
+        ax1.set_title('Training Sample \n Pressure Mat, \n Targets and Estimates')
         ax2 = None
         ax3 = None
         ax4 = None
@@ -321,7 +321,7 @@ class VisualizationLib():
             ax2.set_facecolor('cyan')
             ax2.imshow(p_map_val, interpolation='nearest', cmap=
             plt.cm.jet, origin='upper', vmin=0, vmax=100)
-            ax2.set_title('Validation Sample \n Targets and Estimates')
+            ax2.set_title('Training Sample \n Ground Truth \n Mesh Penetration')
 
         if p_map_ext is not None:
             ax3 = fig.add_subplot(1, num_subplots, 3)
@@ -330,7 +330,7 @@ class VisualizationLib():
             ax3.set_facecolor('cyan')
             ax3.imshow(p_map_ext, interpolation='nearest', cmap=
             plt.cm.jet, origin='upper', vmin=0, vmax=100)
-            ax3.set_title('Validation Sample \n Targets and Estimates')
+            ax3.set_title('Training Sample \n Estimated \n Mesh Penetration')
 
         if p_map_ext2 is not None:
             ax4 = fig.add_subplot(1, num_subplots, 4)
@@ -339,7 +339,7 @@ class VisualizationLib():
             ax4.set_facecolor('cyan')
             ax4.imshow(p_map_ext2, interpolation='nearest', cmap=
             plt.cm.jet, origin='upper', vmin=0, vmax=100)
-            ax4.set_title('Validation Sample \n Targets and Estimates')
+            ax4.set_title('Validation Sample \n Pressure Mat, \n Targets and Estimates')
 
 
         # Visualize targets of training set
