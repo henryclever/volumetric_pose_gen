@@ -143,7 +143,7 @@ class PreprocessingLib():
 
 
 
-    def preprocessing_create_pressure_angle_stack(self,x_data, a_data, include_inter, mat_size, verbose):
+    def preprocessing_create_pressure_angle_stack(self,x_data, a_data, include_inter, mat_size, clip_sobel, verbose):
         '''This is for creating a 2-channel input using the height of the bed. '''
 
         if verbose: print np.max(x_data)
@@ -182,7 +182,8 @@ class PreprocessingLib():
                 sx = ndimage.sobel(p_map, axis=0, mode='constant')
                 sy = ndimage.sobel(p_map, axis=1, mode='constant')
                 p_map_inter = np.hypot(sx, sy)
-                p_map_inter = np.clip(p_map_inter, a_min=0, a_max = 100)
+                if clip_sobel == True:
+                    p_map_inter = np.clip(p_map_inter, a_min=0, a_max = 100)
                 p_map_dataset.append([p_map, p_map_inter, a_map])
             else:
                 p_map_dataset.append([p_map, a_map])

@@ -74,6 +74,7 @@ class MeshDepthLib():
         self.loss_vector_type = loss_vector_type
 
         print self.loss_vector_type
+        print verts_list, "VERTS LIST"
         if self.loss_vector_type == 'anglesDC':
             self.bounds = torch.Tensor(
                 np.array([[-np.pi / 3, np.pi / 3], [-np.pi / 36, np.pi / 36], [-np.pi / 3, np.pi / 3],
@@ -359,7 +360,11 @@ class MeshDepthLib():
 
 
 
-    def compute_tensor_mesh(self, gender_switch, betas_est, Rs_est, root_shift_est, start_incr, end_incr):
+    def compute_tensor_mesh(self, gender_switch, betas_est, Rs_est, root_shift_est, start_incr, end_incr, GPU):
+        if GPU == False:
+            self.dtype = torch.FloatTensor
+            self.dtypeInt = torch.LongTensor
+
         sub_batch_size = end_incr - start_incr
 
         shapedirs = torch.bmm(gender_switch[start_incr:end_incr, :, :],
@@ -387,7 +392,7 @@ class MeshDepthLib():
         # J_est = J_est - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
 
         targets_est, A_est = KinematicsLib().batch_global_rigid_transformation(Rs_est[start_incr:end_incr, :],
-                                                                               J_est, self.parents, self.GPU,
+                                                                               J_est, self.parents, GPU,
                                                                                rotate_base=False)
 
         # if start_incr == 0:
@@ -431,7 +436,7 @@ class MeshDepthLib():
 
 
 
-    def compute_depth_contact_planes(self, verts, bed_angle_batch):
+    def compute_depth_contact_planes(self, verts, bed_angle_batch, get_mesh_bottom_dist = True):
         cbs = verts.size()[0] #current batch size
         bend_taxel_loc = 48
 
@@ -470,7 +475,10 @@ class MeshDepthLib():
         #import matplotlib.pyplot as plt
         #plt.plot(-verts_taxel.cpu().detach().numpy()[0, :, 1], verts_taxel.cpu().detach().numpy()[0, :, 2], 'r.')
 
+        print verts_taxel.size()
         verts_taxel = torch.cat((verts_taxel, verts_taxel[:, 0:8000, :]*0+3.0), dim = 1)
+        print verts_taxel.size(),"SIZE POST"
+
 
         for i in range(cbs):
             body_verts = verts_taxel[i, verts_taxel[i, :, 1] < bend_loc]
@@ -497,6 +505,8 @@ class MeshDepthLib():
         verts_taxel_int = (verts_taxel).type(self.dtypeInt)
 
         print self.filler_taxels.shape, 'filler shape'
+        if get_mesh_bottom_dist == False:
+            verts_taxel_int[:, :, 2] *= -1
 
         verts_taxel_int = torch.cat((self.filler_taxels[0:cbs, :, :], verts_taxel_int), dim=1)
 
@@ -514,6 +524,8 @@ class MeshDepthLib():
 
             x = torch.unique(verts_taxel_int[i, :, :], sorted=True, return_inverse=False,
                              dim=0)  # this takes the most time
+
+
             t2 = time.time()
 
 
@@ -525,6 +537,7 @@ class MeshDepthLib():
             x = x[x[:, 1] >= 0, :]
             x = x[x[:, 0] < 27, :]
             x = x[x[:, 0] >= 0, :]
+
 
             #print torch.min(x[:, 2]), torch.max(x[:, 2]), x.shape
             mesh_matrix = x[:, 2].view(27, 64)
@@ -542,6 +555,7 @@ class MeshDepthLib():
         # print i, t3 - t2, t2 - t1
 
         mesh_matrix_batch[mesh_matrix_batch == 20000] = 0
+
         mesh_matrix_batch = mesh_matrix_batch.type(self.dtype)
         mesh_matrix_batch *= 0.0286  # shouldn't need this. leave as int.
 
@@ -569,9 +583,17 @@ class MeshDepthLib():
         mesh_matrix_batch += self.mesh_patching_array[0:cbs, 1:65, 1:28, 2]
         mesh_matrix_batch = mesh_matrix_batch.type(self.dtypeInt)
 
+
         contact_matrix_batch = mesh_matrix_batch.clone()
         contact_matrix_batch[contact_matrix_batch >= 0] = 0
         contact_matrix_batch[contact_matrix_batch < 0] = 1
+
+        #print mesh_matrix_batch
+
+        print torch.min(mesh_matrix_batch[0, :, :]), torch.max(mesh_matrix_batch[0, :, :]), "A"
+
+        if get_mesh_bottom_dist == False:
+            mesh_matrix_batch *= -1
 
         #print torch.min(mesh_matrix_batch[0, :, :]), torch.max(mesh_matrix_batch[0, :, :])
 

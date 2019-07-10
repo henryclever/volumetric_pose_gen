@@ -146,6 +146,8 @@ class TensorPrepLib():
             mesh_depth_contact_maps = np.array(mesh_depth_contact_maps)
             train_xa = np.concatenate((train_xa, mesh_depth_contact_maps), axis=1)
 
+        print "TRAIN XA SHAPE", np.shape(train_xa)
+
         return train_xa
 
     def prep_labels(self, y_flat, dat, num_repeats, z_adj, gender, is_synth, loss_vector_type, initial_angle_est):

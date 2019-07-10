@@ -88,6 +88,9 @@ class UnpackBatchLib():
         # cut it off so batch[2] is only the xyz marker targets
         batch[1] = batch[1][:, 0:72]
 
+
+
+
         if is_training == True: #only do augmentation for real data that is in training mode
             batch[0], batch[1], extra_targets, extra_smpl_angles = SyntheticLib().synthetic_master(batch[0], batch[1], batch[6],
                                                                     num_images_manip = (CTRL_PNL['num_input_channels_batch0']-1),
@@ -103,6 +106,7 @@ class UnpackBatchLib():
             images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(images_up_non_tensor),
                                                                                     pmat_chan_idx = (CTRL_PNL['num_input_channels_batch0']-3))
         images_up = Variable(torch.Tensor(images_up_non_tensor).type(CTRL_PNL['dtype']), requires_grad=False)
+
 
         if CTRL_PNL['incl_ht_wt_channels'] == True: #make images full of stuff
             weight_input = torch.ones((images_up.size()[0], images_up.size()[2] * images_up.size()[3])).type(CTRL_PNL['dtype'])
@@ -134,6 +138,7 @@ class UnpackBatchLib():
         else:
             INPUT_DICT['batch_mdm'] = None
             INPUT_DICT['batch_cm'] = None
+
 
         scores, OUTPUT_DICT = model.forward_kinematic_angles(images=images_up,
                                                              gender_switch=gender_switch,

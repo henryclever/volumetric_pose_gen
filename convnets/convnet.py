@@ -239,9 +239,12 @@ class CNN(nn.Module):
         filepath_prefix = CTRL_PNL['filepath_prefix']
         OUTPUT_DICT = {}
 
+        self.GPU = False
+        self.dtype = torch.FloatTensor
+
         try:
             x = self.meshDepthLib.bounds
-             #print "mesh embedding already loaded!"
+            print blah
             #self.GPU = False
             #self.dtype = torch.FloatTensor
 
@@ -258,8 +261,6 @@ class CNN(nn.Module):
                 self.verts_list = [1325, 336, 1032, 4515, 1374, 4848, 1739, 5209, 1960, 5423]
             self.meshDepthLib = MeshDepthLib(loss_vector_type=self.loss_vector_type, filepath_prefix=filepath_prefix,
                                              batch_size=images.size(0), verts_list = self.verts_list)
-
-
 
         scores_cnn = self.CNN_pack1(images)
         scores_size = scores_cnn.size()
@@ -295,7 +296,7 @@ class CNN(nn.Module):
 
         #print scores[0, 0:10]
         if CTRL_PNL['adjust_ang_from_est'] == True:
-            scores[:, 0:10] = OUTPUT_EST_DICT['betas']
+            scores[:, 0:10] =  OUTPUT_EST_DICT['betas']#scores[:, 0:10].clone() +
             scores[:, 10:13] = OUTPUT_EST_DICT['root_shift']
             scores[:, 13:85] = scores[:, 13:85].clone() + OUTPUT_EST_DICT['angles']
 
@@ -311,10 +312,10 @@ class CNN(nn.Module):
             add_idx = 0
 
 
-
-        scores[:, 0:10] /= 3.
-        scores[:, 0:10] = scores[:, 0:10].tanh()
-        scores[:, 0:10] *= 3.
+        if CTRL_PNL['clip_betas'] == True:
+            scores[:, 0:10] /= 3.
+            scores[:, 0:10] = scores[:, 0:10].tanh()
+            scores[:, 0:10] *= 3.
 
         test_ground_truth = False #can only use True when the dataset is entirely synthetic AND when we use anglesDC
 
@@ -391,7 +392,7 @@ class CNN(nn.Module):
                 end_incr += sub_batch_incr
                 verts_sub, J_est_sub, targets_est_sub = self.meshDepthLib.compute_tensor_mesh(gender_switch, betas_est,
                                                                                               Rs_est, root_shift_est,
-                                                                                              start_incr, end_incr)
+                                                                                              start_incr, end_incr, self.GPU)
                 if start_incr == 0:
                     verts = verts_sub.clone()
                     J_est = J_est_sub.clone()
@@ -406,7 +407,8 @@ class CNN(nn.Module):
             if CTRL_PNL['incl_ht_wt_channels'] == True: bed_ang_idx -= 2
             bed_angle_batch = torch.mean(images[:, bed_ang_idx, 1:3, 0], dim=1)
 
-            OUTPUT_DICT['batch_mdm_est'], OUTPUT_DICT['batch_cm_est'] = self.meshDepthLib.compute_depth_contact_planes(verts, bed_angle_batch)
+            OUTPUT_DICT['batch_mdm_est'], OUTPUT_DICT['batch_cm_est'] = self.meshDepthLib.compute_depth_contact_planes(verts, bed_angle_batch,
+                                                                                                                       CTRL_PNL['mesh_bottom_dist'])
 
             OUTPUT_DICT['batch_mdm_est'] = OUTPUT_DICT['batch_mdm_est'].type(self.dtype)
             OUTPUT_DICT['batch_cm_est'] = OUTPUT_DICT['batch_cm_est'].type(self.dtype)

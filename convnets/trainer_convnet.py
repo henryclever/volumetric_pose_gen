@@ -105,7 +105,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['batch_size'] = 128
         self.CTRL_PNL['num_epochs'] = 101
         self.CTRL_PNL['incl_inter'] = True
-        self.CTRL_PNL['shuffle'] = True
+        self.CTRL_PNL['shuffle'] = False
         self.CTRL_PNL['incl_ht_wt_channels'] = True
         self.CTRL_PNL['incl_pmat_cntct_input'] = True
         self.CTRL_PNL['lock_root'] = False
@@ -119,6 +119,9 @@ class PhysicalTrainer():
         self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
         self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = False#self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
+        self.CTRL_PNL['clip_sobel'] = True
+        self.CTRL_PNL['clip_betas'] = True
+        self.CTRL_PNL['mesh_bottom_dist'] = False
 
         self.weight_joints = self.opt.j_d_ratio*2
         self.weight_depth_planes = (1-self.opt.j_d_ratio)*2
@@ -218,6 +221,7 @@ class PhysicalTrainer():
         train_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.train_x_flat,
                                                                                 self.train_a_flat,
                                                                                 self.CTRL_PNL['incl_inter'], self.mat_size,
+                                                                                self.CTRL_PNL['clip_sobel'],
                                                                                 self.CTRL_PNL['verbose'])
 
         #stack the depth and contact mesh images (and possibly a pmat contact image) together
@@ -280,6 +284,7 @@ class PhysicalTrainer():
         test_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.test_x_flat,
                                                                                self.test_a_flat,
                                                                                self.CTRL_PNL['incl_inter'], self.mat_size,
+                                                                               self.CTRL_PNL['clip_sobel'],
                                                                                self.CTRL_PNL['verbose'])
 
         test_xa = TensorPrepLib().append_input_depth_contact(np.array(test_xa),
@@ -427,7 +432,8 @@ class PhysicalTrainer():
 
                     if self.CTRL_PNL['depth_map_labels'] == True:
                         INPUT_DICT['batch_mdm'][INPUT_DICT['batch_mdm'] > 0] = 0
-                        OUTPUT_DICT['batch_mdm_est'][OUTPUT_DICT['batch_mdm_est'] > 0] = 0
+                        if self.CTRL_PNL['mesh_bottom_dist'] == True:
+                            OUTPUT_DICT['batch_mdm_est'][OUTPUT_DICT['batch_mdm_est'] > 0] = 0
                         loss_mesh_depth = self.criterion(INPUT_DICT['batch_mdm'], OUTPUT_DICT['batch_mdm_est'])*self.weight_depth_planes / 40
                         loss_mesh_contact = self.criterion(INPUT_DICT['batch_cm'], OUTPUT_DICT['batch_cm_est'])*self.weight_depth_planes * 1.0
                         loss += loss_mesh_depth
@@ -454,7 +460,10 @@ class PhysicalTrainer():
                     print INPUT_DICT['batch_images'].shape
                     self.im_sample = INPUT_DICT['batch_images'][0, 1:, :].squeeze()
                     self.im_sample_ext = INPUT_DICT['batch_mdm'][0, :, :].squeeze().unsqueeze(0)*-1
-                    self.im_sample_ext2 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().unsqueeze(0)*-1
+                    self.im_sample_ext2 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().unsqueeze(0)/2
+
+                    self.publish_depth_marker_array(self.im_sample_ext2)
+
                     self.tar_sample = INPUT_DICT['batch_targets']
                     self.tar_sample = self.tar_sample[0, :].squeeze() / 1000
                     self.sc_sample = OUTPUT_DICT['batch_targets_est'].clone()
@@ -503,6 +512,54 @@ class PhysicalTrainer():
                     self.train_val_losses['train' + self.save_name].append(train_loss)
                     self.train_val_losses['val' + self.save_name].append(val_loss)
                     self.train_val_losses['epoch' + self.save_name].append(epoch)
+
+
+    def publish_depth_marker_array(self, depth_array):
+        depth_array = depth_array.squeeze().cpu().numpy()
+
+
+        x = np.arange(0, 27).astype(float)
+        x = np.tile(x, (64, 1))
+        y = np.arange(0, 64).astype(float)
+        y = np.tile(y, (27, 1)).T
+
+        point_cloud = np.stack((x,y,depth_array))
+        point_cloud = np.swapaxes(point_cloud, 0, 2)
+        point_cloud = np.swapaxes(point_cloud, 0, 1)
+        point_cloud = point_cloud.reshape(-1, 3)
+        point_cloud = point_cloud.astype(float)*0.0286
+        point_cloud[:, 2] = point_cloud[:, 2]/0.0286*0.001
+
+
+        print point_cloud.shape
+        for joint in range(0, point_cloud.shape[0]):
+            print point_cloud[joint, :]
+            Tmarker = Marker()
+            Tmarker.type = Tmarker.SPHERE
+            Tmarker.header.frame_id = "map"
+            Tmarker.action = Tmarker.ADD
+            Tmarker.scale.x = 0.07
+            Tmarker.scale.y = 0.07
+            Tmarker.scale.z = 0.07
+            Tmarker.color.a = 1.0
+            Tmarker.color.r = 0.0
+            Tmarker.color.g = 0.7
+            Tmarker.color.b = 0.0
+            Tmarker.pose.orientation.w = 1.0
+            Tmarker.pose.position.x = point_cloud[joint, 0]  # - INTER_SENSOR_DISTANCE * 10
+            Tmarker.pose.position.y = point_cloud[joint, 1]  # - INTER_SENSOR_DISTANCE * 10
+            Tmarker.pose.position.z = point_cloud[joint, 2]
+            PointCloudArray.markers.append(Tmarker)
+            tid = 0
+            for m in PointCloudArray.markers:
+                m.id = tid
+                tid += 1
+        # print TargetArray
+        pointcloudPublisher.publish(PointCloudArray)
+
+
+
+        print point_cloud.shape, 'depth marker array shape'
 
 
     def validate_convnet(self, verbose=False, n_batches=None):
@@ -569,8 +626,8 @@ class PhysicalTrainer():
                                                           block=False)
             else:
                 VisualizationLib().visualize_pressure_map(self.im_sample, self.tar_sample, self.sc_sample,
-                                                          #self.im_sample_ext, None, None,
-                                                          #self.im_sample_ext2, None, None,
+                                                         # self.im_sample_ext, None, None,
+                                                          self.im_sample_ext2, None, None,
                                                           self.im_sample_val, self.tar_sample_val, self.sc_sample_val,
                                                           block=False)
 
@@ -580,6 +637,14 @@ class PhysicalTrainer():
 
 if __name__ == "__main__":
     #Initialize trainer with a training database file
+
+    from visualization_msgs.msg import MarkerArray
+    from visualization_msgs.msg import Marker
+    import rospy
+
+    rospy.init_node('depth_cam_node')
+    PointCloudArray = MarkerArray()
+    pointcloudPublisher = rospy.Publisher("/point_cloud", MarkerArray)
 
     #import rospy
 
@@ -622,7 +687,7 @@ if __name__ == "__main__":
     p.add_option('--verbose', '--v',  action='store_true', dest='verbose',
                  default=True, help='Printout everything (under construction).')
 
-    p.add_option('--log_interval', type=int, default=10, metavar='N',
+    p.add_option('--log_interval', type=int, default=1, metavar='N',
                  help='number of batches between logging train status')
 
     opt, args = p.parse_args()
@@ -636,7 +701,8 @@ if __name__ == "__main__":
         filepath_suffix = ''
 
     #filepath_prefix = '/media/henry/multimodal_data_2/data/'
-    filepath_suffix = '_outputB'
+    #filepath_suffix = '_outputB'
+    filepath_suffix = ''
 
     training_database_file_f = []
     training_database_file_m = []
