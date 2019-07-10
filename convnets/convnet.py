@@ -239,12 +239,12 @@ class CNN(nn.Module):
         filepath_prefix = CTRL_PNL['filepath_prefix']
         OUTPUT_DICT = {}
 
-        self.GPU = False
-        self.dtype = torch.FloatTensor
+        self.GPU = True
+        self.dtype = torch.cuda.FloatTensor
 
         try:
             x = self.meshDepthLib.bounds
-            print blah
+            #print blah
             #self.GPU = False
             #self.dtype = torch.FloatTensor
 

@@ -117,11 +117,11 @@ class PhysicalTrainer():
         self.CTRL_PNL['aws'] = self.opt.aws
         self.CTRL_PNL['depth_map_labels'] = True #can only be true if we have 100% synthetic data for training
         self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
-        self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
-        self.CTRL_PNL['adjust_ang_from_est'] = False#self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
+        self.CTRL_PNL['depth_map_input_est'] = True #do this if we're working in a two-part regression
+        self.CTRL_PNL['adjust_ang_from_est'] = True#self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
-        self.CTRL_PNL['mesh_bottom_dist'] = False
+        self.CTRL_PNL['mesh_bottom_dist'] = True
 
         self.weight_joints = self.opt.j_d_ratio*2
         self.weight_depth_planes = (1-self.opt.j_d_ratio)*2
@@ -430,6 +430,8 @@ class PhysicalTrainer():
                         loss = (loss_betas + loss_eucl)
 
 
+                    print INPUT_DICT['batch_mdm'].size(), OUTPUT_DICT['batch_mdm_est'].size()
+
                     if self.CTRL_PNL['depth_map_labels'] == True:
                         INPUT_DICT['batch_mdm'][INPUT_DICT['batch_mdm'] > 0] = 0
                         if self.CTRL_PNL['mesh_bottom_dist'] == True:
@@ -458,11 +460,11 @@ class PhysicalTrainer():
                                                              data='train')
 
                     print INPUT_DICT['batch_images'].shape
-                    self.im_sample = INPUT_DICT['batch_images'][0, 1:, :].squeeze()
+                    self.im_sample = INPUT_DICT['batch_images'][0, 4:, :].squeeze()
                     self.im_sample_ext = INPUT_DICT['batch_mdm'][0, :, :].squeeze().unsqueeze(0)*-1
-                    self.im_sample_ext2 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().unsqueeze(0)/2
+                    self.im_sample_ext2 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().unsqueeze(0)*-1
 
-                    self.publish_depth_marker_array(self.im_sample_ext2)
+                    #self.publish_depth_marker_array(self.im_sample_ext2)
 
                     self.tar_sample = INPUT_DICT['batch_targets']
                     self.tar_sample = self.tar_sample[0, :].squeeze() / 1000
@@ -531,7 +533,7 @@ class PhysicalTrainer():
         point_cloud[:, 2] = point_cloud[:, 2]/0.0286*0.001
 
 
-        print point_cloud.shape
+        #print point_cloud.shape
         for joint in range(0, point_cloud.shape[0]):
             print point_cloud[joint, :]
             Tmarker = Marker()
@@ -559,7 +561,7 @@ class PhysicalTrainer():
 
 
 
-        print point_cloud.shape, 'depth marker array shape'
+        #print point_cloud.shape, 'depth marker array shape'
 
 
     def validate_convnet(self, verbose=False, n_batches=None):
@@ -608,7 +610,7 @@ class PhysicalTrainer():
 
 
         self.im_sample_val = INPUT_DICT_VAL['batch_images']
-        self.im_sample_val = self.im_sample_val[0, 1:, :].squeeze()
+        self.im_sample_val = self.im_sample_val[0, 4:, :].squeeze()
         self.tar_sample_val = INPUT_DICT_VAL['batch_targets']  # this is just 10 x 3
         self.tar_sample_val = self.tar_sample_val[0, :].squeeze() / 1000
         self.sc_sample_val = OUTPUT_DICT_VAL['batch_targets_est']  # score space is larger is 72 x3
@@ -620,8 +622,8 @@ class PhysicalTrainer():
         if self.opt.visualize == True:
             if GPU == True:
                 VisualizationLib().visualize_pressure_map(self.im_sample.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),
-                                                          self.im_sample_ext.cpu(), None, None,
-                                                          self.im_sample_ext2.cpu(), None, None,
+                                                          self.im_sample_ext.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),
+                                                          self.im_sample_ext2.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),
                                                           self.im_sample_val.cpu(), self.tar_sample_val.cpu(), self.sc_sample_val.cpu(),
                                                           block=False)
             else:
@@ -701,8 +703,8 @@ if __name__ == "__main__":
         filepath_suffix = ''
 
     #filepath_prefix = '/media/henry/multimodal_data_2/data/'
-    #filepath_suffix = '_outputB'
-    filepath_suffix = ''
+    filepath_suffix = '_outputC'
+    #filepath_suffix = ''
 
     training_database_file_f = []
     training_database_file_m = []
@@ -720,9 +722,9 @@ if __name__ == "__main__":
         #training_database_file_f.append(filepath_prefix + 'real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
         #training_database_file_m.append(filepath_prefix+'real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
         #training_database_file_m.append(filepath_prefix+'real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
-        #test_database_file_m.append(filepath_prefix+'real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
+        test_database_file_m.append(filepath_prefix+'real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
         #training_database_file_f.append(filepath_prefix+'real/trainval4_150rh1_sit120rh'+filepath_suffix+'.p')
-        test_database_file_m.append(filepath_prefix+'real/trainval4_150rh1_sit120rh'+filepath_suffix+'.p')
+        #test_database_file_m.append(filepath_prefix+'real/trainval4_150rh1_sit120rh'+filepath_suffix+'.p')
     else:
         network_design = True
         if network_design == True:
@@ -769,7 +771,7 @@ if __name__ == "__main__":
             #test_database_file_m.append(filepath_prefix+'real/trainval8_150rh1_sit120rh'+filepath_suffix+'.p')
             #test_database_file_f.append(filepath_prefix + 'real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
             #test_database_file_m.append(filepath_prefix + 'real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
-            test_database_file_m.append(filepath_prefix + 'real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
+            test_database_file_m.append(filepath_prefix + 'real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
             #test_database_file_m.append(filepath_prefix + 'real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
             #test_database_file_m.append(filepath_prefix + 'real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
             #test_database_file_m.append(filepath_prefix + 'real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')

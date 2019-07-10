@@ -475,9 +475,9 @@ class MeshDepthLib():
         #import matplotlib.pyplot as plt
         #plt.plot(-verts_taxel.cpu().detach().numpy()[0, :, 1], verts_taxel.cpu().detach().numpy()[0, :, 2], 'r.')
 
-        print verts_taxel.size()
+        #print verts_taxel.size()
         verts_taxel = torch.cat((verts_taxel, verts_taxel[:, 0:8000, :]*0+3.0), dim = 1)
-        print verts_taxel.size(),"SIZE POST"
+        #print verts_taxel.size(),"SIZE POST"
 
 
         for i in range(cbs):
@@ -504,7 +504,7 @@ class MeshDepthLib():
 
         verts_taxel_int = (verts_taxel).type(self.dtypeInt)
 
-        print self.filler_taxels.shape, 'filler shape'
+        #3print self.filler_taxels.shape, 'filler shape'
         if get_mesh_bottom_dist == False:
             verts_taxel_int[:, :, 2] *= -1
 
@@ -590,7 +590,7 @@ class MeshDepthLib():
 
         #print mesh_matrix_batch
 
-        print torch.min(mesh_matrix_batch[0, :, :]), torch.max(mesh_matrix_batch[0, :, :]), "A"
+        #print torch.min(mesh_matrix_batch[0, :, :]), torch.max(mesh_matrix_batch[0, :, :]), "A"
 
         if get_mesh_bottom_dist == False:
             mesh_matrix_batch *= -1

@@ -58,7 +58,7 @@ class UnpackBatchLib():
     def unpackage_batch_kin_pass(self, batch, is_training, model, CTRL_PNL):
 
         INPUT_DICT = {}
-
+        adj_ext_idx = 0
         # 0:72: positions.
         batch.append(batch[1][:, 72:82])  # betas
         batch.append(batch[1][:, 82:154])  # angles
@@ -69,6 +69,7 @@ class UnpackBatchLib():
         batch.append(batch[1][:, 161:162])  # height, kg
 
         if CTRL_PNL['adjust_ang_from_est'] == True:
+            adj_ext_idx += 3
             batch.append(batch[1][:, 162:172]) #betas est
             batch.append(batch[1][:, 172:244]) #angles est
             batch.append(batch[1][:, 244:247]) #root pos est
@@ -133,8 +134,8 @@ class UnpackBatchLib():
             OUTPUT_EST_DICT['root_shift'] = Variable(extra_targets.type(CTRL_PNL['dtype']), requires_grad=is_training)
 
         if CTRL_PNL['depth_map_labels'] == True and is_training == True:
-            INPUT_DICT['batch_mdm'] = batch[9].type(CTRL_PNL['dtype'])
-            INPUT_DICT['batch_cm'] = batch[10].type(CTRL_PNL['dtype'])
+            INPUT_DICT['batch_mdm'] = batch[9+adj_ext_idx].type(CTRL_PNL['dtype'])
+            INPUT_DICT['batch_cm'] = batch[10+adj_ext_idx].type(CTRL_PNL['dtype'])
         else:
             INPUT_DICT['batch_mdm'] = None
             INPUT_DICT['batch_cm'] = None
