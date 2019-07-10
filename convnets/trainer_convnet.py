@@ -461,8 +461,9 @@ class PhysicalTrainer():
 
                     print INPUT_DICT['batch_images'].shape
                     self.im_sample = INPUT_DICT['batch_images'][0, 4:, :].squeeze()
-                    self.im_sample_ext = INPUT_DICT['batch_mdm'][0, :, :].squeeze().unsqueeze(0)*-1
-                    self.im_sample_ext2 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().unsqueeze(0)*-1
+                    self.im_sample_ext = INPUT_DICT['batch_images'][0, 2:, :].squeeze()
+                    self.im_sample_ext2 = INPUT_DICT['batch_mdm'][0, :, :].squeeze().unsqueeze(0)*-1
+                    self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().unsqueeze(0)*-1
 
                     #self.publish_depth_marker_array(self.im_sample_ext2)
 
@@ -624,7 +625,8 @@ class PhysicalTrainer():
                 VisualizationLib().visualize_pressure_map(self.im_sample.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),
                                                           self.im_sample_ext.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),
                                                           self.im_sample_ext2.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),
-                                                          self.im_sample_val.cpu(), self.tar_sample_val.cpu(), self.sc_sample_val.cpu(),
+                                                          self.im_sample_ext3.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),
+                                                          #self.im_sample_val.cpu(), self.tar_sample_val.cpu(), self.sc_sample_val.cpu(),
                                                           block=False)
             else:
                 VisualizationLib().visualize_pressure_map(self.im_sample, self.tar_sample, self.sc_sample,

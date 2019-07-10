@@ -110,7 +110,7 @@ class TensorPrepLib():
             if dat is not None:
                 for entry in range(len(dat['images'])):
                     for i in range(num_repeats):
-                        depth_contact_list.append([np.fliplr(dat['mesh_depth'][entry]), np.fliplr(dat['mesh_contact'][entry]), ])
+                        depth_contact_list.append([dat['mesh_depth'][entry], dat['mesh_contact'][entry], ])
         return depth_contact_list
 
     def prep_depth_contact_input_est(self, depth_contact_input_est_list, dat_f, dat_m, num_repeats):
