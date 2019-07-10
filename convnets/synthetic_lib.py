@@ -274,8 +274,8 @@ class SyntheticLib():
         coin = np.random.randint(2, size=images.shape[0])
         coin[synth_real_switch == 1] = 0
 
-        coin[0] = 1
-        coin[1] = 0
+        #coin[0] = 1
+        #coin[1] = 0
 
         modified = coin
         original = 1 - coin

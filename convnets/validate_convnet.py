@@ -114,6 +114,9 @@ class PhysicalTrainer():
         self.CTRL_PNL['depth_map_output'] = True
         self.CTRL_PNL['depth_map_input_est'] = False#rue #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
+        self.CTRL_PNL['clip_sobel'] = True
+        self.CTRL_PNL['clip_betas'] = True
+        self.CTRL_PNL['mesh_bottom_dist'] = True
 
 
         self.count = 0
@@ -171,6 +174,7 @@ class PhysicalTrainer():
         test_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.test_x_flat,
                                                                                 self.test_a_flat,
                                                                                 self.CTRL_PNL['incl_inter'], self.mat_size,
+                                                                                self.CTRL_PNL['clip_sobel'],
                                                                                 self.CTRL_PNL['verbose'])
 
         test_xa = TensorPrepLib().append_input_depth_contact(np.array(test_xa),
@@ -485,7 +489,8 @@ class PhysicalTrainer():
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_planesreg_128b_100e.pt', map_location='cpu')
 
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_4xsize_128b_200e.pt', map_location = 'cpu')
-                self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_128b_101e_htwt_legacy.pt', map_location = 'cpu')
+                #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_128b_101e_htwt_legacy.pt', map_location = 'cpu')
+                self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg/convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_000002lr.pt', map_location = 'cpu')
                 #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/2.0xsize/convnet_anglesEU_synthreal_tanh_s8ang_sig0p5_5xreal_voloff_128b_300e.pt', map_location='cpu')
 
@@ -598,7 +603,7 @@ class PhysicalTrainer():
                 for image_ct in range(NUM_IMAGES):
                     # #self.im_sampleval = self.im_sampleval[:,0,:,:]
                     self.im_sampleval = INPUT_DICT['batch_images'][image_ct, 1:].squeeze()
-                    self.im_sample_ext = INPUT_DICT['batch_mdm'][0, :, :].squeeze().cpu().unsqueeze(0)*-1
+                    #self.im_sample_ext = INPUT_DICT['batch_mdm'][0, :, :].squeeze().cpu().unsqueeze(0)*-1
 
                     #print self.im_sample_ext.size()
                     self.im_sample_ext2 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().cpu().unsqueeze(0)*-1
@@ -619,10 +624,13 @@ class PhysicalTrainer():
                         VisualizationLib().visualize_pressure_map(self.im_sampleval.cpu(), self.tar_sampleval.cpu(), self.sc_sampleval.cpu(),
                                                                     self.im_sampleval.cpu(), None, None, 
                                                                     self.im_sample_ext2, None, None, 
-                                                                    self.im_sample_ext, None, None,
+                                                                    #self.im_sample_ext, None, None,
                                                                      block=False)
                     else:
-                        VisualizationLib().visualize_pressure_map(self.im_sampleval, self.tar_sampleval, self.sc_sampleval, block=False)
+                        VisualizationLib().visualize_pressure_map(self.im_sampleval, self.tar_sampleval, self.sc_sampleval,
+                                                                  self.im_sample_ext2, None, None,
+                                                                  #self.im_sample_ext, None, None,
+                                                                  block=False)
                     time.sleep(1)
 
         if GPU == True:
@@ -674,7 +682,7 @@ if __name__ == "__main__":
     network_design = True
 
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff.p')
-    test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff_outputB.p')
+    test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2067_none_stiff.p')
