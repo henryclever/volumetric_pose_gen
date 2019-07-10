@@ -642,11 +642,11 @@ if __name__ == "__main__":
 
     from visualization_msgs.msg import MarkerArray
     from visualization_msgs.msg import Marker
-    import rospy
+    #import rospy
 
-    rospy.init_node('depth_cam_node')
-    PointCloudArray = MarkerArray()
-    pointcloudPublisher = rospy.Publisher("/point_cloud", MarkerArray)
+    #rospy.init_node('depth_cam_node')
+    #PointCloudArray = MarkerArray()
+    #pointcloudPublisher = rospy.Publisher("/point_cloud", MarkerArray)
 
     #import rospy
 
