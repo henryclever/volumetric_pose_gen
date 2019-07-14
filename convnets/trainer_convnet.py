@@ -359,7 +359,7 @@ class PhysicalTrainer():
         if GPU == True:
             self.model = self.model.cuda()
 
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.000002, weight_decay=0.0005) #start with .00005
+        self.optimizer = optim.Adam(self.model.parameters(), lr=0.000005, weight_decay=0.0005) #start with .00005
 
         # train the model one epoch at a time
         for epoch in range(1, self.CTRL_PNL['num_epochs'] + 1):
@@ -717,8 +717,8 @@ if __name__ == "__main__":
         filepath_prefix = '/home/henry/data/'
         filepath_suffix = ''
 
-    filepath_suffix = '_output1p0'
-    #filepath_suffix = ''
+    #filepath_suffix = '_output1p0'
+    filepath_suffix = ''
 
     training_database_file_f = []
     training_database_file_m = []
