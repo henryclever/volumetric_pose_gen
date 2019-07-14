@@ -490,7 +490,7 @@ class PhysicalTrainer():
 
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_4xsize_128b_200e.pt', map_location = 'cpu')
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_128b_101e_htwt_legacy.pt', map_location = 'cpu')
-                self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg/convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_000002lr.pt', map_location = 'cpu')
+                self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg/convnet_anglesEU_synth_s9_3xreal_128b_0.05rtojtdpth_pmatcntin_100e_000002lr.pt', map_location = 'cpu')
                 #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/2.0xsize/convnet_anglesEU_synthreal_tanh_s8ang_sig0p5_5xreal_voloff_128b_300e.pt', map_location='cpu')
 
@@ -521,7 +521,7 @@ class PhysicalTrainer():
         n_examples = 0
 
         for batch_i, batch in enumerate(self.test_loader):
-            time.sleep(10)
+            #if batch_i == 20: break
             if DROPOUT == True:
                 batch[0] = batch[0].repeat(25, 1, 1, 1)
                 batch[1] = batch[1].repeat(25, 1)
@@ -585,8 +585,8 @@ class PhysicalTrainer():
                                                                                    self.CTRL_PNL['loss_vector_type'],
                                                                                    data='validate')
             else:
-                error_norm, error_avg, _ = VisualizationLib().print_error_val(targets_print[-2:-1,:],
-                                                                              targets_est_print[-2:-1,:],
+                error_norm, error_avg, _ = VisualizationLib().print_error_val(targets_print[-1:,:],
+                                                                              targets_est_print[-1:,:],
                                                                                    self.output_size_val,
                                                                                    self.CTRL_PNL['loss_vector_type'],
                                                                                    data='validate')
@@ -603,7 +603,7 @@ class PhysicalTrainer():
                 for image_ct in range(NUM_IMAGES):
                     # #self.im_sampleval = self.im_sampleval[:,0,:,:]
                     self.im_sampleval = INPUT_DICT['batch_images'][image_ct, 1:].squeeze()
-                    #self.im_sample_ext = INPUT_DICT['batch_mdm'][0, :, :].squeeze().cpu().unsqueeze(0)*-1
+                    self.im_sample_ext = INPUT_DICT['batch_mdm'][0, :, :].squeeze().cpu().unsqueeze(0)*-1
 
                     #print self.im_sample_ext.size()
                     self.im_sample_ext2 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().cpu().unsqueeze(0)*-1
@@ -628,10 +628,10 @@ class PhysicalTrainer():
                                                                      block=False)
                     else:
                         VisualizationLib().visualize_pressure_map(self.im_sampleval, self.tar_sampleval, self.sc_sampleval,
-                                                                  self.im_sample_ext2, None, None,
-                                                                  #self.im_sample_ext, None, None,
+                                                                  self.im_sample_ext, self.tar_sampleval, self.sc_sampleval,
+                                                                  self.im_sample_ext2, self.tar_sampleval, self.sc_sampleval,
                                                                   block=False)
-                    time.sleep(1)
+                    #time.sleep(1)
 
         if GPU == True:
             error_norm, error_avg, _ = VisualizationLib().print_error_iros2018(targets_print.cpu(), targets_est_print.cpu(), self.output_size_val, self.CTRL_PNL['loss_vector_type'], data='validate')
@@ -676,14 +676,15 @@ if __name__ == "__main__":
 
     filepath_prefix_qt = '/home/henry/'
 
+
     test_database_file_f = []
     test_database_file_m = []
 
     network_design = True
 
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff.p')
-    test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
-    #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff.p')
+    #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
+    test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2067_none_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1121_upperbody_stiff.p')

@@ -121,7 +121,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['adjust_ang_from_est'] = True#self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
-        self.CTRL_PNL['mesh_bottom_dist'] = True
+        self.CTRL_PNL['mesh_bottom_dist'] = False
 
         self.weight_joints = self.opt.j_d_ratio*2
         self.weight_depth_planes = (1-self.opt.j_d_ratio)*2
@@ -465,7 +465,9 @@ class PhysicalTrainer():
                     self.im_sample_ext2 = INPUT_DICT['batch_mdm'][0, :, :].squeeze().unsqueeze(0)*-1
                     self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().unsqueeze(0)*-1
 
-                    #self.publish_depth_marker_array(self.im_sample_ext2)
+                    print self.im_sample.size(), self.im_sample_ext.size(), self.im_sample_ext2.size(), self.im_sample_ext3.size()
+
+                    self.publish_depth_marker_array(self.im_sample_ext3)
 
                     self.tar_sample = INPUT_DICT['batch_targets']
                     self.tar_sample = self.tar_sample[0, :].squeeze() / 1000
@@ -520,6 +522,7 @@ class PhysicalTrainer():
     def publish_depth_marker_array(self, depth_array):
         depth_array = depth_array.squeeze().cpu().numpy()
 
+        PointCloudArray = MarkerArray()
 
         x = np.arange(0, 27).astype(float)
         x = np.tile(x, (64, 1))
@@ -533,10 +536,11 @@ class PhysicalTrainer():
         point_cloud = point_cloud.astype(float)*0.0286
         point_cloud[:, 2] = point_cloud[:, 2]/0.0286*0.001
 
+        point_cloud[:, 2] = np.flipud(point_cloud[:, 2])
 
         #print point_cloud.shape
         for joint in range(0, point_cloud.shape[0]):
-            print point_cloud[joint, :]
+            #print point_cloud[joint, :]
             Tmarker = Marker()
             Tmarker.type = Tmarker.SPHERE
             Tmarker.header.frame_id = "map"
@@ -611,7 +615,7 @@ class PhysicalTrainer():
 
 
         self.im_sample_val = INPUT_DICT_VAL['batch_images']
-        self.im_sample_val = self.im_sample_val[0, 4:, :].squeeze()
+        self.im_sample_val = self.im_sample_val[0, 1:, :].squeeze()
         self.tar_sample_val = INPUT_DICT_VAL['batch_targets']  # this is just 10 x 3
         self.tar_sample_val = self.tar_sample_val[0, :].squeeze() / 1000
         self.sc_sample_val = OUTPUT_DICT_VAL['batch_targets_est']  # score space is larger is 72 x3
@@ -623,16 +627,16 @@ class PhysicalTrainer():
         if self.opt.visualize == True:
             if GPU == True:
                 VisualizationLib().visualize_pressure_map(self.im_sample.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),
-                                                          self.im_sample_ext.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),
-                                                          self.im_sample_ext2.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),
-                                                          self.im_sample_ext3.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),
+                                                          self.im_sample_ext.cpu(), None, None, #self.tar_sample.cpu(), self.sc_sample.cpu(),
+                                                          self.im_sample_ext2.cpu(),None, None, # self.tar_sample.cpu(), self.sc_sample.cpu(),
+                                                          self.im_sample_ext3.cpu(),None, None, # self.tar_sample.cpu(), self.sc_sample.cpu(),
                                                           #self.im_sample_val.cpu(), self.tar_sample_val.cpu(), self.sc_sample_val.cpu(),
                                                           block=False)
             else:
                 VisualizationLib().visualize_pressure_map(self.im_sample, self.tar_sample, self.sc_sample,
                                                          # self.im_sample_ext, None, None,
                                                           self.im_sample_ext2, None, None,
-                                                          self.im_sample_val, self.tar_sample_val, self.sc_sample_val,
+                                                          100-self.im_sample_ext3, None, None, #, self.tar_sample_val, self.sc_sample_val,
                                                           block=False)
 
         return loss
@@ -644,11 +648,10 @@ if __name__ == "__main__":
 
     from visualization_msgs.msg import MarkerArray
     from visualization_msgs.msg import Marker
-    #import rospy
+    import rospy
 
-    #rospy.init_node('depth_cam_node')
-    #PointCloudArray = MarkerArray()
-    #pointcloudPublisher = rospy.Publisher("/point_cloud", MarkerArray)
+    rospy.init_node('depth_cam_node')
+    pointcloudPublisher = rospy.Publisher("/point_cloud", MarkerArray)
 
     #import rospy
 
@@ -704,7 +707,7 @@ if __name__ == "__main__":
         filepath_prefix = '/home/henry/data/'
         filepath_suffix = ''
 
-    #filepath_prefix = '/media/henry/multimodal_data_2/data/'
+    filepath_prefix = '/media/henry/multimodal_data_2/data/'
     filepath_suffix = '_outputC'
     #filepath_suffix = ''
 

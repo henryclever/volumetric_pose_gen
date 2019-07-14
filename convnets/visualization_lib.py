@@ -189,6 +189,33 @@ class VisualizationLib():
 
     def print_error_iros2018(self, target, score, output_size, loss_vector_type = None, data = None, printerror = True):
 
+
+        if target.shape[1] == 72:
+            target = target.reshape(-1, 24, 3)
+            target = np.stack((target[:, 15, :],
+                               target[:, 3, :],
+                               target[:, 19, :],
+                               target[:, 18, :],
+                               target[:, 21, :],
+                               target[:, 20, :],
+                               target[:, 5, :],
+                               target[:, 4, :],
+                               target[:, 8, :],
+                               target[:, 7, :],), axis = 1)
+
+            score = score.reshape(-1, 24, 3)
+            score = np.stack((score[:, 15, :],
+                               score[:, 3, :],
+                               score[:, 19, :],
+                               score[:, 18, :],
+                               score[:, 21, :],
+                               score[:, 20, :],
+                               score[:, 5, :],
+                               score[:, 4, :],
+                               score[:, 8, :],
+                               score[:, 7, :],), axis = 1)
+
+
         error = (score - target)
 
         print error.shape
@@ -321,7 +348,7 @@ class VisualizationLib():
             ax2.set_facecolor('cyan')
             ax2.imshow(p_map_val, interpolation='nearest', cmap=
             plt.cm.jet, origin='upper', vmin=0, vmax=100)
-            ax2.set_title('Training Sample \n Input \n Mesh Penetration')
+            ax2.set_title('Training Sample \n Ground Truth \n Mesh Penetration')
 
         if p_map_ext is not None:
             ax3 = fig.add_subplot(1, num_subplots, 3)
@@ -330,7 +357,7 @@ class VisualizationLib():
             ax3.set_facecolor('cyan')
             ax3.imshow(p_map_ext, interpolation='nearest', cmap=
             plt.cm.jet, origin='upper', vmin=0, vmax=100)
-            ax3.set_title('Training Sample \n Ground Truth \n Mesh Penetration')
+            ax3.set_title('Training Sample \n Estimated \n Mesh Penetration')
 
         if p_map_ext2 is not None:
             ax4 = fig.add_subplot(1, num_subplots, 4)
@@ -339,7 +366,7 @@ class VisualizationLib():
             ax4.set_facecolor('cyan')
             ax4.imshow(p_map_ext2, interpolation='nearest', cmap=
             plt.cm.jet, origin='upper', vmin=0, vmax=100)
-            ax4.set_title('Training Sample \n Estimated \n Mesh Penetration')
+            ax4.set_title('Training Sample \n Input \n Mesh Penetration')
             #ax4.set_title('Validation Sample \n Pressure Mat, \n Targets and Estimates')
 
 

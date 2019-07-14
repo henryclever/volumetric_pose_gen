@@ -506,6 +506,7 @@ class MeshDepthLib():
 
         #3print self.filler_taxels.shape, 'filler shape'
         if get_mesh_bottom_dist == False:
+            print "GETTING THE TOP MESH DIST"
             verts_taxel_int[:, :, 2] *= -1
 
         verts_taxel_int = torch.cat((self.filler_taxels[0:cbs, :, :], verts_taxel_int), dim=1)

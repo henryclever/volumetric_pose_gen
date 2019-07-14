@@ -102,8 +102,8 @@ class PhysicalTrainer():
         self.CTRL_PNL['num_epochs'] = 101
         self.CTRL_PNL['incl_inter'] = True
         self.CTRL_PNL['shuffle'] = False
-        self.CTRL_PNL['incl_ht_wt_channels'] = False
-        self.CTRL_PNL['incl_pmat_cntct_input'] = False
+        self.CTRL_PNL['incl_ht_wt_channels'] = True
+        self.CTRL_PNL['incl_pmat_cntct_input'] = True
         self.CTRL_PNL['num_input_channels'] = 3
         self.CTRL_PNL['GPU'] = GPU
         self.CTRL_PNL['dtype'] = dtype
@@ -113,6 +113,9 @@ class PhysicalTrainer():
         self.CTRL_PNL['depth_map_output'] = True
         self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
+        self.CTRL_PNL['clip_sobel'] = True
+        self.CTRL_PNL['clip_betas'] = True
+        self.CTRL_PNL['mesh_bottom_dist'] = True
 
 
         self.filename = filename
@@ -183,6 +186,7 @@ class PhysicalTrainer():
         test_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.test_x_flat,
                                                                                 self.test_a_flat,
                                                                                 self.CTRL_PNL['incl_inter'], self.mat_size,
+                                                                                self.CTRL_PNL['clip_sobel'],
                                                                                 self.CTRL_PNL['verbose'])
 
         test_xa = TensorPrepLib().append_input_depth_contact(np.array(test_xa),
@@ -250,9 +254,12 @@ class PhysicalTrainer():
                 self.model = self.model.cuda()
             else:
                 #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s6ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
+                self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg/'
+                                        'convnet_anglesEU_synth_s9_3xreal_128b_0.5rtojtdpth_pmatcntin_100e_000002lr.pt',
+                                        map_location='cpu')
 
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_planesreg_128b_100e.pt', map_location='cpu')
-                self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
+                #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
                 #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/2.0xsize/convnet_anglesEU_synthreal_tanh_s8ang_sig0p5_5xreal_voloff_128b_300e.pt', map_location='cpu')
 
@@ -386,8 +393,8 @@ class PhysicalTrainer():
                     time.sleep(1)
 
 
-        #pkl.dump(self.dat,open('/media/henry/multimodal_data_2/'+self.filename+'_outputB.p', 'wb'))
-        pkl.dump(self.dat,open('/home/henry/'+self.filename+'_outputB.p', 'wb'))
+        pkl.dump(self.dat,open('/media/henry/multimodal_data_2/'+self.filename+'_output0p5.p', 'wb'))
+        #pkl.dump(self.dat,open('/home/henry/'+self.filename+'_output0p5.p', 'wb'))
 
 
         #if GPU == True:

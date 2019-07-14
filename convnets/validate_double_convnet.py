@@ -95,6 +95,8 @@ class PhysicalTrainer():
         3d position and orientation of the markers associated with it.'''
 
         # change this to 'direct' when you are doing baseline methods
+
+
         self.CTRL_PNL = {}
         self.CTRL_PNL['batch_size'] = 1
         self.CTRL_PNL['loss_vector_type'] = opt.losstype
@@ -113,6 +115,11 @@ class PhysicalTrainer():
         self.CTRL_PNL['depth_map_labels'] = False
         self.CTRL_PNL['depth_map_output'] = True
         self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
+        self.CTRL_PNL['precomp_net1'] = True
+
+        if self.CTRL_PNL['precomp_net1'] == True:
+            self.CTRL_PNL['depth_map_input_est'] = True
+
         self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
@@ -130,6 +137,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['filepath_prefix'] = '/home/henry/'
         self.CTRL_PNL['aws'] = False
         self.CTRL_PNL['lock_root'] = False
+
 
 
 
@@ -266,7 +274,7 @@ class PhysicalTrainer():
                 self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg/'
                                         'convnet_anglesEU_synth_s9_3xreal_128b_0.5rtojtdpth_pmatcntin_100e_000002lr.pt', map_location = 'cpu')
                 self.model_cor = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg_correction/'
-                                        'convnet_anglesEU_synth_s9_3xreal_128b_0.5rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.pt', map_location = 'cpu')
+                                        'convnet_anglesEU_synth_s9_3xreal_128b_0.5rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betashold.pt', map_location = 'cpu')
 
 
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_4xsize_128b_200e.pt', map_location = 'cpu')
@@ -303,6 +311,7 @@ class PhysicalTrainer():
         n_examples = 0
 
         for batch_i, batch in enumerate(self.test_loader):
+            #if batch_i == 10: break
 
             if self.CTRL_PNL['loss_vector_type'] == 'direct':
                 scores, INPUT_DICT, OUTPUT_DICT = \
@@ -321,10 +330,11 @@ class PhysicalTrainer():
                 batch_cor.append(batch[0])
                 batch_cor.append(batch[1])
                 if self.CTRL_PNL_COR['incl_pmat_cntct_input'] == True and self.CTRL_PNL['incl_pmat_cntct_input'] == False: batch[0] = batch[0][:, 1:, :, :]
+
                 print batch[0].size(), 'batch 0 size'
                 print batch[1].size(), 'batch 1 size'
-                print batch_cor[0].size(), 'batch cor 0 size'
-                print batch_cor[1].size(), 'batch cor 1 size'
+                print batch_cor[0].size(), 'batch cor 0 size A'
+                print batch_cor[1].size(), 'batch cor 1 size A'
 
                 scores, INPUT_DICT, OUTPUT_DICT = \
                     UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model=self.model,
@@ -338,6 +348,9 @@ class PhysicalTrainer():
                 loss_curr = self.criterion(scores[:, 10:34], scores_zeros[:, 10:34]).data.item() / 10.
 
                 print loss_curr, 'loss'
+
+                #########change output dict to be the input dict here if we're testing on the precomputed labels#######
+
 
                 mdm_est_pos = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1)
                 mdm_est_neg = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1)
@@ -359,13 +372,19 @@ class PhysicalTrainer():
                                                 cm_est,
                                                 batch_cor[0]), dim = 1)
 
-                batch_cor[1] = torch.cat((batch_cor[1],
-                                          OUTPUT_DICT['batch_betas_est'].clone(),
-                                          OUTPUT_DICT['batch_angles_est'].clone(),
-                                          OUTPUT_DICT['batch_root_xyz_est'].clone()), dim = 1)
+                if self.CTRL_PNL['precomp_net1'] == True:
+                    batch_cor[1] = torch.cat((batch_cor[1][:, :-85],
+                                              OUTPUT_DICT['batch_betas_est'].clone(),
+                                              OUTPUT_DICT['batch_angles_est'].clone(),
+                                              OUTPUT_DICT['batch_root_xyz_est'].clone()), dim = 1)
+                else:
+                    batch_cor[1] = torch.cat((batch_cor[1],
+                                              OUTPUT_DICT['batch_betas_est'].clone(),
+                                              OUTPUT_DICT['batch_angles_est'].clone(),
+                                              OUTPUT_DICT['batch_root_xyz_est'].clone()), dim = 1)
 
-                print batch_cor[0].size(), 'batch cor 0 size'
-                print batch_cor[1].size(), 'batch cor 1 size'
+                print batch_cor[0].size(), 'batch cor 0 size B'
+                print batch_cor[1].size(), 'batch cor 1 size B'
 
                 #batch_cor2 = []
                 #batch_cor2.append(torch.cat((batch_cor[0][:, 0:1, :, :],
@@ -397,16 +416,16 @@ class PhysicalTrainer():
 
 
             try:
-                targets_print = torch.cat([targets_print, torch.mean(INPUT_DICT['batch_targets'], dim = 0).unsqueeze(0)], dim=0)
-                targets_est_print = torch.cat([targets_est_print, torch.mean(OUTPUT_DICT['batch_targets_est'], dim = 0).unsqueeze(0)], dim=0)
+                targets_print = torch.cat([targets_print, torch.mean(INPUT_DICT_COR['batch_targets'], dim = 0).unsqueeze(0)], dim=0)
+                targets_est_print = torch.cat([targets_est_print, torch.mean(OUTPUT_DICT_COR['batch_targets_est'], dim = 0).unsqueeze(0)], dim=0)
             except:
 
-                targets_print = torch.mean(INPUT_DICT['batch_targets'], dim = 0).unsqueeze(0)
-                targets_est_print = torch.mean(OUTPUT_DICT['batch_targets_est'], dim = 0).unsqueeze(0)
+                targets_print = torch.mean(INPUT_DICT_COR['batch_targets'], dim = 0).unsqueeze(0)
+                targets_est_print = torch.mean(OUTPUT_DICT_COR['batch_targets_est'], dim = 0).unsqueeze(0)
 
 
-            print targets_print.shape, INPUT_DICT['batch_targets'].shape
-            print targets_est_print.shape, OUTPUT_DICT['batch_targets_est'].shape
+            print targets_print.shape, INPUT_DICT_COR['batch_targets'].shape
+            print targets_est_print.shape, OUTPUT_DICT_COR['batch_targets_est'].shape
 
 
             if GPU == True:
@@ -499,6 +518,7 @@ if __name__ == "__main__":
     opt, args = p.parse_args()
 
     filepath_prefix_qt = '/home/henry/'
+    filepath_prefix = '/media/henry/multimodal_data_2/'
 
     test_database_file_f = []
     test_database_file_m = []
@@ -506,8 +526,8 @@ if __name__ == "__main__":
     network_design = True
 
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff.p')
-    test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
-    #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff.p')
+    #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
+    test_database_file_f.append(filepath_prefix+'data/synth/side_up_fw/0p5/train_f_lay_2000_of_2072_leftside_stiff_outputC.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2067_none_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1121_upperbody_stiff.p')

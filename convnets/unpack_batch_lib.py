@@ -68,6 +68,9 @@ class UnpackBatchLib():
         batch.append(batch[1][:, 160:161])  # mass, kg
         batch.append(batch[1][:, 161:162])  # height, kg
 
+
+
+
         if CTRL_PNL['adjust_ang_from_est'] == True:
             adj_ext_idx += 3
             batch.append(batch[1][:, 162:172]) #betas est
@@ -143,6 +146,9 @@ class UnpackBatchLib():
             INPUT_DICT['batch_cm'] = None
 
 
+
+
+
         scores, OUTPUT_DICT = model.forward_kinematic_angles(images=images_up,
                                                              gender_switch=gender_switch,
                                                              synth_real_switch=synth_real_switch,
@@ -174,7 +180,6 @@ class UnpackBatchLib():
         #print angles_gt[0, :], "GT"
         INPUT_DICT['batch_images'] = images.data
         INPUT_DICT['batch_targets'] = targets.data
-
 
         return scores, INPUT_DICT, OUTPUT_DICT
 
