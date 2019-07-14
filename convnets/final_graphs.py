@@ -96,16 +96,27 @@ class DataVisualizer():
 
 
 
-        train_val_loss = load_pickle(self.dump_path + '/convnet_losses_direct_real_s9_alltest_128b_300e.p')
+        train_val_loss = load_pickle(self.dump_path + '/planesreg/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_000002lr.p')
         for key in train_val_loss:
+            print key
+        train_val_loss_2reg = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betasreg.p')
+        for key in train_val_loss_2reg:
+            print key
+
+        train_val_loss_2hold = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betashold.p')
+        for key in train_val_loss_2reg:
             print key
 
 
 
 
 
-        plt.plot(train_val_loss['epoch_direct_real_s9_alltest_128b_300e'], train_val_loss['val_direct_real_s9_alltest_128b_300e'], 'k')
-        plt.plot(train_val_loss['epoch_direct_real_s9_alltest_128b_300e'], train_val_loss['train_direct_real_s9_alltest_128b_300e'], 'k')
+        plt.plot(train_val_loss['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin'],
+                 train_val_loss['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin'], 'k')
+        plt.plot(np.array(train_val_loss_2reg['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'])+100,
+                 train_val_loss_2reg['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'], 'g')
+        plt.plot(np.array(train_val_loss_2hold['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'])+100,
+                 train_val_loss_2hold['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'], 'r')
 
         plt.legend()
         plt.ylabel('Mean squared error loss over 30 joint vectors')
@@ -132,8 +143,9 @@ if __name__ == "__main__":
 
     opt, args = p.parse_args()
 
-    Path = '/media/henryclever/Seagate Backup Plus Drive/Autobed_OFFICIAL_Trials/'
-    Path = '/home/henry/data/synth/'
+    #Path = '/media/henryclever/Seagate Backup Plus Drive/Autobed_OFFICIAL_Trials/'
+    #Path = '/home/henry/data/synth/'
+    Path = '/media/henry/multimodal_data_2/data/convnets/'
 
     #Initialize trainer with a training database file
     p = DataVisualizer(pkl_directory=Path, opt = opt)

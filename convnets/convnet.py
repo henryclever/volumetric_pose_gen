@@ -239,8 +239,8 @@ class CNN(nn.Module):
         filepath_prefix = CTRL_PNL['filepath_prefix']
         OUTPUT_DICT = {}
 
-        self.GPU = True
-        self.dtype = torch.cuda.FloatTensor
+        self.GPU = False
+        self.dtype = torch.FloatTensor
 
         try:
             x = self.meshDepthLib.bounds
@@ -303,8 +303,8 @@ class CNN(nn.Module):
             print OUTPUT_EST_DICT['angles'][0, :]
 
             #scores[:, 13:85] = scores[:, 13:85].clone()
-            scores[:, 13:85] = scores[:, 13:85].clone() + OUTPUT_EST_DICT['angles']
-            #scores[:, 13:85] = OUTPUT_EST_DICT['angles']
+            #scores[:, 13:85] = scores[:, 13:85].clone() + OUTPUT_EST_DICT['angles']
+            scores[:, 13:85] = OUTPUT_EST_DICT['angles']
 
 
         OUTPUT_DICT['batch_betas_est'] = scores[:, 0:10].clone().data

@@ -115,7 +115,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['depth_map_labels'] = False
         self.CTRL_PNL['depth_map_output'] = True
         self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
-        self.CTRL_PNL['precomp_net1'] = True
+        self.CTRL_PNL['precomp_net1'] = False
 
         if self.CTRL_PNL['precomp_net1'] == True:
             self.CTRL_PNL['depth_map_input_est'] = True
@@ -262,7 +262,7 @@ class PhysicalTrainer():
                 self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg/'
                                         'convnet_anglesEU_synth_s9_3xreal_128b_0.5rtojtdpth_pmatcntin_100e_000002lr.pt')
                 self.model_cor = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg_correction/'
-                                        'convnet_anglesEU_synth_s9_3xreal_128b_0.5rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betashold.pt')
+                                        'convnet_anglesEU_synth_s9_3xreal_128b_0.5rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betasreg.pt')
 
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_300e.pt')
                 self.model = self.model.cuda()
@@ -278,9 +278,9 @@ class PhysicalTrainer():
                 #self.model_cor2 = torch.load('/home/henry/data/convnets/convnet_anglesEU_synth_s9_3xreal_128b_101e_pmatcntin_angleadj_25e.pt', map_location = 'cpu')
 
                 self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg/'
-                                        'convnet_anglesEU_synth_s9_3xreal_128b_0.5rtojtdpth_pmatcntin_100e_000002lr.pt', map_location = 'cpu')
+                                        'convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_000002lr.pt', map_location = 'cpu')
                 self.model_cor = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg_correction/'
-                                        'convnet_anglesEU_synth_s9_3xreal_128b_0.5rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betashold.pt', map_location = 'cpu')
+                                        'convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betasreg.pt', map_location = 'cpu')
 
 
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_4xsize_128b_200e.pt', map_location = 'cpu')
@@ -341,6 +341,7 @@ class PhysicalTrainer():
                 print batch[1].size(), 'batch 1 size'
                 print batch_cor[0].size(), 'batch cor 0 size A'
                 print batch_cor[1].size(), 'batch cor 1 size A'
+                self.CTRL_PNL['adjust_ang_from_est'] = False
 
                 scores, INPUT_DICT, OUTPUT_DICT = \
                     UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model=self.model,
@@ -533,7 +534,7 @@ if __name__ == "__main__":
 
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
-    test_database_file_f.append(filepath_prefix+'data/synth/side_up_fw/0p5/train_f_lay_2000_of_2072_leftside_stiff_outputC.p')
+    test_database_file_f.append(filepath_prefix+'data/synth/side_up_fw/1p0/train_f_lay_2000_of_2072_leftside_stiff_output1p0.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2067_none_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1121_upperbody_stiff.p')
