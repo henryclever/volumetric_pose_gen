@@ -117,8 +117,8 @@ class PhysicalTrainer():
         self.CTRL_PNL['aws'] = self.opt.aws
         self.CTRL_PNL['depth_map_labels'] = True #can only be true if we have 100% synthetic data for training
         self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
-        self.CTRL_PNL['depth_map_input_est'] = True #do this if we're working in a two-part regression
-        self.CTRL_PNL['adjust_ang_from_est'] = True#self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
+        self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
+        self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
         self.CTRL_PNL['mesh_bottom_dist'] = True
@@ -463,10 +463,17 @@ class PhysicalTrainer():
                                                              self.output_size_train, self.CTRL_PNL['loss_vector_type'],
                                                              data='train')
 
-                    self.im_sample = INPUT_DICT['batch_images'][0, 4:, :].squeeze()
-                    self.im_sample_ext = INPUT_DICT['batch_images'][0, 2:, :].squeeze() #estimated input
-                    self.im_sample_ext2 = INPUT_DICT['batch_mdm'][0, :, :].squeeze().unsqueeze(0)*-1 #ground truth
-                    self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().unsqueeze(0)*-1
+                    if self.CTRL_PNL['depth_map_input_est'] == True: #two part reg
+                        self.im_sample = INPUT_DICT['batch_images'][0, 4:, :].squeeze() #pmat
+                        self.im_sample_ext = INPUT_DICT['batch_images'][0, 2:, :].squeeze() #estimated input
+                        self.im_sample_ext2 = INPUT_DICT['batch_mdm'][0, :, :].squeeze().unsqueeze(0)*-1 #ground truth depth
+                        self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().unsqueeze(0)*-1 #est depth output
+                    else:
+                        self.im_sample = INPUT_DICT['batch_images'][0, 1:, :].squeeze() #pmat
+                        self.im_sample_ext = INPUT_DICT['batch_images'][0, 0:, :].squeeze() #pmat contact
+                        self.im_sample_ext2 = INPUT_DICT['batch_mdm'][0, :, :].squeeze().unsqueeze(0)*-1 #ground truth depth
+                        self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().unsqueeze(0)*-1 #est depth output
+
 
                     #print self.im_sample.size(), self.im_sample_ext.size(), self.im_sample_ext2.size(), self.im_sample_ext3.size()
 
