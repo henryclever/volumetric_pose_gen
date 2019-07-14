@@ -82,7 +82,6 @@ class UnpackBatchLib():
             extra_smpl_angles = None
             extra_targets = None
 
-        print batch[0].size(), "BAT 0 SIZE", CTRL_PNL['num_input_channels_batch0']
 
         if CTRL_PNL['depth_map_labels'] == True and is_training == True:
             batch.append(batch[0][:, CTRL_PNL['num_input_channels_batch0'], : ,:]) #mesh depth matrix

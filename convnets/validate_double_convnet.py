@@ -260,9 +260,9 @@ class PhysicalTrainer():
                 #self.model = torch.load('/home/henry/data/convnets/epochs_set_3/convnet_anglesEU_synthreal_s12_3xreal_128b_101e_300e.pt')
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_128b_200e.pt')
                 self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg/'
-                                        'convnet_anglesEU_synth_s9_3xreal_128b_0.5rtojtdpth_pmatcntin_100e_000002lr.pt')
+                                        'convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_000002lr.pt')
                 self.model_cor = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg_correction/'
-                                        'convnet_anglesEU_synth_s9_3xreal_128b_0.5rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betasreg.pt')
+                                        'convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betasreg.pt')
 
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_300e.pt')
                 self.model = self.model.cuda()
@@ -367,28 +367,30 @@ class PhysicalTrainer():
                 cm_est = OUTPUT_DICT['batch_cm_est'].clone().unsqueeze(1) * 100
                 # depth_contact_input_est_list.append([dat['mdm_est'][entry], dat['cm_est'][entry], ])
 
+                print batch_cor[0].type()
+
                 if self.CTRL_PNL_COR['incl_pmat_cntct_input'] == True:
                     batch_cor[0] = torch.cat((batch_cor[0][:, 0:1, :, :],
-                                                mdm_est_pos,
-                                                mdm_est_neg,
-                                                cm_est,
+                                                mdm_est_pos.type(torch.FloatTensor),
+                                                mdm_est_neg.type(torch.FloatTensor),
+                                                cm_est.type(torch.FloatTensor),
                                                 batch_cor[0][:, 1:, :, :]), dim = 1)
                 else:
-                    batch_cor[0] = torch.cat((mdm_est_pos,
-                                                mdm_est_neg,
-                                                cm_est,
+                    batch_cor[0] = torch.cat((mdm_est_pos.type(torch.FloatTensor),
+                                                mdm_est_neg.type(torch.FloatTensor),
+                                                cm_est.type(torch.FloatTensor),
                                                 batch_cor[0]), dim = 1)
 
                 if self.CTRL_PNL['precomp_net1'] == True:
                     batch_cor[1] = torch.cat((batch_cor[1][:, :-85],
-                                              OUTPUT_DICT['batch_betas_est'].clone(),
-                                              OUTPUT_DICT['batch_angles_est'].clone(),
-                                              OUTPUT_DICT['batch_root_xyz_est'].clone()), dim = 1)
+                                              OUTPUT_DICT['batch_betas_est'].clone().type(torch.FloatTensor),
+                                              OUTPUT_DICT['batch_angles_est'].clone().type(torch.FloatTensor),
+                                              OUTPUT_DICT['batch_root_xyz_est'].clone().type(torch.FloatTensor)), dim = 1)
                 else:
                     batch_cor[1] = torch.cat((batch_cor[1],
-                                              OUTPUT_DICT['batch_betas_est'].clone(),
-                                              OUTPUT_DICT['batch_angles_est'].clone(),
-                                              OUTPUT_DICT['batch_root_xyz_est'].clone()), dim = 1)
+                                              OUTPUT_DICT['batch_betas_est'].clone().type(torch.FloatTensor),
+                                              OUTPUT_DICT['batch_angles_est'].clone().type(torch.FloatTensor),
+                                              OUTPUT_DICT['batch_root_xyz_est'].clone().type(torch.FloatTensor)), dim = 1)
 
                 print batch_cor[0].size(), 'batch cor 0 size B'
                 print batch_cor[1].size(), 'batch cor 1 size B'
@@ -398,9 +400,16 @@ class PhysicalTrainer():
                 #                                batch_cor[0][:, 4:, :, :]), dim=1))
                 #batch_cor2.append(batch_cor[1].clone())
 
+                VisualizationLib().visualize_pressure_map(batch_cor[0][0, 4:].squeeze(), None, None,
+                                                          batch_cor[0][0, 5:].squeeze(), None, None,
+                                                          batch_cor[0][0, 6:].squeeze(), None, None,
+                                                          block=False)
+                for i in range(7):
+                    print i, torch.min(batch_cor[0][0, i]), torch.max(batch_cor[0][0, i])
+
 
                 scores, INPUT_DICT_COR, OUTPUT_DICT_COR = \
-                    UnpackBatchLib().unpackage_batch_kin_pass(batch_cor, is_training=False, model=self.model_cor,
+                    UnpackBatchLib().unpackage_batch_kin_pass(batch_cor, is_training=True, model=self.model_cor,
                                                               CTRL_PNL=self.CTRL_PNL_COR)
 
 

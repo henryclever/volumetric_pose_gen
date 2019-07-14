@@ -141,7 +141,7 @@ class PhysicalTrainer():
             self.CTRL_PNL['filepath_prefix'] = '/home/ubuntu/'
         else:
             self.CTRL_PNL['filepath_prefix'] = '/home/henry/'
-            self.CTRL_PNL['filepath_prefix'] = '/media/henry/multimodal_data_2/'
+            #self.CTRL_PNL['filepath_prefix'] = '/media/henry/multimodal_data_2/'
 
         if self.CTRL_PNL['depth_map_output'] == True: #we need all the vertices if we're going to regress the depth maps
             self.verts_list = "all"
@@ -334,12 +334,12 @@ class PhysicalTrainer():
 
         elif self.CTRL_PNL['loss_vector_type'] == 'anglesDC' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU':
             fc_output_size = 85## 10 + 3 + 24*3 --- betas, root shift, rotations
-            #self.model = convnet.CNN(fc_output_size, self.CTRL_PNL['loss_vector_type'], self.CTRL_PNL['batch_size'],
-            #                         verts_list = self.verts_list, filepath=self.CTRL_PNL['filepath_prefix'], in_channels=self.CTRL_PNL['num_input_channels'])
+            self.model = convnet.CNN(fc_output_size, self.CTRL_PNL['loss_vector_type'], self.CTRL_PNL['batch_size'],
+                                     verts_list = self.verts_list, filepath=self.CTRL_PNL['filepath_prefix'], in_channels=self.CTRL_PNL['num_input_channels'])
 
             #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
-            self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg_correction/'
-                                        'convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betasreg.pt', map_location='cpu')
+            #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg_correction/'
+            #                            'convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betasreg.pt')
 
             #self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.CTRL_PNL['loss_vector_type'], self.CTRL_PNL['batch_size'], filepath=filepath_prefix)
             #self.model = torch.load('/home/ubuntu/Autobed_OFFICIAL_Trials' + '/subject_' + str(self.opt.leave_out) + '/convnets/convnet_9to18_'+str(self.CTRL_PNL['loss_vector_type'])+'_sTrue_128b_200e_' + str(self.opt.leave_out) + '.pt', map_location=lambda storage, loc: storage)
@@ -445,8 +445,9 @@ class PhysicalTrainer():
                         loss += loss_mesh_contact
 
 
-                #loss.backward()
-                #self.optimizer.step()
+
+                loss.backward()
+                self.optimizer.step()
                 loss *= 1000
 
                 if batch_idx % opt.log_interval == 0:
@@ -462,13 +463,12 @@ class PhysicalTrainer():
                                                              self.output_size_train, self.CTRL_PNL['loss_vector_type'],
                                                              data='train')
 
-                    print INPUT_DICT['batch_images'].shape
                     self.im_sample = INPUT_DICT['batch_images'][0, 4:, :].squeeze()
-                    self.im_sample_ext = INPUT_DICT['batch_images'][0, 2:, :].squeeze()
-                    self.im_sample_ext2 = INPUT_DICT['batch_mdm'][0, :, :].squeeze().unsqueeze(0)*-1
+                    self.im_sample_ext = INPUT_DICT['batch_images'][0, 2:, :].squeeze() #estimated input
+                    self.im_sample_ext2 = INPUT_DICT['batch_mdm'][0, :, :].squeeze().unsqueeze(0)*-1 #ground truth
                     self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().unsqueeze(0)*-1
 
-                    print self.im_sample.size(), self.im_sample_ext.size(), self.im_sample_ext2.size(), self.im_sample_ext3.size()
+                    #print self.im_sample.size(), self.im_sample_ext.size(), self.im_sample_ext2.size(), self.im_sample_ext3.size()
 
                     #self.publish_depth_marker_array(self.im_sample_ext3)
 
@@ -630,7 +630,7 @@ class PhysicalTrainer():
         if self.opt.visualize == True:
             if GPU == True:
                 VisualizationLib().visualize_pressure_map(self.im_sample.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),
-                                                          self.im_sample_ext.cpu(), None, None, #self.tar_sample.cpu(), self.sc_sample.cpu(),
+                                                          self.im_sample_ext.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(), #self.tar_sample.cpu(), self.sc_sample.cpu(),
                                                           self.im_sample_ext2.cpu(),None, None, # self.tar_sample.cpu(), self.sc_sample.cpu(),
                                                           self.im_sample_ext3.cpu(),None, None, # self.tar_sample.cpu(), self.sc_sample.cpu(),
                                                           #self.im_sample_val.cpu(), self.tar_sample_val.cpu(), self.sc_sample_val.cpu(),
@@ -697,7 +697,7 @@ if __name__ == "__main__":
     p.add_option('--verbose', '--v',  action='store_true', dest='verbose',
                  default=True, help='Printout everything (under construction).')
 
-    p.add_option('--log_interval', type=int, default=1, metavar='N',
+    p.add_option('--log_interval', type=int, default=10, metavar='N',
                  help='number of batches between logging train status')
 
     opt, args = p.parse_args()
@@ -708,10 +708,8 @@ if __name__ == "__main__":
         filepath_suffix = ''
     else:
         filepath_prefix = '/home/henry/data/'
-        filepath_prefix = '/media/henry/multimodal_data_2/data/'
         filepath_suffix = ''
 
-    filepath_prefix = '/media/henry/multimodal_data_2/data/'
     filepath_suffix = '_output1p0'
     #filepath_suffix = ''
 
@@ -724,7 +722,7 @@ if __name__ == "__main__":
 
     if opt.quick_test == True:
         #training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/side_up_fw/1p0/train_f_lay_2000_of_2072_leftside_stiff'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff'+filepath_suffix+'.p')
         #training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_sit_1000_of_1121_upperbody_stiff'+filepath_suffix+'.p')
         #training_database_file_f.append(filepath_prefix+'real/trainval4_150rh1_sit120rh'+filepath_suffix+'.p')
         #training_database_file_m.append(filepath_prefix+'real/trainval4_150rh1_sit120rh'+filepath_suffix+'.p')

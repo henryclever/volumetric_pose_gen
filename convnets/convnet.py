@@ -239,8 +239,8 @@ class CNN(nn.Module):
         filepath_prefix = CTRL_PNL['filepath_prefix']
         OUTPUT_DICT = {}
 
-        self.GPU = False
-        self.dtype = torch.FloatTensor
+        self.GPU = CTRL_PNL['GPU']
+        self.dtype = CTRL_PNL['dtype']
 
         try:
             x = self.meshDepthLib.bounds
@@ -296,15 +296,15 @@ class CNN(nn.Module):
 
         #print scores[0, 0:10]
         if CTRL_PNL['adjust_ang_from_est'] == True:
-            scores[:, 0:10] =  OUTPUT_EST_DICT['betas']# + scores[:, 0:10].clone()
+            scores[:, 0:10] =  OUTPUT_EST_DICT['betas'] + scores[:, 0:10].clone()
             scores[:, 10:13] = OUTPUT_EST_DICT['root_shift']
 
-            print scores[0, 13:85]
-            print OUTPUT_EST_DICT['angles'][0, :]
+            #print scores[0, 13:85]
+            #print OUTPUT_EST_DICT['angles'][0, :]
 
             #scores[:, 13:85] = scores[:, 13:85].clone()
-            #scores[:, 13:85] = scores[:, 13:85].clone() + OUTPUT_EST_DICT['angles']
-            scores[:, 13:85] = OUTPUT_EST_DICT['angles']
+            scores[:, 13:85] = scores[:, 13:85].clone() + OUTPUT_EST_DICT['angles']
+            #scores[:, 13:85] = OUTPUT_EST_DICT['angles']
 
 
         OUTPUT_DICT['batch_betas_est'] = scores[:, 0:10].clone().data
