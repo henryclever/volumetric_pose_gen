@@ -235,7 +235,8 @@ class CNN(nn.Module):
                                  targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None):
 
 
-        reg_angles = CTRL_PNL['regr_angles'],
+        reg_angles = CTRL_PNL['regr_angles']
+
         filepath_prefix = CTRL_PNL['filepath_prefix']
         OUTPUT_DICT = {}
 

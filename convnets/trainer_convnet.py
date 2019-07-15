@@ -420,14 +420,19 @@ class PhysicalTrainer():
                         UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=True, model = self.model, CTRL_PNL=self.CTRL_PNL)
 
                     self.criterion = nn.L1Loss()
+                    self.criterion2 = nn.MSELoss()
                     scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].shape[0], scores.size()[1]))).type(dtype),
                                             requires_grad=True)
 
-                    loss_betas = self.criterion(scores[:, 0:10], scores_zeros[:, 0:10])*self.weight_joints
+
                     loss_eucl = self.criterion(scores[:, 10:34], scores_zeros[:, 10:34])*self.weight_joints*2
+                    loss_betas = self.criterion(scores[:, 0:10], scores_zeros[:, 0:10])*self.weight_joints
+
+                    print scores[0, 34:106], scores.size()
+                    print scores_zeros[0, 34:106], scores.size()
 
                     if self.CTRL_PNL['regr_angles'] == True:
-                        loss_angs = self.criterion(scores[:, 34:106], scores_zeros[:, 34:106])*self.weight_joints
+                        loss_angs = self.criterion2(scores[:, 34:106], scores_zeros[:, 34:106])*self.weight_joints
                         loss = (loss_betas + loss_eucl + loss_angs)
                     else:
                         loss = (loss_betas + loss_eucl)
@@ -683,7 +688,7 @@ if __name__ == "__main__":
                  help='Set if you want to do baseline ML or convnet.')
     p.add_option('--j_d_ratio', action='store', type = 'float',
                  dest='j_d_ratio', \
-                 default=0.04, \
+                 default=1.0, \
                  help='Set the loss mix: joints to depth planes.')
     p.add_option('--qt', action='store_true',
                  dest='quick_test', \
@@ -704,7 +709,7 @@ if __name__ == "__main__":
     p.add_option('--verbose', '--v',  action='store_true', dest='verbose',
                  default=True, help='Printout everything (under construction).')
 
-    p.add_option('--log_interval', type=int, default=10, metavar='N',
+    p.add_option('--log_interval', type=int, default=1, metavar='N',
                  help='number of batches between logging train status')
 
     opt, args = p.parse_args()
@@ -717,7 +722,7 @@ if __name__ == "__main__":
         filepath_prefix = '/home/henry/data/'
         filepath_suffix = ''
 
-    filepath_suffix = '_output0p1'
+    filepath_suffix = '_output1p0'
     #filepath_suffix = ''
 
     training_database_file_f = []
