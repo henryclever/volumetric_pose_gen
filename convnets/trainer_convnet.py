@@ -47,13 +47,13 @@ from scipy.ndimage.interpolation import zoom
 # from skimage import data, color, exposure
 
 
-from sklearn.cluster import KMeans
-from sklearn.preprocessing import scale
-from sklearn.preprocessing import normalize
-from sklearn import svm, linear_model, decomposition, kernel_ridge, neighbors
-from sklearn import metrics
-from sklearn.utils import shuffle
-from sklearn.multioutput import MultiOutputRegressor
+#from sklearn.cluster import KMeans
+#from sklearn.preprocessing import scale
+#from sklearn.preprocessing import normalize
+#from sklearn import svm, linear_model, decomposition, kernel_ridge, neighbors
+#from sklearn import metrics
+#from sklearn.utils import shuffle
+#from sklearn.multioutput import MultiOutputRegressor
 
 np.set_printoptions(threshold=sys.maxsize)
 
@@ -683,7 +683,7 @@ if __name__ == "__main__":
                  help='Set if you want to do baseline ML or convnet.')
     p.add_option('--j_d_ratio', action='store', type = 'float',
                  dest='j_d_ratio', \
-                 default=1.0, \
+                 default=0.04, \
                  help='Set the loss mix: joints to depth planes.')
     p.add_option('--qt', action='store_true',
                  dest='quick_test', \
@@ -717,7 +717,7 @@ if __name__ == "__main__":
         filepath_prefix = '/home/henry/data/'
         filepath_suffix = ''
 
-    filepath_suffix = '_output0p7'
+    filepath_suffix = '_output0p1'
     #filepath_suffix = ''
 
     training_database_file_f = []
