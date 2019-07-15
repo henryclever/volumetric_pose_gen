@@ -237,11 +237,11 @@ class PhysicalTrainer():
             if GPU == True:
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_direct_real_s5_128b_300e.pt')
                 #self.model = torch.load('/home/henry/data/convnets/convnet_direct_real_s2_128b_300e.pt')
-                self.model = torch.load('/home/henry/data/synth/convnet_direct_real_s9_alltest_128b_300e.pt')
+                self.model = torch.load('/home/henry/data/synth/convnet_direct_real_s9_alltest_128b_300e444.pt')
                 self.model = self.model.cuda()
             else:
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_direct_real_s5_128b_300e.pt', map_location='cpu')
-                self.model = torch.load('/home/henry/data/convnets/convnet_direct_real_s9_alltest_128b_300e_noscale.pt', map_location='cpu')
+                self.model = torch.load('/home/henry/data/convnets/convnet_direct_real_s9_alltest_128b_300e_noscale444.pt', map_location='cpu')
 
 
         elif self.CTRL_PNL['loss_vector_type'] == 'anglesDC' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU':
@@ -249,13 +249,13 @@ class PhysicalTrainer():
             if GPU == True:
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_planesreg_128b_100e.pt')
                 #self.model = torch.load('/home/henry/data/convnets/epochs_set_3/convnet_anglesEU_synthreal_s12_3xreal_128b_101e_300e.pt')
-                self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_128b_200e.pt')
+                self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_100e_000005lr.pt')
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_300e.pt')
                 self.model = self.model.cuda()
             else:
                 #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s6ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
                 self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg/'
-                                        'convnet_anglesEU_synth_s9_3xreal_128b_0.5rtojtdpth_pmatcntin_100e_000002lr.pt',
+                                        'convnet_anglesEU_synth_s9_3xreal_128b_0.5rtojtdpth_pmatcntin_100e_000002lr444.pt',
                                         map_location='cpu')
 
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_planesreg_128b_100e.pt', map_location='cpu')
@@ -393,7 +393,7 @@ class PhysicalTrainer():
                     time.sleep(1)
 
 
-        pkl.dump(self.dat,open('/media/henry/multimodal_data_2/'+self.filename+'_output0p5.p', 'wb'))
+        pkl.dump(self.dat,open('/media/henry/multimodal_data_2/'+self.filename+'_output0p7.p', 'wb'))
         #pkl.dump(self.dat,open('/home/henry/'+self.filename+'_output0p5.p', 'wb'))
 
 
@@ -473,11 +473,11 @@ if __name__ == "__main__":
                     'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll',
                     'data/real/trainval4_150rh1_sit120rh']
 
-    for filename in filename_list_m:
+    for filename in filename_list_f:
 
         test_database_file_f = []
         test_database_file_m = []
-        test_database_file_m.append(filepath_prefix_qt + filename + '.p')
+        test_database_file_f.append(filepath_prefix_qt + filename + '.p')
 
         p = PhysicalTrainer(test_database_file_f, test_database_file_m, opt, filename)
 
