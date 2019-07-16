@@ -452,9 +452,7 @@ class PhysicalTrainer():
                     loss_eucl = self.criterion(scores[:, 10:34], scores_zeros[:, 10:34])*self.weight_joints*2
                     loss_betas = self.criterion(scores[:, 0:10], scores_zeros[:, 0:10])*self.weight_joints
 
-                    print scores[0, 34:106], scores.size()
-                    print scores_zeros[0, 34:106], scores.size()
-
+                
                     if self.CTRL_PNL['regr_angles'] == True:
                         loss_angs = self.criterion2(scores[:, 34:106], scores_zeros[:, 34:106])*self.weight_joints
                         loss = (loss_betas + loss_eucl + loss_angs)
@@ -633,7 +631,7 @@ class PhysicalTrainer():
                 scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].shape[0], scores.size()[1]))).type(dtype),
                                         requires_grad=False)
 
-                if self.CTRL_PNL['depth_map_labels'] == False:
+                if self.CTRL_PNL['depth_map_labels_test'] == False:
                     loss += self.criterion(scores[:, 10:34], scores_zeros[:, 10:34]).data.item() / 10.
 
                 else:
@@ -649,17 +647,16 @@ class PhysicalTrainer():
 
                     # print INPUT_DICT['batch_mdm'].size(), OUTPUT_DICT['batch_mdm_est'].size()
 
-                    if self.CTRL_PNL['depth_map_labels'] == True:
-                        INPUT_DICT_VAL['batch_mdm'][INPUT_DICT_VAL['batch_mdm'] > 0] = 0
-                        if self.CTRL_PNL['mesh_bottom_dist'] == True:
-                            OUTPUT_DICT_VAL['batch_mdm_est'][OUTPUT_DICT_VAL['batch_mdm_est'] > 0] = 0
-                        loss_mesh_depth = self.criterion(INPUT_DICT_VAL['batch_mdm'],
-                                                         OUTPUT_DICT_VAL['batch_mdm_est']) * self.weight_depth_planes / 40
-                        loss_mesh_contact = self.criterion(INPUT_DICT_VAL['batch_cm'],
-                                                           OUTPUT_DICT_VAL['batch_cm_est']) * self.weight_depth_planes * 1.0
-                        loss_to_add += loss_mesh_depth
-                        loss_to_add += loss_mesh_contact
-                        loss += loss_to_add
+                    INPUT_DICT_VAL['batch_mdm'][INPUT_DICT_VAL['batch_mdm'] > 0] = 0
+                    if self.CTRL_PNL['mesh_bottom_dist'] == True:
+                        OUTPUT_DICT_VAL['batch_mdm_est'][OUTPUT_DICT_VAL['batch_mdm_est'] > 0] = 0
+                    loss_mesh_depth = self.criterion(INPUT_DICT_VAL['batch_mdm'],
+                                                     OUTPUT_DICT_VAL['batch_mdm_est']) * self.weight_depth_planes / 20
+                    loss_mesh_contact = self.criterion(INPUT_DICT_VAL['batch_cm'],
+                                                       OUTPUT_DICT_VAL['batch_cm_est']) * self.weight_depth_planes * 2.0
+                    loss_to_add += loss_mesh_depth
+                    loss_to_add += loss_mesh_contact
+                    loss += loss_to_add
 
             n_examples += self.CTRL_PNL['batch_size']
 
