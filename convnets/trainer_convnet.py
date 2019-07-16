@@ -116,7 +116,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['regr_angles'] = opt.reg_angles
         self.CTRL_PNL['aws'] = self.opt.aws
         self.CTRL_PNL['depth_map_labels'] = True #can only be true if we have 100% synthetic data for training
-        self.CTRL_PNL['depth_map_labels_test'] = True #can only be true is we have 100% synth for testing
+        self.CTRL_PNL['depth_map_labels_test'] = False #can only be true is we have 100% synth for testing
         self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
         self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
@@ -452,7 +452,7 @@ class PhysicalTrainer():
                     loss_eucl = self.criterion(scores[:, 10:34], scores_zeros[:, 10:34])*self.weight_joints*2
                     loss_betas = self.criterion(scores[:, 0:10], scores_zeros[:, 0:10])*self.weight_joints
 
-                
+
                     if self.CTRL_PNL['regr_angles'] == True:
                         loss_angs = self.criterion2(scores[:, 34:106], scores_zeros[:, 34:106])*self.weight_joints
                         loss = (loss_betas + loss_eucl + loss_angs)
@@ -790,8 +790,8 @@ if __name__ == "__main__":
         #training_database_file_f.append(filepath_prefix + 'real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
         #training_database_file_m.append(filepath_prefix+'real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
         #training_database_file_m.append(filepath_prefix+'real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
-        test_database_file_f.append(filepath_prefix + 'synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff' + filepath_suffix + '.p')
-        #test_database_file_m.append(filepath_prefix+'real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
+        #test_database_file_f.append(filepath_prefix + 'synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff' + filepath_suffix + '.p')
+        test_database_file_m.append(filepath_prefix+'real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
         #training_database_file_f.append(filepath_prefix+'real/trainval4_150rh1_sit120rh'+filepath_suffix+'.p')
         #test_database_file_m.append(filepath_prefix+'real/trainval4_150rh1_sit120rh'+filepath_suffix+'.p')
     else:
@@ -840,8 +840,8 @@ if __name__ == "__main__":
             #test_database_file_m.append(filepath_prefix+'real/trainval8_150rh1_sit120rh'+filepath_suffix+'.p')
             #test_database_file_f.append(filepath_prefix + 'real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
             #test_database_file_m.append(filepath_prefix + 'real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
-            #test_database_file_m.append(filepath_prefix + 'real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
-            test_database_file_f.append(filepath_prefix + 'synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff' + filepath_suffix + '.p')
+            test_database_file_m.append(filepath_prefix + 'real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
+            #test_database_file_f.append(filepath_prefix + 'synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff' + filepath_suffix + '.p')
             #test_database_file_m.append(filepath_prefix + 'real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
             #test_database_file_m.append(filepath_prefix + 'real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
             #test_database_file_m.append(filepath_prefix + 'real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
