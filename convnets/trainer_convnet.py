@@ -283,7 +283,7 @@ class PhysicalTrainer():
 
         if self.CTRL_PNL['depth_map_labels_test'] == True:
             self.depth_contact_maps = [] #Initialize the precomputed depth and contact maps. only synth has this label.
-            self.depth_contact_maps = TensorPrepLib().prep_depth_contact(self.depth_contact_maps, dat_f_synth, dat_m_synth, num_repeats = 1)
+            self.depth_contact_maps = TensorPrepLib().prep_depth_contact(self.depth_contact_maps, test_dat_f_synth, test_dat_m_synth, num_repeats = 1)
         else:
             self.depth_contact_maps = None
 
