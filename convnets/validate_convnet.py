@@ -494,7 +494,7 @@ class PhysicalTrainer():
                 #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/2.0xsize/convnet_anglesEU_synthreal_tanh_s8ang_sig0p5_5xreal_voloff_128b_300e.pt', map_location='cpu')
 
-            print 'LOADED anglesEU !!!!!!!!!!!!!!!!!1'
+            print 'LOADED anglesEU !!!!!!!!!!!!!!!!!'
             pp = 0
             for p in list(self.model.parameters()):
                 nn = 1

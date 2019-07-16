@@ -94,33 +94,123 @@ class DataVisualizer():
         self.output_size = (10, 3)
 
 
+        from scipy.signal import savgol_filter
+        fig = plt.figure()
 
-
-        train_val_loss = load_pickle(self.dump_path + '/planesreg/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_000005lr.p')
-        for key in train_val_loss:
+        plt.subplot(3, 2, 1)
+        plt.axis([0,200,2000,10000])
+        #plt.yticks([])
+        train_val_loss1 = load_pickle(self.dump_path + '/planesreg/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_000005lr.p')
+        for key in train_val_loss1:
             print key
-        #train_val_loss_2reg = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betasreg.p')
-        #for key in train_val_loss_2reg:
+        train_val_loss1_cor = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.p')
+        for key in train_val_loss1_cor:
+            print key
+
+        y1 = savgol_filter(train_val_loss1['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin'], 501, 3)
+        corrected_y1 = savgol_filter(train_val_loss1_cor['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'], 501, 3)
+
+        plt.plot(train_val_loss1['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin'],
+                 y1, 'k')
+        plt.plot(np.array(train_val_loss1_cor['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'])+100,
+                          corrected_y1, 'k')
+
+
+
+
+        plt.subplot(3, 2, 3)
+        plt.axis([0,200,1000,5000])
+        #plt.yticks([])
+        train_val_loss2 = load_pickle(self.dump_path + '/planesreg/convnet_losses_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_100e_000005lr.p')
+        for key in train_val_loss2:
+            print key
+        train_val_loss2_cor = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.p')
+        for key in train_val_loss2_cor:
+            print key
+
+        y2 = savgol_filter(train_val_loss2['train_anglesEU_synth_s9_3xreal_128b_101e_0.4rtojtdpth_pmatcntin'], 501, 3)
+        corrected_y2 = savgol_filter(train_val_loss2_cor['train_anglesEU_synth_s9_3xreal_128b_101e_0.4rtojtdpth_pmatcntin_depthestin_angleadj'], 501, 3)
+
+        plt.plot(train_val_loss2['epoch_anglesEU_synth_s9_3xreal_128b_101e_0.4rtojtdpth_pmatcntin'],
+                 y2, 'b')
+        plt.plot(np.array(train_val_loss2_cor['epoch_anglesEU_synth_s9_3xreal_128b_101e_0.4rtojtdpth_pmatcntin_depthestin_angleadj'])+100,
+                          corrected_y2, 'b')
+
+
+
+        plt.subplot(3, 2, 5)
+        plt.axis([0,200,500,2500])
+        #plt.yticks([])
+        train_val_loss3 = load_pickle(self.dump_path + '/planesreg/convnet_losses_anglesEU_synth_s9_3xreal_128b_0.1rtojtdpth_pmatcntin_100e_000005lr.p')
+        for key in train_val_loss3:
+            print key
+        y2 = savgol_filter(train_val_loss3['train_anglesEU_synth_s9_3xreal_128b_101e_0.04rtojtdpth_pmatcntin'], 501, 3)
+
+        plt.plot(train_val_loss3['epoch_anglesEU_synth_s9_3xreal_128b_101e_0.04rtojtdpth_pmatcntin'],
+                 y2, 'r')
+
+
+
+
+
+        plt.subplot(3, 2, 2)
+        plt.axis([0,200,2000,10000])
+        #plt.yticks([])
+        train_val_loss4 = load_pickle(self.dump_path + '/planesreg/old/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_000002lr.p')
+        train_val_loss4_cor1 = load_pickle(self.dump_path + '/planesreg_correction/old/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betasreg.p')
+        train_val_loss4_cor2 = load_pickle(self.dump_path + '/planesreg_correction/old/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betashold.p')
+
+        y4 = savgol_filter(train_val_loss4['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin'], 501, 3)
+        corrected_y4_1 = savgol_filter(train_val_loss4_cor1['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'], 501, 3)
+        corrected_y4_2 = savgol_filter(train_val_loss4_cor2['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'], 501, 3)
+
+        plt.plot(train_val_loss4['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin'],
+                 y4, 'k')
+        plt.plot(np.array(train_val_loss4_cor1['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'])+100,
+                          corrected_y4_1, 'k')
+        plt.plot(np.array(train_val_loss4_cor2['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'])+100,
+                          corrected_y4_2, 'r')
+
+
+
+        plt.subplot(3, 2, 4)
+        plt.axis([0,200,1000,5000])
+        #plt.yticks([])
+        #train_val_loss5 = load_pickle(self.dump_path + '/planesreg/old/convnet_losses_anglesEU_synth_s9_3xreal_128b_0.5rtojtdpth_pmatcntin_100e_000002lr.p')
+        #for key in train_val_loss5:
         #    print key
+        train_val_loss5_cor = load_pickle(self.dump_path + '/planesreg_correction/old/convnet_losses_anglesEU_synth_s9_3xreal_128b_0.5rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betasreg.p')
+        for key in train_val_loss5_cor:
+            print key
 
-        #train_val_loss_2hold = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betashold.p')
-        #for key in train_val_loss_2reg:
-        #    print key
+        #y5 = savgol_filter(train_val_loss5['train_anglesEU_synth_s9_3xreal_128b_101e_0.5rtojtdpth_pmatcntin'], 51, 3)
+        corrected_y5 = savgol_filter(train_val_loss5_cor['train_anglesEU_synth_s9_3xreal_128b_101e_0.5rtojtdpth_pmatcntin_depthestin_angleadj'], 501, 3)
+
+        #plt.plot(train_val_loss5['epoch_anglesEU_synth_s9_3xreal_128b_101e_0.5rtojtdpth_pmatcntin'],
+        #         y5, 'k')
+        plt.plot(np.array(train_val_loss5_cor['epoch_anglesEU_synth_s9_3xreal_128b_101e_0.5rtojtdpth_pmatcntin_depthestin_angleadj'])+175,
+                          corrected_y5, 'k')
+
+
+
+        plt.subplot(3, 2, 6)
+        plt.axis([0,200,500,2500])
+        #plt.yticks([])
+        train_val_loss6 = load_pickle(self.dump_path + '/planesreg/old/convnet_losses_anglesEU_synth_s9_3xreal_128b_0.05rtojtdpth_pmatcntin_100e_000002lr.p')
+        for key in train_val_loss6:
+            print key
+        y6 = savgol_filter(train_val_loss6['train_anglesEU_synth_s9_3xreal_128b_101e_0.05rtojtdpth_pmatcntin'], 501, 3)
+
+        plt.plot(train_val_loss6['epoch_anglesEU_synth_s9_3xreal_128b_101e_0.05rtojtdpth_pmatcntin'],
+                 y6, 'k')
 
 
 
 
-
-        plt.plot(train_val_loss['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin'],
-                 train_val_loss['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin'], 'k')
-        #plt.plot(np.array(train_val_loss_2reg['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'])+100,
-        #         train_val_loss_2reg['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'], 'g')
-        #plt.plot(np.array(train_val_loss_2hold['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'])+100,
-        #         train_val_loss_2hold['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'], 'r')
 
         plt.legend()
-        plt.ylabel('Mean squared error loss over 30 joint vectors')
-        plt.title('Subject 1 laying validation Loss, training performed on subjects 2, 3, 4, 5, 6, 7, 8')
+        #plt.ylabel('Mean squared error loss over 30 joint vectors')
+        #plt.title('Subject 1 laying validation Loss, training performed on subjects 2, 3, 4, 5, 6, 7, 8')
 
 
 

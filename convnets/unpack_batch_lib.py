@@ -83,7 +83,7 @@ class UnpackBatchLib():
             extra_targets = None
 
 
-        if CTRL_PNL['depth_map_labels'] == True and is_training == True:
+        if CTRL_PNL['depth_map_labels'] == True or CTRL_PNL['depth_map_labels_test'] == True:
             batch.append(batch[0][:, CTRL_PNL['num_input_channels_batch0'], : ,:]) #mesh depth matrix
             batch.append(batch[0][:, CTRL_PNL['num_input_channels_batch0']+1, : ,:]) #mesh contact matrix
 
@@ -92,8 +92,6 @@ class UnpackBatchLib():
 
         # cut it off so batch[2] is only the xyz marker targets
         batch[1] = batch[1][:, 0:72]
-
-
 
 
         if is_training == True: #only do augmentation for real data that is in training mode
@@ -122,6 +120,7 @@ class UnpackBatchLib():
             height_input = height_input.view((images_up.size()[0], 1, images_up.size()[2], images_up.size()[3]))
             images_up = torch.cat((images_up, weight_input, height_input), 1)
 
+
         images, targets, betas = Variable(batch[0].type(CTRL_PNL['dtype']), requires_grad=False), \
                                  Variable(batch[1].type(CTRL_PNL['dtype']), requires_grad=False), \
                                  Variable(batch[2].type(CTRL_PNL['dtype']), requires_grad=False)
@@ -137,14 +136,12 @@ class UnpackBatchLib():
             OUTPUT_EST_DICT['angles'] = Variable(extra_smpl_angles.type(CTRL_PNL['dtype']), requires_grad=is_training)
             OUTPUT_EST_DICT['root_shift'] = Variable(extra_targets.type(CTRL_PNL['dtype']), requires_grad=is_training)
 
-        if CTRL_PNL['depth_map_labels'] == True and is_training == True:
+        if CTRL_PNL['depth_map_labels'] == True or CTRL_PNL['depth_map_labels_test'] == True:
             INPUT_DICT['batch_mdm'] = batch[9+adj_ext_idx].type(CTRL_PNL['dtype'])
             INPUT_DICT['batch_cm'] = batch[10+adj_ext_idx].type(CTRL_PNL['dtype'])
         else:
             INPUT_DICT['batch_mdm'] = None
             INPUT_DICT['batch_cm'] = None
-
-
 
 
 
