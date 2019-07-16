@@ -132,7 +132,6 @@ class TensorPrepLib():
                                    mesh_depth_contact_maps = None, include_mesh_depth_contact = False):
 
 
-
         if include_pmat_contact == True:
             train_contact = np.copy(train_xa[:, 0:1, :, :]) #get the pmat contact map
             train_contact[train_contact > 0] = 100.

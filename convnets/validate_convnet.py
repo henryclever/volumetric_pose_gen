@@ -110,7 +110,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['dtype'] = dtype
         self.CTRL_PNL['repeat_real_data_ct'] = 1
         self.CTRL_PNL['regr_angles'] = 1
-        self.CTRL_PNL['depth_map_labels'] = True
+        self.CTRL_PNL['depth_map_labels'] = False
         self.CTRL_PNL['depth_map_output'] = True
         self.CTRL_PNL['depth_map_input_est'] = False#rue #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
@@ -490,7 +490,7 @@ class PhysicalTrainer():
 
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_4xsize_128b_200e.pt', map_location = 'cpu')
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_128b_101e_htwt_legacy.pt', map_location = 'cpu')
-                self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg/convnet_anglesEU_synth_s9_3xreal_128b_0.05rtojtdpth_pmatcntin_100e_000002lr.pt', map_location = 'cpu')
+                self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg/convnet_anglesEU_synth_s9_3xreal_128b_0.1rtojtdpth_pmatcntin_100e_000005lr.pt', map_location = 'cpu')
                 #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/2.0xsize/convnet_anglesEU_synthreal_tanh_s8ang_sig0p5_5xreal_voloff_128b_300e.pt', map_location='cpu')
 
@@ -540,7 +540,7 @@ class PhysicalTrainer():
 
             elif self.CTRL_PNL['loss_vector_type'] == 'anglesR' or self.CTRL_PNL['loss_vector_type'] == 'anglesDC' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU':
                 scores, INPUT_DICT, OUTPUT_DICT = \
-                    UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=True, model=self.model,
+                    UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model=self.model,
                                                               CTRL_PNL=self.CTRL_PNL)
                 self.criterion = nn.L1Loss()
                 scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].shape[0], scores.size()[1]))).type(dtype),
@@ -549,6 +549,7 @@ class PhysicalTrainer():
                 loss_curr = self.criterion(scores[:, 10:34], scores_zeros[:, 10:34]).data.item() / 10.
 
                 print loss_curr, 'loss'
+                #print scores[0, :], "SCORES!"
 
 
                 if self.CTRL_PNL['depth_map_labels'] == True:
@@ -683,8 +684,8 @@ if __name__ == "__main__":
     network_design = True
 
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff.p')
-    #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
-    test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff.p')
+    test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
+    #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2067_none_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1121_upperbody_stiff.p')

@@ -255,7 +255,7 @@ class PhysicalTrainer():
             else:
                 #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s6ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
                 self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg/'
-                                        'convnet_anglesEU_synth_s9_3xreal_128b_0.5rtojtdpth_pmatcntin_100e_000002lr444.pt',
+                                        'convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_000005lr.pt',
                                         map_location='cpu')
 
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_planesreg_128b_100e.pt', map_location='cpu')
@@ -322,6 +322,7 @@ class PhysicalTrainer():
 
                 loss += loss_curr
 
+                print scores[0, :], "SCORES!!"
 
 
                 print OUTPUT_DICT['batch_angles_est'].shape, n_examples
@@ -442,7 +443,7 @@ if __name__ == "__main__":
 
     network_design = True
 
-    filename_list_f = [ 'data/synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff',
+    filename_list_f = ['data/synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff',
                     'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff',
                     'data/synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff',
                     'data/synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff',

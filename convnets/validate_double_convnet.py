@@ -104,7 +104,7 @@ class PhysicalTrainer():
         self.opt = opt
         self.CTRL_PNL['num_epochs'] = 101
         self.CTRL_PNL['incl_inter'] = True
-        self.CTRL_PNL['shuffle'] = False
+        self.CTRL_PNL['shuffle'] = True
         self.CTRL_PNL['incl_ht_wt_channels'] = True
         self.CTRL_PNL['incl_pmat_cntct_input'] = True
         self.CTRL_PNL['num_input_channels'] = 3
@@ -278,9 +278,9 @@ class PhysicalTrainer():
                 #self.model_cor2 = torch.load('/home/henry/data/convnets/convnet_anglesEU_synth_s9_3xreal_128b_101e_pmatcntin_angleadj_25e.pt', map_location = 'cpu')
 
                 self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg/'
-                                        'convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_000002lr.pt', map_location = 'cpu')
+                                        'convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_100e_000005lr.pt', map_location = 'cpu')
                 self.model_cor = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg_correction/'
-                                        'convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betasreg.pt', map_location = 'cpu')
+                                        'convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.pt', map_location = 'cpu')
 
 
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_4xsize_128b_200e.pt', map_location = 'cpu')
@@ -317,7 +317,7 @@ class PhysicalTrainer():
         n_examples = 0
 
         for batch_i, batch in enumerate(self.test_loader):
-            #if batch_i == 10: break
+           # if batch_i == 300: break
 
             if self.CTRL_PNL['loss_vector_type'] == 'direct':
                 scores, INPUT_DICT, OUTPUT_DICT = \
@@ -400,12 +400,12 @@ class PhysicalTrainer():
                 #                                batch_cor[0][:, 4:, :, :]), dim=1))
                 #batch_cor2.append(batch_cor[1].clone())
 
-                VisualizationLib().visualize_pressure_map(batch_cor[0][0, 4:].squeeze(), None, None,
-                                                          batch_cor[0][0, 5:].squeeze(), None, None,
-                                                          batch_cor[0][0, 6:].squeeze(), None, None,
-                                                          block=False)
-                for i in range(7):
-                    print i, torch.min(batch_cor[0][0, i]), torch.max(batch_cor[0][0, i])
+                #VisualizationLib().visualize_pressure_map(batch_cor[0][0, 4:].squeeze(), None, None,
+                #                                          batch_cor[0][0, 5:].squeeze(), None, None,
+                #                                          batch_cor[0][0, 6:].squeeze(), None, None,
+                #                                          block=False)
+                #for i in range(7):
+                #    print i, torch.min(batch_cor[0][0, i]), torch.max(batch_cor[0][0, i])
 
 
                 scores, INPUT_DICT_COR, OUTPUT_DICT_COR = \
@@ -486,7 +486,7 @@ class PhysicalTrainer():
                         VisualizationLib().visualize_pressure_map(self.im_sample.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(), block=False)
                     else:
                         VisualizationLib().visualize_pressure_map(self.im_sample, self.tar_sample, self.sc_sample,
-                                                                  self.im_sample2, self.tar_sample, self.sc_sample_cor,
+                                                                  self.im_sample2, self.tar_sample, self.sc_sample,
                                                                   #self.im_sample_cor2, self.tar_sample, self.sc_sample_cor2,
                                                                   self.im_sample_cor, self.tar_sample, self.sc_sample_cor,
                                                                   block=False)
@@ -542,8 +542,8 @@ if __name__ == "__main__":
     network_design = True
 
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff.p')
-    #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
-    test_database_file_f.append(filepath_prefix+'data/synth/side_up_fw/1p0/train_f_lay_2000_of_2072_leftside_stiff_output1p0.p')
+    test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
+    #test_database_file_f.append(filepath_prefix+'data/synth/side_up_fw/1p0/train_f_lay_2000_of_2072_leftside_stiff_output1p0.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2067_none_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1121_upperbody_stiff.p')

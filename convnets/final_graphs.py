@@ -96,16 +96,16 @@ class DataVisualizer():
 
 
 
-        train_val_loss = load_pickle(self.dump_path + '/planesreg/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_000002lr.p')
+        train_val_loss = load_pickle(self.dump_path + '/planesreg/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_000005lr.p')
         for key in train_val_loss:
             print key
-        train_val_loss_2reg = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betasreg.p')
-        for key in train_val_loss_2reg:
-            print key
+        #train_val_loss_2reg = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betasreg.p')
+        #for key in train_val_loss_2reg:
+        #    print key
 
-        train_val_loss_2hold = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betashold.p')
-        for key in train_val_loss_2reg:
-            print key
+        #train_val_loss_2hold = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betashold.p')
+        #for key in train_val_loss_2reg:
+        #    print key
 
 
 
@@ -113,10 +113,10 @@ class DataVisualizer():
 
         plt.plot(train_val_loss['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin'],
                  train_val_loss['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin'], 'k')
-        plt.plot(np.array(train_val_loss_2reg['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'])+100,
-                 train_val_loss_2reg['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'], 'g')
-        plt.plot(np.array(train_val_loss_2hold['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'])+100,
-                 train_val_loss_2hold['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'], 'r')
+        #plt.plot(np.array(train_val_loss_2reg['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'])+100,
+        #         train_val_loss_2reg['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'], 'g')
+        #plt.plot(np.array(train_val_loss_2hold['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'])+100,
+        #         train_val_loss_2hold['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'], 'r')
 
         plt.legend()
         plt.ylabel('Mean squared error loss over 30 joint vectors')
