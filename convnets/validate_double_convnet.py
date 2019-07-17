@@ -104,7 +104,7 @@ class PhysicalTrainer():
         self.opt = opt
         self.CTRL_PNL['num_epochs'] = 101
         self.CTRL_PNL['incl_inter'] = True
-        self.CTRL_PNL['shuffle'] = True
+        self.CTRL_PNL['shuffle'] = False
         self.CTRL_PNL['incl_ht_wt_channels'] = True
         self.CTRL_PNL['incl_pmat_cntct_input'] = True
         self.CTRL_PNL['num_input_channels'] = 3
@@ -113,6 +113,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['repeat_real_data_ct'] = 1
         self.CTRL_PNL['regr_angles'] = 1
         self.CTRL_PNL['depth_map_labels'] = False
+        self.CTRL_PNL['depth_map_labels_test'] = False
         self.CTRL_PNL['depth_map_output'] = True
         self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
         self.CTRL_PNL['precomp_net1'] = False
@@ -277,8 +278,11 @@ class PhysicalTrainer():
                 #self.model_cor = torch.load('/home/henry/data/convnets/convnet_anglesEU_synth_s9_3xreal_128b_101e_pmatcntin_depthestin_angleadj_25e.pt', map_location = 'cpu')
                 #self.model_cor2 = torch.load('/home/henry/data/convnets/convnet_anglesEU_synth_s9_3xreal_128b_101e_pmatcntin_angleadj_25e.pt', map_location = 'cpu')
 
+                #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg/'
+                #                        'convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_000005lr.pt', map_location = 'cpu')
                 self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg/'
-                                        'convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_000005lr.pt', map_location = 'cpu')
+                                        'convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_00001lr.pt', map_location='cpu')
+
                 self.model_cor = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg_correction/'
                                         'convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.pt', map_location = 'cpu')
 
@@ -317,7 +321,7 @@ class PhysicalTrainer():
         n_examples = 0
 
         for batch_i, batch in enumerate(self.test_loader):
-           # if batch_i == 300: break
+            if batch_i == 10: break
 
             if self.CTRL_PNL['loss_vector_type'] == 'direct':
                 scores, INPUT_DICT, OUTPUT_DICT = \
@@ -432,16 +436,16 @@ class PhysicalTrainer():
 
 
             try:
-                targets_print = torch.cat([targets_print, torch.mean(INPUT_DICT_COR['batch_targets'], dim = 0).unsqueeze(0)], dim=0)
-                targets_est_print = torch.cat([targets_est_print, torch.mean(OUTPUT_DICT_COR['batch_targets_est'], dim = 0).unsqueeze(0)], dim=0)
+                targets_print = torch.cat([targets_print, torch.mean(INPUT_DICT['batch_targets'], dim = 0).unsqueeze(0)], dim=0)
+                targets_est_print = torch.cat([targets_est_print, torch.mean(OUTPUT_DICT['batch_targets_est'], dim = 0).unsqueeze(0)], dim=0)
             except:
 
-                targets_print = torch.mean(INPUT_DICT_COR['batch_targets'], dim = 0).unsqueeze(0)
-                targets_est_print = torch.mean(OUTPUT_DICT_COR['batch_targets_est'], dim = 0).unsqueeze(0)
+                targets_print = torch.mean(INPUT_DICT['batch_targets'], dim = 0).unsqueeze(0)
+                targets_est_print = torch.mean(OUTPUT_DICT['batch_targets_est'], dim = 0).unsqueeze(0)
 
 
-            print targets_print.shape, INPUT_DICT_COR['batch_targets'].shape
-            print targets_est_print.shape, OUTPUT_DICT_COR['batch_targets_est'].shape
+            print targets_print.shape, INPUT_DICT['batch_targets'].shape
+            print targets_est_print.shape, OUTPUT_DICT['batch_targets_est'].shape
 
 
             if GPU == True:
