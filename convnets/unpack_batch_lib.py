@@ -83,12 +83,13 @@ class UnpackBatchLib():
             extra_targets = None
 
 
-        if CTRL_PNL['depth_map_labels'] == True or CTRL_PNL['depth_map_labels_test'] == True:
-            batch.append(batch[0][:, CTRL_PNL['num_input_channels_batch0'], : ,:]) #mesh depth matrix
-            batch.append(batch[0][:, CTRL_PNL['num_input_channels_batch0']+1, : ,:]) #mesh contact matrix
+        if CTRL_PNL['depth_map_labels'] == True:
+            if CTRL_PNL['depth_map_labels_test'] == True or is_training == True:
+                batch.append(batch[0][:, CTRL_PNL['num_input_channels_batch0'], : ,:]) #mesh depth matrix
+                batch.append(batch[0][:, CTRL_PNL['num_input_channels_batch0']+1, : ,:]) #mesh contact matrix
 
-            #cut off batch 0 so we don't have depth or contact on the input
-            batch[0] = batch[0][:, 0:CTRL_PNL['num_input_channels_batch0'], :, :]
+                #cut off batch 0 so we don't have depth or contact on the input
+                batch[0] = batch[0][:, 0:CTRL_PNL['num_input_channels_batch0'], :, :]
 
         # cut it off so batch[2] is only the xyz marker targets
         batch[1] = batch[1][:, 0:72]
@@ -136,9 +137,10 @@ class UnpackBatchLib():
             OUTPUT_EST_DICT['angles'] = Variable(extra_smpl_angles.type(CTRL_PNL['dtype']), requires_grad=is_training)
             OUTPUT_EST_DICT['root_shift'] = Variable(extra_targets.type(CTRL_PNL['dtype']), requires_grad=is_training)
 
-        if CTRL_PNL['depth_map_labels'] == True or CTRL_PNL['depth_map_labels_test'] == True:
-            INPUT_DICT['batch_mdm'] = batch[9+adj_ext_idx].type(CTRL_PNL['dtype'])
-            INPUT_DICT['batch_cm'] = batch[10+adj_ext_idx].type(CTRL_PNL['dtype'])
+        if CTRL_PNL['depth_map_labels'] == True:
+            if CTRL_PNL['depth_map_labels_test'] == True or is_training == True:
+                INPUT_DICT['batch_mdm'] = batch[9+adj_ext_idx].type(CTRL_PNL['dtype'])
+                INPUT_DICT['batch_cm'] = batch[10+adj_ext_idx].type(CTRL_PNL['dtype'])
         else:
             INPUT_DICT['batch_mdm'] = None
             INPUT_DICT['batch_cm'] = None
