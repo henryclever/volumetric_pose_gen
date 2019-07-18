@@ -273,6 +273,8 @@ class pyRenderMesh():
         #get SMPL mesh
         smpl_verts = (m.r - m.J_transformed[0, :])+[root_pos[1]-0.286+0.15, root_pos[0]-0.286, 0.12-root_pos[2]]#*228./214.
 
+        print smpl_verts
+
         if np.sum(pmat) < 5000:
             smpl_verts = smpl_verts * 0.001
 

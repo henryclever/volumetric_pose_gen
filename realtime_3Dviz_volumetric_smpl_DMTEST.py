@@ -55,15 +55,18 @@ import matplotlib.pyplot as plt
 #hmr
 from hmr.src.tf_smpl.batch_smpl import SMPL
 
+WEIGHT_LBS = 140.
+HEIGHT_IN = 72.
+GENDER = 'm'
 
 
 class GeneratePose():
-    def __init__(self, gender, filepath_prefix = '/home/henry'):
+    def __init__(self, filepath_prefix = '/home/henry'):
         ## Load SMPL model
         self.filepath_prefix = filepath_prefix
 
         self.index_queue = []
-        if gender == "m":
+        if GENDER == "m":
             model_path = filepath_prefix+'/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
         else:
             model_path = filepath_prefix+'/git/SMPL_python_v.1.0.0/smpl/models/basicModel_f_lbs_10_207_0_v1.0.0.pkl'
@@ -85,6 +88,47 @@ class GeneratePose():
         rospy.init_node('vol_3d_listener', anonymous=False)
         self.point_cloud_array = np.array([[0., 0., 0.]])
         self.pc_isnew = False
+
+
+        self.CTRL_PNL = {}
+        self.CTRL_PNL['batch_size'] = 1
+        self.CTRL_PNL['loss_vector_type'] = 'anglesEU'
+        self.CTRL_PNL['verbose'] = False
+        self.CTRL_PNL['num_epochs'] = 101
+        self.CTRL_PNL['incl_inter'] = True
+        self.CTRL_PNL['shuffle'] = False
+        self.CTRL_PNL['incl_ht_wt_channels'] = True
+        self.CTRL_PNL['incl_pmat_cntct_input'] = True
+        self.CTRL_PNL['num_input_channels'] = 3
+        self.CTRL_PNL['GPU'] = True
+        self.CTRL_PNL['dtype'] = torch.cuda.FloatTensor
+        self.CTRL_PNL['repeat_real_data_ct'] = 1
+        self.CTRL_PNL['regr_angles'] = 1
+        self.CTRL_PNL['depth_map_labels'] = False
+        self.CTRL_PNL['depth_map_output'] = True
+        self.CTRL_PNL['depth_map_input_est'] = False#rue #do this if we're working in a two-part regression
+        self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
+        self.CTRL_PNL['clip_sobel'] = True
+        self.CTRL_PNL['clip_betas'] = True
+        self.CTRL_PNL['mesh_bottom_dist'] = True
+
+
+        self.count = 0
+
+        if self.CTRL_PNL['incl_pmat_cntct_input'] == True:
+            self.CTRL_PNL['num_input_channels'] += 1
+        if self.CTRL_PNL['depth_map_input_est'] == True: #for a two part regression
+            self.CTRL_PNL['num_input_channels'] += 3
+        self.CTRL_PNL['num_input_channels_batch0'] = np.copy(self.CTRL_PNL['num_input_channels'])
+        if self.CTRL_PNL['incl_ht_wt_channels'] == True:
+            self.CTRL_PNL['num_input_channels'] += 2
+
+        self.CTRL_PNL['filepath_prefix'] = '/home/henry/'
+        self.CTRL_PNL['aws'] = False
+        self.CTRL_PNL['lock_root'] = False
+
+
+
 
     def bed_config_callback(self, msg):
         '''This callback accepts incoming pressure map from
@@ -163,7 +207,7 @@ class GeneratePose():
             self.pressure = np.array(data.data)
 
 
-    def generate_prechecked_pose(self, gender, posture, stiffness, filename):
+    def generate_prechecked_pose(self, posture, stiffness, filename):
 
 
         prechecked_pose_list = np.load(filename, allow_pickle = True).tolist()
@@ -231,15 +275,14 @@ class GeneratePose():
 
             #break
 
-    def estimate_real_time(self, gender, filename):
-
-
+    def estimate_real_time(self, filename1, filename2 = None):
 
 
 
 
         pyRender = libRender.pyRenderMesh()
         mat_size = (64, 27)
+        from unpack_batch_lib import UnpackBatchLib
 
         if torch.cuda.is_available():
             # Use for GPU
@@ -256,10 +299,16 @@ class GeneratePose():
         from torch.autograd import Variable
 
         if GPU == True:
-            model = torch.load(filename)
-            model = model.cuda()
+            model = torch.load(filename1)
+            model = model.cuda().eval()
+            if filename2 is not None:
+                model2 = torch.load(filename2)
+                model2 = model2.cuda().eval()
+
         else:
-            model = torch.load(filename, map_location='cpu')
+            model = torch.load(filename1, map_location='cpu').eval()
+            if filename2 is not None:
+                model2 = torch.load(filename2, map_location='cpu').eval()
 
         while not rospy.is_shutdown():
 
@@ -273,21 +322,63 @@ class GeneratePose():
             pmat_stack = np.clip(pmat_stack, a_min=0, a_max=100)
 
             pmat_stack = np.array(pmat_stack)
-            print pmat_stack.shape
             pmat_contact = np.copy(pmat_stack[:, 0:1, :, :])
             pmat_contact[pmat_contact > 0] = 100
             pmat_stack = np.concatenate((pmat_contact, pmat_stack), axis = 1)
 
-            print pmat_stack.shape
+            weight_input = WEIGHT_LBS/2.20462
+            height_input = (HEIGHT_IN*0.0254 - 1)*100
+
+            batch1 = np.zeros((1, 162))
+            if GENDER == 'f':
+                batch1[:, 157] += 1
+            elif GENDER == 'm':
+                batch1[:, 158] += 1
+            batch1[:, 160] += weight_input
+            batch1[:, 161] += height_input
 
             pmat_stack = torch.Tensor(pmat_stack)
+            batch1 = torch.Tensor(batch1)
 
-            images_up_non_tensor = np.array(PreprocessingLib().preprocessing_pressure_map_upsample(pmat_stack.numpy(), multiple=2))
-            images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
+            batch = []
+            batch.append(pmat_stack)
+            batch.append(batch1)
 
-            betas_est, root_shift_est, angles_est = model.forward_kinematic_angles_realtime_DMTEST(images_up)
+            self.CTRL_PNL['adjust_ang_from_est'] = False
+            scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch, False, model, self.CTRL_PNL)
 
-            print betas_est, root_shift_est, angles_est
+
+            mdm_est_pos = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1)
+            mdm_est_neg = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1)
+            mdm_est_pos[mdm_est_pos < 0] = 0
+            mdm_est_neg[mdm_est_neg > 0] = 0
+            mdm_est_neg *= -1
+            cm_est = OUTPUT_DICT['batch_cm_est'].clone().unsqueeze(1) * 100
+
+            batch_cor = []
+            batch_cor.append(torch.cat((pmat_stack[:, 0:1, :, :],
+                                      mdm_est_pos.type(torch.FloatTensor),
+                                      mdm_est_neg.type(torch.FloatTensor),
+                                      cm_est.type(torch.FloatTensor),
+                                      pmat_stack[:, 1:, :, :]), dim=1))
+
+            batch_cor.append(torch.cat((batch1,
+                              OUTPUT_DICT['batch_betas_est'].cpu(),
+                              OUTPUT_DICT['batch_angles_est'].cpu(),
+                              OUTPUT_DICT['batch_root_xyz_est'].cpu()), dim = 1))
+
+
+            self.CTRL_PNL['adjust_ang_from_est'] = True
+            scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch_cor, False, model2, self.CTRL_PNL)
+
+            betas_est = np.squeeze(OUTPUT_DICT['batch_betas_est_post_clip'].cpu().numpy())
+            angles_est = np.squeeze(OUTPUT_DICT['batch_angles_est_post_clip'])
+            root_shift_est = np.squeeze(OUTPUT_DICT['batch_root_xyz_est_post_clip'].cpu().numpy())
+
+
+            #print betas_est.shape, root_shift_est.shape, angles_est.shape
+
+            #print betas_est, root_shift_est, angles_est
             angles_est = angles_est.reshape(72)
 
             for idx in range(10):
@@ -312,6 +403,8 @@ class GeneratePose():
             #print self.m.J_transformed[1, :], self.m.J_transformed[4, :]
             # self.m.pose[51] = selection_r
 
+            print self.m.r
+            print OUTPUT_DICT['verts']
 
             pyRender.mesh_render_pose_bed(self.m, root_shift_est, self.point_cloud_array, self.pc_isnew, pmat, self.markers, self.bedangle)
             self.point_cloud_array = None
@@ -326,9 +419,9 @@ class GeneratePose():
 
 if __name__ ==  "__main__":
 
-    gender = "m"
     filepath_prefix = "/home/henry"
 
 
-    generator = GeneratePose(gender, filepath_prefix)
-    generator.estimate_real_time(gender, filepath_prefix+"/data/synth/convnet_anglesEU_synth_s9_3xreal_128b_101e_0.5rtojtdpth_pmatcntin_100e.pt")
+    generator = GeneratePose(filepath_prefix)
+    generator.estimate_real_time(filepath_prefix+"/data/synth/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_100e_000005lr.pt",
+                                 filepath_prefix+"/data/synth/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.pt")
