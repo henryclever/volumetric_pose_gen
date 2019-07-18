@@ -230,7 +230,6 @@ class CNN(nn.Module):
 
 
 
-
     def forward_kinematic_angles(self, images, gender_switch, synth_real_switch, CTRL_PNL, OUTPUT_EST_DICT,
                                  targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None):
 
@@ -383,6 +382,12 @@ class CNN(nn.Module):
         #print Rs_est[0, :]
 
 
+
+        OUTPUT_DICT['batch_betas_est_post_clip'] = scores[:, 0:10].clone().data
+        OUTPUT_DICT['batch_angles_est_post_clip']  = KinematicsLib().batch_dir_cos_angles_from_euler_angles(scores[:, 13:85].view(-1, 24, 3).clone(), self.meshDepthLib.zeros_cartesian, self.meshDepthLib.ones_cartesian)
+        OUTPUT_DICT['batch_root_xyz_est_post_clip'] = scores[:, 10:13].clone().data
+
+
         gender_switch = gender_switch.unsqueeze(1)
         current_batch_size = gender_switch.size()[0]
 
@@ -419,6 +424,7 @@ class CNN(nn.Module):
 
             OUTPUT_DICT['batch_mdm_est'] = OUTPUT_DICT['batch_mdm_est'].type(self.dtype)
             OUTPUT_DICT['batch_cm_est'] = OUTPUT_DICT['batch_cm_est'].type(self.dtype)
+            OUTPUT_DICT['verts'] = verts
 
             verts_red = torch.stack([verts[:, 1325, :],
                                      verts[:, 336, :],  # head
