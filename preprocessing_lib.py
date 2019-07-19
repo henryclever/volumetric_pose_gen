@@ -50,6 +50,9 @@ HIGH_TAXEL_THRESH_Y = (NUMOFTAXELS_Y - 1)
 
 
 class PreprocessingLib():
+    def __init__(self):
+        pass
+
     def chi2_distance(self, histA, histB, eps = 1e-10):
         # compute the chi-squared distance
         d = 0.5 * np.sum([((a - b) ** 2) / (a + b + eps)
