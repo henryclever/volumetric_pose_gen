@@ -118,7 +118,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['depth_map_labels'] = True #can only be true if we have 100% synthetic data for training
         self.CTRL_PNL['depth_map_labels_test'] = False #can only be true is we have 100% synth for testing
         self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
-        self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
+        self.CTRL_PNL['depth_map_input_est'] = True #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
@@ -295,6 +295,8 @@ class PhysicalTrainer():
                                                                                              test_dat_f_real, test_dat_m_real, num_repeats = 1)
         else:
             self.depth_contact_maps_input_est = None
+
+        print np.shape(self.test_x_flat), np.shape(self.test_a_flat)
 
         test_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.test_x_flat,
                                                                                self.test_a_flat,
@@ -624,7 +626,7 @@ class PhysicalTrainer():
                                         requires_grad=False)
                 loss += self.criterion(scores, scores_zeros).data.item()
 
-            elif self.CTRL_PNL['loss_vector_type'] == 'anglesR' or self.CTRL_PNL['loss_vector_type'] == 'anglesDC' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU':
+            elif self.CTRL_PNL['loss_vector_type'] == 'anglesR' or self.CTRL_PNL['loss_vector_type'] == 'anglesDC' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU444':
                 scores, INPUT_DICT_VAL, OUTPUT_DICT_VAL = \
                     UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model=self.model, CTRL_PNL=self.CTRL_PNL)
                 self.criterion = nn.L1Loss()
@@ -658,32 +660,32 @@ class PhysicalTrainer():
                     loss_to_add += loss_mesh_contact
                     loss += loss_to_add
 
-            n_examples += self.CTRL_PNL['batch_size']
+            #n_examples += self.CTRL_PNL['batch_size']
 
-            if n_batches and (batch_i >= n_batches):
-                break
+            #if n_batches and (batch_i >= n_batches):
+            #    break
 
-            batch_ct += 1
+            #batch_ct += 1
 
-        loss /= batch_ct
-        loss *= 1000
+        #loss /= batch_ct
+        #loss *= 1000
         #loss *= 10. / 34
 
-        if GPU == True:
-            VisualizationLib().print_error_val(INPUT_DICT_VAL['batch_targets'].cpu(), OUTPUT_DICT_VAL['batch_targets_est'].cpu(), self.output_size_val,
-                                               self.CTRL_PNL['loss_vector_type'], data='validate')
-        else:
-            VisualizationLib().print_error_val(INPUT_DICT_VAL['batch_targets'], OUTPUT_DICT_VAL['batch_targets_est'], self.output_size_val,
-                                               self.CTRL_PNL['loss_vector_type'], data='validate')
+        #if GPU == True:
+        #    VisualizationLib().print_error_val(INPUT_DICT_VAL['batch_targets'].cpu(), OUTPUT_DICT_VAL['batch_targets_est'].cpu(), self.output_size_val,
+        #                                       self.CTRL_PNL['loss_vector_type'], data='validate')
+        #else:
+        #    VisualizationLib().print_error_val(INPUT_DICT_VAL['batch_targets'], OUTPUT_DICT_VAL['batch_targets_est'], self.output_size_val,
+         #                                      self.CTRL_PNL['loss_vector_type'], data='validate')
 
 
-        self.im_sample_val = INPUT_DICT_VAL['batch_images']
-        self.im_sample_val = self.im_sample_val[0, 1:, :].squeeze()
-        self.tar_sample_val = INPUT_DICT_VAL['batch_targets']  # this is just 10 x 3
-        self.tar_sample_val = self.tar_sample_val[0, :].squeeze() / 1000
-        self.sc_sample_val = OUTPUT_DICT_VAL['batch_targets_est']  # score space is larger is 72 x3
-        self.sc_sample_val = self.sc_sample_val[0, :].squeeze() / 1000
-        self.sc_sample_val = self.sc_sample_val.view(24, 3)
+        #self.im_sample_val = INPUT_DICT_VAL['batch_images']
+        #self.im_sample_val = self.im_sample_val[0, 1:, :].squeeze()
+        #self.tar_sample_val = INPUT_DICT_VAL['batch_targets']  # this is just 10 x 3
+        #self.tar_sample_val = self.tar_sample_val[0, :].squeeze() / 1000
+        ##self.sc_sample_val = OUTPUT_DICT_VAL['batch_targets_est']  # score space is larger is 72 x3
+        #self.sc_sample_val = self.sc_sample_val[0, :].squeeze() / 1000
+        #self.sc_sample_val = self.sc_sample_val.view(24, 3)
 
         #print self.im_sample.shape, self.im_sample_val.shape, self.im_sample_ext.shape, self.im_sample_ext2.shape
 
@@ -736,7 +738,7 @@ if __name__ == "__main__":
                  help='Set if you want to do baseline ML or convnet.')
     p.add_option('--j_d_ratio', action='store', type = 'float',
                  dest='j_d_ratio', \
-                 default=1.0, \
+                 default=0.5, \
                  help='Set the loss mix: joints to depth planes.')
     p.add_option('--qt', action='store_true',
                  dest='quick_test', \
@@ -770,8 +772,8 @@ if __name__ == "__main__":
         filepath_prefix = '/home/henry/data/'
         filepath_suffix = ''
 
-    #filepath_suffix = '_output1p0'
-    filepath_suffix = ''
+    filepath_suffix = '_output0p5'
+    #filepath_suffix = ''
 
     training_database_file_f = []
     training_database_file_m = []

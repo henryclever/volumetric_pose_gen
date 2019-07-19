@@ -481,7 +481,8 @@ class PhysicalTrainer():
                 #self.model = torch.load('/home/henry/data/convnets/epochs_set_3/convnet_anglesEU_synthreal_s12_3xreal_128b_101e_300e.pt')
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_128b_200e.pt')
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_128b_101e_htwt_legacy.pt')
-                self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_s9_3xreal_128b_101e_0.5rtojtdpth_pmatcntin_100e.pt')
+                #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_s9_3xreal_128b_101e_0.5rtojtdpth_pmatcntin_100e.pt')
+                self.model = torch.load('/home/henry/data/convnets/planesreg/convnet_anglesEU_synth_s9_3xreal_128b_0.5rtojtdpth_pmatcntin_200e_00001lr.pt')
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_300e.pt')
                 self.model = self.model.cuda()
             else:
