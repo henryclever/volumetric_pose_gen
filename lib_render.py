@@ -49,6 +49,14 @@ import matplotlib.cm as cm #use cm.jet(list)
 #hmr
 from hmr.src.tf_smpl.batch_smpl import SMPL
 
+import cPickle as pkl
+
+def load_pickle(filename):
+    with open(filename, 'rb') as f:
+        return pickle.load(f)
+
+import os
+
 
 
 
@@ -122,9 +130,17 @@ class pyRenderMesh():
         self.first_pass = True
         self.scene = pyrender.Scene()
         self.human_mat = pyrender.MetallicRoughnessMaterial(baseColorFactor=[0.0, 0.0, 1.0 ,0.0])
-
-
-
+        self.mesh_parts_mat_list = [
+            pyrender.MetallicRoughnessMaterial(baseColorFactor=[166. / 255., 206. / 255., 227. / 255., 0.0]),
+            pyrender.MetallicRoughnessMaterial(baseColorFactor=[31. / 255., 120. / 255., 180. / 255., 0.0]),
+            pyrender.MetallicRoughnessMaterial(baseColorFactor=[251. / 255., 154. / 255., 153. / 255., 0.0]),
+            pyrender.MetallicRoughnessMaterial(baseColorFactor=[227. / 255., 26. / 255., 28. / 255., 0.0]),
+            pyrender.MetallicRoughnessMaterial(baseColorFactor=[178. / 255., 223. / 255., 138. / 255., 0.0]),
+            pyrender.MetallicRoughnessMaterial(baseColorFactor=[51. / 255., 160. / 255., 44. / 255., 0.0]),
+            pyrender.MetallicRoughnessMaterial(baseColorFactor=[253. / 255., 191. / 255., 111. / 255., 0.0]),
+            pyrender.MetallicRoughnessMaterial(baseColorFactor=[255. / 255., 127. / 255., 0. / 255., 0.0]),
+            pyrender.MetallicRoughnessMaterial(baseColorFactor=[202. / 255., 178. / 255., 214. / 255., 0.0]),
+            pyrender.MetallicRoughnessMaterial(baseColorFactor=[106. / 255., 61. / 255., 154. / 255., 0.0])]
 
         self.artag_mat = pyrender.MetallicRoughnessMaterial(baseColorFactor=[0.3, 1.0, 0.3, 0.5])
         self.artag_mat_other = pyrender.MetallicRoughnessMaterial(baseColorFactor=[0.1, 0.1, 0.1, 0.0])
@@ -133,8 +149,7 @@ class pyRenderMesh():
         self.artag_facecolors_root = np.array([[0.0, 1.0, 0.0],[0.0, 1.0, 0.0],[0.0, 1.0, 0.0],[0.0, 1.0, 0.0],[0.0, 1.0, 0.0]])
         self.artag_facecolors = np.array([[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],])
 
-
-
+        self.segmented_dict = load_pickle('segmented_mesh_idx_faces.p')
 
     def mesh_render(self,m):
 
@@ -268,18 +283,57 @@ class pyRenderMesh():
 
 
 
-    def mesh_render_pose_bed(self, m, root_pos, pc, pc_isnew, pmat, markers, bedangle):
+    def mesh_render_pose_bed(self, m, root_pos, pc, pc_isnew, pmat, markers, bedangle, segment_limbs = False):
 
         #get SMPL mesh
         smpl_verts = (m.r - m.J_transformed[0, :])+[root_pos[1]-0.286+0.15, root_pos[0]-0.286, 0.12-root_pos[2]]#*228./214.
+        smpl_faces = np.array(m.f)
 
         print smpl_verts
 
         if np.sum(pmat) < 5000:
             smpl_verts = smpl_verts * 0.001
 
-        smpl_tm = trimesh.base.Trimesh(vertices=smpl_verts, faces=m.f)
-        smpl_mesh = pyrender.Mesh.from_trimesh(smpl_tm, material=self.human_mat, wireframe = True)
+
+        human_mesh_vtx_parts = [smpl_verts[self.segmented_dict['l_lowerleg_idx_list'], :],
+                                smpl_verts[self.segmented_dict['r_lowerleg_idx_list'], :],
+                                smpl_verts[self.segmented_dict['l_upperleg_idx_list'], :],
+                                smpl_verts[self.segmented_dict['r_upperleg_idx_list'], :],
+                                smpl_verts[self.segmented_dict['l_forearm_idx_list'], :],
+                                smpl_verts[self.segmented_dict['r_forearm_idx_list'], :],
+                                smpl_verts[self.segmented_dict['l_upperarm_idx_list'], :],
+                                smpl_verts[self.segmented_dict['r_upperarm_idx_list'], :],
+                                smpl_verts[self.segmented_dict['head_idx_list'], :],
+                                smpl_verts[self.segmented_dict['torso_idx_list'], :]]
+        human_mesh_face_parts = [self.segmented_dict['l_lowerleg_face_list'],
+                                 self.segmented_dict['r_lowerleg_face_list'],
+                                 self.segmented_dict['l_upperleg_face_list'],
+                                 self.segmented_dict['r_upperleg_face_list'],
+                                 self.segmented_dict['l_forearm_face_list'],
+                                 self.segmented_dict['r_forearm_face_list'],
+                                 self.segmented_dict['l_upperarm_face_list'],
+                                 self.segmented_dict['r_upperarm_face_list'],
+                                 self.segmented_dict['head_face_list'],
+                                 self.segmented_dict['torso_face_list']]
+
+        #human_mesh_vtx_parts = [smpl_verts]
+        #human_mesh_face_parts = [smpl_faces]
+
+
+        tm_list = []
+        for idx in range(len(human_mesh_vtx_parts)):
+            tm_list.append(trimesh.base.Trimesh(vertices=np.array(human_mesh_vtx_parts[idx]), faces = np.array(human_mesh_face_parts[idx])))
+
+        mesh_list = []
+        for idx in range(len(tm_list)):
+            if len(tm_list) == 1:
+                mesh_list.append(pyrender.Mesh.from_trimesh(tm_list[idx], material = self.human_mat, wireframe = True))
+            else:
+                mesh_list.append(pyrender.Mesh.from_trimesh(tm_list[idx], material = self.mesh_parts_mat_list[idx], wireframe = True))
+
+
+        #smpl_tm = trimesh.base.Trimesh(vertices=smpl_verts, faces=smpl_faces)
+        #smpl_mesh = pyrender.Mesh.from_trimesh(smpl_tm, material=self.human_mat, wireframe = True)
 
 
         #get Point cloud mesh
@@ -299,7 +353,7 @@ class pyRenderMesh():
             elif marker is None:
                 artag_meshes.append(None)
             else:
-                print marker - markers[2]
+                #print marker - markers[2]
                 if marker is markers[2]:
                     artag_tm = trimesh.base.Trimesh(vertices=self.artag_r+marker-markers[2], faces=self.artag_f, face_colors = self.artag_facecolors_root)
                     artag_meshes.append(pyrender.Mesh.from_trimesh(artag_tm, smooth = False))
@@ -318,8 +372,10 @@ class pyRenderMesh():
         #print "Viewing"
         if self.first_pass == True:
 
+            for mesh_part in mesh_list:
+                self.scene.add(mesh_part)
 
-            self.scene.add(smpl_mesh)
+            #self.scene.add(smpl_mesh)
             self.scene.add(pc_mesh)
             self.scene.add(pmat_mesh)
 
@@ -331,8 +387,13 @@ class pyRenderMesh():
             self.viewer = pyrender.Viewer(self.scene, use_raymond_lighting=True, run_in_thread=True)
             self.first_pass = False
 
-            for node in self.scene.get_nodes(obj=smpl_mesh):
-                self.human_obj_node = node
+            #for node in self.scene.get_nodes(obj=smpl_mesh):
+            #    self.human_obj_node = node
+
+            self.node_list = []
+            for mesh_part in mesh_list:
+                for node in self.scene.get_nodes(obj=mesh_part):
+                    self.node_list.append(node)
 
             for node in self.scene.get_nodes(obj=pc_mesh):
                 self.point_cloud_node = node
@@ -350,10 +411,17 @@ class pyRenderMesh():
             self.viewer.render_lock.acquire()
 
             #reset the human mesh
-            self.scene.remove_node(self.human_obj_node)
-            self.scene.add(smpl_mesh)
-            for node in self.scene.get_nodes(obj=smpl_mesh):
-                self.human_obj_node = node
+            for idx in range(len(mesh_list)):
+
+                self.scene.remove_node(self.node_list[idx])
+                self.scene.add(mesh_list[idx])
+                for node in self.scene.get_nodes(obj=mesh_list[idx]):
+                    self.node_list[idx] = node
+
+            #self.scene.remove_node(self.human_obj_node)
+            #self.scene.add(smpl_mesh)
+            #for node in self.scene.get_nodes(obj=smpl_mesh):
+            #    self.human_obj_node = node
 
 
             #reset the point cloud mesh

@@ -60,9 +60,15 @@ import matplotlib.pyplot as plt
 #hmr
 from hmr.src.tf_smpl.batch_smpl import SMPL
 
-WEIGHT_LBS = 140.
-HEIGHT_IN = 72.
+WEIGHT_LBS = 190.
+HEIGHT_IN = 78.
 GENDER = 'm'
+
+MAT_SIZE = (64, 27)
+
+PC_WRT_ARTAG_ADJ = [0.11, -0.02, 0.07]
+ARTAG_WRT_PMAT = [0.08, 0.05, 0.0]
+
 
 import sys
 
@@ -70,6 +76,17 @@ sys.path.insert(0, '/home/henry/git/volumetric_pose_gen/convnets')
 from unpack_batch_lib import UnpackBatchLib
 import convnet as convnet
 from torch.autograd import Variable
+
+if torch.cuda.is_available():
+    # Use for GPU
+    GPU = True
+    dtype = torch.cuda.FloatTensor
+    print '######################### CUDA is available! #############################'
+else:
+    # Use for CPU
+    GPU = False
+    dtype = torch.FloatTensor
+    print '############################## USING CPU #################################'
 
 
 class Viz3DPose():
@@ -105,8 +122,8 @@ class Viz3DPose():
         self.CTRL_PNL['incl_ht_wt_channels'] = True
         self.CTRL_PNL['incl_pmat_cntct_input'] = True
         self.CTRL_PNL['num_input_channels'] = 3
-        self.CTRL_PNL['GPU'] = True
-        self.CTRL_PNL['dtype'] = torch.cuda.FloatTensor
+        self.CTRL_PNL['GPU'] = GPU
+        self.CTRL_PNL['dtype'] = dtype
         self.CTRL_PNL['repeat_real_data_ct'] = 1
         self.CTRL_PNL['regr_angles'] = 1
         self.CTRL_PNL['depth_map_labels'] = False
@@ -298,7 +315,7 @@ class Viz3DPose():
         Y = -Y
         Z = -depth_value + camera_to_bed_dist
 
-        point_cloud = np.stack((X,Y,Z))
+        point_cloud = np.stack((Y, X, -Z))
         point_cloud = np.swapaxes(point_cloud, 0, 2)
         point_cloud = np.swapaxes(point_cloud, 0, 1)
 
@@ -306,167 +323,128 @@ class Viz3DPose():
         for j in range(point_cloud_red.shape[0]):
             for i in range(point_cloud_red.shape[1]):
                 point_cloud_red[j, i, :] = np.median(np.median(point_cloud[j*10:(j+1)*10, i*10:(i+1)*10, :], axis = 0), axis = 0)
-        point_cloud_red = point_cloud_red.reshape(-1, 3)
+        self.point_cloud_red = point_cloud_red.reshape(-1, 3)
+        self.point_cloud = point_cloud.reshape(-1, 3)
+        self.point_cloud[:, 0] += PC_WRT_ARTAG_ADJ[0] + ARTAG_WRT_PMAT[0]
+        self.point_cloud[:, 1] += PC_WRT_ARTAG_ADJ[1] + ARTAG_WRT_PMAT[1]
+        self.point_cloud[:, 2] += PC_WRT_ARTAG_ADJ[2] + ARTAG_WRT_PMAT[2]
+        #print point_cloud.shape, 'pc shape'
+        #print point_cloud_red.shape
 
         return X, Y, Z
 
 
-    def estimate_real_time(self, filename1, filename2 = None):
-
-        pyRender = libRender.pyRenderMesh()
-        mat_size = (64, 27)
-        from unpack_batch_lib import UnpackBatchLib
-
-        if torch.cuda.is_available():
-            # Use for GPU
-            GPU = True
-            dtype = torch.cuda.FloatTensor
-            print '######################### CUDA is available! #############################'
-        else:
-            # Use for CPU
-            GPU = False
-            dtype = torch.FloatTensor
-            print '############################## USING CPU #################################'
-
-        import convnet as convnet
-        from torch.autograd import Variable
-
-        if GPU == True:
-            model = torch.load(filename1)
-            model = model.cuda().eval()
-            if filename2 is not None:
-                model2 = torch.load(filename2)
-                model2 = model2.cuda().eval()
-
-        else:
-            model = torch.load(filename1, map_location='cpu').eval()
-            if filename2 is not None:
-                model2 = torch.load(filename2, map_location='cpu').eval()
-
-        while not rospy.is_shutdown():
+    def estimate_pose(self, pmat, bedangle, markers_c, model, model2):
 
 
-            pmat = np.fliplr(np.flipud(np.clip(self.pressure.reshape(mat_size)*5.0, a_min=0, a_max=100)))
+        pmat = np.fliplr(np.flipud(np.clip(pmat.reshape(MAT_SIZE)*5.0, a_min=0, a_max=100)))
 
-            pmat = gaussian_filter(pmat, sigma= 0.5)
-
-
-            pmat_stack = PreprocessingLib().preprocessing_create_pressure_angle_stack_realtime(pmat, self.bedangle, mat_size)
-            pmat_stack = np.clip(pmat_stack, a_min=0, a_max=100)
-
-            pmat_stack = np.array(pmat_stack)
-            pmat_contact = np.copy(pmat_stack[:, 0:1, :, :])
-            pmat_contact[pmat_contact > 0] = 100
-            pmat_stack = np.concatenate((pmat_contact, pmat_stack), axis = 1)
-
-            weight_input = WEIGHT_LBS/2.20462
-            height_input = (HEIGHT_IN*0.0254 - 1)*100
-
-            batch1 = np.zeros((1, 162))
-            if GENDER == 'f':
-                batch1[:, 157] += 1
-            elif GENDER == 'm':
-                batch1[:, 158] += 1
-            batch1[:, 160] += weight_input
-            batch1[:, 161] += height_input
-
-            pmat_stack = torch.Tensor(pmat_stack)
-            batch1 = torch.Tensor(batch1)
-
-            batch = []
-            batch.append(pmat_stack)
-            batch.append(batch1)
-
-            self.CTRL_PNL['adjust_ang_from_est'] = False
-            scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch, False, model, self.CTRL_PNL)
+        pmat = gaussian_filter(pmat, sigma= 0.5)
 
 
-            mdm_est_pos = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1)
-            mdm_est_neg = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1)
-            mdm_est_pos[mdm_est_pos < 0] = 0
-            mdm_est_neg[mdm_est_neg > 0] = 0
-            mdm_est_neg *= -1
-            cm_est = OUTPUT_DICT['batch_cm_est'].clone().unsqueeze(1) * 100
+        pmat_stack = PreprocessingLib().preprocessing_create_pressure_angle_stack_realtime(pmat, bedangle, MAT_SIZE)
+        pmat_stack = np.clip(pmat_stack, a_min=0, a_max=100)
 
-            batch_cor = []
-            batch_cor.append(torch.cat((pmat_stack[:, 0:1, :, :],
-                                      mdm_est_pos.type(torch.FloatTensor),
-                                      mdm_est_neg.type(torch.FloatTensor),
-                                      cm_est.type(torch.FloatTensor),
-                                      pmat_stack[:, 1:, :, :]), dim=1))
+        pmat_stack = np.array(pmat_stack)
+        pmat_contact = np.copy(pmat_stack[:, 0:1, :, :])
+        pmat_contact[pmat_contact > 0] = 100
+        pmat_stack = np.concatenate((pmat_contact, pmat_stack), axis = 1)
 
-            batch_cor.append(torch.cat((batch1,
-                              OUTPUT_DICT['batch_betas_est'].cpu(),
-                              OUTPUT_DICT['batch_angles_est'].cpu(),
-                              OUTPUT_DICT['batch_root_xyz_est'].cpu()), dim = 1))
+        weight_input = WEIGHT_LBS/2.20462
+        height_input = (HEIGHT_IN*0.0254 - 1)*100
 
+        batch1 = np.zeros((1, 162))
+        if GENDER == 'f':
+            batch1[:, 157] += 1
+        elif GENDER == 'm':
+            batch1[:, 158] += 1
+        batch1[:, 160] += weight_input
+        batch1[:, 161] += height_input
 
-            self.CTRL_PNL['adjust_ang_from_est'] = True
-            scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch_cor, False, model2, self.CTRL_PNL)
+        pmat_stack = torch.Tensor(pmat_stack)
+        batch1 = torch.Tensor(batch1)
 
-            betas_est = np.squeeze(OUTPUT_DICT['batch_betas_est_post_clip'].cpu().numpy())
-            angles_est = np.squeeze(OUTPUT_DICT['batch_angles_est_post_clip'])
-            root_shift_est = np.squeeze(OUTPUT_DICT['batch_root_xyz_est_post_clip'].cpu().numpy())
+        batch = []
+        batch.append(pmat_stack)
+        batch.append(batch1)
 
-
-            #print betas_est.shape, root_shift_est.shape, angles_est.shape
-
-            #print betas_est, root_shift_est, angles_est
-            angles_est = angles_est.reshape(72)
-
-            for idx in range(10):
-                #print shape_pose_vol[0][idx]
-                self.m.betas[idx] = betas_est[idx]
+        self.CTRL_PNL['adjust_ang_from_est'] = False
+        scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch, False, model, self.CTRL_PNL)
 
 
-            for idx in range(72):
-                self.m.pose[idx] = angles_est[idx]
+        mdm_est_pos = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1)
+        mdm_est_neg = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1)
+        mdm_est_pos[mdm_est_pos < 0] = 0
+        mdm_est_neg[mdm_est_neg > 0] = 0
+        mdm_est_neg *= -1
+        cm_est = OUTPUT_DICT['batch_cm_est'].clone().unsqueeze(1) * 100
+
+        batch_cor = []
+        batch_cor.append(torch.cat((pmat_stack[:, 0:1, :, :],
+                                  mdm_est_pos.type(torch.FloatTensor),
+                                  mdm_est_neg.type(torch.FloatTensor),
+                                  cm_est.type(torch.FloatTensor),
+                                  pmat_stack[:, 1:, :, :]), dim=1))
+
+        batch_cor.append(torch.cat((batch1,
+                          OUTPUT_DICT['batch_betas_est'].cpu(),
+                          OUTPUT_DICT['batch_angles_est'].cpu(),
+                          OUTPUT_DICT['batch_root_xyz_est'].cpu()), dim = 1))
 
 
-            init_root = np.array(self.m.pose[0:3])+0.000001
-            init_rootR = libKinematics.matrix_from_dir_cos_angles(init_root)
-            root_rot = libKinematics.eulerAnglesToRotationMatrix([np.pi, 0.0, np.pi/2])
-            #print root_rot
-            trans_root = libKinematics.dir_cos_angles_from_matrix(np.matmul(root_rot, init_rootR))
+        self.CTRL_PNL['adjust_ang_from_est'] = True
+        scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch_cor, False, model2, self.CTRL_PNL)
 
-            self.m.pose[0] = trans_root[0]
-            self.m.pose[1] = trans_root[1]
-            self.m.pose[2] = trans_root[2]
-
-            #print self.m.J_transformed[1, :], self.m.J_transformed[4, :]
-            # self.m.pose[51] = selection_r
-
-            print self.m.r
-            print OUTPUT_DICT['verts']
-
-            pyRender.mesh_render_pose_bed(self.m, root_shift_est, self.point_cloud_array, self.pc_isnew, pmat, self.markers, self.bedangle)
-            self.point_cloud_array = None
-
-            #dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix, add_floor = False)
-
-            #dss.run_simulation(10000)
-            #generator.standard_render()
+        betas_est = np.squeeze(OUTPUT_DICT['batch_betas_est_post_clip'].cpu().numpy())
+        angles_est = np.squeeze(OUTPUT_DICT['batch_angles_est_post_clip'])
+        root_shift_est = np.squeeze(OUTPUT_DICT['batch_root_xyz_est_post_clip'].cpu().numpy())
 
 
-            #break
+        #print betas_est.shape, root_shift_est.shape, angles_est.shape
+
+        #print betas_est, root_shift_est, angles_est
+        angles_est = angles_est.reshape(72)
+
+        for idx in range(10):
+            #print shape_pose_vol[0][idx]
+            self.m.betas[idx] = betas_est[idx]
+
+
+        for idx in range(72):
+            self.m.pose[idx] = angles_est[idx]
+
+
+        init_root = np.array(self.m.pose[0:3])+0.000001
+        init_rootR = libKinematics.matrix_from_dir_cos_angles(init_root)
+        root_rot = libKinematics.eulerAnglesToRotationMatrix([np.pi, 0.0, np.pi/2])
+        #print root_rot
+        trans_root = libKinematics.dir_cos_angles_from_matrix(np.matmul(root_rot, init_rootR))
+
+        self.m.pose[0] = trans_root[0]
+        self.m.pose[1] = trans_root[1]
+        self.m.pose[2] = trans_root[2]
+
+        #print self.m.J_transformed[1, :], self.m.J_transformed[4, :]
+        # self.m.pose[51] = selection_r
+
+
+        self.pyRender.mesh_render_pose_bed(self.m, root_shift_est, self.point_cloud, self.pc_isnew, pmat, markers_c, bedangle)
+        self.point_cloud_array = None
+
+
+
+        #dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix, add_floor = False)
+
+        #dss.run_simulation(10000)
+        #generator.standard_render()
+
+
 
 
     def evaluate_data(self, function_input, filename1, filename2):
 
 
-        pyRender = libRender.pyRenderMesh()
-        mat_size = (64, 27)
-
-        if torch.cuda.is_available():
-            # Use for GPU
-            GPU = True
-            dtype = torch.cuda.FloatTensor
-            print '######################### CUDA is available! #############################'
-        else:
-            # Use for CPU
-            GPU = False
-            dtype = torch.FloatTensor
-            print '############################## USING CPU #################################'
+        self.pyRender = libRender.pyRenderMesh()
 
         if GPU == True:
             model = torch.load(filename1)
@@ -532,7 +510,12 @@ class Viz3DPose():
                 markers_c.append(self.markers_all[im_num][1])
                 markers_c.append(self.markers_all[im_num][2])
                 markers_c.append(self.markers_all[im_num][3])
+                for idx in range(4):
+                    if markers_c[idx] is not None:
+                        markers_c[idx] = np.array(markers_c[idx])*213./228.
             blah = False
+
+
 
             # Get the marker points in 2D on the color image
             u_c, v_c = ArTagLib().color_2D_markers(markers_c, self.new_K_kin)
@@ -638,7 +621,8 @@ class Viz3DPose():
             #k = cv2.waitKey(1)
             #cv2.waitKey(0)
 
-            print self.pressure.shape
+
+            self.estimate_pose(self.pressure, self.bed_state[0], markers_c, model, model2)
 
 
 if __name__ ==  "__main__":

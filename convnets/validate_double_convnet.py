@@ -281,10 +281,10 @@ class PhysicalTrainer():
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg/'
                 #                        'convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_000005lr.pt', map_location = 'cpu')
                 self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg/'
-                                        'convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_00001lr.pt', map_location='cpu')
+                                        'convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_000005lr.pt', map_location='cpu')
 
                 self.model_cor = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg_correction/'
-                                        'convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.pt', map_location = 'cpu')
+                                        'convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_rgangs_100e_00001lr.pt', map_location = 'cpu')
 
 
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_4xsize_128b_200e.pt', map_location = 'cpu')
@@ -321,7 +321,7 @@ class PhysicalTrainer():
         n_examples = 0
 
         for batch_i, batch in enumerate(self.test_loader):
-            if batch_i == 10: break
+            if batch_i == 100: break
 
             if self.CTRL_PNL['loss_vector_type'] == 'direct':
                 scores, INPUT_DICT, OUTPUT_DICT = \
@@ -436,16 +436,16 @@ class PhysicalTrainer():
 
 
             try:
-                targets_print = torch.cat([targets_print, torch.mean(INPUT_DICT['batch_targets'], dim = 0).unsqueeze(0)], dim=0)
-                targets_est_print = torch.cat([targets_est_print, torch.mean(OUTPUT_DICT['batch_targets_est'], dim = 0).unsqueeze(0)], dim=0)
+                targets_print = torch.cat([targets_print, torch.mean(INPUT_DICT_COR['batch_targets'], dim = 0).unsqueeze(0)], dim=0)
+                targets_est_print = torch.cat([targets_est_print, torch.mean(OUTPUT_DICT_COR['batch_targets_est'], dim = 0).unsqueeze(0)], dim=0)
             except:
 
-                targets_print = torch.mean(INPUT_DICT['batch_targets'], dim = 0).unsqueeze(0)
-                targets_est_print = torch.mean(OUTPUT_DICT['batch_targets_est'], dim = 0).unsqueeze(0)
+                targets_print = torch.mean(INPUT_DICT_COR['batch_targets'], dim = 0).unsqueeze(0)
+                targets_est_print = torch.mean(OUTPUT_DICT_COR['batch_targets_est'], dim = 0).unsqueeze(0)
 
 
-            print targets_print.shape, INPUT_DICT['batch_targets'].shape
-            print targets_est_print.shape, OUTPUT_DICT['batch_targets_est'].shape
+            print targets_print.shape, INPUT_DICT_COR['batch_targets'].shape
+            print targets_est_print.shape, OUTPUT_DICT_COR['batch_targets_est'].shape
 
 
             if GPU == True:
@@ -546,8 +546,8 @@ if __name__ == "__main__":
     network_design = True
 
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff.p')
-    test_database_file_f.append(filepath_prefix+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
-    #test_database_file_f.append(filepath_prefix+'data/synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff.p')
+    #test_database_file_f.append(filepath_prefix+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
+    test_database_file_f.append(filepath_prefix+'data/synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2067_none_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1121_upperbody_stiff.p')
