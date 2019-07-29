@@ -375,6 +375,27 @@ class GeneratePose():
         #human_mesh_vtx_parts = [smpl_verts]
         #human_mesh_face_parts = [smpl_faces]
 
+        #print np.min(human_mesh_vtx_parts[0][:, 0]), np.max(human_mesh_vtx_parts[0][:, 0])
+        #print np.min(human_mesh_vtx_parts[0][:, 1]), np.max(human_mesh_vtx_parts[0][:, 1])
+        #print np.min(human_mesh_vtx_parts[0][:, 2]), np.max(human_mesh_vtx_parts[0][:, 2])
+        #for idx in range(np.shape(human_mesh_vtx_parts[0])[0]):
+        #    if human_mesh_vtx_parts[0][idx, 0] > -0.11 and human_mesh_vtx_parts[0][idx, 0] < -0.08:
+        #        if human_mesh_vtx_parts[0][idx, 1] < -0.2 and human_mesh_vtx_parts[0][idx, 1] > -0.5:
+        #            if human_mesh_vtx_parts[0][idx, 2] > 0:
+       #                 print idx, human_mesh_vtx_parts[0][idx, :]
+
+
+        #throw_out = 1350 #heart
+        #throw_out = 3166 #mouth
+        #throw_out = 6566 #appendix
+
+        #for idx in range(np.shape(human_mesh_face_parts[0])[0]):
+        #    #print human_mesh_face_parts[9][idx]
+        #    if human_mesh_face_parts[0][idx][0] == throw_out or human_mesh_face_parts[0][idx][1] == throw_out or human_mesh_face_parts[0][idx][2] == throw_out:
+        #        human_mesh_face_parts[0][idx][0] = 0
+        #        human_mesh_face_parts[0][idx][1] = 1
+        #        human_mesh_face_parts[0][idx][2] = 2
+
 
         tm_list = []
         for idx in range(len(human_mesh_vtx_parts)):

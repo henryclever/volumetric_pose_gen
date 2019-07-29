@@ -1,4 +1,6 @@
 
+
+import open3d as o3d
 import trimesh
 import pyrender
 import pyglet
@@ -234,7 +236,7 @@ class pyRenderMesh():
 
         pmat_colors = cm.jet(pmat_reshaped/100)
         print pmat_colors.shape
-        pmat_colors[:, :, 3] = 0.5
+        pmat_colors[:, :, 3] = 0.8 #translucency
 
         pmat_xyz = np.zeros((64, 27, 3))
         pmat_faces = []
@@ -281,48 +283,400 @@ class pyRenderMesh():
         return pmat_verts, pmat_faces, pmat_facecolors
 
 
+    def reduce_by_cam_dir(self, vertices, faces, camera_point):
+
+        vertices = np.array(vertices)
+        faces = np.array(faces)
+
+        tri_norm = np.cross(vertices[faces[:, 1], :] - vertices[faces[:, 0], :],
+                            vertices[faces[:, 2], :] - vertices[faces[:, 0], :])
+
+        tri_norm = tri_norm/np.linalg.norm(tri_norm, axis = 1)[:, None]
+
+        tri_to_cam = camera_point - vertices[faces[:, 0], :]
+
+        tri_to_cam = tri_to_cam/np.linalg.norm(tri_to_cam, axis = 1)[:, None]
+
+        angle_list = tri_norm[:, 0]*tri_to_cam[:, 0] + tri_norm[:, 1]*tri_to_cam[:, 1] + tri_norm[:, 2]*tri_to_cam[:, 2]
+        angle_list = np.arccos(angle_list) * 180 / np.pi
 
 
-    def mesh_render_pose_bed(self, m, root_pos, pc, pc_isnew, pmat, markers, bedangle, segment_limbs = False):
+        angle_list = np.array(angle_list)
+        faces = np.array(faces)
+        faces_red = faces[angle_list < 90, :]
 
-        #get SMPL mesh
-        smpl_verts = (m.r - m.J_transformed[0, :])+[root_pos[1]-0.286+0.15, root_pos[0]-0.286, 0.12-root_pos[2]]#*228./214.
-        smpl_faces = np.array(m.f)
+        return list(faces_red)
 
-        print smpl_verts
+
+    def get_triangle_area_vert_weight(self, verts, faces, verts_idx_red):
+
+        #first we need all the triangle areas
+        tri_verts = verts[faces, :]
+        a = np.linalg.norm(tri_verts[:,0]-tri_verts[:,1], axis = 1)
+        b = np.linalg.norm(tri_verts[:,1]-tri_verts[:,2], axis = 1)
+        c = np.linalg.norm(tri_verts[:,2]-tri_verts[:,0], axis = 1)
+        s = (a+b+c)/2
+        A = np.sqrt(s*(s-a)*(s-b)*(s-c))
+        A = np.swapaxes(np.stack((A, A, A)), 0, 1) #repeat the area for each vert in the triangle
+        A = A.flatten()
+        faces = np.array(faces).flatten()
+        i = np.argsort(faces) #sort the faces and the areas by the face idx
+        faces_sorted = faces[i]
+        A_sorted = A[i]
+        last_face = 0
+        area_minilist = []
+        area_avg_list = []
+        face_sort_list = [] #take the average area for all the trianges surrounding each vert
+        for vtx_connect_idx in range(np.shape(faces_sorted)[0]):
+            if faces_sorted[vtx_connect_idx] == last_face and vtx_connect_idx != np.shape(faces_sorted)[0]-1:
+                area_minilist.append(A_sorted[vtx_connect_idx])
+            elif faces_sorted[vtx_connect_idx] > last_face or vtx_connect_idx == np.shape(faces_sorted)[0]-1:
+                if len(area_minilist) != 0:
+                    area_avg_list.append(np.mean(area_minilist))
+                else:
+                    area_avg_list.append(0)
+                face_sort_list.append(last_face)
+                area_minilist = []
+                last_face += 1
+                if faces_sorted[vtx_connect_idx] == last_face:
+                    area_minilist.append(A_sorted[vtx_connect_idx])
+                elif faces_sorted[vtx_connect_idx] > last_face:
+                    num_tack_on = np.copy(faces_sorted[vtx_connect_idx] - last_face)
+                    for i in range(num_tack_on):
+                        area_avg_list.append(0)
+                        face_sort_list.append(last_face)
+                        last_face += 1
+                        if faces_sorted[vtx_connect_idx] == last_face:
+                            area_minilist.append(A_sorted[vtx_connect_idx])
+
+        area_avg = np.array(area_avg_list)
+        area_avg_red = area_avg[area_avg > 0] #find out how many of the areas correspond to verts facing the camera
+
+        #print np.sum(area_avg_red), np.sum(area_avg)
+
+        norm_area_avg = area_avg/np.sum(area_avg_red)
+        norm_area_avg = norm_area_avg*np.shape(area_avg_red) #multiply by the REDUCED num of verts
+        #print norm_area_avg[0:3], np.min(norm_area_avg), np.max(norm_area_avg), np.mean(norm_area_avg), np.sum(norm_area_avg)
+        #print norm_area_avg.shape, np.shape(verts_idx_red)
+
+        norm_area_avg = norm_area_avg[verts_idx_red]
+        #print norm_area_avg[0:3], np.min(norm_area_avg), np.max(norm_area_avg), np.mean(norm_area_avg), np.sum(norm_area_avg)
+        return norm_area_avg
+
+
+    def get_triangle_norm_to_vert(self, verts, faces, verts_idx_red):
+
+        tri_norm = np.cross(verts[np.array(faces)[:, 1], :] - verts[np.array(faces)[:, 0], :],
+                            verts[np.array(faces)[:, 2], :] - verts[np.array(faces)[:, 0], :])
+
+        tri_norm = tri_norm/np.linalg.norm(tri_norm, axis = 1)[:, None] #but this is for every TRIANGLE. need it per vert
+        tri_norm = np.stack((tri_norm, tri_norm, tri_norm))
+        tri_norm = np.swapaxes(tri_norm, 0, 1)
+
+        tri_norm = tri_norm.reshape(tri_norm.shape[0]*tri_norm.shape[1], tri_norm.shape[2])
+
+        faces = np.array(faces).flatten()
+
+        i = np.argsort(faces) #sort the faces and the areas by the face idx
+        faces_sorted = faces[i]
+
+        tri_norm_sorted = tri_norm[i]
+
+        last_face = 0
+        face_sort_list = [] #take the average area for all the trianges surrounding each vert
+        vertnorm_minilist = []
+        vertnorm_avg_list = []
+
+        for vtx_connect_idx in range(np.shape(faces_sorted)[0]):
+            if faces_sorted[vtx_connect_idx] == last_face and vtx_connect_idx != np.shape(faces_sorted)[0]-1:
+                vertnorm_minilist.append(tri_norm_sorted[vtx_connect_idx])
+            elif faces_sorted[vtx_connect_idx] > last_face or vtx_connect_idx == np.shape(faces_sorted)[0]-1:
+                if len(vertnorm_minilist) != 0:
+                    mean_vertnorm = np.mean(vertnorm_minilist, axis = 0)
+                    mean_vertnorm = mean_vertnorm/np.linalg.norm(mean_vertnorm)
+                    vertnorm_avg_list.append(mean_vertnorm)
+                else:
+                    vertnorm_avg_list.append(np.array([0.0, 0.0, 0.0]))
+                face_sort_list.append(last_face)
+                vertnorm_minilist = []
+                last_face += 1
+                if faces_sorted[vtx_connect_idx] == last_face:
+                    vertnorm_minilist.append(tri_norm_sorted[vtx_connect_idx])
+                elif faces_sorted[vtx_connect_idx] > last_face:
+                    num_tack_on = np.copy(faces_sorted[vtx_connect_idx] - last_face)
+                    for i in range(num_tack_on):
+                        vertnorm_avg_list.append([0.0, 0.0, 0.0])
+                        face_sort_list.append(last_face)
+                        last_face += 1
+                        if faces_sorted[vtx_connect_idx] == last_face:
+                            vertnorm_minilist.append(tri_norm_sorted[vtx_connect_idx])
+
+
+        vertnorm_avg = np.array(vertnorm_avg_list)
+        vertnorm_avg_red = np.swapaxes(np.stack((vertnorm_avg[vertnorm_avg[:, 0] != 0, 0],
+                                                vertnorm_avg[vertnorm_avg[:, 1] != 0, 1],
+                                                vertnorm_avg[vertnorm_avg[:, 2] != 0, 2])), 0, 1)
+        return vertnorm_avg_red
+
+
+    def downspl_pc_get_normals(self, pc, camera_point):
+
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(pc)
+        #print("Downsample the point cloud with a voxel of 0.01")
+        downpcd = o3d.geometry.voxel_down_sample(pcd, voxel_size=0.01)
+
+
+        #o3d.visualization.draw_geometries([downpcd])
+
+        #print("Recompute the normal of the downsampled point cloud")
+        o3d.geometry.estimate_normals(
+            downpcd,
+            search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.05,
+                                                              max_nn=30))
+
+        o3d.geometry.orient_normals_towards_camera_location(downpcd, camera_location=np.array(camera_point))
+
+        #o3d.visualization.draw_geometries([downpcd])
+
+        points = np.array(downpcd.points)
+        normals = np.array(downpcd.normals)
+
+        return points, normals
+
+    def plot_mesh_norms(self, verts, verts_norm):
+
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(verts)
+        pcd.normals = o3d.utility.Vector3dVector(verts_norm)
+
+        o3d.visualization.draw_geometries([pcd])
+
+
+
+    def eval_dist(self, pc, verts, faces, faces_red, camera_point):
+        print pc.shape, verts.shape, np.shape(faces_red)
+
+        verts_idx_red = np.unique(faces_red)
+
+        verts_red = verts[verts_idx_red, :]
+
+        print verts_red.shape
+
+
+        print verts_idx_red.shape
+        print verts_idx_red
+
+        #downsample the point cloud and get the normals
+        pc_red, pc_red_norm = self.downspl_pc_get_normals(pc, camera_point)
+
+        #get the vert norms
+        verts_norm = self.get_triangle_norm_to_vert(verts, faces, verts_idx_red)
+        verts_red_norm = verts_norm[verts_idx_red, :]
+
+        print np.shape(pc_red), np.shape(verts_red)
+        print np.shape(pc_red_norm), np.shape(verts_red_norm)
+
+        #plot the mesh with normals on the verts
+        #self.plot_mesh_norms(verts_red, verts_red_norm)
+
+        allverts = o3d.geometry.PointCloud()
+        allverts.points = o3d.utility.Vector3dVector(verts_red)
+        allverts.normals = o3d.utility.Vector3dVector(verts_red_norm)
+        allverts.paint_uniform_color([55./256,126./256,184./256])
+
+
+        points = o3d.geometry.PointCloud()
+        points.points = o3d.utility.Vector3dVector(pc_red)
+        points.normals = o3d.utility.Vector3dVector(pc_red_norm)
+        points.paint_uniform_color([228./256,26./256,28./256])
+
+        o3d.visualization.draw_geometries([points, allverts])
+
+
+        #get the nearest point from each pc point to some vert, regardless of the normal
+        pc_to_nearest_vert_error_list = []
+        for point_idx in range(pc_red.shape[0]):
+            curr_point = pc_red[point_idx, :]
+
+            all_dist = verts_red - curr_point
+            all_eucl = np.linalg.norm(all_dist, axis = 1)
+            curr_error = np.min(all_eucl)
+            pc_to_nearest_vert_error_list.append(curr_error)
+            #break
+        print "average pc point to nearest vert error, regardless of normal:", np.mean(pc_to_nearest_vert_error_list)
+
+
+        #get the nearest point from each pc point to some vert, considering the normal
+        #angle_cutoff = 45.0
+        for angle_cutoff in [90., 80., 70., 60., 50., 40., 30., 20., 10.]:
+        #for angle_cutoff in [90.]:
+            pc_to_nearest_vert_error_list = []
+            for point_idx in range(pc_red.shape[0]):
+
+                curr_point = pc_red[point_idx, :]
+                curr_normal = pc_red_norm[point_idx, :]
+                udotv = curr_normal[0]*verts_red_norm[:, 0] + \
+                        curr_normal[1]*verts_red_norm[:, 1] + \
+                        curr_normal[2]*verts_red_norm[:, 2]
+
+                theta = np.arccos(udotv)*180/np.pi
+                cutoff_mult = np.copy(theta)
+                cutoff_add = np.copy(theta)
+                cutoff_mult[cutoff_mult < angle_cutoff] = 1
+                cutoff_mult[cutoff_mult > angle_cutoff] = 0
+                cutoff_add[cutoff_add < angle_cutoff] = 0
+                cutoff_add[cutoff_add > angle_cutoff] = 5
+                verts_red_facing = verts_red*(np.expand_dims(cutoff_mult, axis = 1))
+                verts_red_facing = verts_red_facing+(np.expand_dims(cutoff_add, axis = 1))
+
+                all_dist = verts_red_facing - curr_point
+                #all_dist = verts_red - curr_point
+                all_eucl = np.linalg.norm(all_dist, axis = 1)
+
+                curr_error = np.min(all_eucl)
+                pc_to_nearest_vert_error_list.append(curr_error)
+                #break
+
+            #print "average pc point to nearest vert error, considering the normal:", np.mean(pc_to_nearest_vert_error_list)," cutoff: ",angle_cutoff
+            print np.mean(pc_to_nearest_vert_error_list)
+
+
+        #get the nearest point from each vert to some pc point, regardless of the normal
+        vert_to_nearest_point_error_list = []
+        for vert_idx in range(verts_red.shape[0]):
+            curr_vtx = verts_red[vert_idx, :]
+            all_dist = pc_red - curr_vtx
+            all_eucl = np.linalg.norm(all_dist, axis = 1)
+            curr_error = np.min(all_eucl)
+            vert_to_nearest_point_error_list.append(curr_error)
+            #break
+        #print np.mean(vert_to_nearest_point_error_list)
+
+        #normalize by the average area of triangles around each point. the verts are much less spatially distributed well
+        #than the points in the point cloud.
+        norm_area_avg = self.get_triangle_area_vert_weight(verts, faces_red, verts_idx_red)
+        norm_vert_to_nearest_point_error = np.array(vert_to_nearest_point_error_list)*norm_area_avg
+        print "average vert to nearest pc point error, regardless of normal:", np.mean(norm_vert_to_nearest_point_error)
+
+
+        #get the nearest point from each vert to some pc point, considering the normal
+        for angle_cutoff in [90., 80., 70., 60., 50., 40., 30., 20., 10.]:
+        #for angle_cutoff in [90.]:
+            vert_to_nearest_point_error_list = []
+            for vert_idx in range(verts_red.shape[0]):
+                curr_vtx = verts_red[vert_idx, :]
+                curr_normal = verts_red_norm[vert_idx, :]
+                udotv = curr_normal[0]*pc_red_norm[:, 0] + \
+                        curr_normal[1]*pc_red_norm[:, 1] + \
+                        curr_normal[2]*pc_red_norm[:, 2]
+                theta = np.arccos(udotv)*180/np.pi
+                cutoff_mult = np.copy(theta)
+                cutoff_add = np.copy(theta)
+
+                cutoff_mult[cutoff_mult < angle_cutoff] = 1
+                cutoff_mult[cutoff_mult > angle_cutoff] = 0
+                cutoff_add[cutoff_add < angle_cutoff] = 0
+                cutoff_add[cutoff_add > angle_cutoff] = 5.0
+                pc_red_facing = pc_red*(np.expand_dims(cutoff_mult, axis = 1))
+                pc_red_facing = pc_red_facing+(np.expand_dims(cutoff_add, axis = 1))
+
+                all_dist = pc_red_facing - curr_vtx
+                all_eucl = np.linalg.norm(all_dist, axis = 1)
+
+                curr_error = np.min(all_eucl)
+                #if curr_error < 0.5:
+                vert_to_nearest_point_error_list.append(curr_error)
+
+                '''
+                #else:
+                #print curr_error
+                print curr_vtx
+                print curr_normal
+                print norm_area_avg[vert_idx]
+    
+                allverts = o3d.geometry.PointCloud()
+                allverts.points = o3d.utility.Vector3dVector(verts_red)
+                #allverts.normals = o3d.utility.Vector3dVector(verts_red_norm)
+                allverts.paint_uniform_color([0.1, 0.9, 0.1])
+    
+                vert = o3d.geometry.PointCloud()
+                vert.points = o3d.utility.Vector3dVector(np.expand_dims(np.array(curr_vtx), axis = 0))
+                vert.normals = o3d.utility.Vector3dVector(np.expand_dims(curr_normal, axis = 0))
+                vert.paint_uniform_color([0.1, 0.1, 0.9])
+    
+                points = o3d.geometry.PointCloud()
+                points.points = o3d.utility.Vector3dVector(pc_red_facing)
+                #points.normals = o3d.utility.Vector3dVector(pc_red_norm)
+                points.paint_uniform_color([0.9, 0.1, 0.1])
+    
+                o3d.visualization.draw_geometries([points, vert, allverts])
+                '''
+
+                #break
+            #normalize by the average area of triangles around each point. the verts are much less spatially distributed well
+            #than the points in the point cloud.
+
+            #print np.mean(vert_to_nearest_point_error_list), 'mean'
+            norm_area_avg = self.get_triangle_area_vert_weight(verts, faces_red, verts_idx_red)
+
+            #print np.shape(vert_to_nearest_point_error_list), np.shape(norm_area_avg)
+
+            norm_vert_to_nearest_point_error = np.array(vert_to_nearest_point_error_list)*norm_area_avg
+            #print "average vert to nearest pc point error, considering the normal:", np.mean(norm_vert_to_nearest_point_error)," cutoff: ",angle_cutoff
+            print np.mean(norm_vert_to_nearest_point_error)
+
+
+        print "DONE CALC"
+
+
+    def mesh_render_pose_bed(self, smpl_verts, smpl_faces, pc, pc_isnew, pmat, markers, bedangle, segment_limbs = False):
+
+        camera_point = [1.09898028, 0.46441343, -1.53]
+
 
         if np.sum(pmat) < 5000:
             smpl_verts = smpl_verts * 0.001
 
+        if segment_limbs == True:
+            human_mesh_vtx_parts = [smpl_verts[self.segmented_dict['l_lowerleg_idx_list'], :],
+                                    smpl_verts[self.segmented_dict['r_lowerleg_idx_list'], :],
+                                    smpl_verts[self.segmented_dict['l_upperleg_idx_list'], :],
+                                    smpl_verts[self.segmented_dict['r_upperleg_idx_list'], :],
+                                    smpl_verts[self.segmented_dict['l_forearm_idx_list'], :],
+                                    smpl_verts[self.segmented_dict['r_forearm_idx_list'], :],
+                                    smpl_verts[self.segmented_dict['l_upperarm_idx_list'], :],
+                                    smpl_verts[self.segmented_dict['r_upperarm_idx_list'], :],
+                                    smpl_verts[self.segmented_dict['head_idx_list'], :],
+                                    smpl_verts[self.segmented_dict['torso_idx_list'], :]]
+            human_mesh_face_parts = [self.segmented_dict['l_lowerleg_face_list'],
+                                     self.segmented_dict['r_lowerleg_face_list'],
+                                     self.segmented_dict['l_upperleg_face_list'],
+                                     self.segmented_dict['r_upperleg_face_list'],
+                                     self.segmented_dict['l_forearm_face_list'],
+                                     self.segmented_dict['r_forearm_face_list'],
+                                     self.segmented_dict['l_upperarm_face_list'],
+                                     self.segmented_dict['r_upperarm_face_list'],
+                                     self.segmented_dict['head_face_list'],
+                                     self.segmented_dict['torso_face_list']]
+        else:
+            human_mesh_vtx_parts = [smpl_verts]
+            human_mesh_face_parts = [smpl_faces]
 
-        human_mesh_vtx_parts = [smpl_verts[self.segmented_dict['l_lowerleg_idx_list'], :],
-                                smpl_verts[self.segmented_dict['r_lowerleg_idx_list'], :],
-                                smpl_verts[self.segmented_dict['l_upperleg_idx_list'], :],
-                                smpl_verts[self.segmented_dict['r_upperleg_idx_list'], :],
-                                smpl_verts[self.segmented_dict['l_forearm_idx_list'], :],
-                                smpl_verts[self.segmented_dict['r_forearm_idx_list'], :],
-                                smpl_verts[self.segmented_dict['l_upperarm_idx_list'], :],
-                                smpl_verts[self.segmented_dict['r_upperarm_idx_list'], :],
-                                smpl_verts[self.segmented_dict['head_idx_list'], :],
-                                smpl_verts[self.segmented_dict['torso_idx_list'], :]]
-        human_mesh_face_parts = [self.segmented_dict['l_lowerleg_face_list'],
-                                 self.segmented_dict['r_lowerleg_face_list'],
-                                 self.segmented_dict['l_upperleg_face_list'],
-                                 self.segmented_dict['r_upperleg_face_list'],
-                                 self.segmented_dict['l_forearm_face_list'],
-                                 self.segmented_dict['r_forearm_face_list'],
-                                 self.segmented_dict['l_upperarm_face_list'],
-                                 self.segmented_dict['r_upperarm_face_list'],
-                                 self.segmented_dict['head_face_list'],
-                                 self.segmented_dict['torso_face_list']]
+        human_mesh_face_parts_red = []
 
-        #human_mesh_vtx_parts = [smpl_verts]
-        #human_mesh_face_parts = [smpl_faces]
+        #only use the vertices that are facing the camera
+        for part_idx in range(len(human_mesh_vtx_parts)):
+            human_mesh_face_parts_red.append(self.reduce_by_cam_dir(human_mesh_vtx_parts[part_idx], human_mesh_face_parts[part_idx], camera_point))
+
+
+
+        self.eval_dist(pc, human_mesh_vtx_parts[0], human_mesh_face_parts[0], human_mesh_face_parts_red[0], camera_point)
 
 
         tm_list = []
         for idx in range(len(human_mesh_vtx_parts)):
-            tm_list.append(trimesh.base.Trimesh(vertices=np.array(human_mesh_vtx_parts[idx]), faces = np.array(human_mesh_face_parts[idx])))
+            tm_list.append(trimesh.base.Trimesh(vertices=np.array(human_mesh_vtx_parts[idx]), faces = np.array(human_mesh_face_parts_red[idx])))
 
         mesh_list = []
         for idx in range(len(tm_list)):
@@ -375,7 +729,6 @@ class pyRenderMesh():
             for mesh_part in mesh_list:
                 self.scene.add(mesh_part)
 
-            #self.scene.add(smpl_mesh)
             self.scene.add(pc_mesh)
             self.scene.add(pmat_mesh)
 
@@ -387,13 +740,11 @@ class pyRenderMesh():
             self.viewer = pyrender.Viewer(self.scene, use_raymond_lighting=True, run_in_thread=True)
             self.first_pass = False
 
-            #for node in self.scene.get_nodes(obj=smpl_mesh):
-            #    self.human_obj_node = node
-
             self.node_list = []
             for mesh_part in mesh_list:
                 for node in self.scene.get_nodes(obj=mesh_part):
                     self.node_list.append(node)
+
 
             for node in self.scene.get_nodes(obj=pc_mesh):
                 self.point_cloud_node = node
@@ -407,21 +758,16 @@ class pyRenderMesh():
             for node in self.scene.get_nodes(obj=pmat_mesh):
                 self.pmat_node = node
 
+
         else:
             self.viewer.render_lock.acquire()
 
             #reset the human mesh
             for idx in range(len(mesh_list)):
-
                 self.scene.remove_node(self.node_list[idx])
                 self.scene.add(mesh_list[idx])
                 for node in self.scene.get_nodes(obj=mesh_list[idx]):
                     self.node_list[idx] = node
-
-            #self.scene.remove_node(self.human_obj_node)
-            #self.scene.add(smpl_mesh)
-            #for node in self.scene.get_nodes(obj=smpl_mesh):
-            #    self.human_obj_node = node
 
 
             #reset the point cloud mesh
@@ -456,5 +802,5 @@ class pyRenderMesh():
             self.viewer.render_lock.release()
 
 
-        sleep(0.01)
+        sleep(100.01)
         print "BLAH"

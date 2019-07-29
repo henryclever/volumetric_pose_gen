@@ -1,6 +1,7 @@
 import numpy as np
 import random
 import copy
+import lib_render as libRender
 from opendr.renderer import ColoredRenderer
 from opendr.renderer import DepthRenderer
 from opendr.lighting import LambertianPointLight
@@ -12,7 +13,6 @@ from util import batch_global_rigid_transformation, batch_rodrigues, batch_lrotm
 #volumetric pose gen libraries
 import lib_visualization as libVisualization
 import lib_kinematics as libKinematics
-import lib_render as libRender
 from multipose_lib import ArTagLib
 from multipose_lib import VizLib
 from process_yash_data import ProcessYashData
@@ -206,6 +206,7 @@ class Viz3DPose():
         self.bedstate_all = np.load(newpath+"/bedstate.npy")
         self.markers_all = np.load(newpath+"/markers.npy", allow_pickle=True)
         self.time_stamp_all = np.load(newpath+"/time_stamp.npy")
+        self.point_cloud_autofil_all = np.load(newpath+"/point_cloud.npy")
         #self.config_code_all = np.load(newpath+"/config_code.npy")
         print "Finished. Time taken: ", time.time() - time_orig
 
@@ -333,6 +334,15 @@ class Viz3DPose():
 
         return X, Y, Z
 
+    def trim_pc_sides(self):
+        pc_autofil_red = self.point_cloud_autofil[self.point_cloud_autofil[:, 1] < 0.9, :] #width of bed
+        pc_autofil_red = pc_autofil_red[pc_autofil_red[:, 1] > -0.05, :]
+        pc_autofil_red = pc_autofil_red[pc_autofil_red[:, 0] > 0.15, :] #up and down bed
+        pc_autofil_red = pc_autofil_red[pc_autofil_red[:, 0] < 2.05, :] #up and down bed
+
+        return pc_autofil_red
+
+
 
     def estimate_pose(self, pmat, bedangle, markers_c, model, model2):
 
@@ -427,8 +437,15 @@ class Viz3DPose():
         #print self.m.J_transformed[1, :], self.m.J_transformed[4, :]
         # self.m.pose[51] = selection_r
 
+        #get SMPL mesh
+        smpl_verts = (self.m.r - self.m.J_transformed[0, :])+[root_shift_est[1]-0.286+0.15, root_shift_est[0]-0.286, 0.12-root_shift_est[2]]#*228./214.
+        smpl_faces = np.array(self.m.f)
 
-        self.pyRender.mesh_render_pose_bed(self.m, root_shift_est, self.point_cloud, self.pc_isnew, pmat, markers_c, bedangle)
+        pc_autofil_red = self.trim_pc_sides()
+
+
+
+        self.pyRender.mesh_render_pose_bed(smpl_verts, smpl_faces, pc_autofil_red, self.pc_isnew, pmat, markers_c, bedangle, segment_limbs=False)
         self.point_cloud_array = None
 
 
@@ -479,11 +496,14 @@ class Viz3DPose():
         #file_dir_list = ["/media/henry/multimodal_data_2/test_data/data_072019_0001/"]
         blah = True
 
-        file_dir = "/media/henry/multimodal_data_2/test_data/data_072019_0002"
+        #file_dir = "/media/henry/multimodal_data_2/test_data/data_072019_0007"
+        file_dir = "/media/henry/multimodal_data_2/test_data/data_072019_0006"
 
         V3D.load_next_file(file_dir)
 
-        for im_num in range(0, 100):
+        start_num = 51
+        #for im_num in range(29, 100):
+        for im_num in range(start_num, 100):
 
             self.overall_image_scale_amount = 0.85
 
@@ -498,13 +518,15 @@ class Viz3DPose():
             self.depth_r = self.depth_r_all[im_num]
             self.pressure = self.pressure_all[im_num]
             self.bed_state = self.bedstate_all[im_num]
-
+            self.point_cloud_autofil = self.point_cloud_autofil_all[im_num] + [0.0, 0.0, 0.1]
+            print self.point_cloud_autofil.shape
 
             self.bed_state[0] = self.bed_state[0]*head_angle_multiplier
             self.bed_state *= 0
+            #self.bed_state += 60.
             print self.bed_state, np.shape(self.pressure)
 
-            if im_num == 0 and blah == True:
+            if im_num == start_num and blah == True:
                 markers_c = []
                 markers_c.append(self.markers_all[im_num][0])
                 markers_c.append(self.markers_all[im_num][1])
