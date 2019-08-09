@@ -200,16 +200,16 @@ class GeneratePose():
 
 
     def read_precomp_set(self):
-        precomp_data = np.load('/home/henry/data/init_poses/left_leg_yifeng_f_lay_1000.npy', allow_pickle = True)
+        precomp_data = np.load('/home/henry/data/init_poses/all_rand_nom_f_lay_100.npy', allow_pickle = True)
         precomp_data = list(precomp_data)
         print len(precomp_data)
-        print precomp_data[7]
+        #print precomp_data[7]
 
-        for i in range(500):
+        for i in range(100):
 
             pose_ind = precomp_data[i][1]
             pose_angs = precomp_data[i][2]
-            validity = precomp_data[i][7]
+            validity = [1,0]#precomp_data[i][7]
             gender = 'f'
             posture = 'lay'
 
@@ -225,7 +225,7 @@ class GeneratePose():
             joints = np.array(self.m.J_transformed)
 
             print joints
-            print validity
+            #print validity
             rospy.init_node("smpl_viz", anonymous=False)
 
             if int(validity[0]) == 1:
@@ -244,14 +244,14 @@ class GeneratePose():
             libVisualization.rviz_publish_output_limbs_direct(joints, r=r, g=g, b=b, a = a)
 
 
-            #dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None,
-            #                                check_only_distal=True, filepath_prefix=self.filepath_prefix, add_floor=False)
+            dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None,
+                                            check_only_distal=True, filepath_prefix=self.filepath_prefix, add_floor=False)
 
 
 
 
             # run a step to check for collisions
-            #dss.run_sim_step()
+            dss.run_sim_step()
 
             #dss.world.check_collision()
             print "checked collisions"
@@ -259,10 +259,10 @@ class GeneratePose():
             #print "is valid pose?", is_valid_pose
             #print dss.world.collision_result.contacted_bodies
 
-            #dss.run_simulation(1)
+            dss.run_simulation(1)
 
-            for i in range(500):
-                print precomp_data[i][7]
+            #for i in range(100):
+            #    print precomp_data[i][7]
 
 
 
@@ -571,8 +571,8 @@ if __name__ == "__main__":
     #generator.solve_ik_tree_smpl()
 
     posture = "lay"
-    #generator.read_precomp_set()
-    generator.generate_rand_dir_cos(gender='f', posture='lay', num_data=500)
+    generator.read_precomp_set()
+    #generator.generate_rand_dir_cos(gender='f', posture='lay', num_data=500)
 
     #generator.save_yash_data_with_angles(posture)
     #generator.map_euler_angles_to_axis_angle()
