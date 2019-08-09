@@ -21,6 +21,13 @@ try:
 except:
     pass
 
+#ROS libs
+import rospkg
+import roslib
+import tf.transformations as tft
+from visualization_msgs.msg import Marker
+from visualization_msgs.msg import MarkerArray
+
 import tensorflow as tensorflow
 import cPickle as pickle
 
@@ -162,17 +169,30 @@ class GeneratePose():
 
     def load_yifeng_data(self):
 
-        mat_contents = sio.loadmat('/home/henry/git/realistic_human_joint_limits/randomsin_arm_left_q_big.mat')
-        for content in mat_contents:
+        arm_mat_contents = sio.loadmat('/home/henry/git/realistic_human_joint_limits/randomsin_arm_left_q_big.mat')
+        for content in arm_mat_contents:
             print content
 
-        xyall = mat_contents['qTrain_ba']
-        print(xyall.shape)
+        arm_xyall = arm_mat_contents['qTrain_ba']
+        print(arm_xyall.shape)
 
-        np.random.shuffle(xyall)
+        np.random.shuffle(arm_xyall)
 
-        self.yifeng_y = xyall[:, 4].reshape(-1, 1).astype(int)
-        self.yifeng_X = xyall[:, :4]
+        self.yifeng_y_arm = arm_xyall[:, 4].reshape(-1, 1).astype(int)
+        self.yifeng_X_arm = arm_xyall[:, :4]
+
+
+        leg_mat_contents = sio.loadmat('/home/henry/git/realistic_human_joint_limits/randomsin_leg_left_q_big.mat')
+        for content in leg_mat_contents:
+            print content
+
+        leg_xyall = leg_mat_contents['qTrain_ba']
+        print(leg_xyall.shape)
+
+        np.random.shuffle(leg_xyall)
+
+        self.yifeng_y_leg = leg_xyall[:, 6].reshape(-1, 1).astype(int)
+        self.yifeng_X_leg = leg_xyall[:, :4]
 
         # model = Sequential()
         # model.add(Dense(64, input_dim=4, activation='tanh'))
@@ -182,7 +202,7 @@ class GeneratePose():
         # model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
         # model.fit(X, y, batch_size=256, epochs=200, verbose=1)
         # model.save('arm_left_limits_big.h5')
-        self.yifeng_model = load_keras_model('/home/henry/git/realistic_human_joint_limits/arm_left_limits.h5')
+        #self.yifeng_model = load_keras_model('/home/henry/git/realistic_human_joint_limits/arm_left_limits.h5')
 
 
 
@@ -192,39 +212,68 @@ class GeneratePose():
         precomp_data = list(precomp_data)
         print len(precomp_data)
         print precomp_data[7]
-        pose_ind = precomp_data[7][1]
-        pose_angs = precomp_data[7][2]
-        validity = precomp_data[7][7]
-        gender = 'f'
-        posture = 'lay'
-
-        print len(pose_ind), len(pose_angs)
-
-
-        for idx in range(len(pose_ind)):
-            m_idx = pose_ind[idx]
-            ang = pose_angs[idx]
-            self.m.pose[m_idx] = ang
-
-        print self.m.pose
-
-
-        dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None,
-                                        check_only_distal=True, filepath_prefix=self.filepath_prefix, add_floor=False)
-
-        # run a step to check for collisions
-        dss.run_sim_step()
-
-        dss.world.check_collision()
-        print "checked collisions"
-        # print dss.world.CollisionResult()
-        #print "is valid pose?", is_valid_pose
-        print dss.world.collision_result.contacted_bodies
-
-        dss.run_simulation(1)
 
         for i in range(1000):
-            print precomp_data[i][7]
+
+            pose_ind = precomp_data[i][1]
+            pose_angs = precomp_data[i][2]
+            validity = precomp_data[i][7]
+            gender = 'f'
+            posture = 'lay'
+
+            print len(pose_ind), len(pose_angs)
+
+            for idx in range(len(pose_ind)):
+                m_idx = pose_ind[idx]
+                ang = pose_angs[idx]
+                self.m.pose[m_idx] = ang
+
+            print self.m.pose
+
+            joints = np.array(self.m.J_transformed)
+
+            print joints
+            print validity
+            rospy.init_node("smpl_viz", anonymous=False)
+
+            if int(validity[0]) == 1:
+                r=1.0
+                g=1.0
+                b=0.0
+                a = 0.0
+            else:
+                r=1.0
+                g=0.0
+                b=0.0
+                a = 0.3
+
+
+            libVisualization.rviz_publish_output(joints, r=r, g=g, b=b, a = a)
+            libVisualization.rviz_publish_output_limbs_direct(joints, r=r, g=g, b=b, a = a)
+
+
+            #dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None,
+            #                                check_only_distal=True, filepath_prefix=self.filepath_prefix, add_floor=False)
+
+
+
+
+            # run a step to check for collisions
+            #dss.run_sim_step()
+
+            #dss.world.check_collision()
+            print "checked collisions"
+            # print dss.world.CollisionResult()
+            #print "is valid pose?", is_valid_pose
+            #print dss.world.collision_result.contacted_bodies
+
+            #dss.run_simulation(1)
+
+            for i in range(1000):
+                print precomp_data[i][7]
+
+
+
 
 
     def generate_rand_dir_cos(self, gender, posture, num_data):
@@ -297,7 +346,7 @@ class GeneratePose():
                 print "is valid pose?", is_valid_pose
                 print dss.world.collision_result.contacted_bodies
 
-                #dss.run_simulation(1)
+                dss.run_simulation(1)
 
                 print dss.world.collision_result.contact_sets
                 if len(dss.world.collision_result.contacted_bodies) != 0:
@@ -362,11 +411,10 @@ class GeneratePose():
     def map_yifeng_random_selection_to_smpl_angles(self, select_idx, alter_angles=True):
         if alter_angles == True:
             i = select_idx
-
+            '''
             print '\n'
-            zxy_angs = np.squeeze(self.yifeng_X[i:i + 1, :])
-
-            is_valid_pose = np.squeeze(self.yifeng_y[i:i + 1, :])
+            zxy_angs = np.squeeze(self.yifeng_X_arm[i:i + 1, :])
+            is_valid_pose = np.squeeze(self.yifeng_y_arm[i:i + 1, :])
 
             print np.array(zxy_angs), is_valid_pose, 'orig'
 
@@ -387,15 +435,8 @@ class GeneratePose():
             print eulers2, 'recomp eul solution 2'
 
             dircos = libKinematics.dir_cos_angles_from_matrix(R)
-            print dircos, 'recomp dircos 1'
+            print dircos, 'recomp dircos 1 arm'
             #print dircos2, 'recomp dircos 2'
-
-
-            print '\n'
-
-
-
-
 
             ls_roll = dircos[0]
             ls_yaw = dircos[1]
@@ -409,6 +450,48 @@ class GeneratePose():
             self.m.pose[50] = ls_pitch*2/3
 
             self.m.pose[55] = -zxy_angs[3]
+            print '\n'
+            '''
+
+            print '\n'
+            zxy_angs = np.squeeze(self.yifeng_X_leg[i:i + 1, :])
+            is_valid_pose = np.squeeze(self.yifeng_y_leg[i:i + 1, :])
+
+            print np.array(zxy_angs), is_valid_pose, 'orig'
+
+            for i in range(3):
+                if zxy_angs[i] > np.pi:
+                    zxy_angs[i] = zxy_angs[i] - 2 * np.pi
+
+            #print np.array(zxy_angs), prediction, 'orig'
+            R = libKinematics.ZXYeulerAnglesToRotationMatrix(zxy_angs)
+            print R
+
+            eulers, eulers2 = libKinematics.rotationMatrixToZXYEulerAngles(R)  # use THESE rather than the originals
+
+            print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers)
+            print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers2)
+
+            print eulers, 'recomp eul solution 1'
+            print eulers2, 'recomp eul solution 2'
+
+            dircos = libKinematics.dir_cos_angles_from_matrix(R)
+            print R-libKinematics.matrix_from_dir_cos_angles(dircos)
+            print dircos, 'recomp dircos 1 leg'
+            #print dircos2, 'recomp dircos 2'
+
+            self.m.pose[3] = dircos[0]
+            self.m.pose[4] = dircos[1]
+            self.m.pose[5] = dircos[2]
+
+            self.m.pose[12] = zxy_angs[3]
+            print '\n'
+
+
+
+
+
+
 
 
         #self.m.pose[51] = selection_r
@@ -489,8 +572,8 @@ if __name__ == "__main__":
     #generator.solve_ik_tree_smpl()
 
     posture = "lay"
-    generator.read_precomp_set()
-    #generator.generate_rand_dir_cos(gender='f', posture='lay', num_data=1000)
+    #generator.read_precomp_set()
+    generator.generate_rand_dir_cos(gender='f', posture='lay', num_data=1000)
 
     #generator.save_yash_data_with_angles(posture)
     #generator.map_euler_angles_to_axis_angle()
