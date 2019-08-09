@@ -259,7 +259,6 @@ class GeneratePose():
                 #print dss.world.CollisionResult()
                 print dss.world.collision_result.contacted_bodies
 
-                dss.run_simulation(1)
 
                 print dss.world.collision_result.contact_sets
                 if len(dss.world.collision_result.contacted_bodies) != 0:
@@ -303,6 +302,8 @@ class GeneratePose():
                 shape_pose_vol[7] = [is_valid_pose, in_collision]
                 print "is a valid pose?",is_valid_pose,"    is in collision?",in_collision
 
+                dss.run_simulation(1)
+                
                 in_collision = False
 
             pose_indices = [0, 3, 4, 5, 6, 7, 8, 9, 12, 15, 18, 27, 36, 39, 40, 41, 42, 43, 44, 45, 48, 49, 50, 51, 52, 53, 55, 58]
