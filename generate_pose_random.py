@@ -42,7 +42,7 @@ class GeneratePose():
         ## Load SMPL model (here we load the female model)
         model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_'+gender+'_lbs_10_207_0_v1.0.0.pkl'
         self.m = load_model(model_path)
-        
+
         self.filepath_prefix = '/home/henry'
 
         ## Assign random pose and shape parameters
@@ -206,7 +206,7 @@ class GeneratePose():
 
                 self.m.pose[:] = np.random.rand(self.m.pose.size) * 0.
 
-                m, capsules, joint2name, rots0 = generator.map_random_selection_to_smpl_angles()
+                m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles()
 
                 #print "GOT HERE"
                 #time.sleep(2)
