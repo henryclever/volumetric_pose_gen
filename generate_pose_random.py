@@ -258,8 +258,7 @@ class GeneratePose():
                 print "checked collisions"
                 #print dss.world.CollisionResult()
                 print dss.world.collision_result.contacted_bodies
-                
-                print "is a valid pose?", is_valid_pose
+
                 dss.run_simulation(1)
 
                 print dss.world.collision_result.contact_sets
@@ -300,11 +299,6 @@ class GeneratePose():
                 dss.world.reset()
                 dss.world.destroy()
 
-
-                shape_pose_vol[7] = [is_valid_pose, in_collision]
-
-                in_collision = False
-
             pose_indices = [0, 3, 4, 5, 6, 7, 8, 9, 12, 15, 18, 27, 36, 39, 40, 41, 42, 43, 44, 45, 48, 49, 50, 51, 52, 53, 55, 58]
             pose_angles = []
             for index in pose_indices:
@@ -320,6 +314,7 @@ class GeneratePose():
         #print shape_pose_vol_list
         #pickle.dump(shape_pose_vol_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_list1.pkl", "wb"))
         #np.save(self.filepath_prefix+"/data/init_poses/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+".npy", np.array(shape_pose_vol_list))
+
 
 
 
@@ -399,6 +394,7 @@ class GeneratePose():
         rots0 = rots0
 
         return self.m, capsules, joint2name, rots0, is_valid_pose
+
 
 
     def map_nom_limited_random_selection_to_smpl_angles(self, alter_angles=True):
