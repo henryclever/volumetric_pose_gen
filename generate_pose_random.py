@@ -208,7 +208,7 @@ class GeneratePose():
 
 
     def read_precomp_set(self):
-        precomp_data = np.load('/home/henry/data/init_poses/left_arm_checking_f_lay_1000.npy', allow_pickle = True)
+        precomp_data = np.load('/home/henry/data/init_poses/left_leg_checking_f_lay_1000.npy', allow_pickle = True)
         precomp_data = list(precomp_data)
         print len(precomp_data)
         print precomp_data[7]
@@ -240,7 +240,7 @@ class GeneratePose():
                 r=1.0
                 g=1.0
                 b=0.0
-                a = 0.0
+                a = 0.3
             else:
                 r=1.0
                 g=0.0
@@ -298,10 +298,14 @@ class GeneratePose():
             #generator.sample_body_shape(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
             in_collision = True
 
-            m, capsules, joint2name, rots0, is_valid_pose = generator.map_yifeng_random_selection_to_smpl_angles(i)
+            m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles()
+            is_valid_pose = np.array(1)
+            #m, capsules, joint2name, rots0, is_valid_pose = generator.map_yifeng_random_selection_to_smpl_angles(i)
 
             self.m.pose[:] = np.random.rand(self.m.pose.size) * 0.
+
             dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None, check_only_distal = True, filepath_prefix=self.filepath_prefix, add_floor = False)
+
             #print "dataset create type", DATASET_CREATE_TYPE
             #print self.m.pose
             #volumes = dss.getCapsuleVolumes(mm_resolution = 1., dataset_num = DATASET_CREATE_TYPE)
@@ -324,8 +328,8 @@ class GeneratePose():
 
                 self.m.pose[:] = np.random.rand(self.m.pose.size) * 0.
 
-                #m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles()
-                m, capsules, joint2name, rots0, is_valid_pose = generator.map_yifeng_random_selection_to_smpl_angles(i)
+                m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles()
+                #m, capsules, joint2name, rots0, is_valid_pose = generator.map_yifeng_random_selection_to_smpl_angles(i)
 
                 #print "GOT HERE"
                 #time.sleep(2)
@@ -403,7 +407,7 @@ class GeneratePose():
         print "SAVING! "
         #print shape_pose_vol_list
         pickle.dump(shape_pose_vol_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_list1.pkl", "wb"))
-        np.save(self.filepath_prefix+"/data/init_poses/left_arm_checking_"+gender+"_"+posture+"_"+str(num_data)+".npy", np.array(shape_pose_vol_list))
+        np.save(self.filepath_prefix+"/data/init_poses/left_leg_rand_nom_"+gender+"_"+posture+"_"+str(num_data)+".npy", np.array(shape_pose_vol_list))
 
 
 
@@ -513,6 +517,7 @@ class GeneratePose():
 
             self.m.pose[12] = np.random.uniform(np.deg2rad(-1.3), np.deg2rad(139.9))
 
+            '''
             self.m.pose[6] = np.random.uniform(np.deg2rad(-132.1), np.deg2rad(17.8))
             self.m.pose[7] = np.random.uniform(np.deg2rad(-32.6), np.deg2rad(33.7))
             self.m.pose[8] = np.random.uniform(np.deg2rad(-38.6), np.deg2rad(30.5))
@@ -544,6 +549,7 @@ class GeneratePose():
             self.m.pose[53] = rs_pitch*2/3
 
             self.m.pose[58] = np.random.uniform(np.deg2rad(-2.8), np.deg2rad(147.3))
+            '''
 
         #self.m.pose[51] = selection_r
         from capsule_body import get_capsules, joint2name, rots0
@@ -573,7 +579,7 @@ if __name__ == "__main__":
 
     posture = "lay"
     #generator.read_precomp_set()
-    generator.generate_rand_dir_cos(gender='f', posture='lay', num_data=1000)
+    generator.generate_rand_dir_cos(gender='f', posture='lay', num_data=500)
 
     #generator.save_yash_data_with_angles(posture)
     #generator.map_euler_angles_to_axis_angle()
