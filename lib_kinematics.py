@@ -697,6 +697,27 @@ def eulerAnglesToRotationMatrix(theta):
 
     return R
 
+
+def ZXYeulerAnglesToRotationMatrix(theta): #ZXY euler angles
+    R_x = np.array([[1, 0, 0],
+                    [0, math.cos(theta[0]), math.sin(theta[0])],
+                    [0, -math.sin(theta[0]), math.cos(theta[0])]
+                    ])
+
+    R_y = np.array([[math.cos(theta[1]), 0, math.sin(theta[1])],
+                    [0, 1, 0],
+                    [-math.sin(theta[1]), 0, math.cos(theta[1])]
+                    ])
+
+    R_z = np.array([[math.cos(theta[2]), -math.sin(theta[2]), 0],
+                    [math.sin(theta[2]), math.cos(theta[2]), 0],
+                    [0, 0, 1]
+                    ])
+
+    R = np.dot(R_z, np.dot(R_x, R_y))
+
+    return R
+
 def isRotationMatrix(R) :
     Rt = np.transpose(R)
     shouldBeIdentity = np.dot(Rt, R)
@@ -722,6 +743,43 @@ def rotationMatrixToEulerAngles(R):
         z = 0
 
     return np.array([x, y, z])
+
+
+def rotationMatrixToZXYEulerAngles(R):
+    assert (isRotationMatrix(R))
+
+    sx = math.sqrt(R[1, 1] * R[1, 1] + R[0, 1] * R[0, 1])
+
+    singular = sx < 1e-6
+
+    if not singular:
+
+        x = math.atan2(-R[2, 1], sx)
+        y = -math.atan2(R[2, 0], R[2, 2])
+        z = -math.atan2(R[0, 1], R[1, 1])
+
+    else:
+        x = math.atan2(-R[1, 2], R[1, 1])
+        y = math.atan2(-R[2, 0], sy)
+        z = 0
+
+    if x < 0:
+        x2 = -(x + np.pi)
+    else:
+        x2 = -(x - np.pi)
+
+    if y < 0:
+        y2 = y + np.pi
+    else:
+        y2 = y - np.pi
+
+    if z < 0:
+        z2 = z + np.pi
+    else:
+        z2 = z - np.pi
+
+    return np.array([x, y, z]), np.array([x2, y2, z2])
+
 
 def dir_cos_angles_from_matrix(R):
 

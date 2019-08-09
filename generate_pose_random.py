@@ -3,7 +3,9 @@ import random
 from opendr.renderer import ColoredRenderer
 from opendr.lighting import LambertianPointLight
 from opendr.camera import ProjectPoints
-from smpl.smpl_webuser.serialization import load_model
+from smpl.smpl_webuser.serialization import load_model as load_smpl_model
+
+from keras.models import load_model as load_keras_model
 
 #volumetric pose gen libraries
 import lib_visualization as libVisualization
@@ -31,6 +33,7 @@ from ikpy.link import OriginLink, URDFLink
 import time as time
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import scipy.io as sio
 
 #hmr
 from hmr.src.tf_smpl.batch_smpl import SMPL
@@ -41,7 +44,7 @@ class GeneratePose():
     def __init__(self, sampling = "NORMAL", sigma = 0, one_side_range = 0, gender="m"):
         ## Load SMPL model (here we load the female model)
         model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_'+gender+'_lbs_10_207_0_v1.0.0.pkl'
-        self.m = load_model(model_path)
+        self.m = load_smpl_model(model_path)
 
         self.filepath_prefix = '/home/henry'
 
@@ -155,6 +158,33 @@ class GeneratePose():
         #print self.m.pose.shape
         #print self.m.pose, 'pose'
         #print self.m.betas, 'betas'
+        self.load_yifeng_data()
+
+    def load_yifeng_data(self):
+
+        mat_contents = sio.loadmat('/home/henry/git/realistic_human_joint_limits/randomsin_arm_left_q_big.mat')
+        for content in mat_contents:
+            print content
+
+        xyall = mat_contents['qTrain_ba']
+        print(xyall.shape)
+
+        np.random.shuffle(xyall)
+
+        self.yifeng_y = xyall[:, 4].reshape(-1, 1).astype(int)
+        self.yifeng_X = xyall[:, :4]
+
+        # model = Sequential()
+        # model.add(Dense(64, input_dim=4, activation='tanh'))
+        # model.add(Dense(64, activation='tanh'))
+        # model.add(Dense(64, activation='tanh'))
+        # model.add(Dense(1, activation='sigmoid'))
+        # model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+        # model.fit(X, y, batch_size=256, epochs=200, verbose=1)
+        # model.save('arm_left_limits_big.h5')
+        self.yifeng_model = load_keras_model('/home/henry/git/realistic_human_joint_limits/arm_left_limits.h5')
+
+
 
 
 
@@ -170,17 +200,19 @@ class GeneratePose():
 
 
         for i in range(num_data):
-            #shape_pose_vol = [[],[],[],[],[],[],[]]
+            shape_pose_vol = [[],[],[],[],[],[],[]]
 
-            #root_rot = np.random.uniform(-np.pi / 16, np.pi / 16)
-            #shift_side = np.random.uniform(-0.2, 0.2)  # in meters
-            #shift_ud = np.random.uniform(-0.2, 0.2)  # in meters
-            #shape_pose_vol[3] = root_rot
-            #shape_pose_vol[4] = shift_side
-            #shape_pose_vol[5] = shift_ud
+            root_rot = np.random.uniform(-np.pi / 16, np.pi / 16)
+            shift_side = np.random.uniform(-0.2, 0.2)  # in meters
+            shift_ud = np.random.uniform(-0.2, 0.2)  # in meters
+            shape_pose_vol[3] = root_rot
+            shape_pose_vol[4] = shift_side
+            shape_pose_vol[5] = shift_ud
 
             #generator.sample_body_shape(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
             in_collision = True
+
+            m, capsules, joint2name, rots0 = generator.map_yifeng_random_selection_to_smpl_angles()
 
             self.m.pose[:] = np.random.rand(self.m.pose.size) * 0.
             dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None, check_only_distal = True, filepath_prefix=self.filepath_prefix, add_floor = False)
@@ -206,7 +238,8 @@ class GeneratePose():
 
                 self.m.pose[:] = np.random.rand(self.m.pose.size) * 0.
 
-                m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles()
+                #m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles()
+                m, capsules, joint2name, rots0 = generator.map_yifeng_random_selection_to_smpl_angles()
 
                 #print "GOT HERE"
                 #time.sleep(2)
@@ -271,17 +304,97 @@ class GeneratePose():
             for index in pose_indices:
                 pose_angles.append(float(m.pose[index]))
 
-            #shape_pose_vol[1] = pose_indices
-            #shape_pose_vol[2] = pose_angles
+            shape_pose_vol[1] = pose_indices
+            shape_pose_vol[2] = pose_angles
 
 
-            #shape_pose_vol_list.append(shape_pose_vol)
+            shape_pose_vol_list.append(shape_pose_vol)
 
         print "SAVING! "
         #print shape_pose_vol_list
         #pickle.dump(shape_pose_vol_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_list1.pkl", "wb"))
         #np.save(self.filepath_prefix+"/data/init_poses/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+".npy", np.array(shape_pose_vol_list))
 
+
+
+    def map_yifeng_random_selection_to_smpl_angles(self, alter_angles=True):
+        if alter_angles == True:
+
+            for i in range(0, 100):
+                #y0 = self.yifeng_model.predict(np.array(self.yifeng_X[i:i + 1, :]))
+                #if y0 > 0.5:
+                #    prediction = 1
+                #else:
+                #    prediction = 0
+
+                print '\n'
+                zxy_angs = np.squeeze(self.yifeng_X[i:i + 1, :])
+
+                prediction = np.squeeze(self.yifeng_y[i:i + 1, :])
+
+                print np.array(zxy_angs), prediction, 'orig'
+
+                for i in range(3):
+                    if zxy_angs[i] > np.pi:
+                        zxy_angs[i] = zxy_angs[i] - 2 * np.pi
+
+                #print np.array(zxy_angs), prediction, 'orig'
+                R = libKinematics.ZXYeulerAnglesToRotationMatrix(zxy_angs)
+                print R
+                # R = np.matmul(R, np.array([[0, 0, 1],[1, 0, 0],[0, 1, 0]]))
+
+                eulers, eulers2 = libKinematics.rotationMatrixToZXYEulerAngles(R)  # use THESE rather than the originals
+
+                #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers)
+                #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers2)
+
+                print eulers, 'recomp eul solution 1'
+                print eulers2, 'recomp eul solution 2'
+
+                dircos = libKinematics.dir_cos_angles_from_matrix(R)
+                #dircos2 = np.copy(dircos)
+                #for idx in range(3):
+                #    if dircos2[idx] < 0:
+                #        dircos2[idx] = dircos2[idx] + np.pi
+                #    else:
+                #        dircos2[idx] = dircos2[idx] - np.pi
+
+
+                #print R - libKinematics.matrix_from_dir_cos_angles(dircos)
+                #print R - libKinematics.matrix_from_dir_cos_angles(dircos2)
+                print dircos, 'recomp dircos 1'
+                #print dircos2, 'recomp dircos 2'
+
+
+                print '\n'
+
+                if prediction == 1:
+                    break
+
+
+
+
+            ls_roll = dircos[0]
+            ls_yaw = dircos[1]
+            ls_pitch = dircos[2]
+
+            self.m.pose[39] = ls_roll*1/3
+            self.m.pose[40] = ls_yaw*1/3
+            self.m.pose[41] = ls_pitch*1/3
+            self.m.pose[48] = ls_roll*2/3
+            self.m.pose[49] = ls_yaw*2/3
+            self.m.pose[50] = ls_pitch*2/3
+
+            self.m.pose[55] = -zxy_angs[3]
+
+
+        #self.m.pose[51] = selection_r
+        from capsule_body import get_capsules, joint2name, rots0
+        capsules = get_capsules(self.m)
+        joint2name = joint2name
+        rots0 = rots0
+
+        return self.m, capsules, joint2name, rots0
 
 
     def map_nom_limited_random_selection_to_smpl_angles(self, alter_angles=True):
