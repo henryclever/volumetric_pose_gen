@@ -12,7 +12,7 @@ import lib_visualization as libVisualization
 import lib_kinematics as libKinematics
 #import lib_render as libRender
 from process_yash_data import ProcessYashData
-#import dart_skel_sim
+import dart_skel_sim
 
 #ROS
 try:
