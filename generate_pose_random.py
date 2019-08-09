@@ -350,7 +350,7 @@ class GeneratePose():
                 print "is valid pose?", is_valid_pose
                 print dss.world.collision_result.contacted_bodies
 
-                dss.run_simulation(1)
+                #dss.run_simulation(1)
 
                 print dss.world.collision_result.contact_sets
                 if len(dss.world.collision_result.contacted_bodies) != 0:
@@ -511,7 +511,8 @@ class GeneratePose():
     def map_nom_limited_random_selection_to_smpl_angles(self, alter_angles=True):
         if alter_angles == True:
 
-            self.m.pose[3] = np.random.uniform(np.deg2rad(-132.1), np.deg2rad(17.8))
+            #self.m.pose[3] = np.random.uniform(np.deg2rad(-132.1), np.deg2rad(17.8))
+            self.m.pose[3] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
             self.m.pose[4] = np.random.uniform(np.deg2rad(-33.7), np.deg2rad(32.6))
             self.m.pose[5] = np.random.uniform(np.deg2rad(-30.5), np.deg2rad(38.6))
 
