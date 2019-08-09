@@ -223,7 +223,7 @@ class GeneratePose():
 
                 dss.world.check_collision()
                 print "checked collisions"
-                print dss.world.CollisionResult()
+                #print dss.world.CollisionResult()
                 print dss.world.collision_result.contacted_bodies
 
                 dss.run_simulation(1)
