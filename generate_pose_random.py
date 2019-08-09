@@ -12,7 +12,10 @@ import lib_visualization as libVisualization
 import lib_kinematics as libKinematics
 #import lib_render as libRender
 from process_yash_data import ProcessYashData
-import dart_skel_sim
+try:
+    import dart_skel_sim
+except:
+    pass
 
 #ROS
 try:
@@ -194,26 +197,15 @@ class GeneratePose():
         self.yifeng_y_leg = leg_xyall[:, 6].reshape(-1, 1).astype(int)
         self.yifeng_X_leg = leg_xyall[:, :4]
 
-        # model = Sequential()
-        # model.add(Dense(64, input_dim=4, activation='tanh'))
-        # model.add(Dense(64, activation='tanh'))
-        # model.add(Dense(64, activation='tanh'))
-        # model.add(Dense(1, activation='sigmoid'))
-        # model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-        # model.fit(X, y, batch_size=256, epochs=200, verbose=1)
-        # model.save('arm_left_limits_big.h5')
-        #self.yifeng_model = load_keras_model('/home/henry/git/realistic_human_joint_limits/arm_left_limits.h5')
-
-
 
 
     def read_precomp_set(self):
-        precomp_data = np.load('/home/henry/data/init_poses/left_leg_checking_f_lay_1000.npy', allow_pickle = True)
+        precomp_data = np.load('/home/henry/data/init_poses/left_leg_yifeng_f_lay_1000.npy', allow_pickle = True)
         precomp_data = list(precomp_data)
         print len(precomp_data)
         print precomp_data[7]
 
-        for i in range(1000):
+        for i in range(500):
 
             pose_ind = precomp_data[i][1]
             pose_angs = precomp_data[i][2]
@@ -269,7 +261,7 @@ class GeneratePose():
 
             #dss.run_simulation(1)
 
-            for i in range(1000):
+            for i in range(500):
                 print precomp_data[i][7]
 
 
@@ -286,7 +278,7 @@ class GeneratePose():
 
 
         for i in range(num_data):
-            shape_pose_vol = [[],[],[],[],[],[],[],[]]
+            shape_pose_vol = [[],[],[],[],[],[],[]]
 
             root_rot = np.random.uniform(-np.pi / 16, np.pi / 16)
             shift_side = np.random.uniform(-0.2, 0.2)  # in meters
@@ -334,7 +326,7 @@ class GeneratePose():
                 #print "GOT HERE"
                 #time.sleep(2)
 
-                #shape_pose_vol[0] = np.asarray(m.betas).tolist()
+                shape_pose_vol[0] = np.asarray(m.betas).tolist()
 
                 #print "stepping", m.pose
                 dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture = posture, stiffness=None, check_only_distal = True, filepath_prefix=self.filepath_prefix, add_floor = False)
@@ -384,8 +376,8 @@ class GeneratePose():
 
 
 
-                shape_pose_vol[7] = [is_valid_pose, in_collision]
-                in_collision = False
+                #shape_pose_vol[7] = [is_valid_pose, in_collision]
+                #in_collision = False
 
                 #dss.world.skeletons[0].remove_all_collision_pairs()
 
@@ -518,7 +510,7 @@ class GeneratePose():
 
             self.m.pose[12] = np.random.uniform(np.deg2rad(-1.3), np.deg2rad(139.9))
 
-            '''
+
             self.m.pose[6] = np.random.uniform(np.deg2rad(-132.1), np.deg2rad(17.8))
             self.m.pose[7] = np.random.uniform(np.deg2rad(-32.6), np.deg2rad(33.7))
             self.m.pose[8] = np.random.uniform(np.deg2rad(-38.6), np.deg2rad(30.5))
@@ -550,7 +542,7 @@ class GeneratePose():
             self.m.pose[53] = rs_pitch*2/3
 
             self.m.pose[58] = np.random.uniform(np.deg2rad(-2.8), np.deg2rad(147.3))
-            '''
+
 
         #self.m.pose[51] = selection_r
         from capsule_body import get_capsules, joint2name, rots0
