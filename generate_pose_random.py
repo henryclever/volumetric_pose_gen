@@ -42,6 +42,8 @@ class GeneratePose():
         ## Load SMPL model (here we load the female model)
         model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_'+gender+'_lbs_10_207_0_v1.0.0.pkl'
         self.m = load_model(model_path)
+        
+        self.filepath_prefix = '/home/henry'
 
         ## Assign random pose and shape parameters
 
