@@ -240,8 +240,8 @@ class GeneratePose():
                 a = 0.3
 
 
-            libVisualization.rviz_publish_output(joints, r=r, g=g, b=b, a = a)
-            libVisualization.rviz_publish_output_limbs_direct(joints, r=r, g=g, b=b, a = a)
+            #libVisualization.rviz_publish_output(joints, r=r, g=g, b=b, a = a)
+            #libVisualization.rviz_publish_output_limbs_direct(joints, r=r, g=g, b=b, a = a)
 
 
             dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None,
