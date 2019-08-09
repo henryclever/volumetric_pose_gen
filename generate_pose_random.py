@@ -195,6 +195,8 @@ class GeneratePose():
         pose_ind = precomp_data[7][1]
         pose_angs = precomp_data[7][2]
         validity = precomp_data[7][7]
+        gender = 'f'
+        posture = 'lay'
 
         print len(pose_ind), len(pose_angs)
 
