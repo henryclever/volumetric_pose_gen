@@ -294,6 +294,9 @@ class GeneratePose():
 
 
 
+                shape_pose_vol[7] = [is_valid_pose, in_collision]
+                in_collision = False
+
                 #dss.world.skeletons[0].remove_all_collision_pairs()
 
                 #libRender.standard_render(self.m)
@@ -313,8 +316,8 @@ class GeneratePose():
 
         print "SAVING! "
         #print shape_pose_vol_list
-        #pickle.dump(shape_pose_vol_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_list1.pkl", "wb"))
-        #np.save(self.filepath_prefix+"/data/init_poses/valid_shape_pose_vol_"+gender+"_"+posture+"_"+str(num_data)+".npy", np.array(shape_pose_vol_list))
+        pickle.dump(shape_pose_vol_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_list1.pkl", "wb"))
+        np.save(self.filepath_prefix+"/data/init_poses/left_arm_checking_"+gender+"_"+posture+"_"+str(num_data)+".npy", np.array(shape_pose_vol_list))
 
 
 
@@ -463,7 +466,7 @@ if __name__ == "__main__":
     #generator.solve_ik_tree_smpl()
 
     posture = "lay"
-    generator.generate_rand_dir_cos(gender='f', posture='lay', num_data=10)
+    generator.generate_rand_dir_cos(gender='f', posture='lay', num_data=1000)
 
     #generator.save_yash_data_with_angles(posture)
     #generator.map_euler_angles_to_axis_angle()
