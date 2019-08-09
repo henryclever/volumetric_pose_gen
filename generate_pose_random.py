@@ -8,7 +8,7 @@ from smpl.smpl_webuser.serialization import load_model
 #volumetric pose gen libraries
 import lib_visualization as libVisualization
 import lib_kinematics as libKinematics
-import lib_render as libRender
+#import lib_render as libRender
 from process_yash_data import ProcessYashData
 import dart_skel_sim
 
