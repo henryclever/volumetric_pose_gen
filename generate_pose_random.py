@@ -12,7 +12,7 @@ import lib_visualization as libVisualization
 import lib_kinematics as libKinematics
 #import lib_render as libRender
 from process_yash_data import ProcessYashData
-import dart_skel_sim
+#import dart_skel_sim
 
 #ROS
 try:
@@ -187,7 +187,42 @@ class GeneratePose():
 
 
 
+    def read_precomp_set(self):
+        precomp_data = np.load('/home/henry/data/init_poses/left_arm_checking_f_lay_1000.npy', allow_pickle = True)
+        precomp_data = list(precomp_data)
+        print len(precomp_data)
+        print precomp_data[7]
+        pose_ind = precomp_data[7][1]
+        pose_angs = precomp_data[7][2]
+        validity = precomp_data[7][7]
 
+        print len(pose_ind), len(pose_angs)
+
+
+        for idx in range(len(pose_ind)):
+            m_idx = pose_ind[idx]
+            ang = pose_angs[idx]
+            self.m.pose[m_idx] = ang
+
+        print self.m.pose
+
+
+        dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None,
+                                        check_only_distal=True, filepath_prefix=self.filepath_prefix, add_floor=False)
+
+        # run a step to check for collisions
+        dss.run_sim_step()
+
+        dss.world.check_collision()
+        print "checked collisions"
+        # print dss.world.CollisionResult()
+        print "is valid pose?", is_valid_pose
+        print dss.world.collision_result.contacted_bodies
+
+        dss.run_simulation(1)
+
+        for i in range(1000):
+            print precomp_data[i][7]
 
 
     def generate_rand_dir_cos(self, gender, posture, num_data):
@@ -326,12 +361,6 @@ class GeneratePose():
         if alter_angles == True:
             i = select_idx
 
-            #y0 = self.yifeng_model.predict(np.array(self.yifeng_X[i:i + 1, :]))
-            #if y0 > 0.5:
-            #    prediction = 1
-            #else:
-            #    prediction = 0
-
             print '\n'
             zxy_angs = np.squeeze(self.yifeng_X[i:i + 1, :])
 
@@ -346,7 +375,6 @@ class GeneratePose():
             #print np.array(zxy_angs), prediction, 'orig'
             R = libKinematics.ZXYeulerAnglesToRotationMatrix(zxy_angs)
             print R
-            # R = np.matmul(R, np.array([[0, 0, 1],[1, 0, 0],[0, 1, 0]]))
 
             eulers, eulers2 = libKinematics.rotationMatrixToZXYEulerAngles(R)  # use THESE rather than the originals
 
@@ -357,16 +385,6 @@ class GeneratePose():
             print eulers2, 'recomp eul solution 2'
 
             dircos = libKinematics.dir_cos_angles_from_matrix(R)
-            #dircos2 = np.copy(dircos)
-            #for idx in range(3):
-            #    if dircos2[idx] < 0:
-            #        dircos2[idx] = dircos2[idx] + np.pi
-            #    else:
-            #        dircos2[idx] = dircos2[idx] - np.pi
-
-
-            #print R - libKinematics.matrix_from_dir_cos_angles(dircos)
-            #print R - libKinematics.matrix_from_dir_cos_angles(dircos2)
             print dircos, 'recomp dircos 1'
             #print dircos2, 'recomp dircos 2'
 
@@ -459,6 +477,9 @@ class GeneratePose():
 
 
 
+
+
+
 if __name__ == "__main__":
     generator = GeneratePose(sampling = "UNIFORM", sigma = 0, one_side_range = 0)
     #libRender.standard_render(generator.m)
@@ -466,7 +487,8 @@ if __name__ == "__main__":
     #generator.solve_ik_tree_smpl()
 
     posture = "lay"
-    generator.generate_rand_dir_cos(gender='f', posture='lay', num_data=1000)
+    generator.read_precomp_set()
+    #generator.generate_rand_dir_cos(gender='f', posture='lay', num_data=1000)
 
     #generator.save_yash_data_with_angles(posture)
     #generator.map_euler_angles_to_axis_angle()
