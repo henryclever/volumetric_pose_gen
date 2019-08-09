@@ -260,7 +260,7 @@ class GeneratePose():
                 print "is valid pose?", is_valid_pose
                 print dss.world.collision_result.contacted_bodies
 
-                dss.run_simulation(1)
+                #dss.run_simulation(1)
 
                 print dss.world.collision_result.contact_sets
                 if len(dss.world.collision_result.contacted_bodies) != 0:
