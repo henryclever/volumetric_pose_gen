@@ -338,7 +338,7 @@ class GeneratePose():
 
             is_valid_pose = np.squeeze(self.yifeng_y[i:i + 1, :])
 
-            print np.array(zxy_angs), prediction, 'orig'
+            print np.array(zxy_angs), is_valid_pose, 'orig'
 
             for i in range(3):
                 if zxy_angs[i] > np.pi:
