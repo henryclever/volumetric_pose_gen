@@ -211,7 +211,7 @@ class GeneratePose():
                 #print "GOT HERE"
                 #time.sleep(2)
 
-                shape_pose_vol[0] = np.asarray(m.betas).tolist()
+                #shape_pose_vol[0] = np.asarray(m.betas).tolist()
 
                 #print "stepping", m.pose
                 dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture = posture, stiffness=None, check_only_distal = True, filepath_prefix=self.filepath_prefix, add_floor = False)
@@ -271,11 +271,11 @@ class GeneratePose():
             for index in pose_indices:
                 pose_angles.append(float(m.pose[index]))
 
-            shape_pose_vol[1] = pose_indices
-            shape_pose_vol[2] = pose_angles
+            #shape_pose_vol[1] = pose_indices
+            #shape_pose_vol[2] = pose_angles
 
 
-            shape_pose_vol_list.append(shape_pose_vol)
+            #shape_pose_vol_list.append(shape_pose_vol)
 
         print "SAVING! "
         #print shape_pose_vol_list
