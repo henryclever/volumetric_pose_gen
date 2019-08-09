@@ -200,7 +200,7 @@ class GeneratePose():
 
 
         for i in range(num_data):
-            shape_pose_vol = [[],[],[],[],[],[],[]]
+            shape_pose_vol = [[],[],[],[],[],[],[],[]]
 
             root_rot = np.random.uniform(-np.pi / 16, np.pi / 16)
             shift_side = np.random.uniform(-0.2, 0.2)  # in meters
@@ -239,7 +239,7 @@ class GeneratePose():
                 self.m.pose[:] = np.random.rand(self.m.pose.size) * 0.
 
                 #m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles()
-                m, capsules, joint2name, rots0 = generator.map_yifeng_random_selection_to_smpl_angles()
+                m, capsules, joint2name, rots0, is_valid_pose = generator.map_yifeng_random_selection_to_smpl_angles(i)
 
                 #print "GOT HERE"
                 #time.sleep(2)
@@ -299,6 +299,12 @@ class GeneratePose():
                 dss.world.reset()
                 dss.world.destroy()
 
+
+                shape_pose_vol[7] = [is_valid_pose, in_collision]
+                print "is a valid pose?",is_valid_pose,"    is in collision?",in_collision
+
+                in_collision = False
+
             pose_indices = [0, 3, 4, 5, 6, 7, 8, 9, 12, 15, 18, 27, 36, 39, 40, 41, 42, 43, 44, 45, 48, 49, 50, 51, 52, 53, 55, 58]
             pose_angles = []
             for index in pose_indices:
@@ -317,59 +323,57 @@ class GeneratePose():
 
 
 
-    def map_yifeng_random_selection_to_smpl_angles(self, alter_angles=True):
+    def map_yifeng_random_selection_to_smpl_angles(self, select_idx, alter_angles=True):
         if alter_angles == True:
+            i = select_idx
 
-            for i in range(0, 100):
-                #y0 = self.yifeng_model.predict(np.array(self.yifeng_X[i:i + 1, :]))
-                #if y0 > 0.5:
-                #    prediction = 1
-                #else:
-                #    prediction = 0
+            #y0 = self.yifeng_model.predict(np.array(self.yifeng_X[i:i + 1, :]))
+            #if y0 > 0.5:
+            #    prediction = 1
+            #else:
+            #    prediction = 0
 
-                print '\n'
-                zxy_angs = np.squeeze(self.yifeng_X[i:i + 1, :])
+            print '\n'
+            zxy_angs = np.squeeze(self.yifeng_X[i:i + 1, :])
 
-                prediction = np.squeeze(self.yifeng_y[i:i + 1, :])
+            is_valid_pose = np.squeeze(self.yifeng_y[i:i + 1, :])
 
-                print np.array(zxy_angs), prediction, 'orig'
+            print np.array(zxy_angs), prediction, 'orig'
 
-                for i in range(3):
-                    if zxy_angs[i] > np.pi:
-                        zxy_angs[i] = zxy_angs[i] - 2 * np.pi
+            for i in range(3):
+                if zxy_angs[i] > np.pi:
+                    zxy_angs[i] = zxy_angs[i] - 2 * np.pi
 
-                #print np.array(zxy_angs), prediction, 'orig'
-                R = libKinematics.ZXYeulerAnglesToRotationMatrix(zxy_angs)
-                print R
-                # R = np.matmul(R, np.array([[0, 0, 1],[1, 0, 0],[0, 1, 0]]))
+            #print np.array(zxy_angs), prediction, 'orig'
+            R = libKinematics.ZXYeulerAnglesToRotationMatrix(zxy_angs)
+            print R
+            # R = np.matmul(R, np.array([[0, 0, 1],[1, 0, 0],[0, 1, 0]]))
 
-                eulers, eulers2 = libKinematics.rotationMatrixToZXYEulerAngles(R)  # use THESE rather than the originals
+            eulers, eulers2 = libKinematics.rotationMatrixToZXYEulerAngles(R)  # use THESE rather than the originals
 
-                #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers)
-                #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers2)
+            #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers)
+            #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers2)
 
-                print eulers, 'recomp eul solution 1'
-                print eulers2, 'recomp eul solution 2'
+            print eulers, 'recomp eul solution 1'
+            print eulers2, 'recomp eul solution 2'
 
-                dircos = libKinematics.dir_cos_angles_from_matrix(R)
-                #dircos2 = np.copy(dircos)
-                #for idx in range(3):
-                #    if dircos2[idx] < 0:
-                #        dircos2[idx] = dircos2[idx] + np.pi
-                #    else:
-                #        dircos2[idx] = dircos2[idx] - np.pi
-
-
-                #print R - libKinematics.matrix_from_dir_cos_angles(dircos)
-                #print R - libKinematics.matrix_from_dir_cos_angles(dircos2)
-                print dircos, 'recomp dircos 1'
-                #print dircos2, 'recomp dircos 2'
+            dircos = libKinematics.dir_cos_angles_from_matrix(R)
+            #dircos2 = np.copy(dircos)
+            #for idx in range(3):
+            #    if dircos2[idx] < 0:
+            #        dircos2[idx] = dircos2[idx] + np.pi
+            #    else:
+            #        dircos2[idx] = dircos2[idx] - np.pi
 
 
-                print '\n'
+            #print R - libKinematics.matrix_from_dir_cos_angles(dircos)
+            #print R - libKinematics.matrix_from_dir_cos_angles(dircos2)
+            print dircos, 'recomp dircos 1'
+            #print dircos2, 'recomp dircos 2'
 
-                if prediction == 1:
-                    break
+
+            print '\n'
+
 
 
 
@@ -394,7 +398,7 @@ class GeneratePose():
         joint2name = joint2name
         rots0 = rots0
 
-        return self.m, capsules, joint2name, rots0
+        return self.m, capsules, joint2name, rots0, is_valid_pose
 
 
     def map_nom_limited_random_selection_to_smpl_angles(self, alter_angles=True):
