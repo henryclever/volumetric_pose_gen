@@ -170,6 +170,18 @@ class GeneratePose():
         #print self.m.betas, 'betas'
         self.load_yifeng_data()
 
+
+
+    def sample_body_shape(self, sampling, sigma, one_side_range):
+        mu = 0
+        for i in range(10):
+            if sampling == "NORMAL":
+                self.m.betas[i] = random.normalvariate(mu, sigma)
+            elif sampling == "UNIFORM":
+                self.m.betas[i]  = np.random.uniform(-one_side_range, one_side_range)
+
+
+
     def load_yifeng_data(self):
 
         arm_mat_contents = sio.loadmat('/home/henry/git/realistic_human_joint_limits/randomsin_arm_left_q_big.mat')
@@ -287,7 +299,7 @@ class GeneratePose():
             shape_pose_vol[4] = shift_side
             shape_pose_vol[5] = shift_ud
 
-            #generator.sample_body_shape(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
+            generator.sample_body_shape(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
             in_collision = True
 
             m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles()
@@ -300,11 +312,11 @@ class GeneratePose():
 
             #print "dataset create type", DATASET_CREATE_TYPE
             #print self.m.pose
-            #volumes = dss.getCapsuleVolumes(mm_resolution = 1., dataset_num = DATASET_CREATE_TYPE)
+            volumes = dss.getCapsuleVolumes(mm_resolution = 1., dataset_num = DATASET_CREATE_TYPE)
 
             #libRender.standard_render(self.m)
             #print volumes
-            #shape_pose_vol[6] = volumes
+            shape_pose_vol[6] = volumes
             dss.world.reset()
             dss.world.destroy()
 
@@ -398,8 +410,8 @@ class GeneratePose():
 
         print "SAVING! "
         #print shape_pose_vol_list
-        pickle.dump(shape_pose_vol_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_list1.pkl", "wb"))
-        np.save(self.filepath_prefix+"/data/init_poses/left_leg_rand_nom_"+gender+"_"+posture+"_"+str(num_data)+".npy", np.array(shape_pose_vol_list))
+        #pickle.dump(shape_pose_vol_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_list1.pkl", "wb"))
+        np.save(self.filepath_prefix+"/data/init_poses/all_rand_nom_"+gender+"_"+posture+"_"+str(num_data)+".npy", np.array(shape_pose_vol_list))
 
 
 
@@ -571,8 +583,8 @@ if __name__ == "__main__":
     #generator.solve_ik_tree_smpl()
 
     posture = "lay"
-    generator.read_precomp_set()
-    #generator.generate_rand_dir_cos(gender='f', posture='lay', num_data=500)
+    #generator.read_precomp_set()
+    generator.generate_rand_dir_cos(gender='f', posture='lay', num_data=1000)
 
     #generator.save_yash_data_with_angles(posture)
     #generator.map_euler_angles_to_axis_angle()
