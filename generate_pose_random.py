@@ -312,7 +312,7 @@ class GeneratePose():
 
             #print "dataset create type", DATASET_CREATE_TYPE
             #print self.m.pose
-            volumes = dss.getCapsuleVolumes(mm_resolution = 1., dataset_num = DATASET_CREATE_TYPE)
+            volumes = dss.getCapsuleVolumes(mm_resolution = 2.)
 
             #libRender.standard_render(self.m)
             #print volumes
