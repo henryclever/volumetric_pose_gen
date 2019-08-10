@@ -209,6 +209,9 @@ class GeneratePose():
         self.yifeng_y_leg = leg_xyall[:, 6].reshape(-1, 1).astype(int)
         self.yifeng_X_leg = leg_xyall[:, :4]
 
+        self.curr_yifeng_arm_idx = 0
+        self.curr_yifeng_leg_idx = 0
+
 
 
     def read_precomp_set(self):
@@ -302,9 +305,8 @@ class GeneratePose():
             generator.sample_body_shape(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
             in_collision = True
 
-            m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles()
-            is_valid_pose = np.array(1)
-            #m, capsules, joint2name, rots0, is_valid_pose = generator.map_yifeng_random_selection_to_smpl_angles(i)
+            #m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles()
+            #m, capsules, joint2name, rots0, is_valid_pose = generator.map_yifeng_random_selection_to_smpl_angles(get_new = True)
 
             self.m.pose[:] = np.random.rand(self.m.pose.size) * 0.
 
@@ -332,8 +334,8 @@ class GeneratePose():
 
                 self.m.pose[:] = np.random.rand(self.m.pose.size) * 0.
 
-                m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles()
-                #m, capsules, joint2name, rots0, is_valid_pose = generator.map_yifeng_random_selection_to_smpl_angles(i)
+                #m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles()
+                m, capsules, joint2name, rots0, is_valid_pose = generator.map_yifeng_random_selection_to_smpl_angles(get_new=True)
 
                 #print "GOT HERE"
                 #time.sleep(2)
@@ -411,90 +413,134 @@ class GeneratePose():
         print "SAVING! "
         #print shape_pose_vol_list
         #pickle.dump(shape_pose_vol_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_list1.pkl", "wb"))
-        np.save(self.filepath_prefix+"/data/init_poses/all_rand_nom_"+gender+"_"+posture+"_"+str(num_data)+".npy", np.array(shape_pose_vol_list))
+        np.save(self.filepath_prefix+"/data/init_poses/all_yifeng_"+gender+"_"+posture+"_"+str(num_data)+".npy", np.array(shape_pose_vol_list))
 
 
 
 
-    def map_yifeng_random_selection_to_smpl_angles(self, select_idx, alter_angles=True):
+    def map_yifeng_random_selection_to_smpl_angles(self, get_new, alter_angles=True):
+
+
         if alter_angles == True:
-            i = select_idx
-            '''
             print '\n'
-            zxy_angs = np.squeeze(self.yifeng_X_arm[i:i + 1, :])
-            is_valid_pose = np.squeeze(self.yifeng_y_arm[i:i + 1, :])
+            if get_new == True:
+                self.arm_limb_angs = []
+                for arm_side in ['left','right']:
+                    is_within_human_manifold = False
 
-            print np.array(zxy_angs), is_valid_pose, 'orig'
+                    while is_within_human_manifold == False:
 
-            for i in range(3):
-                if zxy_angs[i] > np.pi:
-                    zxy_angs[i] = zxy_angs[i] - 2 * np.pi
+                        i = self.curr_yifeng_arm_idx
+                        zxy_angs = np.squeeze(self.yifeng_X_arm[i:i + 1, :])
+                        is_valid_pose = np.squeeze(self.yifeng_y_arm[i:i + 1, :])
 
-            #print np.array(zxy_angs), prediction, 'orig'
-            R = libKinematics.ZXYeulerAnglesToRotationMatrix(zxy_angs)
-            print R
+                        print np.array(zxy_angs), is_valid_pose, 'orig'
 
-            eulers, eulers2 = libKinematics.rotationMatrixToZXYEulerAngles(R)  # use THESE rather than the originals
+                        for i in range(3):
+                            if zxy_angs[i] > np.pi:
+                                zxy_angs[i] = zxy_angs[i] - 2 * np.pi
 
-            #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers)
-            #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers2)
+                        #print np.array(zxy_angs), prediction, 'orig'
+                        R = libKinematics.ZXYeulerAnglesToRotationMatrix(zxy_angs)
+                        #print R
 
-            print eulers, 'recomp eul solution 1'
-            print eulers2, 'recomp eul solution 2'
+                        eulers, eulers2 = libKinematics.rotationMatrixToZXYEulerAngles(R)  # use THESE rather than the originals
 
-            dircos = libKinematics.dir_cos_angles_from_matrix(R)
-            print dircos, 'recomp dircos 1 arm'
-            #print dircos2, 'recomp dircos 2'
+                        #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers)
+                        #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers2)
 
-            ls_roll = dircos[0]
-            ls_yaw = dircos[1]
-            ls_pitch = dircos[2]
+                        #print eulers, 'recomp eul solution 1'
+                        #print eulers2, 'recomp eul solution 2'
 
-            self.m.pose[39] = ls_roll*1/3
-            self.m.pose[40] = ls_yaw*1/3
-            self.m.pose[41] = ls_pitch*1/3
-            self.m.pose[48] = ls_roll*2/3
-            self.m.pose[49] = ls_yaw*2/3
-            self.m.pose[50] = ls_pitch*2/3
+                        dircos = libKinematics.dir_cos_angles_from_matrix(R)
+                        print dircos, 'recomp dircos 1 arm', arm_side, self.curr_yifeng_arm_idx
+                        #print dircos2, 'recomp dircos 2'
+                        self.curr_yifeng_arm_idx += 1
+                        if int(is_valid_pose) == 1:
+                            is_within_human_manifold = True
 
-            self.m.pose[55] = -zxy_angs[3]
-            print '\n'
-            '''
+                    self.arm_limb_angs.append([dircos[0], dircos[1], dircos[2], zxy_angs[3]])
 
-            print '\n'
-            zxy_angs = np.squeeze(self.yifeng_X_leg[i:i + 1, :])
-            is_valid_pose = np.squeeze(self.yifeng_y_leg[i:i + 1, :])
 
-            print np.array(zxy_angs), is_valid_pose, 'orig'
 
-            for i in range(3):
-                if zxy_angs[i] > np.pi:
-                    zxy_angs[i] = zxy_angs[i] - 2 * np.pi
+            self.m.pose[39] = self.arm_limb_angs[0][0]*1/3
+            self.m.pose[40] = self.arm_limb_angs[0][1]*1/3
+            self.m.pose[41] = self.arm_limb_angs[0][2]*1/3
 
-            #print np.array(zxy_angs), prediction, 'orig'
-            R = libKinematics.ZXYeulerAnglesToRotationMatrix(zxy_angs)
-            print R
+            self.m.pose[48] = self.arm_limb_angs[0][0]*2/3
+            self.m.pose[49] = self.arm_limb_angs[0][1]*2/3
+            self.m.pose[50] = self.arm_limb_angs[0][2]*2/3
 
-            eulers, eulers2 = libKinematics.rotationMatrixToZXYEulerAngles(R)  # use THESE rather than the originals
+            self.m.pose[55] = -self.arm_limb_angs[0][3]
 
-            print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers)
-            print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers2)
 
-            print eulers, 'recomp eul solution 1'
-            print eulers2, 'recomp eul solution 2'
+            self.m.pose[42] = self.arm_limb_angs[1][0]*1/3
+            self.m.pose[43] = -self.arm_limb_angs[1][1]*1/3
+            self.m.pose[44] = -self.arm_limb_angs[1][2]*1/3
 
-            dircos = libKinematics.dir_cos_angles_from_matrix(R)
-            print R-libKinematics.matrix_from_dir_cos_angles(dircos)
-            print dircos, 'recomp dircos 1 leg'
-            #print dircos2, 'recomp dircos 2'
+            self.m.pose[51] = self.arm_limb_angs[1][0]*2/3
+            self.m.pose[52] = -self.arm_limb_angs[1][1]*2/3
+            self.m.pose[53] = -self.arm_limb_angs[1][2]*2/3
 
-            self.m.pose[3] = dircos[0]
-            self.m.pose[4] = dircos[1]
-            self.m.pose[5] = dircos[2]
-
-            self.m.pose[12] = zxy_angs[3]
+            self.m.pose[58] = self.arm_limb_angs[1][3]
             print '\n'
 
+
+
+            if get_new == True:
+                self.leg_limb_angs = []
+                for leg_side in ['left','right']:
+                    is_within_human_manifold = False
+
+                    while is_within_human_manifold == False:
+
+                        i = self.curr_yifeng_leg_idx
+                        zxy_angs = np.squeeze(self.yifeng_X_leg[i:i + 1, :])
+                        is_valid_pose = np.squeeze(self.yifeng_y_leg[i:i + 1, :])
+
+                        print np.array(zxy_angs), is_valid_pose, 'orig'
+
+                        for i in range(3):
+                            if zxy_angs[i] > np.pi:
+                                zxy_angs[i] = zxy_angs[i] - 2 * np.pi
+
+                        #print np.array(zxy_angs), prediction, 'orig'
+                        R = libKinematics.ZXYeulerAnglesToRotationMatrix(zxy_angs)
+                        #print R
+
+                        #eulers, eulers2 = libKinematics.rotationMatrixToZXYEulerAngles(R)  # use THESE rather than the originals
+
+                        #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers)
+                        #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers2)
+
+                        #print eulers, 'recomp eul solution 1'
+                        #print eulers2, 'recomp eul solution 2'
+
+                        dircos = libKinematics.dir_cos_angles_from_matrix(R)
+                        #print R-libKinematics.matrix_from_dir_cos_angles(dircos)
+                        #print dircos2, 'recomp dircos 2'
+                        print dircos, 'recomp dircos 1 leg', leg_side, self.curr_yifeng_leg_idx
+                        #print dircos2, 'recomp dircos 2'
+                        self.curr_yifeng_leg_idx += 1
+                        if int(is_valid_pose) == 1:
+                            is_within_human_manifold = True
+
+                    self.leg_limb_angs.append([dircos[0], dircos[1], dircos[2], zxy_angs[3]])
+
+            self.m.pose[3] = self.leg_limb_angs[0][0]
+            self.m.pose[4] = self.leg_limb_angs[0][1]
+            self.m.pose[5] = self.leg_limb_angs[0][2]
+
+            self.m.pose[12] = self.leg_limb_angs[0][3]
+
+            self.m.pose[6] = self.leg_limb_angs[1][0]
+            self.m.pose[7] = -self.leg_limb_angs[1][1]
+            self.m.pose[8] = -self.leg_limb_angs[1][2]
+
+            self.m.pose[15] = self.leg_limb_angs[1][3]
+
+
+            print '\n'
 
 
 
