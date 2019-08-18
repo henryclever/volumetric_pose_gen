@@ -215,12 +215,12 @@ class GeneratePose():
 
 
     def read_precomp_set(self):
-        precomp_data = np.load('/home/henry/data/init_poses/all_rand_nom_f_lay_100.npy', allow_pickle = True)
+        precomp_data = np.load('/home/henry/data/init_poses/all_yifeng_f_lay_100.npy', allow_pickle = True)
         precomp_data = list(precomp_data)
         print len(precomp_data)
         #print precomp_data[7]
 
-        for i in range(100):
+        for i in range(35,36):
 
             pose_ind = precomp_data[i][1]
             pose_angs = precomp_data[i][2]
@@ -233,14 +233,16 @@ class GeneratePose():
             for idx in range(len(pose_ind)):
                 m_idx = pose_ind[idx]
                 ang = pose_angs[idx]
-                self.m.pose[m_idx] = ang
+                if m_idx not in [3,4,5, 12]: continue
+                else: self.m.pose[m_idx] = ang
+
 
             print self.m.pose
 
             joints = np.array(self.m.J_transformed)
 
             print joints
-            #print validity
+            print validity
             rospy.init_node("smpl_viz", anonymous=False)
 
             if int(validity[0]) == 1:
@@ -254,31 +256,11 @@ class GeneratePose():
                 b=0.0
                 a = 0.3
 
-
-            #libVisualization.rviz_publish_output(joints, r=r, g=g, b=b, a = a)
-            #libVisualization.rviz_publish_output_limbs_direct(joints, r=r, g=g, b=b, a = a)
+            time.sleep(1)
 
 
-            dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None,
-                                            check_only_distal=True, filepath_prefix=self.filepath_prefix, add_floor=False)
-
-
-
-
-            # run a step to check for collisions
-            dss.run_sim_step()
-
-            #dss.world.check_collision()
-            print "checked collisions"
-            # print dss.world.CollisionResult()
-            #print "is valid pose?", is_valid_pose
-            #print dss.world.collision_result.contacted_bodies
-
-            dss.run_simulation(1)
-
-            #for i in range(100):
-            #    print precomp_data[i][7]
-
+            libVisualization.rviz_publish_output(joints, r=r, g=g, b=b, a = a)
+            libVisualization.rviz_publish_output_limbs_direct(joints, r=r, g=g, b=b, a = a)
 
 
 
@@ -295,117 +277,26 @@ class GeneratePose():
         for i in range(num_data):
             shape_pose_vol = [[],[],[],[],[],[],[]]
 
-            #root_rot = np.random.uniform(-np.pi / 16, np.pi / 16)
+            root_rot = np.random.uniform(-np.pi / 16, np.pi / 16)
             shift_side = np.random.uniform(-0.2, 0.2)  # in meters
             shift_ud = np.random.uniform(-0.2, 0.2)  # in meters
-            #shape_pose_vol[3] = root_rot
+            shape_pose_vol[3] = root_rot
             shape_pose_vol[4] = shift_side
             shape_pose_vol[5] = shift_ud
 
             generator.sample_body_shape(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
-            in_collision = True
 
-            #m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles()
-            #m, capsules, joint2name, rots0, is_valid_pose = generator.map_yifeng_random_selection_to_smpl_angles(get_new = True)
-            #m = generator.map_random_cartesian_ik_to_smpl_angles([shift_side, shift_ud, 0.0], get_new = True)
 
             self.m.pose[:] = np.random.rand(self.m.pose.size) * 0.
 
-            dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None, check_only_distal = True, filepath_prefix=self.filepath_prefix, add_floor = False)
+            #m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles()
+            m, capsules, joint2name, rots0, is_valid_pose = generator.map_yifeng_random_selection_to_smpl_angles(get_new=True)
 
-            #print "dataset create type", DATASET_CREATE_TYPE
-            #print self.m.pose
-            volumes = dss.getCapsuleVolumes(mm_resolution = 2.)
+            #print "GOT HERE"
+            #time.sleep(2)
 
-            #libRender.standard_render(self.m)
-            #print volumes
-            shape_pose_vol[6] = volumes
-            dss.world.reset()
-            dss.world.destroy()
+            shape_pose_vol[0] = np.asarray(m.betas).tolist()
 
-
-
-
-
-            while in_collision == True:
-                #m, capsules, joint2name, rots0 = generator.map_random_selection_to_smpl_angles(alter_angles = True)
-
-                #print "GOT HERE"
-                #time.sleep(2)
-
-                self.m.pose[:] = np.random.rand(self.m.pose.size) * 0.
-
-                m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles()
-                shape_pose_vol[3] = np.copy(m.pose[2])
-
-                print shape_pose_vol[3], 'yaw of person to save'
-
-                #m, capsules, joint2name, rots0, is_valid_pose = generator.map_yifeng_random_selection_to_smpl_angles(get_new=True)
-
-                #here check the height of the limbs on the kinematic tree and make sure the children aren't lower than limb root
-                print m.J_transformed
-
-                #print "GOT HERE"
-                #time.sleep(2)
-
-                shape_pose_vol[0] = np.asarray(m.betas).tolist()
-
-                #print "stepping", m.pose
-                dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture = posture, stiffness=None, check_only_distal = True, filepath_prefix=self.filepath_prefix, add_floor = False)
-
-                #print "stepping", m.pose
-                invalid_pose = False
-                #run a step to check for collisions
-                dss.run_sim_step()
-
-                dss.world.check_collision()
-                print "checked collisions"
-                #print dss.world.CollisionResult()
-                print "is valid pose?", is_valid_pose
-                print dss.world.collision_result.contacted_bodies
-
-                #dss.run_simulation(1)
-
-                print dss.world.collision_result.contact_sets
-                if len(dss.world.collision_result.contacted_bodies) != 0:
-                    for contact_set in dss.world.collision_result.contact_sets:
-                        if contact_set[0] in contact_check_bns or contact_set[1] in contact_check_bns: #consider removing spine 3 and upper legs
-                            if contact_set in contact_exceptions:
-                                pass
-
-                            else:
-                                #print "one of the limbs in contact"
-                                print contact_set
-                                #dss.run_simulation(1)
-
-                                print "resampling pose from the same shape, invalid pose"
-                                #dss.run_simulation(1000)
-                                #libRender.standard_render(self.m)
-                                in_collision = True
-                                invalid_pose = True
-                            break
-
-                    if invalid_pose == False:
-                        print "resampling shape and pose, collision not important."
-
-                        #libRender.standard_render(self.m)
-                        in_collision = False
-                else: # no contacts anywhere.
-
-                    print "resampling shape and pose, no collision."
-                    in_collision = False
-                    #libRender.standard_render(self.m)
-
-
-
-                #shape_pose_vol[7] = [is_valid_pose, in_collision]
-                #in_collision = False
-
-                #dss.world.skeletons[0].remove_all_collision_pairs()
-
-                #libRender.standard_render(self.m)
-                dss.world.reset()
-                dss.world.destroy()
 
             pose_indices = [0, 3, 4, 5, 6, 7, 8, 9, 12, 15, 18, 27, 36, 39, 40, 41, 42, 43, 44, 45, 48, 49, 50, 51, 52, 53, 55, 58]
             pose_angles = []
@@ -421,7 +312,7 @@ class GeneratePose():
         print "SAVING! "
         #print shape_pose_vol_list
         #pickle.dump(shape_pose_vol_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_list1.pkl", "wb"))
-        np.save(self.filepath_prefix+"/data/init_poses/all_rand_nom_htcheck_"+gender+"_"+posture+"_"+str(num_data)+".npy", np.array(shape_pose_vol_list))
+        np.save(self.filepath_prefix+"/data/init_poses/all_yifeng_"+gender+"_"+posture+"_"+str(num_data)+".npy", np.array(shape_pose_vol_list))
 
 
     def map_random_cartesian_ik_to_smpl_angles(self, shift, get_new, alter_angles = True):
@@ -609,16 +500,13 @@ class GeneratePose():
     def map_nom_limited_random_selection_to_smpl_angles(self, alter_angles=True):
         if alter_angles == True:
 
-            #self.m.pose[1] = np.random.uniform(-np.pi, np.pi)
-            #self.m.pose[2] = np.random.uniform(-np.pi/8, np.pi/8)
-            print self.m.pose[2], 'yaw of person in space'
-
             #self.m.pose[3] = np.random.uniform(np.deg2rad(-132.1), np.deg2rad(17.8))
             self.m.pose[3] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
             self.m.pose[4] = np.random.uniform(np.deg2rad(-33.7), np.deg2rad(32.6))
             self.m.pose[5] = np.random.uniform(np.deg2rad(-30.5), np.deg2rad(38.6))
 
             self.m.pose[12] = np.random.uniform(np.deg2rad(-1.3), np.deg2rad(139.9))
+
 
 
             self.m.pose[6] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))

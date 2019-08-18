@@ -3,21 +3,21 @@ import numpy as np
 
 
 #ROS
-#import rospy
-#from visualization_msgs.msg import Marker
-#from visualization_msgs.msg import MarkerArray
-#import tf
+import rospy
+from visualization_msgs.msg import Marker
+from visualization_msgs.msg import MarkerArray
+import tf
+
+scoresPublisher = rospy.Publisher("/scores", MarkerArray)
 
 
-
-def rviz_publish_output(scores):
+def rviz_publish_output(scores, r = 1.0, g = 1.0, b = 0.0, a = 1.0):
 
     print scores.shape
 
     ScoresArray = MarkerArray()
     for joint in range(0, scores.shape[0]):
         print joint
-        scoresPublisher = rospy.Publisher("/scores", MarkerArray)
         Smarker = Marker()
         Smarker.header.frame_id = "map"
         Smarker.type = Smarker.SPHERE
@@ -25,14 +25,20 @@ def rviz_publish_output(scores):
         Smarker.scale.x = 0.06
         Smarker.scale.y = 0.06
         Smarker.scale.z = 0.06
-        Smarker.color.a = 1.0
+        Smarker.color.a = a
 
+        '''
         if joint == 0:
             Smarker.color.r = 1.0
         else:
             Smarker.color.r = 1.0
             Smarker.color.g = 1.0
         Smarker.color.b = 0.0
+        '''
+        Smarker.color.r = r
+        Smarker.color.g = g
+        Smarker.color.b = b
+
 
         Smarker.pose.orientation.w = 1.0
         Smarker.pose.position.x = scores[joint, 0]
@@ -48,10 +54,11 @@ def rviz_publish_output(scores):
     scoresPublisher.publish(ScoresArray)
 
 
-def rviz_publish_output_limbs_direct(scores, count = 0):
+LimbArray = MarkerArray()
+
+def rviz_publish_output_limbs_direct(scores, count = 0, r = 1.0, g = 1.0, b = 0.0, a = 1.0):
 
     #if LimbArray == None or count <= 2:
-    LimbArray = MarkerArray()
 
     limbs = {}
     limbs['left_glute'] = [scores[0,0], scores[0,1], scores[0,2], scores[1,0], scores[1,1], scores[1,2]]
@@ -112,16 +119,23 @@ def rviz_publish_output_limbs_direct(scores, count = 0):
 
         if count <= 0:
             Lmarker.color.a = 1.0
-            Lmarker.scale.x = 0.025
-            Lmarker.scale.y = 0.025
+            Lmarker.scale.x = 0.005
+            Lmarker.scale.y = 0.005
         else:
             Lmarker.color.a = 0.5
             Lmarker.scale.x = 0.015
             Lmarker.scale.y = 0.015
 
-        Lmarker.color.r = 1.0
-        Lmarker.color.g = 1.0
-        Lmarker.color.b = 0.0
+
+
+        #Lmarker.color.r = 1.0
+        #Lmarker.color.g = 1.0
+        #Lmarker.color.b = 0.0
+
+        Lmarker.color.a = a
+        Lmarker.color.r = r
+        Lmarker.color.g = g
+        Lmarker.color.b = b
         Lmarker.pose.orientation.x = tf.transformations.quaternion_from_matrix(ROT_mat)[0]
         Lmarker.pose.orientation.y = tf.transformations.quaternion_from_matrix(ROT_mat)[1]
         Lmarker.pose.orientation.z = tf.transformations.quaternion_from_matrix(ROT_mat)[2]

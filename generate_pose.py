@@ -10,7 +10,7 @@ import lib_visualization as libVisualization
 import lib_kinematics as libKinematics
 import lib_render as libRender
 from process_yash_data import ProcessYashData
-import dart_skel_sim
+#import dart_skel_sim
 
 #ROS
 try:
@@ -160,6 +160,7 @@ class GeneratePose():
 
 
 
+
     def map_yash_to_smpl_angles(self, verbose = True):
 
         movements = ['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
@@ -279,7 +280,7 @@ class GeneratePose():
 
 if __name__ == "__main__":
     generator = GeneratePose(sampling = "UNIFORM", sigma = 0, one_side_range = 0)
-    #generator.standard_render()
+    libRender.standard_render(generator.m)
     #generator.ax = plt.figure().add_subplot(111, projection='3d')
     #generator.solve_ik_tree_smpl()
 

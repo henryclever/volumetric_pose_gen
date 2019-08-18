@@ -270,6 +270,40 @@ def ikpy_leg_analytic(origins, current):
     print(angles, 'angles')
 
 
+def ikpy_leg_rand_cart(origins, current_cartesian):
+
+    ankle_chain = Chain(name='ankle', links=[
+        OriginLink(),
+        URDFLink(name="hip_1", translation_vector=origins[1, :] - origins[0, :],
+                 orientation=[0, 0, 0], rotation=[1, 0, 0], bounds=(-np.pi, np.pi), ),
+        URDFLink(name="hip_2", translation_vector=[.0, 0, 0],
+                 orientation=[0, 0, 0], rotation=[0, 0, 1], bounds=(-np.pi, np.pi), ),
+        URDFLink(name="hip_3", translation_vector=[.0, 0, 0],
+                 orientation=[0, 0, 0], rotation=[0, 1, 0], bounds=(-np.pi, np.pi), ),
+        URDFLink(name="knee", translation_vector=origins[2, :] - origins[1, :],
+                 orientation=[0, 0, 0], rotation=[1, 0, 0], bounds=(0.01, np.pi), ),
+        URDFLink(name="ankle", translation_vector=origins[3, :] - origins[2, :],
+                 orientation=[0, 0, 0], rotation=[1, 0, 0], bounds=(-np.pi, np.pi), ), ],
+                              active_links_mask=[False, True, True, True, True, False]
+                              )
+    Ankle_Pos = current_cartesian - origins[0, :]
+    IK_A = ankle_chain.inverse_kinematics([
+        [1., 0., 0., Ankle_Pos[0]],
+        [0., 1., 0., Ankle_Pos[1]],
+        [0., 0., 1., Ankle_Pos[2]],
+        [0., 0., 0., 1.]])
+
+
+    hip_1 = geometry_utils.Rx_matrix(IK_A[1])
+    hip_2 = geometry_utils.Rz_matrix(IK_A[2])
+    hip_3 = geometry_utils.Ry_matrix(IK_A[3])
+
+
+    print IK_A
+
+
+
+
 def ikpy_leg(origins, current):
 
     knee_chain = Chain(name='knee', links=[
