@@ -610,7 +610,7 @@ class GeneratePose():
         if alter_angles == True:
 
             #self.m.pose[1] = np.random.uniform(-np.pi, np.pi)
-            #self.m.pose[2] = np.random.uniform(-np.pi/8, np.pi/8)
+            #self.m.pose[2] = np.random.uniform(-np.pi/16, np.pi/16)
             print self.m.pose[2], 'yaw of person in space'
 
             #self.m.pose[3] = np.random.uniform(np.deg2rad(-132.1), np.deg2rad(17.8))
