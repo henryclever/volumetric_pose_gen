@@ -143,7 +143,7 @@ class GeneratePose():
 
         self.m.pose[69] = 0 #right hand roll
         #self.m.pose[71] = np.pi/5 #right fist
-
+        print self.m.J_transformed, 'here'
 
         mu = 0
 
@@ -293,7 +293,7 @@ class GeneratePose():
 
 
         for i in range(num_data):
-            shape_pose_vol = [[],[],[],[],[],[],[]]
+            shape_pose_vol = [[],[],[],[],[],[],[],[]]
 
             #root_rot = np.random.uniform(-np.pi / 16, np.pi / 16)
             shift_side = np.random.uniform(-0.2, 0.2)  # in meters
@@ -330,22 +330,43 @@ class GeneratePose():
             while in_collision == True:
                 #m, capsules, joint2name, rots0 = generator.map_random_selection_to_smpl_angles(alter_angles = True)
 
-                #print "GOT HERE"
+                print "GOT HERE", len(shape_pose_vol_list)
                 #time.sleep(2)
 
                 self.m.pose[:] = np.random.rand(self.m.pose.size) * 0.
 
                 m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles()
                 shape_pose_vol[3] = np.copy(m.pose[2])
+                shape_pose_vol[7] = np.copy(m.pose[1])
 
-                print shape_pose_vol[3], 'yaw of person to save'
+                #print shape_pose_vol[3], 'yaw of person to save'
 
                 #m, capsules, joint2name, rots0, is_valid_pose = generator.map_yifeng_random_selection_to_smpl_angles(get_new=True)
 
                 #here check the height of the limbs on the kinematic tree and make sure the children aren't lower than limb root
-                print m.J_transformed
+                #print m.J_transformed
+                #print m.J_transformed[1, 2], m.J_transformed[4, 2], m.J_transformed[7, 2]
+                #print m.J_transformed[2, 2], m.J_transformed[5, 2], m.J_transformed[8, 2]
+                mJtransformed = np.array(m.J_transformed)
+                if mJtransformed[4, 2] < mJtransformed[1, 2] or mJtransformed[7, 2] < mJtransformed[1, 2]:
+                    #print 'left leg continue'
+                    continue
+                elif mJtransformed[5, 2] < mJtransformed[2, 2] or mJtransformed[8, 2] < mJtransformed[2, 2]:
+                    #print 'right leg continue'
+                    continue
+                elif mJtransformed[20, 2] < mJtransformed[16, 2] or mJtransformed[18, 2] < mJtransformed[16, 2]:
+                    #print 'left arm continue'
+                    continue
+                elif mJtransformed[21, 2] < mJtransformed[17, 2] or mJtransformed[19, 2] < mJtransformed[17, 2]:
+                    #print 'right arm continue'
+                    continue
 
-                #print "GOT HERE"
+                #elif m.J_transformed[5, 2] < m.J_transformed[2, 2] or m.J_transformed[8, 2] < m.J_transformed[2, 2]:
+                #    continue
+
+
+                #continue
+                print "GOT HERE2"
                 #time.sleep(2)
 
                 shape_pose_vol[0] = np.asarray(m.betas).tolist()
@@ -361,7 +382,7 @@ class GeneratePose():
                 dss.world.check_collision()
                 print "checked collisions"
                 #print dss.world.CollisionResult()
-                print "is valid pose?", is_valid_pose
+                #print "is valid pose?", is_valid_pose
                 print dss.world.collision_result.contacted_bodies
 
                 #dss.run_simulation(1)
@@ -421,7 +442,7 @@ class GeneratePose():
         print "SAVING! "
         #print shape_pose_vol_list
         #pickle.dump(shape_pose_vol_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_list1.pkl", "wb"))
-        np.save(self.filepath_prefix+"/data/init_poses/all_rand_nom_htcheck_"+gender+"_"+posture+"_"+str(num_data)+".npy", np.array(shape_pose_vol_list))
+        np.save(self.filepath_prefix+"/data/init_poses/all_rand_nom_htcheck_rollpi_"+gender+"_"+posture+"_"+str(num_data)+"_set2.npy", np.array(shape_pose_vol_list))
 
 
     def map_random_cartesian_ik_to_smpl_angles(self, shift, get_new, alter_angles = True):
@@ -609,9 +630,9 @@ class GeneratePose():
     def map_nom_limited_random_selection_to_smpl_angles(self, alter_angles=True):
         if alter_angles == True:
 
-            #self.m.pose[1] = np.random.uniform(-np.pi, np.pi)
-            #self.m.pose[2] = np.random.uniform(-np.pi/16, np.pi/16)
-            print self.m.pose[2], 'yaw of person in space'
+            self.m.pose[1] = np.random.uniform(-np.pi, np.pi)
+            self.m.pose[2] = np.random.uniform(-np.pi/8, np.pi/8)
+            #print self.m.pose[2], 'yaw of person in space'
 
             #self.m.pose[3] = np.random.uniform(np.deg2rad(-132.1), np.deg2rad(17.8))
             self.m.pose[3] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
@@ -659,7 +680,7 @@ class GeneratePose():
         capsules = get_capsules(self.m)
         joint2name = joint2name
         rots0 = rots0
-        print len(capsules)
+        #print len(capsules)
 
         #put these capsules into dart based on these angles. Make Dart joints only as necessary.
         #Use the positions found in dart to update positions in FleX. Do not use angles in Flex
@@ -682,7 +703,7 @@ if __name__ == "__main__":
 
     posture = "lay"
     #generator.read_precomp_set()
-    generator.generate_rand_dir_cos(gender='f', posture='lay', num_data=100)
+    generator.generate_rand_dir_cos(gender='f', posture='lay', num_data=2500)
 
     #generator.save_yash_data_with_angles(posture)
     #generator.map_euler_angles_to_axis_angle()
