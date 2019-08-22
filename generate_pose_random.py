@@ -5,7 +5,7 @@ from opendr.lighting import LambertianPointLight
 from opendr.camera import ProjectPoints
 from smpl.smpl_webuser.serialization import load_model as load_smpl_model
 
-from keras.models import load_model as load_keras_model
+#from keras.models import load_model as load_keras_model
 
 #volumetric pose gen libraries
 import lib_visualization as libVisualization
@@ -168,7 +168,7 @@ class GeneratePose():
         #print self.m.pose.shape
         #print self.m.pose, 'pose'
         #print self.m.betas, 'betas'
-        self.load_yifeng_data()
+        #self.load_yifeng_data()
 
 
 
@@ -442,7 +442,7 @@ class GeneratePose():
         print "SAVING! "
         #print shape_pose_vol_list
         #pickle.dump(shape_pose_vol_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_list1.pkl", "wb"))
-        np.save(self.filepath_prefix+"/data/init_poses/all_rand_nom_htcheck_rollpi_"+gender+"_"+posture+"_"+str(num_data)+"_set2.npy", np.array(shape_pose_vol_list))
+        np.save(self.filepath_prefix+"/data/init_poses/all_rand_nom_htcheck_rollpi_"+gender+"_"+posture+"_"+str(num_data)+"_set4.npy", np.array(shape_pose_vol_list))
 
 
     def map_random_cartesian_ik_to_smpl_angles(self, shift, get_new, alter_angles = True):
@@ -703,7 +703,7 @@ if __name__ == "__main__":
 
     posture = "lay"
     #generator.read_precomp_set()
-    generator.generate_rand_dir_cos(gender='f', posture='lay', num_data=2500)
+    generator.generate_rand_dir_cos(gender='m', posture='lay', num_data=2500)
 
     #generator.save_yash_data_with_angles(posture)
     #generator.map_euler_angles_to_axis_angle()
