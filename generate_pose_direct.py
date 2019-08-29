@@ -231,7 +231,8 @@ class GeneratePose():
 
 
 
-        subjects = ['40ESJ', 'GRTJK', 'TX887', 'WFGW9', 'WM9KJ', 'ZV7TE', 'FMNGQ']
+        #subjects = ['40ESJ', 'GRTJK', 'TX887', 'WFGW9', 'WM9KJ', 'ZV7TE', 'FMNGQ']
+        subjects = ['4ZZZQ',  '5LDJG', 'A4G4Y', 'G55Q1', 'GF5Q3', 'RQCLC', 'TSQNA', 'WCNOM', 'WE2SZ'] #'GRTJK',
         bag = []
 
 
@@ -469,7 +470,7 @@ class GeneratePose():
         plt.plot(np.arange(len(r_shoulder_angle_axis_1)), r_shoulder_angle_axis_1, 'ko')
         plt.show()
 
-        pickle.dump(bag, open("/home/henry/data/init_ik_solutions/all_"+posture+"_angles_side_up.p", "wb"))
+        pickle.dump(bag, open("/home/henry/data/init_ik_solutions/all_test_"+posture+"_angles_side_up.p", "wb"))
 
 
     def get_noisy_angle(self, angle, angle_min, angle_max):

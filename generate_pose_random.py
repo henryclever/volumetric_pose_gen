@@ -1,11 +1,16 @@
 import numpy as np
 import random
+
+from keras.models import load_model as load_keras_model
+
 from opendr.renderer import ColoredRenderer
 from opendr.lighting import LambertianPointLight
 from opendr.camera import ProjectPoints
+
+
 from smpl.smpl_webuser.serialization import load_model as load_smpl_model
 
-#from keras.models import load_model as load_keras_model
+
 
 #volumetric pose gen libraries
 import lib_visualization as libVisualization
@@ -53,6 +58,8 @@ from hmr.src.tf_smpl.batch_smpl import SMPL
 class GeneratePose():
     def __init__(self, sampling = "NORMAL", sigma = 0, one_side_range = 0, gender="m"):
         ## Load SMPL model (here we load the female model)
+
+
         model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_'+gender+'_lbs_10_207_0_v1.0.0.pkl'
         self.m = load_smpl_model(model_path)
 
@@ -168,7 +175,8 @@ class GeneratePose():
         #print self.m.pose.shape
         #print self.m.pose, 'pose'
         #print self.m.betas, 'betas'
-        #self.load_yifeng_data()
+        self.load_yifeng_data()
+
 
 
 
@@ -207,11 +215,13 @@ class GeneratePose():
         np.random.shuffle(leg_xyall)
 
         self.yifeng_y_leg = leg_xyall[:, 6].reshape(-1, 1).astype(int)
-        self.yifeng_X_leg = leg_xyall[:, :4]
+        self.yifeng_X_leg = leg_xyall[:, :6]
 
         self.curr_yifeng_arm_idx = 0
         self.curr_yifeng_leg_idx = 0
 
+        self.arm_model = load_keras_model('/home/henry/git/realistic_human_joint_limits/arm_left_limits.h5')
+        self.leg_model = load_keras_model('/home/henry/git/realistic_human_joint_limits/leg_left_limits.h5')
 
 
     def read_precomp_set(self):
@@ -225,7 +235,7 @@ class GeneratePose():
             pose_ind = precomp_data[i][1]
             pose_angs = precomp_data[i][2]
             validity = [1,0]#precomp_data[i][7]
-            gender = 'f'
+            gender = 'm'
             posture = 'lay'
 
             print len(pose_ind), len(pose_angs)
@@ -283,13 +293,16 @@ class GeneratePose():
 
 
 
-    def generate_rand_dir_cos(self, gender, posture, num_data):
+    def generate_rand_dir_cos(self, gender, posture, num_data, roll_person, set):
 
         #NEED FOR DATASET: pose Nx72, shape Nx10
         shape_pose_vol_list = []
         #contact_check_bns = [1, 2, 4, 5, 7, 8, 14, 15, 16, 17, 18, 19]
         contact_check_bns = [4, 5, 7, 8, 16, 17, 18, 19]
         contact_exceptions = [[9, 14],[9, 15]]
+
+
+
 
 
         for i in range(num_data):
@@ -323,8 +336,8 @@ class GeneratePose():
             dss.world.reset()
             dss.world.destroy()
 
-
-
+            left_arm_side = int(np.random.randint(2))
+            right_arm_side = int(np.random.randint(2))
 
 
             while in_collision == True:
@@ -335,31 +348,61 @@ class GeneratePose():
 
                 self.m.pose[:] = np.random.rand(self.m.pose.size) * 0.
 
-                m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles()
+                m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles(alter_angles= True, roll_person = roll_person,
+                                                                                                           left_arm_side = left_arm_side, right_arm_side = right_arm_side)
+                #m, capsules, joint2name, rots0 = generator.map_yifeng_random_selection_to_smpl_angles(get_new=True, alter_angles= True, roll_person = roll_person)
+
                 shape_pose_vol[3] = np.copy(m.pose[2])
                 shape_pose_vol[7] = np.copy(m.pose[1])
 
                 #print shape_pose_vol[3], 'yaw of person to save'
 
-                #m, capsules, joint2name, rots0, is_valid_pose = generator.map_yifeng_random_selection_to_smpl_angles(get_new=True)
 
                 #here check the height of the limbs on the kinematic tree and make sure the children aren't lower than limb root
                 #print m.J_transformed
                 #print m.J_transformed[1, 2], m.J_transformed[4, 2], m.J_transformed[7, 2]
                 #print m.J_transformed[2, 2], m.J_transformed[5, 2], m.J_transformed[8, 2]
                 mJtransformed = np.array(m.J_transformed)
-                if mJtransformed[4, 2] < mJtransformed[1, 2] or mJtransformed[7, 2] < mJtransformed[1, 2]:
+                #print mJtransformed, 'mJ'
+                #if mJtransformed[4, 2] < mJtransformed[1, 2] or mJtransformed[7, 2] < mJtransformed[1, 2]:
+                if mJtransformed[7, 2] < (mJtransformed[1, 2] - 0.2) or mJtransformed[7, 2] > (mJtransformed[1, 2] + 0.2):
                     #print 'left leg continue'
                     continue
-                elif mJtransformed[5, 2] < mJtransformed[2, 2] or mJtransformed[8, 2] < mJtransformed[2, 2]:
+                #elif mJtransformed[5, 2] < mJtransformed[2, 2] or mJtransformed[8, 2] < mJtransformed[2, 2]:
+                elif mJtransformed[8, 2] < (mJtransformed[2, 2] - 0.2) or mJtransformed[8, 2] > (mJtransformed[2, 2] + 0.2):
                     #print 'right leg continue'
                     continue
-                elif mJtransformed[20, 2] < mJtransformed[16, 2] or mJtransformed[18, 2] < mJtransformed[16, 2]:
+                #elif mJtransformed[20, 2] < mJtransformed[16, 2] or mJtransformed[18, 2] < mJtransformed[16, 2]:
+                elif mJtransformed[20, 2] < (mJtransformed[16, 2] - 0.2) or mJtransformed[20, 2] > (mJtransformed[16, 2] + 0.2):
                     #print 'left arm continue'
                     continue
-                elif mJtransformed[21, 2] < mJtransformed[17, 2] or mJtransformed[19, 2] < mJtransformed[17, 2]:
+                #elif mJtransformed[21, 2] < mJtransformed[17, 2] or mJtransformed[19, 2] < mJtransformed[17, 2]:
+                elif mJtransformed[21, 2] < (mJtransformed[17, 2] - 0.2) or mJtransformed[21, 2] > (mJtransformed[17, 2] + 0.2):
                     #print 'right arm continue'
                     continue
+
+                print left_arm_side, right_arm_side
+                if left_arm_side == 1:
+                    if mJtransformed[20, 1] < mJtransformed[16, 1]:
+                        #print 'left arm continue'
+                        continue
+                if right_arm_side == 1:
+                    if mJtransformed[21, 1] < mJtransformed[17, 1]:
+                        #print 'right arm continue'
+                        continue
+
+
+                if left_arm_side == 0:
+                    if mJtransformed[20, 1] > mJtransformed[16, 1]:
+                        #print 'left arm continue'
+                        continue
+                if right_arm_side == 0:
+                    if mJtransformed[21, 1] > mJtransformed[17, 1]:
+                        #print 'right arm continue'
+                        continue
+
+
+
 
                 #elif m.J_transformed[5, 2] < m.J_transformed[2, 2] or m.J_transformed[8, 2] < m.J_transformed[2, 2]:
                 #    continue
@@ -442,55 +485,20 @@ class GeneratePose():
         print "SAVING! "
         #print shape_pose_vol_list
         #pickle.dump(shape_pose_vol_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_list1.pkl", "wb"))
-        np.save(self.filepath_prefix+"/data/init_poses/all_rand_nom_htcheck_rollpi_"+gender+"_"+posture+"_"+str(num_data)+"_set4.npy", np.array(shape_pose_vol_list))
-
-
-    def map_random_cartesian_ik_to_smpl_angles(self, shift, get_new, alter_angles = True):
-        joint_locs = np.array(self.m.J_transformed)
-        print joint_locs
-        #joint_locs = joint_locs - joint_locs[0, :]
-        #print joint_locs
-        #joint_locs += shift
-        print joint_locs
-
-        #let's do the left leg first.
-        len_thigh = np.linalg.norm(joint_locs[4, :] - joint_locs[1, :])
-        len_calf = np.linalg.norm(joint_locs[7, :] - joint_locs[4, :])
-        len_leg = len_thigh+len_calf
-
-        #pick anything in the rectangular prism box that is above the bed height or at least as high as the hip and lower than it on the bed
-        has_found_valid_pose = False
-        while has_found_valid_pose == False:
-            x = np.random.uniform(joint_locs[1,0]-len_leg, joint_locs[1,0]+len_leg)
-            y = np.random.uniform(joint_locs[1,1]-len_leg, joint_locs[1,1])
-            z = np.random.uniform(joint_locs[1,2], joint_locs[1,2]+len_leg)
-
-            x = joint_locs[1, 0] + len_leg - 0.01
-            y = joint_locs[0, 1]# + len_leg# + 0.2
-            z = joint_locs[0, 2]
-
-            cart_len_from_hip = np.linalg.norm(np.array([x,y,z]) - joint_locs[1,:])
-            print "got here", cart_len_from_hip, len_leg
-            if cart_len_from_hip > len_leg: continue
-
-            print "got here2", cart_len_from_hip, len_leg
-            l_leg_pos_origins = np.array([np.array(self.m.J[0, :]), np.array(self.m.J[1, :]), np.array(self.m.J[4, :]),
-                                          np.array(self.m.J[7, :])])
-
-
-            l_leg_pos_current = np.array([x,y,z])
-            libKinematics.ikpy_leg_rand_cart(l_leg_pos_origins, l_leg_pos_current)
+        if roll_person == True:
+            np.save(self.filepath_prefix+"/data/init_poses/all_rand_nom_endhtbicheck_rollpi_"+gender+"_"+posture+"_"+str(num_data)+"_set"+str(set)+".npy", np.array(shape_pose_vol_list))
+        else:
+            np.save(self.filepath_prefix+"/data/init_poses/all_rand_nom_endhtbicheck_roll0_"+gender+"_"+posture+"_"+str(num_data)+"_set"+str(set)+".npy", np.array(shape_pose_vol_list))
 
 
 
-
-        return self.m
-
-
-    def map_yifeng_random_selection_to_smpl_angles(self, get_new, alter_angles=True):
-
+    def map_yifeng_random_selection_to_smpl_angles(self, get_new, alter_angles, roll_person):
+        sample_from_orig_yifeng_angles = False
 
         if alter_angles == True:
+            if roll_person == True:
+                self.m.pose[1] = np.random.uniform(-np.pi, np.pi)
+            self.m.pose[2] = np.random.uniform(-np.pi/6, np.pi/6)
             print '\n'
             if get_new == True:
                 self.arm_limb_angs = []
@@ -498,37 +506,69 @@ class GeneratePose():
                     is_within_human_manifold = False
 
                     while is_within_human_manifold == False:
+                        if sample_from_orig_yifeng_angles == True:
+                            i = self.curr_yifeng_arm_idx
+                            zxy_angs_copy = np.copy(self.yifeng_X_arm[i:i + 1, :])
+                            zxy_angs = np.squeeze(self.yifeng_X_arm[i:i + 1, :])
+                            is_valid_pose = np.squeeze(self.yifeng_y_arm[i:i + 1, :])
 
-                        i = self.curr_yifeng_arm_idx
-                        zxy_angs = np.squeeze(self.yifeng_X_arm[i:i + 1, :])
-                        is_valid_pose = np.squeeze(self.yifeng_y_arm[i:i + 1, :])
+                            print np.array(zxy_angs), is_valid_pose, 'orig'
 
-                        print np.array(zxy_angs), is_valid_pose, 'orig'
+                            for j in range(3):
+                                if zxy_angs[j] > np.pi:
+                                    zxy_angs[j] = zxy_angs[j] - 2 * np.pi
 
-                        for i in range(3):
-                            if zxy_angs[i] > np.pi:
-                                zxy_angs[i] = zxy_angs[i] - 2 * np.pi
+                            #print np.array(zxy_angs), prediction, 'orig'
+                            R = libKinematics.ZXYeulerAnglesToRotationMatrix(zxy_angs)
+                            #print R
+                            elbow = float(zxy_angs[3])
 
-                        #print np.array(zxy_angs), prediction, 'orig'
-                        R = libKinematics.ZXYeulerAnglesToRotationMatrix(zxy_angs)
-                        #print R
+                        else:
+                            dircos = [0.0, 0.0, 0.0]
+                            dircos[0] = np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4))
+                            dircos[1] = np.random.uniform(np.deg2rad(-140.7), np.deg2rad(43.7))
+                            dircos[2] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(80.4))
+                            #elbow = np.random.uniform(np.deg2rad(-147.3), np.deg2rad(2.8))
+                            elbow = np.random.uniform(np.deg2rad(-147.3), np.deg2rad(2.8))
 
-                        eulers, eulers2 = libKinematics.rotationMatrixToZXYEulerAngles(R)  # use THESE rather than the originals
+                            R = libKinematics.matrix_from_dir_cos_angles(dircos)
+                            #print R
 
-                        #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers)
-                        #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers2)
+                            eulers, eulers2 = libKinematics.rotationMatrixToZXYEulerAngles(R)  # use THESE rather than the originals
 
-                        #print eulers, 'recomp eul solution 1'
-                        #print eulers2, 'recomp eul solution 2'
+                            #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers)
+                            #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers2)
 
-                        dircos = libKinematics.dir_cos_angles_from_matrix(R)
-                        print dircos, 'recomp dircos 1 arm', arm_side, self.curr_yifeng_arm_idx
-                        #print dircos2, 'recomp dircos 2'
-                        self.curr_yifeng_arm_idx += 1
-                        if int(is_valid_pose) == 1:
-                            is_within_human_manifold = True
+                            print eulers, 'recomp eul solution 1 arm'
+                            print eulers2, 'recomp eul solution 2 arm'
 
-                    self.arm_limb_angs.append([dircos[0], dircos[1], dircos[2], zxy_angs[3]])
+
+                            if int(self.arm_model.predict(np.array([[eulers[0], eulers[1], eulers[2], elbow]]))+0.5) == 1:
+                                is_within_human_manifold = True
+                            if int(self.arm_model.predict(np.array([[eulers2[0], eulers2[1], eulers2[2], elbow]]))+0.5) == 1:
+                                is_within_human_manifold = True
+
+
+                        if sample_from_orig_yifeng_angles == True:
+                            print self.arm_model.predict(zxy_angs_copy), int(self.arm_model.predict(zxy_angs_copy)+0.5)
+
+
+                            dircos = libKinematics.dir_cos_angles_from_matrix(R)
+                            print dircos, 'recomp dircos 1 arm', arm_side, self.curr_yifeng_arm_idx
+                            #print dircos2, 'recomp dircos 2'
+                            self.curr_yifeng_arm_idx += 1
+                            if int(is_valid_pose) == 1:
+                                is_within_human_manifold = True
+
+                            if dircos[0] < -88.9*np.pi/180 or dircos[0] > 81.4*np.pi/180:
+                                is_within_human_manifold = False
+                            elif dircos[1] < -140.7*np.pi/180 or dircos[1] > 43.7*np.pi/180:
+                                is_within_human_manifold = False
+                            elif dircos[2] < -90.0*np.pi/180 or dircos[2] > 80.4*np.pi/180:
+                                is_within_human_manifold = False
+
+
+                    self.arm_limb_angs.append([dircos[0], dircos[1], dircos[2], elbow])
 
 
 
@@ -540,7 +580,7 @@ class GeneratePose():
             self.m.pose[49] = self.arm_limb_angs[0][1]*2/3
             self.m.pose[50] = self.arm_limb_angs[0][2]*2/3
 
-            self.m.pose[55] = -self.arm_limb_angs[0][3]
+            self.m.pose[55] = self.arm_limb_angs[0][3]
 
 
             self.m.pose[42] = self.arm_limb_angs[1][0]*1/3
@@ -551,7 +591,7 @@ class GeneratePose():
             self.m.pose[52] = -self.arm_limb_angs[1][1]*2/3
             self.m.pose[53] = -self.arm_limb_angs[1][2]*2/3
 
-            self.m.pose[58] = self.arm_limb_angs[1][3]
+            self.m.pose[58] = -self.arm_limb_angs[1][3]
             print '\n'
 
 
@@ -563,38 +603,63 @@ class GeneratePose():
 
                     while is_within_human_manifold == False:
 
-                        i = self.curr_yifeng_leg_idx
-                        zxy_angs = np.squeeze(self.yifeng_X_leg[i:i + 1, :])
-                        is_valid_pose = np.squeeze(self.yifeng_y_leg[i:i + 1, :])
+                        if sample_from_orig_yifeng_angles == True:
+                            i = self.curr_yifeng_leg_idx
+                            zxy_angs_copy = np.copy(self.yifeng_X_leg[i:i + 1, :4])
+                            zxy_angs = np.squeeze(self.yifeng_X_leg[i:i + 1, :4])
+                            is_valid_pose = np.squeeze(self.yifeng_y_leg[i:i + 1, :])
 
-                        print np.array(zxy_angs), is_valid_pose, 'orig'
+                            print np.array(zxy_angs_copy), is_valid_pose, 'orig'
 
-                        for i in range(3):
-                            if zxy_angs[i] > np.pi:
-                                zxy_angs[i] = zxy_angs[i] - 2 * np.pi
+                            for j in range(3):
+                                if zxy_angs[j] > np.pi:
+                                    zxy_angs[j] = zxy_angs[j] - 2 * np.pi
 
-                        #print np.array(zxy_angs), prediction, 'orig'
-                        R = libKinematics.ZXYeulerAnglesToRotationMatrix(zxy_angs)
-                        #print R
+                            #print np.array(zxy_angs), prediction, 'orig'
+                            R = libKinematics.ZXYeulerAnglesToRotationMatrix(zxy_angs)
+                            knee = float(zxy_angs[3])
+                        else:
+                            dircos = [0.0, 0.0, 0.0]
+                            dircos[0] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
+                            dircos[1] = np.random.uniform(np.deg2rad(-33.7), np.deg2rad(32.6))
+                            dircos[2] = np.random.uniform(np.deg2rad(-30.5), np.deg2rad(38.6))
+                            knee = np.random.uniform(np.deg2rad(-1.3), np.deg2rad(139.9))
 
-                        #eulers, eulers2 = libKinematics.rotationMatrixToZXYEulerAngles(R)  # use THESE rather than the originals
 
-                        #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers)
-                        #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers2)
+                            R = libKinematics.matrix_from_dir_cos_angles(dircos)
+                            #print R
 
-                        #print eulers, 'recomp eul solution 1'
-                        #print eulers2, 'recomp eul solution 2'
+                            eulers, eulers2 = libKinematics.rotationMatrixToZXYEulerAngles(R)  # use THESE rather than the originals
 
-                        dircos = libKinematics.dir_cos_angles_from_matrix(R)
-                        #print R-libKinematics.matrix_from_dir_cos_angles(dircos)
-                        #print dircos2, 'recomp dircos 2'
-                        print dircos, 'recomp dircos 1 leg', leg_side, self.curr_yifeng_leg_idx
-                        #print dircos2, 'recomp dircos 2'
-                        self.curr_yifeng_leg_idx += 1
-                        if int(is_valid_pose) == 1:
-                            is_within_human_manifold = True
+                            #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers)
+                            #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers2)
 
-                    self.leg_limb_angs.append([dircos[0], dircos[1], dircos[2], zxy_angs[3]])
+                            print eulers, 'recomp eul solution 1 leg'
+                            print eulers2, 'recomp eul solution 2 leg'
+
+
+                            if int(self.leg_model.predict(np.array([[eulers[0], eulers[1], eulers[2], knee]]))+0.5) == 1:
+                                is_within_human_manifold = True
+                            if int(self.leg_model.predict(np.array([[eulers2[0], eulers2[1], eulers2[2], knee]]))+0.5) == 1:
+                                is_within_human_manifold = True
+
+                        if sample_from_orig_yifeng_angles == True:
+
+                            dircos = libKinematics.dir_cos_angles_from_matrix(R)
+                            print dircos, 'recomp dircos 1 arm', arm_side, self.curr_yifeng_arm_idx
+
+                            self.curr_yifeng_leg_idx += 1
+                            if int(is_valid_pose) == 1:
+                                is_within_human_manifold = True
+
+                            if dircos[0] < -90*np.pi/180 or dircos[0] > 17.8*np.pi/180:
+                                is_within_human_manifold = False
+                            elif dircos[1] < -33.7*np.pi/180 or dircos[1] > 32.6*np.pi/180:
+                                is_within_human_manifold = False
+                            elif dircos[2] < -30.5*np.pi/180 or dircos[2] > 38.6*np.pi/180:
+                                is_within_human_manifold = False
+
+                    self.leg_limb_angs.append([dircos[0], dircos[1], dircos[2], knee])
 
             self.m.pose[3] = self.leg_limb_angs[0][0]
             self.m.pose[4] = self.leg_limb_angs[0][1]
@@ -623,57 +688,114 @@ class GeneratePose():
         joint2name = joint2name
         rots0 = rots0
 
-        return self.m, capsules, joint2name, rots0, is_valid_pose
+        return self.m, capsules, joint2name, rots0
 
 
 
-    def map_nom_limited_random_selection_to_smpl_angles(self, alter_angles=True):
+    def map_nom_limited_random_selection_to_smpl_angles(self, alter_angles, roll_person, left_arm_side, right_arm_side):
         if alter_angles == True:
-
-            self.m.pose[1] = np.random.uniform(-np.pi, np.pi)
-            self.m.pose[2] = np.random.uniform(-np.pi/8, np.pi/8)
+            if roll_person == True:
+                self.m.pose[1] = np.random.uniform(-np.pi, np.pi)
+            self.m.pose[2] = np.random.uniform(-np.pi/6, np.pi/6)
             #print self.m.pose[2], 'yaw of person in space'
 
-            #self.m.pose[3] = np.random.uniform(np.deg2rad(-132.1), np.deg2rad(17.8))
-            self.m.pose[3] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
-            self.m.pose[4] = np.random.uniform(np.deg2rad(-33.7), np.deg2rad(32.6))
-            self.m.pose[5] = np.random.uniform(np.deg2rad(-30.5), np.deg2rad(38.6))
+            print 'picking left leg...',
+            left_leg_chosen = False
+            while left_leg_chosen == False:
+                # self.m.pose[3] = np.random.uniform(np.deg2rad(-132.1), np.deg2rad(17.8))
+                self.m.pose[3] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
+                self.m.pose[4] = np.random.uniform(np.deg2rad(-33.7), np.deg2rad(32.6))
+                self.m.pose[5] = np.random.uniform(np.deg2rad(-30.5), np.deg2rad(38.6))
+                self.m.pose[12] = np.random.uniform(np.deg2rad(-1.3), np.deg2rad(139.9))
 
-            self.m.pose[12] = np.random.uniform(np.deg2rad(-1.3), np.deg2rad(139.9))
+                mJtransformed = np.array(self.m.J_transformed)
+                if mJtransformed[7, 2] < (mJtransformed[1, 2] - 0.2) or mJtransformed[7, 2] > (mJtransformed[1, 2] + 0.2):
+                    # print 'left leg continue'
+                    left_leg_chosen = False
+                else:
+                    left_leg_chosen = True
+
+            print mJtransformed[7, 2] - mJtransformed[1, 2],'   picking right leg...',
+            right_leg_chosen = False
+            while right_leg_chosen == False:
+                self.m.pose[6] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
+                self.m.pose[7] = np.random.uniform(np.deg2rad(-32.6), np.deg2rad(33.7))
+                self.m.pose[8] = np.random.uniform(np.deg2rad(-38.6), np.deg2rad(30.5))
+
+                self.m.pose[15] = np.random.uniform(np.deg2rad(-1.3), np.deg2rad(139.9))
+
+                mJtransformed = np.array(self.m.J_transformed)
+                if mJtransformed[8, 2] < (mJtransformed[2, 2] - 0.2) or mJtransformed[8, 2] > (mJtransformed[2, 2] + 0.2):
+                    # print 'left leg continue'
+                    right_leg_chosen = False
+                else:
+                    right_leg_chosen = True
+
+            print mJtransformed[8, 2] - mJtransformed[2, 2],'   picking left arm...',
+            left_arm_chosen = False
+            while left_arm_chosen == False:
+                ls_roll = np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4))
+                ls_yaw = np.random.uniform(np.deg2rad(-140.7), np.deg2rad(43.7))
+                ls_pitch = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(80.4))
+
+                self.m.pose[39] = ls_roll*1/3
+                self.m.pose[40] = ls_yaw*1/3
+                self.m.pose[41] = ls_pitch*1/3
+                self.m.pose[48] = ls_roll*2/3
+                self.m.pose[49] = ls_yaw*2/3
+                self.m.pose[50] = ls_pitch*2/3
+
+                self.m.pose[55] = np.random.uniform(np.deg2rad(-147.3), np.deg2rad(2.8))
 
 
-            self.m.pose[6] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
-            self.m.pose[7] = np.random.uniform(np.deg2rad(-32.6), np.deg2rad(33.7))
-            self.m.pose[8] = np.random.uniform(np.deg2rad(-38.6), np.deg2rad(30.5))
+                mJtransformed = np.array(self.m.J_transformed)
+                if mJtransformed[20, 2] < (mJtransformed[16, 2] - 0.2) or mJtransformed[20, 2] > (mJtransformed[16, 2] + 0.2):
+                    left_arm_chosen = False
+                else:
+                    if left_arm_side == 1:
+                        if mJtransformed[20, 1] < mJtransformed[16, 1]:
+                            left_arm_chosen = False
+                        else:
+                            left_arm_chosen = True
+                    else:
+                        if mJtransformed[20, 1] > mJtransformed[16, 1]:
+                            left_arm_chosen = False
+                        else:
+                            left_arm_chosen = True
 
-            self.m.pose[15] = np.random.uniform(np.deg2rad(-1.3), np.deg2rad(139.9))
 
-            ls_roll = np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4))
-            ls_yaw = np.random.uniform(np.deg2rad(-140.7), np.deg2rad(43.7))
-            ls_pitch = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(80.4))
 
-            self.m.pose[39] = ls_roll*1/3
-            self.m.pose[40] = ls_yaw*1/3
-            self.m.pose[41] = ls_pitch*1/3
-            self.m.pose[48] = ls_roll*2/3
-            self.m.pose[49] = ls_yaw*2/3
-            self.m.pose[50] = ls_pitch*2/3
+            print mJtransformed[20, 2] - mJtransformed[16, 2],'   picking right arm...',
+            right_arm_chosen = False
+            while right_arm_chosen == False:
+                rs_roll = np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4))
+                rs_yaw = np.random.uniform(np.deg2rad(-43.7), np.deg2rad(140.7))
+                rs_pitch = np.random.uniform(np.deg2rad(-80.4), np.deg2rad(90.0))
 
-            self.m.pose[55] = np.random.uniform(np.deg2rad(-147.3), np.deg2rad(2.8))
+                self.m.pose[42] = rs_roll*1/3
+                self.m.pose[43] = rs_yaw*1/3
+                self.m.pose[44] = rs_pitch*1/3
+                self.m.pose[51] = rs_roll*2/3
+                self.m.pose[52] = rs_yaw*2/3
+                self.m.pose[53] = rs_pitch*2/3
 
-            rs_roll = np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4))
-            rs_yaw = np.random.uniform(np.deg2rad(-43.7), np.deg2rad(140.7))
-            rs_pitch = np.random.uniform(np.deg2rad(-80.4), np.deg2rad(90.0))
+                self.m.pose[58] = np.random.uniform(np.deg2rad(-2.8), np.deg2rad(147.3))
 
-            self.m.pose[42] = rs_roll*1/3
-            self.m.pose[43] = rs_yaw*1/3
-            self.m.pose[44] = rs_pitch*1/3
-            self.m.pose[51] = rs_roll*2/3
-            self.m.pose[52] = rs_yaw*2/3
-            self.m.pose[53] = rs_pitch*2/3
-
-            self.m.pose[58] = np.random.uniform(np.deg2rad(-2.8), np.deg2rad(147.3))
-
+                mJtransformed = np.array(self.m.J_transformed)
+                if mJtransformed[21, 2] < (mJtransformed[17, 2] - 0.2) or mJtransformed[21, 2] > (mJtransformed[17, 2] + 0.2):
+                    right_arm_chosen = False
+                else:
+                    if right_arm_side == 1:
+                        if mJtransformed[21, 1] < mJtransformed[17, 1]:
+                            right_arm_chosen = False
+                        else:
+                            right_arm_chosen = True
+                    else:
+                        if mJtransformed[21, 1] > mJtransformed[17, 1]:
+                            right_arm_chosen = False
+                        else:
+                            right_arm_chosen = True
+            print mJtransformed[21, 2] - mJtransformed[17, 2]
 
         #self.m.pose[51] = selection_r
         from capsule_body import get_capsules, joint2name, rots0
@@ -696,14 +818,16 @@ class GeneratePose():
 
 
 if __name__ == "__main__":
-    generator = GeneratePose(sampling = "UNIFORM", sigma = 0, one_side_range = 0)
+    gender = 'f'
+
+
+    generator = GeneratePose(sampling = "UNIFORM", sigma = 0, one_side_range = 0, gender=gender)
     #libRender.standard_render(generator.m)
     #generator.ax = plt.figure().add_subplot(111, projection='3d')
     #generator.solve_ik_tree_smpl()
 
-    posture = "lay"
-    #generator.read_precomp_set()
-    generator.generate_rand_dir_cos(gender='m', posture='lay', num_data=2500)
+    #generator.read_precomp_set(gender=gender)
+    generator.generate_rand_dir_cos(gender=gender, posture='lay', num_data=2500, roll_person = True, set = 5)
 
     #generator.save_yash_data_with_angles(posture)
     #generator.map_euler_angles_to_axis_angle()

@@ -13,7 +13,7 @@ def load_pickle(filename):
 #volumetric pose gen libraries
 import lib_visualization as libVisualization
 import lib_kinematics as libKinematics
-import lib_render as libRender
+#import lib_render as libRender
 from process_yash_data import ProcessYashData
 import dart_skel_sim
 
@@ -729,12 +729,15 @@ class GeneratePose():
 
     def save_yash_data_with_angles(self, posture, verbose = True):
         if posture == "lay":
-            movements = ['RH3']#['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
+            #movements = ['LL', 'RL', 'LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
+            movements = ['LH1', 'LH2', 'LH3', 'RH1', 'RH2', 'RH3']
         elif posture == "sit":
-            movements = ['LL_sitting', 'RL_sitting', 'LH_sitting','RH_sitting']
-        subjects = ['GRTJK', '40ESJ',  'TX887', 'WFGW9', 'WM9KJ', 'ZV7TE', 'FMNGQ'] #'GRTJK',
+            #movements = ['LL_sitting', 'RL_sitting', 'LH_sitting','RH_sitting']
+            movements = ['LH_sitting','RH_sitting']
+        #subjects = ['GRTJK', '40ESJ',  'TX887', 'WFGW9', 'WM9KJ', 'ZV7TE', 'FMNGQ'] #'GRTJK',
+        subjects = ['4ZZZQ',  '5LDJG', 'A4G4Y', 'G55Q1', 'GF5Q3', 'RQCLC', 'TSQNA', 'WCNOM', 'WE2SZ'] #'GRTJK',
 
-        for subject in subjects[6:7]:
+        for subject in subjects[8:9]:
             for movement in movements:
 
                 filename = "/media/henry/multimodal_data_2/pressure_mat_pose_data/subject_" + subject + "/" + movement + ".p"
@@ -764,9 +767,9 @@ class GeneratePose():
                 solution_original_ik = []
                 solution_offset_ik = []
 
-                for entry in data:
+                for entry_idx in range(len(data)):
                     print len(solution_offset_ik)
-                    p_mat, targets_raw, other = entry
+                    p_mat, targets_raw, other = data[entry_idx]
 
                     targets = libKinematics.world_to_mat(targets_raw, p_world_mat, R_world_mat)
 
@@ -779,92 +782,124 @@ class GeneratePose():
                     Jtc_origins = generator.get_joint_origins(Jtc, lengths)
                     # print Jtc_origins
 
-                    angles_from_mocap = generator.solve_ik_tree(Jtc_origins, Jtc, plot_all_joints=False, working_on_offsets=False, posture=posture, verbose=False)
+                    error_too_high = True
+                    try_num = 1
+                    right_elbow_bound, left_elbow_bound = 0.01, 0.01
+                    while error_too_high == True:
+                        angles_from_mocap = generator.solve_ik_tree(Jtc_origins, Jtc, plot_all_joints=False,
+                                                                    working_on_offsets=False, posture=posture,
+                                                                    right_elbow_bound=right_elbow_bound,
+                                                                    left_elbow_bound=left_elbow_bound,
+                                                                    verbose=False)
 
-                    self.ax.plot(Jtc_origins[:, 0], Jtc_origins[:, 1], Jtc_origins[:, 2], markerfacecolor='k',
-                                 markeredgecolor='k', marker='o', markersize=5, alpha=0.5)
-                    self.ax.plot(Jtc[:, 0], Jtc[:, 1], Jtc[:, 2], markerfacecolor='k', markeredgecolor='k', marker='o',
-                                 markersize=5, alpha=0.5)
-                    self.ax.set_xlim(-1, 1)
-                    self.ax.set_ylim(-1, 1)
-                    self.ax.set_zlim(-1, 1)
-
-
-                    Jtc_offset = np.copy(Jtc)
-
-                    ################################### RIGHT LEG OFFSETS #######################################
-                    pos_r_knee, Jtc_offset[6, :], pos_r_ankle, Jtc_offset[8, :] = \
-                        libKinematics.get_ik_marker_offsets(chain_start_joint=Jtc[13, :],
-                                                            R_1=angles_from_mocap['r_hip_R'],
-                                                            R_2=angles_from_mocap['r_knee_R'],
-                                                            L_1=[0.0, -lengths['r_glute_knee'], 0.0],
-                                                            L_2=[0.0, -lengths['r_knee_ankle'], 0.0],
-                                                            drop1=[0.0, -0.05, 0.05],
-                                                            drop2=[0.0, -0.045, 0.10])
-
-                    #################################### LEFT LEG OFFSETS #######################################
-                    pos_l_knee, Jtc_offset[7, :], pos_l_ankle, Jtc_offset[9, :] = \
-                        libKinematics.get_ik_marker_offsets(chain_start_joint=Jtc[14, :],
-                                                            R_1=angles_from_mocap['l_hip_R'],
-                                                            R_2=angles_from_mocap['l_knee_R'],
-                                                            L_1=[0.0, -lengths['l_glute_knee'], 0.0],
-                                                            L_2=[0.0, -lengths['l_knee_ankle'], 0.0],
-                                                            drop1=[0.0, -0.05, 0.05],
-                                                            drop2=[0.0, -0.045, 0.10])
-
-                    ##################################### RIGHT ARM OFFSETS #####################################
-                    pos_r_elbow, Jtc_offset[2, :], pos_r_wrist, Jtc_offset[4, :] = \
-                        libKinematics.get_ik_marker_offsets(chain_start_joint=Jtc[11, :],
-                                                            R_1=angles_from_mocap['r_shoulder_R'],
-                                                            R_2=angles_from_mocap['r_elbow_R'],
-                                                            L_1=[-lengths['r_shoulder_elbow'], 0.0, 0.0],
-                                                            L_2=[-lengths['r_elbow_wrist'], 0.0, 0.0],
-                                                            drop1=[-0.025, 0.0, 0.029],
-                                                            drop2=[-0.05, 0.0, 0.015])
-
-                    ##################################### LEFT ARM OFFSETS #####################################
-                    pos_l_elbow, Jtc_offset[3, :], pos_l_wrist, Jtc_offset[5, :] = \
-                        libKinematics.get_ik_marker_offsets(chain_start_joint=Jtc[12, :],
-                                                            R_1=angles_from_mocap['l_shoulder_R'],
-                                                            R_2=angles_from_mocap['l_elbow_R'],
-                                                            L_1=[lengths['l_shoulder_elbow'], 0.0, 0.0],
-                                                            L_2=[lengths['l_elbow_wrist'], 0.0, 0.0],
-                                                            drop1=[0.025, 0.0, 0.029],
-                                                            drop2=[0.05, 0.0, 0.015])
-
-                    lengths_offset = {}
-                    lengths_offset['neck_head'] = np.copy(lengths['neck_head'])
-                    lengths_offset['r_glute_knee'] = np.linalg.norm(Jtc_offset[6,:] - Jtc_offset[13,:])
-                    lengths_offset['r_knee_ankle'] = np.linalg.norm(Jtc_offset[8, :] - Jtc_offset[6, :])
-                    lengths_offset['l_glute_knee'] = np.linalg.norm(Jtc_offset[7,:] - Jtc_offset[14, :])
-                    lengths_offset['l_knee_ankle'] = np.linalg.norm(Jtc_offset[9, :] - Jtc_offset[7, :])
-                    lengths_offset['r_shoulder_elbow'] = np.linalg.norm(Jtc_offset[2, :] - Jtc_offset[11, :])
-                    lengths_offset['r_elbow_wrist'] = np.linalg.norm(Jtc_offset[4, :] - Jtc_offset[2, :])
-                    lengths_offset['l_shoulder_elbow'] = np.linalg.norm(Jtc_offset[3, :] - Jtc_offset[12, :])
-                    lengths_offset['l_elbow_wrist'] = np.linalg.norm(Jtc_offset[5, :] - Jtc_offset[3, :])
+                        self.ax.plot(Jtc_origins[:, 0], Jtc_origins[:, 1], Jtc_origins[:, 2], markerfacecolor='k',
+                                     markeredgecolor='k', marker='o', markersize=5, alpha=0.5)
+                        self.ax.plot(Jtc[:, 0], Jtc[:, 1], Jtc[:, 2], markerfacecolor='k', markeredgecolor='k', marker='o',
+                                     markersize=5, alpha=0.5)
+                        self.ax.set_xlim(-1, 1)
+                        self.ax.set_ylim(-1, 1)
+                        self.ax.set_zlim(-1, 1)
 
 
-                    #for item in lengths:
-                    #    for item2 in lengths_offset:
-                    #        if item == item2:
-                    #            print item, lengths[item], lengths_offset[item]
+                        Jtc_offset = np.copy(Jtc)
 
-                    Jtc_origins_offset = generator.get_joint_origins(Jtc_offset, lengths_offset)
+                        ################################### RIGHT LEG OFFSETS #######################################
+                        pos_r_knee, Jtc_offset[6, :], pos_r_ankle, Jtc_offset[8, :] = \
+                            libKinematics.get_ik_marker_offsets(chain_start_joint=Jtc[13, :],
+                                                                R_1=angles_from_mocap['r_hip_R'],
+                                                                R_2=angles_from_mocap['r_knee_R'],
+                                                                L_1=[0.0, -lengths['r_glute_knee'], 0.0],
+                                                                L_2=[0.0, -lengths['r_knee_ankle'], 0.0],
+                                                                drop1=[0.0, -0.05, 0.05],
+                                                                drop2=[0.0, -0.045, 0.10])
 
-                    angles_from_mocap_offset = generator.solve_ik_tree(Jtc_origins_offset, Jtc_offset, plot_all_joints=False, working_on_offsets=True, verbose= False)
+                        #################################### LEFT LEG OFFSETS #######################################
+                        pos_l_knee, Jtc_offset[7, :], pos_l_ankle, Jtc_offset[9, :] = \
+                            libKinematics.get_ik_marker_offsets(chain_start_joint=Jtc[14, :],
+                                                                R_1=angles_from_mocap['l_hip_R'],
+                                                                R_2=angles_from_mocap['l_knee_R'],
+                                                                L_1=[0.0, -lengths['l_glute_knee'], 0.0],
+                                                                L_2=[0.0, -lengths['l_knee_ankle'], 0.0],
+                                                                drop1=[0.0, -0.05, 0.05],
+                                                                drop2=[0.0, -0.045, 0.10])
 
-                    for i in range(2, 10):
-                        self.ax.plot([Jtc_offset[i, 0]], [Jtc_offset[i, 1]], [Jtc_offset[i, 2]], markerfacecolor='k',
-                                     marker='o',
-                                     markersize=10, alpha=0.5)
+                        ##################################### RIGHT ARM OFFSETS #####################################
+                        pos_r_elbow, Jtc_offset[2, :], pos_r_wrist, Jtc_offset[4, :] = \
+                            libKinematics.get_ik_marker_offsets(chain_start_joint=Jtc[11, :],
+                                                                R_1=angles_from_mocap['r_shoulder_R'],
+                                                                R_2=angles_from_mocap['r_elbow_R'],
+                                                                L_1=[-lengths['r_shoulder_elbow'], 0.0, 0.0],
+                                                                L_2=[-lengths['r_elbow_wrist'], 0.0, 0.0],
+                                                                drop1=[-0.025, 0.0, 0.029],
+                                                                drop2=[-0.05, 0.0, 0.015])
+
+                        ##################################### LEFT ARM OFFSETS #####################################
+                        pos_l_elbow, Jtc_offset[3, :], pos_l_wrist, Jtc_offset[5, :] = \
+                            libKinematics.get_ik_marker_offsets(chain_start_joint=Jtc[12, :],
+                                                                R_1=angles_from_mocap['l_shoulder_R'],
+                                                                R_2=angles_from_mocap['l_elbow_R'],
+                                                                L_1=[lengths['l_shoulder_elbow'], 0.0, 0.0],
+                                                                L_2=[lengths['l_elbow_wrist'], 0.0, 0.0],
+                                                                drop1=[0.025, 0.0, 0.029],
+                                                                drop2=[0.05, 0.0, 0.015])
+
+                        lengths_offset = {}
+                        lengths_offset['neck_head'] = np.copy(lengths['neck_head'])
+                        lengths_offset['r_glute_knee'] = np.linalg.norm(Jtc_offset[6,:] - Jtc_offset[13,:])
+                        lengths_offset['r_knee_ankle'] = np.linalg.norm(Jtc_offset[8, :] - Jtc_offset[6, :])
+                        lengths_offset['l_glute_knee'] = np.linalg.norm(Jtc_offset[7,:] - Jtc_offset[14, :])
+                        lengths_offset['l_knee_ankle'] = np.linalg.norm(Jtc_offset[9, :] - Jtc_offset[7, :])
+                        lengths_offset['r_shoulder_elbow'] = np.linalg.norm(Jtc_offset[2, :] - Jtc_offset[11, :])
+                        lengths_offset['r_elbow_wrist'] = np.linalg.norm(Jtc_offset[4, :] - Jtc_offset[2, :])
+                        lengths_offset['l_shoulder_elbow'] = np.linalg.norm(Jtc_offset[3, :] - Jtc_offset[12, :])
+                        lengths_offset['l_elbow_wrist'] = np.linalg.norm(Jtc_offset[5, :] - Jtc_offset[3, :])
+
+                        #for item in lengths:
+                        #    for item2 in lengths_offset:
+                        #        if item == item2:
+                        #            print item, lengths[item], lengths_offset[item]
+
+                        Jtc_origins_offset = generator.get_joint_origins(Jtc_offset, lengths_offset)
+
+                        angles_from_mocap_offset = generator.solve_ik_tree(Jtc_origins_offset, Jtc_offset, plot_all_joints=False,
+                                                                            working_on_offsets=False, posture=posture,
+                                                                            right_elbow_bound=right_elbow_bound,
+                                                                            left_elbow_bound=left_elbow_bound,
+                                                                            verbose=False)
+
+                        #for i in range(2, 10):
+                        #    self.ax.plot([Jtc_offset[i, 0]], [Jtc_offset[i, 1]], [Jtc_offset[i, 2]], markerfacecolor='k',
+                        #                 marker='o',
+                        #                 markersize=10, alpha=0.5)
 
 
 
 
-                    plt.show()
+                        #plt.show()
 
-                    solution_original_ik.append(angles_from_mocap)
-                    solution_offset_ik.append(angles_from_mocap_offset)
+                        targets_new = Jtc_offset + targets[1, :]
+                        targets_new = targets_new[0:10, :]
+
+                        ik_error = (np.linalg.norm((targets_new - targets), axis=1)[0:10])
+
+                        right_elbow_error = ik_error[4]
+                        left_elbow_error = ik_error[5]
+                        if right_elbow_error > 0.12:
+                            right_elbow_bound = 0.2
+                        if left_elbow_error > 0.12:
+                            left_elbow_bound = 0.2
+
+                        print np.max(ik_error), try_num, entry_idx
+                        if np.max(ik_error) < 0.12:
+                            error_too_high = False
+
+                        try_num += 1
+                        if try_num > 10: error_too_high = False
+
+
+                    if try_num <= 10:
+                        solution_original_ik.append(angles_from_mocap)
+                        solution_offset_ik.append(angles_from_mocap_offset)
 
                 #sprint len(new_data), 'length of new data'
                 #with open(filename_save_orig, 'wb') as fp:
@@ -943,7 +978,7 @@ class GeneratePose():
                     self.m.pose[55] = entry['l_elbow'][1]
                     if verbose == True: print 'l elbow', self.m.pose[54:57]
 
-                    libRender.standard_render(self.m)
+                    #libRender.standard_render(self.m)
 
     def map_random_selection_to_smpl_angles(self, alter_angles):
         if alter_angles == True:
@@ -1006,14 +1041,14 @@ if __name__ == "__main__":
     generator.ax = plt.figure().add_subplot(111, projection='3d')
     #generator.solve_ik_tree_smpl()
 
-    #posture = "sit"
+    posture = "sit"
 
     #generator.save_yash_data_with_angles(posture)
     #posture = "lay"
 
-    generator.extend_yash_dataset()
+    #generator.extend_yash_dataset()
 
-    #generator.save_yash_data_with_angles(posture)
+    generator.save_yash_data_with_angles(posture)
 
     #processYashData = ProcessYashData()
     #generator.map_yash_to_smpl_angles()

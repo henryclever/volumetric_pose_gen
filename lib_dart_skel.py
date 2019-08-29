@@ -125,9 +125,9 @@ class LibDartSkel():
 
 
         if posture == "sit":
-            torso_stiffness = 300.0*bm_fraction
+            torso_stiffness = 200.0*bm_fraction
         else:
-            torso_stiffness = 300.0*bm_fraction
+            torso_stiffness = 200.0*bm_fraction
 
         if STIFFNESS == "upperbody":
             r_arm_stiffness = 100.0*bm_fraction
@@ -162,144 +162,146 @@ class LibDartSkel():
             r_knee_stiffness = 10.0*bm_fraction
             l_knee_stiffness = 200.0*bm_fraction
         else: #not stiff
-            r_arm_stiffness = 2.0*bm_fraction
-            l_arm_stiffness = 2.0*bm_fraction
+            r_arm_stiffness = 4.0*bm_fraction*1.
+            l_arm_stiffness = 4.0*bm_fraction*1.
+            r_elbow_stiffness = 2.0*bm_fraction*1.
+            l_elbow_stiffness = 2.0*bm_fraction*1.
             head_stiffness = 200.0*bm_fraction
-            r_leg_stiffness = 10.0*bm_fraction
-            l_leg_stiffness = 10.0*bm_fraction
-            r_knee_stiffness = 10.0*bm_fraction
-            l_knee_stiffness = 10.0*bm_fraction
+            r_leg_stiffness = 6.0*bm_fraction*1.
+            l_leg_stiffness = 6.0*bm_fraction*1.
+            r_knee_stiffness = 3.0*bm_fraction*1.
+            l_knee_stiffness = 3.0*bm_fraction*1.
 
 
         for joint in skel.joints:
             #print joint.spring_stiffness(0)
             if joint.name == "leftThigh":
-                joint.set_rest_position(0, float(m.pose[3]))
-                joint.set_rest_position(1, float(m.pose[4]))
-                joint.set_rest_position(2, float(m.pose[5]))
+                joint.set_rest_position(0, 0.0)#float(m.pose[3]))
+                joint.set_rest_position(1, 0.0)#float(m.pose[4]))
+                joint.set_rest_position(2, 0.0)#float(m.pose[5]))
                 joint.set_spring_stiffness(0, l_leg_stiffness)
                 joint.set_spring_stiffness(1, l_leg_stiffness)
                 joint.set_spring_stiffness(2, l_leg_stiffness)
             elif joint.name == "rightThigh":
-                joint.set_rest_position(0, float(m.pose[6]))
-                joint.set_rest_position(1, float(m.pose[7]))
-                joint.set_rest_position(2, float(m.pose[8]))
+                joint.set_rest_position(0, 0.0)#float(m.pose[6]))
+                joint.set_rest_position(1, 0.0)#float(m.pose[7]))
+                joint.set_rest_position(2, 0.0)#float(m.pose[8]))
                 joint.set_spring_stiffness(0, r_leg_stiffness)
                 joint.set_spring_stiffness(1, r_leg_stiffness)
                 joint.set_spring_stiffness(2, r_leg_stiffness)
             elif joint.name == "spine":
-                joint.set_rest_position(0, float(m.pose[9]))
-                joint.set_rest_position(1, float(m.pose[10]))
-                joint.set_rest_position(2, float(m.pose[11]))
+                joint.set_rest_position(0, 0.0)#float(m.pose[9]))
+                joint.set_rest_position(1, 0.0)#float(m.pose[10]))
+                joint.set_rest_position(2, 0.0)#float(m.pose[11]))
                 joint.set_spring_stiffness(0, torso_stiffness)
                 joint.set_spring_stiffness(1, torso_stiffness)
                 joint.set_spring_stiffness(2, torso_stiffness)
             elif joint.name == "leftCalf":
-                joint.set_rest_position(0, float(m.pose[12]))
+                joint.set_rest_position(0, 0.0)#float(m.pose[12]))
                 joint.set_spring_stiffness(0, l_knee_stiffness)
             elif joint.name == "rightCalf":
-                joint.set_rest_position(0, float(m.pose[15]))
+                joint.set_rest_position(0, 0.0)#float(m.pose[15]))
                 joint.set_spring_stiffness(0, r_knee_stiffness)
             elif joint.name == "spine1":
-                joint.set_rest_position(0, float(m.pose[18]))
-                joint.set_rest_position(1, float(m.pose[19]))
-                joint.set_rest_position(2, float(m.pose[20]))
+                joint.set_rest_position(0, 0.0)#float(m.pose[18]))
+                joint.set_rest_position(1, 0.0)#float(m.pose[19]))
+                joint.set_rest_position(2, 0.0)#float(m.pose[20]))
                 joint.set_spring_stiffness(0, torso_stiffness)
                 joint.set_spring_stiffness(1, torso_stiffness)
                 joint.set_spring_stiffness(2, torso_stiffness)
             elif joint.name == "leftFoot":
-                joint.set_rest_position(0, float(m.pose[21]))
-                joint.set_rest_position(1, float(m.pose[22]))
-                joint.set_rest_position(2, float(m.pose[23]))
+                joint.set_rest_position(0, 0.0)#float(m.pose[21]))
+                joint.set_rest_position(1, 0.0)#float(m.pose[22]))
+                joint.set_rest_position(2, 0.0)#float(m.pose[23]))
                 joint.set_spring_stiffness(0, l_leg_stiffness)
                 joint.set_spring_stiffness(1, l_leg_stiffness)
                 joint.set_spring_stiffness(2, l_leg_stiffness)
             elif joint.name == "rightFoot":
-                joint.set_rest_position(0, float(m.pose[24]))
-                joint.set_rest_position(1, float(m.pose[25]))
-                joint.set_rest_position(2, float(m.pose[26]))
+                joint.set_rest_position(0, 0.0)#float(m.pose[24]))
+                joint.set_rest_position(1, 0.0)#float(m.pose[25]))
+                joint.set_rest_position(2, 0.0)#float(m.pose[26]))
                 joint.set_spring_stiffness(0, r_leg_stiffness)
                 joint.set_spring_stiffness(1, r_leg_stiffness)
                 joint.set_spring_stiffness(2, r_leg_stiffness)
             elif joint.name == "spine2":
-                joint.set_rest_position(0, float(m.pose[27]))
-                joint.set_rest_position(1, float(m.pose[28]))
-                joint.set_rest_position(2, float(m.pose[29]))
+                joint.set_rest_position(0, 0.0)#float(m.pose[27]))
+                joint.set_rest_position(1, 0.0)#float(m.pose[28]))
+                joint.set_rest_position(2, 0.0)#float(m.pose[29]))
                 joint.set_spring_stiffness(0, torso_stiffness)
                 joint.set_spring_stiffness(1, torso_stiffness)
                 joint.set_spring_stiffness(2, torso_stiffness)
             elif joint.name == "neck":
-                joint.set_rest_position(0, float(m.pose[36]))
-                joint.set_rest_position(1, float(m.pose[37]))
-                joint.set_rest_position(2, float(m.pose[38]))
+                joint.set_rest_position(0, 0.0)#float(m.pose[36]))
+                joint.set_rest_position(1, 0.0)#float(m.pose[37]))
+                joint.set_rest_position(2, 0.0)#float(m.pose[38]))
                 joint.set_spring_stiffness(0, head_stiffness)
                 joint.set_spring_stiffness(1, head_stiffness)
                 joint.set_spring_stiffness(2, head_stiffness)
             elif joint.name == "leftShoulder":
-                joint.set_rest_position(0, float(m.pose[39]))
-                joint.set_rest_position(1, float(m.pose[40]))
-                joint.set_rest_position(2, float(m.pose[41]))
+                joint.set_rest_position(0, 0.0)#float(m.pose[39]))
+                joint.set_rest_position(1, 0.0)#float(m.pose[40]))
+                joint.set_rest_position(2, (1./3.)*-np.pi/2)#float(m.pose[41]))
                 joint.set_spring_stiffness(0, l_arm_stiffness)
                 joint.set_spring_stiffness(1, l_arm_stiffness)
                 joint.set_spring_stiffness(2, l_arm_stiffness)
             elif joint.name == "rightShoulder":
-                joint.set_rest_position(0, float(m.pose[42]))
-                joint.set_rest_position(1, float(m.pose[43]))
-                joint.set_rest_position(2, float(m.pose[44]))
+                joint.set_rest_position(0, 0.0)#float(m.pose[42]))
+                joint.set_rest_position(1, 0.0)#float(m.pose[43]))
+                joint.set_rest_position(2, (1./3.)*np.pi/2)#float(m.pose[44]))
                 joint.set_spring_stiffness(0, r_arm_stiffness)
                 joint.set_spring_stiffness(1, r_arm_stiffness)
                 joint.set_spring_stiffness(2, r_arm_stiffness)
             elif joint.name == "head":
-                joint.set_rest_position(0, float(m.pose[45]))
-                joint.set_rest_position(1, float(m.pose[46]))
-                joint.set_rest_position(2, float(m.pose[47]))
+                joint.set_rest_position(0, 0.0)#float(m.pose[45]))
+                joint.set_rest_position(1, 0.0)#float(m.pose[46]))
+                joint.set_rest_position(2, 0.0)#float(m.pose[47]))
                 joint.set_spring_stiffness(0, head_stiffness)
                 joint.set_spring_stiffness(1, head_stiffness)
                 joint.set_spring_stiffness(2, head_stiffness)
             elif joint.name == "leftUpperArm":
-                joint.set_rest_position(0, float(m.pose[48]))
-                joint.set_rest_position(1, float(m.pose[49]))
-                joint.set_rest_position(2, float(m.pose[50]))
+                joint.set_rest_position(0, 0.0)#float(m.pose[48]))
+                joint.set_rest_position(1, 0.0)#float(m.pose[49]))
+                joint.set_rest_position(2, (2./3.)*-np.pi/2)#float(m.pose[50]))
                 joint.set_spring_stiffness(0, l_arm_stiffness)
                 joint.set_spring_stiffness(1, l_arm_stiffness)
                 joint.set_spring_stiffness(2, l_arm_stiffness)
             elif joint.name == "rightUpperArm":
-                joint.set_rest_position(0, float(m.pose[51]))
-                joint.set_rest_position(1, float(m.pose[52]))
-                joint.set_rest_position(2, float(m.pose[53]))
+                joint.set_rest_position(0, 0.0)#float(m.pose[51]))
+                joint.set_rest_position(1, 0.0)#float(m.pose[52]))
+                joint.set_rest_position(2, (2./3.)*np.pi/2)#float(m.pose[53]))
                 joint.set_spring_stiffness(0, r_arm_stiffness)
                 joint.set_spring_stiffness(1, r_arm_stiffness)
                 joint.set_spring_stiffness(2, r_arm_stiffness)
             elif joint.name == "leftForeArm":
-                joint.set_rest_position(0, float(m.pose[55]))
-                joint.set_spring_stiffness(0, l_arm_stiffness)
+                joint.set_rest_position(0, 0.0)#float(m.pose[55]))
+                joint.set_spring_stiffness(0, l_elbow_stiffness)
             elif joint.name == "rightForeArm":
-                joint.set_rest_position(0, float(m.pose[58]))
-                joint.set_spring_stiffness(0, r_arm_stiffness)
+                joint.set_rest_position(0, 0.0)#float(m.pose[58]))
+                joint.set_spring_stiffness(0, r_elbow_stiffness)
             elif joint.name == "leftHand":
-                joint.set_rest_position(0, float(m.pose[60]))
-                joint.set_rest_position(1, float(m.pose[61]))
-                joint.set_rest_position(2, float(m.pose[62]))
+                joint.set_rest_position(0, 0.0)#float(m.pose[60]))
+                joint.set_rest_position(1, 0.0)#float(m.pose[61]))
+                joint.set_rest_position(2, 0.0)#float(m.pose[62]))
                 joint.set_spring_stiffness(0, l_arm_stiffness)
                 joint.set_spring_stiffness(1, l_arm_stiffness)
                 joint.set_spring_stiffness(2, l_arm_stiffness)
             elif joint.name == "rightHand":
-                joint.set_rest_position(0, float(m.pose[63]))
-                joint.set_rest_position(1, float(m.pose[64]))
-                joint.set_rest_position(2, float(m.pose[65]))
+                joint.set_rest_position(0, 0.0)#float(m.pose[63]))
+                joint.set_rest_position(1, 0.0)#float(m.pose[64]))
+                joint.set_rest_position(2, 0.0)#float(m.pose[65]))
                 joint.set_spring_stiffness(0, r_arm_stiffness)
                 joint.set_spring_stiffness(1, r_arm_stiffness)
                 joint.set_spring_stiffness(2, r_arm_stiffness)
 
 
-        r_arm_damping = r_arm_stiffness*5
-        l_arm_damping = l_arm_stiffness*5
-        head_damping = head_stiffness*5
-        r_leg_damping = r_leg_stiffness*5
-        l_leg_damping = l_leg_stiffness*5
-        r_knee_damping = r_knee_stiffness*5
-        l_knee_damping = l_knee_stiffness*5
-        torso_damping = torso_stiffness*5
+        r_arm_damping = r_arm_stiffness*10
+        l_arm_damping = l_arm_stiffness*10
+        head_damping = head_stiffness*10
+        r_leg_damping = r_leg_stiffness*10
+        l_leg_damping = l_leg_stiffness*10
+        r_knee_damping = r_knee_stiffness*10
+        l_knee_damping = l_knee_stiffness*10
+        torso_damping = torso_stiffness*10
 
         for joint in skel.joints:
             print joint.spring_stiffness(0)

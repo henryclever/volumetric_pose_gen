@@ -69,6 +69,7 @@ class DartSkelSim(object):
         self.render_dart = render
         self.ct = 0
         self.num_dart_steps = 4
+        self.glute_height = 1.0
 
         self.has_reset_velocity1 = False
         self.has_reset_velocity2 = False
@@ -1057,6 +1058,16 @@ class DartSkelSim(object):
         root_joint_pos = skel.bodynodes[0].C - dist
         root_joint_pos[2] += self.STARTING_HEIGHT / DART_TO_FLEX_CONV
         print root_joint_pos, 'radius: ', self.root_capsule_rad
+
+
+
+        #here lets transform the position of skel.bodybodes[0].C by a length of length/2
+        midglute_to_left = np.matmul(Trans1, np.array([np.abs(float(self.capsules[0].length[0]))/2, 0.0, 0.0]))
+        dist_down = -np.abs(midglute_to_left[2])
+        self.glute_height = 2.58872 * skel.bodynodes[0].C[2] + self.STARTING_HEIGHT - 2.58872 * np.abs(float(self.capsules[0].rad[0]))
+        self.glute_height += 2.58872 * dist_down #add a bit down for when the person is tilted to the side
+
+
 
         #print "appending time", time() - time_orig
 
