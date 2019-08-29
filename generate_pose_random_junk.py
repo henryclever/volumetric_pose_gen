@@ -558,6 +558,70 @@ class GeneratePose():
 
 
 
+    def get_elbow_knee_cart_distribution(self):
+
+        l_upperlimb = 0.4
+        l_lowerlimb = 0.4
+        r_of_sphere = (l_upperlimb + l_lowerlimb)
+        OK_angle_list = []
+        OK_root_to_end_len = []
+
+        for i in range(100000):
+            dist_root_to_end_is_not_valid = True
+            while dist_root_to_end_is_not_valid == True:
+                x_rand_pick = np.random.uniform(0.0, r_of_sphere*2)
+                y_rand_pick = np.random.uniform(0.0, r_of_sphere*2)
+                z_rand_pick = np.random.uniform(0.0, r_of_sphere*2)
+                dist_root_to_end = np.linalg.norm(np.array([x_rand_pick - r_of_sphere, y_rand_pick - r_of_sphere, z_rand_pick - r_of_sphere]))
+                if dist_root_to_end < r_of_sphere:
+                    dist_root_to_end_is_not_valid = False
+
+
+                midjoint_angle = np.rad2deg(np.arccos((np.square(l_upperlimb) + np.square(l_lowerlimb) - np.square(dist_root_to_end))/(2*l_upperlimb*l_lowerlimb)))
+
+
+
+                #print i, x_rand_pick, y_rand_pick, z_rand_pick, "_____" , dist_root_to_end, dist_root_to_end_is_not_valid, midjoint_angle
+            OK_angle_list.append(midjoint_angle)
+            OK_root_to_end_len.append(dist_root_to_end)
+
+
+
+        print "working on angles..."
+        OK_angle_list = np.array(OK_angle_list)
+        print OK_angle_list
+        OK_angle_list = (OK_angle_list+0.5).astype(int)
+        print OK_angle_list, OK_angle_list.shape
+        OK_angle_list_ct = np.bincount(OK_angle_list)
+
+        x1 = np.arange(OK_angle_list_ct.shape[0])
+
+        import matplotlib.pyplot as plt
+        #plt.plot(x1, OK_angle_list_ct, 'k',label='Raw Pressure Map Input')
+        #plt.axis([0,410,0,30000])
+        #plt.axis([0, 200, 10, 15])
+        #if self.opt.visualize == True:
+        #plt.show()
+
+        print "working on distances..."
+        OK_root_to_end_len = np.array(OK_root_to_end_len)
+        print OK_root_to_end_len
+        OK_root_to_end_len = OK_root_to_end_len*100
+        OK_root_to_end_len = (OK_root_to_end_len + 0.5).astype(int)
+        print OK_root_to_end_len, OK_root_to_end_len.shape
+        OK_root_to_end_len_ct = np.bincount(OK_root_to_end_len)
+        x2 = np.arange(OK_root_to_end_len_ct.shape[0])
+        #OK_root_to_end_len_ct = OK_root_to_end_len_ct.astype(float)
+        #OK_root_to_end_len_ct /= 100
+
+        plt.plot(x2, OK_root_to_end_len_ct, 'k')#,label='')
+        plt.show()
+
+
+
+
+
+
 
 
 
@@ -569,8 +633,10 @@ if __name__ == "__main__":
     #generator.solve_ik_tree_smpl()
 
     posture = "lay"
+    generator.get_elbow_knee_cart_distribution()
     #generator.read_precomp_set()
-    generator.generate_rand_dir_cos(gender='f', posture='lay', num_data=100)
+
+    #generator.generate_rand_dir_cos(gender='f', posture='lay', num_data=100)
 
     #generator.save_yash_data_with_angles(posture)
     #generator.map_euler_angles_to_axis_angle()
