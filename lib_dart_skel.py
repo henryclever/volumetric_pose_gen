@@ -294,16 +294,16 @@ class LibDartSkel():
                 joint.set_spring_stiffness(2, r_arm_stiffness)
 
 
-        r_arm_damping = r_arm_stiffness*10
-        l_arm_damping = l_arm_stiffness*10
-        r_elbow_damping = r_elbow_stiffness*10
-        l_elbow_damping = l_elbow_stiffness(10)
-        head_damping = head_stiffness*10
-        r_leg_damping = r_leg_stiffness*10
-        l_leg_damping = l_leg_stiffness*10
-        r_knee_damping = r_knee_stiffness*10
-        l_knee_damping = l_knee_stiffness*10
-        torso_damping = torso_stiffness*10
+        r_arm_damping = r_arm_stiffness*20
+        l_arm_damping = l_arm_stiffness*20
+        r_elbow_damping = r_elbow_stiffness*20
+        l_elbow_damping = l_elbow_stiffness*20
+        head_damping = head_stiffness*20
+        r_leg_damping = r_leg_stiffness*20
+        l_leg_damping = l_leg_stiffness*20
+        r_knee_damping = r_knee_stiffness*20
+        l_knee_damping = l_knee_stiffness*20
+        torso_damping = torso_stiffness*20
 
         for joint in skel.joints:
             print joint.spring_stiffness(0)

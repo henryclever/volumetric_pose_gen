@@ -83,6 +83,9 @@ class DartSkelSim(object):
 
         pydart.init(verbose=True)
         print('pydart initialization OK')
+        print m.J_transformed
+        print shiftSIDE
+        print shiftUD
 
         self.world = pydart.World(0.0103/self.num_dart_steps, "EMPTY") #0.003, .0002 #0.002 is stable
         self.world.set_gravity([0, 0, GRAVITY])#([0, 0,  -9.81])
@@ -106,6 +109,13 @@ class DartSkelSim(object):
         mJ_transformed = np.asarray(m.J_transformed)
 
         shift = [shiftSIDE, shiftUD, 0.0]
+        #print np.array(m.J_transformed) - np.array(m.J[0, :])
+        #print np.array(m.J_transformed) - np.array(m.J[0, :]) + np.array(shift)
+        #print (np.array(m.J_transformed) - np.array(m.J[0, :]) + np.array(shift))*2.58872
+        #print (np.array(m.J_transformed) - np.array(m.J[0, :]) + np.array(shift))*2.58872 + np.array([1.185, 2.55, 0.0]), 'final mesh tree'
+
+        #print np.array(m.J_transformed) - np.array(m.J[0, :]) + np.array(shift) + np.array([0.0, -0.04, 0.0])
+        #print m.pose
 
 
         red_joint_ref = joint_ref[0:20] #joints
@@ -235,12 +245,16 @@ class DartSkelSim(object):
             #add a floor-STARTING_HEIGHT / DART_TO_FLEX_CONV
             self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.0, -self.STARTING_HEIGHT/DART_TO_FLEX_CONV/2 - 0.05], box_rot=[0.0, 0.0, 0.0], joint_name = "floor") #-0.05
 
-            print "got there!!!!"
+            print "added floor!!!!"
 
             if posture == "sit": #need to hack the 0.5 to the right spot
                 self.world.add_weld_box(width = 10.0, length = 10.0, height = 0.2, joint_loc = [0.0, 0.43, 0.0], box_rot=[np.pi/3, 0.0, 0.0], joint_name = "headrest") #-0.05
 
         skel = self.world.add_built_skeleton(_skel_id=0, _skel_name="human")
+
+
+        print skel.bodynodes[0].C, 'SKEL BODYNODES 0 POS'
+        print skel.bodynodes[0].C[0]*2.58872 + 1.185, skel.bodynodes[0].C[1]*2.58872 + 2.55
 
         if check_only_distal == True:
             skel.set_self_collision_check(True)
@@ -248,9 +262,6 @@ class DartSkelSim(object):
         else:
             skel.set_self_collision_check(True)
             skel.set_adjacent_body_check(True)
-
-
-
 
 
 
@@ -296,7 +307,6 @@ class DartSkelSim(object):
 
         #print volume
         #sleep(1)
-
 
 
         self.volume = volume
@@ -390,9 +400,15 @@ class DartSkelSim(object):
             body_mass += skel.bodynodes[body_ct].m
 
 
+        print skel.bodynodes[0].C, 'SKEL BODYNODES 0 POS'
+        print skel.bodynodes[0].C[0]*2.58872 + 1.185, skel.bodynodes[0].C[1]*2.58872 + 2.55
 
 
         skel = LibDartSkel().assign_init_joint_angles(skel, m, root_joint_type)
+
+        print skel.bodynodes[0].C, 'SKEL BODYNODES 0 POS'
+        print skel.bodynodes[0].C[0]*2.58872 + 1.185, skel.bodynodes[0].C[1]*2.58872 + 2.55
+
         skel = LibDartSkel().assign_joint_rest_and_stiffness(skel, m, STIFFNESS = stiffness, posture = posture, body_mass = body_mass)
 
         #skel = LibDartSkel().assign_joint_limits_and_damping(skel)
@@ -433,7 +449,6 @@ class DartSkelSim(object):
 
         self.force_application_count = 0
         self.count = 0
-
 
 
         self.zi = []
@@ -1058,8 +1073,6 @@ class DartSkelSim(object):
         root_joint_pos = skel.bodynodes[0].C - dist
         root_joint_pos[2] += self.STARTING_HEIGHT / DART_TO_FLEX_CONV
         print root_joint_pos, 'radius: ', self.root_capsule_rad
-
-
 
         #here lets transform the position of skel.bodybodes[0].C by a length of length/2
         midglute_to_left = np.matmul(Trans1, np.array([np.abs(float(self.capsules[0].length[0]))/2, 0.0, 0.0]))
