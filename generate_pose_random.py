@@ -335,9 +335,14 @@ class GeneratePose():
             self.right_arm_block = int(np.random.randint(8))
             self.left_leg_block = int(np.random.randint(4))
             self.right_leg_block = int(np.random.randint(4))
-
+            self.num_collisions = 0
 
             while in_collision == True:
+                if self.num_collisions > 20:
+                    generator.sample_body_shape(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
+                    self.num_collisions = 0
+
+
                 shift_side = np.random.uniform(-0.2, 0.2)  # in meters
                 shift_ud = np.random.uniform(-0.2, 0.2)  # in meters
                 #shape_pose_vol[3] = root_rot
@@ -425,7 +430,7 @@ class GeneratePose():
 
 
                 #continue
-                print "GOT HERE2"
+                print "GOT HERE2, num collision tries: ", self.num_collisions
                 #time.sleep(2)
 
                 shape_pose_vol[0] = np.asarray(m.betas).tolist()
@@ -486,6 +491,8 @@ class GeneratePose():
                 #libRender.standard_render(self.m)
                 dss.world.reset()
                 dss.world.destroy()
+
+                self.num_collisions += 1
 
             pose_indices = [0, 3, 4, 5, 6, 7, 8, 9, 12, 15, 18, 27, 36, 39, 40, 41, 42, 43, 44, 45, 48, 49, 50, 51, 52, 53, 55, 58]
             pose_angles = []
@@ -783,29 +790,30 @@ class GeneratePose():
             is_limb_chosen = False
             #we also have to see if the block itself is valid: i.e. pick a new block if the arm is up too high or the leg is down too low.
             if limb_tag == 'left_leg':
-                if np.min(global_joint_pos[:, 1]) <= 0.0:
+                if np.min(global_joint_pos[:, 1]) <= 0.0 or self.try_idx > 20:
                     print 'old left leg block: ', self.left_leg_block,
                     self.left_leg_block = int(np.random.randint(4))
                     print '   new block: ', self.left_leg_block
             elif limb_tag == 'right_leg':
-                if np.min(global_joint_pos[:, 1]) <= 0.0:
+                if np.min(global_joint_pos[:, 1]) <= 0.0 or self.try_idx > 20:
                     print 'old right leg block: ', self.right_leg_block,
                     self.right_leg_block = int(np.random.randint(4))
                     print '   new block: ', self.right_leg_block
             elif limb_tag == 'left_arm':
-                if np.max(global_joint_pos[:, 1]) >= 2.55*2:
+                if np.max(global_joint_pos[:, 1]) >= 2.55*2 or self.try_idx > 20:
                     print 'old left arm block: ', self.left_arm_block,
                     self.left_arm_block = int(np.random.randint(8))
                     print '   new block: ', self.left_arm_block
             elif limb_tag == 'right_arm':
-                if np.max(global_joint_pos[:, 1]) >= 2.55*2:
+                if np.max(global_joint_pos[:, 1]) >= 2.55*2 or self.try_idx > 20:
                     print 'old right arm block: ', self.right_arm_block,
                     self.right_arm_block = int(np.random.randint(8))
                     print '   new block: ', self.right_arm_block
 
 
 
-        print is_limb_chosen
+        print is_limb_chosen, self.try_idx, self.m.betas[0], self.num_collisions
+        self.try_idx += 1
         return is_limb_chosen
 
 
@@ -826,6 +834,7 @@ class GeneratePose():
 
             print 'picking left leg...', self.left_leg_block
             left_leg_chosen = False
+            self.try_idx = 0
             while left_leg_chosen == False:
                 # self.m.pose[3] = np.random.uniform(np.deg2rad(-132.1), np.deg2rad(17.8))
                 self.m.pose[3] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
@@ -853,6 +862,7 @@ class GeneratePose():
 
             print mJtransformed[7, 2] - mJtransformed[1, 2],'   picking right leg...', self.right_leg_block
             right_leg_chosen = False
+            self.try_idx = 0
             while right_leg_chosen == False:
                 self.m.pose[6] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
                 self.m.pose[7] = np.random.uniform(np.deg2rad(-32.6), np.deg2rad(33.7))
@@ -881,6 +891,7 @@ class GeneratePose():
             arm_length = np.linalg.norm(np.array(mJtransformed[20, :])-np.array(mJtransformed[18, :]))+np.linalg.norm(np.array(mJtransformed[18, :])-np.array(mJtransformed[16, :]))
             print mJtransformed[8, 2] - mJtransformed[2, 2],'   picking left arm...', self.left_arm_block
             left_arm_chosen = False
+            self.try_idx = 0
             while left_arm_chosen == False:
                 ls_roll = np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4))
                 ls_yaw = np.random.uniform(np.deg2rad(-140.7), np.deg2rad(43.7))
@@ -915,6 +926,7 @@ class GeneratePose():
 
             print mJtransformed[20, 2] - mJtransformed[16, 2],'   picking right arm...', self.right_arm_block
             right_arm_chosen = False
+            self.try_idx = 0
             while right_arm_chosen == False:
                 rs_roll = np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4))
                 rs_yaw = np.random.uniform(np.deg2rad(-43.7), np.deg2rad(140.7))
@@ -977,7 +989,7 @@ if __name__ == "__main__":
     #generator.solve_ik_tree_smpl()
 
     #generator.read_precomp_set(gender=gender)
-    generator.generate_rand_dir_cos(gender=gender, posture='lay', num_data=50, roll_person = False, set = 1, prevent_limb_overhang = True)
+    generator.generate_rand_dir_cos(gender=gender, posture='lay', num_data=2200, roll_person = False, set = 10, prevent_limb_overhang = True)
 
     #generator.save_yash_data_with_angles(posture)
     #generator.map_euler_angles_to_axis_angle()
