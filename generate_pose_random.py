@@ -62,6 +62,7 @@ class GeneratePose():
 
         model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_'+gender+'_lbs_10_207_0_v1.0.0.pkl'
         self.m = load_smpl_model(model_path)
+        print "changed body to: ",gender
 
         self.filepath_prefix = '/home/henry'
 
@@ -221,77 +222,173 @@ class GeneratePose():
         self.curr_yifeng_leg_idx = 0
 
         self.arm_model = load_keras_model('/home/henry/git/realistic_human_joint_limits/arm_left_limits.h5')
-        self.leg_model = load_keras_model('/home/henry/git/realistic_human_joint_limits/leg_left_limits.h5')
+        self.leg_model = load_keras_model('/home/henry/git/realistic_human_joint_limits/leg_left_limits_big.h5')
 
 
-    def read_precomp_set(self):
-        precomp_data = np.load('/home/henry/data/init_poses/all_rand_nom_f_lay_100.npy', allow_pickle = True)
+    def read_precomp_set(self, gender):
+        precomp_data = np.load('/home/henry/data/init_poses/random/all_rand_nom_endhtbicheck_rollpi_'+gender+'_lay_1500_set1.npy', allow_pickle = True)
         precomp_data = list(precomp_data)
         print len(precomp_data)
         #print precomp_data[7]
 
-        for i in range(100):
+        shape_pose_17joints_list = []
 
-            pose_ind = precomp_data[i][1]
-            pose_angs = precomp_data[i][2]
-            validity = [1,0]#precomp_data[i][7]
-            gender = 'm'
-            posture = 'lay'
+        num_samples = 100000
 
-            print len(pose_ind), len(pose_angs)
+        for i in range(num_samples):
+            print i
+            if i == num_samples/2: GeneratePose(sampling="UNIFORM", sigma=0, one_side_range=0, gender='m')
+            shape_pose_17joints = []
+            #betas = precomp_data[i][0]
+            #pose_ind = precomp_data[i][1]
+            #pose_angs = precomp_data[i][2]
+            #validity = [1,0]#precomp_data[i][7]
+            #posture = 'lay'
 
-            for idx in range(len(pose_ind)):
-                m_idx = pose_ind[idx]
-                ang = pose_angs[idx]
-                self.m.pose[m_idx] = ang
+            #print len(pose_ind), len(pose_angs), i
 
-            print self.m.pose
+            #for idx in range(len(betas)):
+                #self.m.betas[idx] = betas[idx]
+
+
+            #for idx in range(len(pose_ind)):
+            #    m_idx = pose_ind[idx]
+            #    ang = pose_angs[idx]
+            #    self.m.pose[m_idx] = ang
+            #print self.m.pose
+
+
+
+            generator.sample_body_shape(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
+
+            self.m.pose[3] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
+            self.m.pose[4] = np.random.uniform(np.deg2rad(-33.7), np.deg2rad(32.6))
+            self.m.pose[5] = np.random.uniform(np.deg2rad(-30.5), np.deg2rad(38.6))
+            self.m.pose[12] = np.random.uniform(np.deg2rad(-1.3), np.deg2rad(139.9))
+
+            self.m.pose[6] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
+            self.m.pose[7] = np.random.uniform(np.deg2rad(-32.6), np.deg2rad(33.7))
+            self.m.pose[8] = np.random.uniform(np.deg2rad(-38.6), np.deg2rad(30.5))
+
+            self.m.pose[15] = np.random.uniform(np.deg2rad(-1.3), np.deg2rad(139.9))
+
+            ls_roll = np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4))
+            ls_yaw = np.random.uniform(np.deg2rad(-140.7), np.deg2rad(43.7))
+            ls_pitch = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(80.4))
+
+            self.m.pose[39] = ls_roll * 1 / 3
+            self.m.pose[40] = ls_yaw * 1 / 3
+            self.m.pose[41] = ls_pitch * 1 / 3
+            self.m.pose[48] = ls_roll * 2 / 3
+            self.m.pose[49] = ls_yaw * 2 / 3
+            self.m.pose[50] = ls_pitch * 2 / 3
+
+            self.m.pose[55] = np.random.uniform(np.deg2rad(-147.3), np.deg2rad(2.8))
+
+            rs_roll = np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4))
+            rs_yaw = np.random.uniform(np.deg2rad(-43.7), np.deg2rad(140.7))
+            rs_pitch = np.random.uniform(np.deg2rad(-80.4), np.deg2rad(90.0))
+
+            self.m.pose[42] = rs_roll * 1 / 3
+            self.m.pose[43] = rs_yaw * 1 / 3
+            self.m.pose[44] = rs_pitch * 1 / 3
+            self.m.pose[51] = rs_roll * 2 / 3
+            self.m.pose[52] = rs_yaw * 2 / 3
+            self.m.pose[53] = rs_pitch * 2 / 3
+
+            self.m.pose[58] = np.random.uniform(np.deg2rad(-2.8), np.deg2rad(147.3))
 
             joints = np.array(self.m.J_transformed)
+            joints = joints - joints[0, :] + np.array([0.0, -0.4, 0.0])
 
-            print joints
+            joints[:, 2] *= -1
+
+            joints_pose_cond_check = np.stack((joints[0, :],
+                                               joints[12, :],
+                                               joints[17, :],
+                                               joints[19, :],
+                                               joints[21, :],
+                                               joints[16, :],
+                                               joints[18, :],
+                                               joints[20, :],
+                                               joints[15, :],
+                                               joints[2, :],
+                                               joints[5, :],
+                                               joints[8, :],
+                                               joints[11, :],
+                                               joints[1, :],
+                                               joints[4, :],
+                                               joints[7, :],
+                                               joints[10, :],))
+
+            #print ((joints_pose_cond_check*100).astype(int)).astype(float)/100
+
+
+            shape_pose_17joints.append(np.array(self.m.betas))
+            shape_pose_17joints.append(0)
+            shape_pose_17joints.append(np.array(self.m.pose))
+            shape_pose_17joints.append(joints_pose_cond_check)
+
+            shape_pose_17joints_list.append(shape_pose_17joints)
+
+
             #print validity
-            rospy.init_node("smpl_viz", anonymous=False)
+            #rospy.init_node("smpl_viz", anonymous=False)
 
-            if int(validity[0]) == 1:
-                r=1.0
-                g=1.0
-                b=0.0
-                a = 0.3
-            else:
-                r=1.0
-                g=0.0
-                b=0.0
-                a = 0.3
+            #if int(validity[0]) == 1:
+            #    r=1.0
+            #    g=1.0
+            #    b=0.0
+            #    a = 0.3
+            #else:
+            #    r=1.0
+            #    g=0.0
+            #    b=0.0
+            #    a = 0.3
 
 
             #libVisualization.rviz_publish_output(joints, r=r, g=g, b=b, a = a)
             #libVisualization.rviz_publish_output_limbs_direct(joints, r=r, g=g, b=b, a = a)
 
 
-            dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None,
-                                            check_only_distal=True, filepath_prefix=self.filepath_prefix, add_floor=False)
+            #dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None,
+            #                                check_only_distal=True, filepath_prefix=self.filepath_prefix, add_floor=False)
 
 
 
 
             # run a step to check for collisions
-            dss.run_sim_step()
+            #dss.run_sim_step()
 
             #dss.world.check_collision()
-            print "checked collisions"
+            #print "checked collisions"
             # print dss.world.CollisionResult()
             #print "is valid pose?", is_valid_pose
             #print dss.world.collision_result.contacted_bodies
 
-            dss.run_simulation(1)
+            #dss.run_simulation(1)
 
             #for i in range(100):
             #    print precomp_data[i][7]
 
 
+        #only_17_joints = np.array(shape_pose_17joints_list[:][3])
 
+        shape_pose_17joints_list = np.array(shape_pose_17joints_list)
 
+        print np.shape(shape_pose_17joints_list)
+
+        only_17_joints = np.array(list(shape_pose_17joints_list[:, 3]))
+        print only_17_joints.shape
+        #print only_17_joints
+
+        import numpy, scipy.io
+
+        #arr = numpy.arange(10)
+        #arr = arr.reshape((3, 3))  # 2d array of 3x3
+
+        scipy.io.savemat('/home/henry/data/init_poses/random/nom_limit_'+str(num_samples)+'_samp_lay.mat', mdict={'arr':only_17_joints})
+        np.save('/home/henry/data/init_poses/random/nom_limit_'+str(num_samples)+'_samp_lay.npy', np.array(shape_pose_17joints_list))
 
     def generate_rand_dir_cos(self, gender, posture, num_data, roll_person, set, prevent_limb_overhang):
 
@@ -988,8 +1085,8 @@ if __name__ == "__main__":
     #generator.ax = plt.figure().add_subplot(111, projection='3d')
     #generator.solve_ik_tree_smpl()
 
-    #generator.read_precomp_set(gender=gender)
-    generator.generate_rand_dir_cos(gender=gender, posture='lay', num_data=2200, roll_person = False, set = 10, prevent_limb_overhang = True)
+    generator.read_precomp_set(gender=gender)
+    #generator.generate_rand_dir_cos(gender=gender, posture='lay', num_data=2200, roll_person = False, set = 10, prevent_limb_overhang = True)
 
     #generator.save_yash_data_with_angles(posture)
     #generator.map_euler_angles_to_axis_angle()
