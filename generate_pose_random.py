@@ -261,20 +261,20 @@ class GeneratePose():
 
             generator.sample_body_shape(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
 
-            self.m.pose[3] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
-            self.m.pose[4] = np.random.uniform(np.deg2rad(-33.7), np.deg2rad(32.6))
-            self.m.pose[5] = np.random.uniform(np.deg2rad(-30.5), np.deg2rad(38.6))
-            self.m.pose[12] = np.random.uniform(np.deg2rad(-1.3), np.deg2rad(139.9))
+            self.m.pose[3] = np.random.uniform(np.deg2rad(-180.), np.deg2rad(90.))#np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
+            self.m.pose[4] = np.random.uniform(np.deg2rad(-90.), np.deg2rad(90.))#np.random.uniform(np.deg2rad(-33.7), np.deg2rad(32.6))
+            self.m.pose[5] = np.random.uniform(np.deg2rad(-90.), np.deg2rad(90.))#np.random.uniform(np.deg2rad(-30.5), np.deg2rad(38.6))
+            self.m.pose[12] = np.random.uniform(np.deg2rad(-1.0), np.deg2rad(180.))#np.random.uniform(np.deg2rad(-1.3), np.deg2rad(139.9))
 
-            self.m.pose[6] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
-            self.m.pose[7] = np.random.uniform(np.deg2rad(-32.6), np.deg2rad(33.7))
-            self.m.pose[8] = np.random.uniform(np.deg2rad(-38.6), np.deg2rad(30.5))
+            self.m.pose[6] = np.random.uniform(np.deg2rad(-180.), np.deg2rad(90.))#np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
+            self.m.pose[7] = np.random.uniform(np.deg2rad(-90.), np.deg2rad(90.))#np.random.uniform(np.deg2rad(-32.6), np.deg2rad(33.7))
+            self.m.pose[8] = np.random.uniform(np.deg2rad(-90.), np.deg2rad(90.))#np.random.uniform(np.deg2rad(-38.6), np.deg2rad(30.5))
 
-            self.m.pose[15] = np.random.uniform(np.deg2rad(-1.3), np.deg2rad(139.9))
+            self.m.pose[15] = np.random.uniform(np.deg2rad(-0.0), np.deg2rad(180.))#np.random.uniform(np.deg2rad(-1.3), np.deg2rad(139.9))
 
-            ls_roll = np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4))
-            ls_yaw = np.random.uniform(np.deg2rad(-140.7), np.deg2rad(43.7))
-            ls_pitch = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(80.4))
+            ls_roll = np.random.uniform(np.deg2rad(-90.), np.deg2rad(90.))#np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4))
+            ls_yaw = np.random.uniform(np.deg2rad(-180.), np.deg2rad(90.))#np.random.uniform(np.deg2rad(-140.7), np.deg2rad(43.7))
+            ls_pitch = np.random.uniform(np.deg2rad(-180.), np.deg2rad(90.))#np.random.uniform(np.deg2rad(-90.0), np.deg2rad(80.4))
 
             self.m.pose[39] = ls_roll * 1 / 3
             self.m.pose[40] = ls_yaw * 1 / 3
@@ -283,11 +283,11 @@ class GeneratePose():
             self.m.pose[49] = ls_yaw * 2 / 3
             self.m.pose[50] = ls_pitch * 2 / 3
 
-            self.m.pose[55] = np.random.uniform(np.deg2rad(-147.3), np.deg2rad(2.8))
+            self.m.pose[55] = np.random.uniform(np.deg2rad(-180.), np.deg2rad(0.0))#np.random.uniform(np.deg2rad(-147.3), np.deg2rad(2.8))
 
-            rs_roll = np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4))
-            rs_yaw = np.random.uniform(np.deg2rad(-43.7), np.deg2rad(140.7))
-            rs_pitch = np.random.uniform(np.deg2rad(-80.4), np.deg2rad(90.0))
+            rs_roll = np.random.uniform(np.deg2rad(-90.), np.deg2rad(90.))#np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4))
+            rs_yaw = np.random.uniform(np.deg2rad(-90.), np.deg2rad(180.))#np.random.uniform(np.deg2rad(-43.7), np.deg2rad(140.7))
+            rs_pitch = np.random.uniform(np.deg2rad(-90.), np.deg2rad(180.))#np.random.uniform(np.deg2rad(-80.4), np.deg2rad(90.0))
 
             self.m.pose[42] = rs_roll * 1 / 3
             self.m.pose[43] = rs_yaw * 1 / 3
@@ -296,7 +296,7 @@ class GeneratePose():
             self.m.pose[52] = rs_yaw * 2 / 3
             self.m.pose[53] = rs_pitch * 2 / 3
 
-            self.m.pose[58] = np.random.uniform(np.deg2rad(-2.8), np.deg2rad(147.3))
+            self.m.pose[58] = np.random.uniform(np.deg2rad(0.0), np.deg2rad(180.))#np.random.uniform(np.deg2rad(-2.8), np.deg2rad(147.3))
 
             joints = np.array(self.m.J_transformed)
             joints = joints - joints[0, :] + np.array([0.0, -0.4, 0.0])
@@ -387,8 +387,8 @@ class GeneratePose():
         #arr = numpy.arange(10)
         #arr = arr.reshape((3, 3))  # 2d array of 3x3
 
-        scipy.io.savemat('/home/henry/data/init_poses/random/nom_limit_'+str(num_samples)+'_samp_lay.mat', mdict={'arr':only_17_joints})
-        np.save('/home/henry/data/init_poses/random/nom_limit_'+str(num_samples)+'_samp_lay.npy', np.array(shape_pose_17joints_list))
+        scipy.io.savemat('/home/henry/data/init_poses/random/generous_limit_'+str(num_samples)+'_samp_lay.mat', mdict={'arr':only_17_joints})
+        np.save('/home/henry/data/init_poses/random/generous_limit_'+str(num_samples)+'_samp_lay.npy', np.array(shape_pose_17joints_list))
 
     def generate_rand_dir_cos(self, gender, posture, num_data, roll_person, set, prevent_limb_overhang):
 
