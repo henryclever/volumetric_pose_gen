@@ -116,9 +116,9 @@ class PhysicalTrainer():
         self.CTRL_PNL['regr_angles'] = opt.reg_angles
         self.CTRL_PNL['aws'] = self.opt.aws
         self.CTRL_PNL['depth_map_labels'] = True #can only be true if we have 100% synthetic data for training
-        self.CTRL_PNL['depth_map_labels_test'] = False #can only be true is we have 100% synth for testing
+        self.CTRL_PNL['depth_map_labels_test'] = True #can only be true is we have 100% synth for testing
         self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
-        self.CTRL_PNL['depth_map_input_est'] = True #do this if we're working in a two-part regression
+        self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
@@ -153,8 +153,7 @@ class PhysicalTrainer():
         # Entire pressure dataset with coordinates in world frame
 
         self.save_name = '_' + opt.losstype + \
-                         '_synth_s' + str(TEST_SUBJECT) + \
-                         '_3xreal' + \
+                         '_synth_32000' + \
                          '_' + str(self.CTRL_PNL['batch_size']) + 'b' + \
                          '_' + str(self.CTRL_PNL['num_epochs']) + 'e'
 
@@ -615,7 +614,6 @@ class PhysicalTrainer():
         n_examples = 0
         batch_ct = 1
         for batch_i, batch in enumerate(self.test_loader):
-
             self.model.eval()
 
             if self.CTRL_PNL['loss_vector_type'] == 'direct':
@@ -672,12 +670,11 @@ class PhysicalTrainer():
         #loss *= 10. / 34
 
         #if GPU == True:
-        #    VisualizationLib().print_error_val(INPUT_DICT_VAL['batch_targets'].cpu(), OUTPUT_DICT_VAL['batch_targets_est'].cpu(), self.output_size_val,
+        #    VisualizationLib().print_error_train(INPUT_DICT_VAL['batch_targets'].cpu(), OUTPUT_DICT_VAL['batch_targets_est'].cpu(), self.output_size_val,
         #                                       self.CTRL_PNL['loss_vector_type'], data='validate')
         #else:
-        #    VisualizationLib().print_error_val(INPUT_DICT_VAL['batch_targets'], OUTPUT_DICT_VAL['batch_targets_est'], self.output_size_val,
-         #                                      self.CTRL_PNL['loss_vector_type'], data='validate')
-
+        #    VisualizationLib().print_error_train(INPUT_DICT_VAL['batch_targets'], OUTPUT_DICT_VAL['batch_targets_est'], self.output_size_val,
+        #                                      self.CTRL_PNL['loss_vector_type'], data='validate')
 
         #self.im_sample_val = INPUT_DICT_VAL['batch_images']
         #self.im_sample_val = self.im_sample_val[0, 1:, :].squeeze()
@@ -738,7 +735,7 @@ if __name__ == "__main__":
                  help='Set if you want to do baseline ML or convnet.')
     p.add_option('--j_d_ratio', action='store', type = 'float',
                  dest='j_d_ratio', \
-                 default=0.5, \
+                 default=0.1, \
                  help='Set the loss mix: joints to depth planes.')
     p.add_option('--qt', action='store_true',
                  dest='quick_test', \
@@ -783,19 +780,15 @@ if __name__ == "__main__":
 
 
     if opt.quick_test == True:
-        #training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff'+filepath_suffix+'.p')
-        #training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_sit_1000_of_1121_upperbody_stiff'+filepath_suffix+'.p')
-        #training_database_file_f.append(filepath_prefix+'real/trainval4_150rh1_sit120rh'+filepath_suffix+'.p')
-        #training_database_file_m.append(filepath_prefix+'real/trainval4_150rh1_sit120rh'+filepath_suffix+'.p')
-        #training_database_file_f.append(filepath_prefix + 'real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
-        #training_database_file_f.append(filepath_prefix + 'real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
-        #training_database_file_m.append(filepath_prefix+'real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
-        #training_database_file_m.append(filepath_prefix+'real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
-        #test_database_file_f.append(filepath_prefix + 'synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff' + filepath_suffix + '.p')
-        test_database_file_m.append(filepath_prefix+'real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll'+filepath_suffix+'.p')
-        #training_database_file_f.append(filepath_prefix+'real/trainval4_150rh1_sit120rh'+filepath_suffix+'.p')
-        #test_database_file_m.append(filepath_prefix+'real/trainval4_150rh1_sit120rh'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_f_lay_4000_none_stiff.p')
+        training_database_file_f.append(filepath_prefix+'synth/random/train_rollpi_f_lay_4000_none_stiff.p')
+        training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_plo_f_lay_4000_none_stiff.p')
+        training_database_file_f.append(filepath_prefix+'synth/random/train_rollpi_plo_f_lay_4000_none_stiff.p')
+        training_database_file_m.append(filepath_prefix+'synth/random/train_roll0_m_lay_4000_none_stiff.p')
+        training_database_file_m.append(filepath_prefix+'synth/random/train_rollpi_m_lay_4000_none_stiff.p')
+        training_database_file_m.append(filepath_prefix+'synth/random/train_roll0_plo_m_lay_4000_none_stiff.p')
+        training_database_file_m.append(filepath_prefix+'synth/random/train_rollpi_plo_m_lay_4000_none_stiff.p')
+        test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_f_lay_1000_none_stiff.p')
     else:
         network_design = True
         if network_design == True:
