@@ -408,7 +408,7 @@ class GeneratePose():
         scipy.io.savemat('/home/henry/data/init_poses/random/nom_limit_'+gender+'_'+str(num_samples)+'_samp_lay.mat', mdict={'arr':only_17_joints})
         np.save('/home/henry/data/init_poses/random/nom_limit_'+gender+'_'+str(num_samples)+'_samp_lay.npy', np.array(shape_pose_17joints_list))
 
-    def generate_rand_dir_cos(self, gender, posture, num_data, roll_person, set, prevent_limb_overhang):
+    def generate_rand_dir_cos(self, gender, posture, num_data, roll_person, set, prevent_limb_overhang, hands_behind_head):
 
         #NEED FOR DATASET: pose Nx72, shape Nx10
         shape_pose_vol_list = []
@@ -446,8 +446,13 @@ class GeneratePose():
             dss.world.reset()
             dss.world.destroy()
 
-            self.left_arm_block = int(np.random.randint(8))
-            self.right_arm_block = int(np.random.randint(8))
+            if hands_behind_head == True:
+                arm_choices = 4
+            else:
+                arm_choices = 8
+
+            self.left_arm_block = int(np.random.randint(arm_choices))
+            self.right_arm_block = int(np.random.randint(arm_choices))
             self.left_leg_block = int(np.random.randint(4))
             self.right_leg_block = int(np.random.randint(4))
             self.num_collisions = 0
@@ -623,216 +628,25 @@ class GeneratePose():
         print "SAVING! "
         #print shape_pose_vol_list
         #pickle.dump(shape_pose_vol_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_list1.pkl", "wb"))
-        if roll_person == True:
-            if prevent_limb_overhang == True:
-                np.save(self.filepath_prefix+"/data/init_poses/all_rand_nom_endhtbicheck_rollpi_plo_"+gender+"_"+posture+"_"+str(num_data)+"_set"+str(set)+".npy", np.array(shape_pose_vol_list))
-            else:
-                np.save(self.filepath_prefix+"/data/init_poses/all_rand_nom_endhtbicheck_rollpi_"+gender+"_"+posture+"_"+str(num_data)+"_set"+str(set)+".npy", np.array(shape_pose_vol_list))
+
+        if prevent_limb_overhang == True:
+            plo = "_plo"
         else:
-            if prevent_limb_overhang == True:
-                np.save(self.filepath_prefix+"/data/init_poses/all_rand_nom_endhtbicheck_roll0_plo_"+gender+"_"+posture+"_"+str(num_data)+"_set"+str(set)+".npy", np.array(shape_pose_vol_list))
-            else:
-                np.save(self.filepath_prefix+"/data/init_poses/all_rand_nom_endhtbicheck_roll0_"+gender+"_"+posture+"_"+str(num_data)+"_set"+str(set)+".npy", np.array(shape_pose_vol_list))
+            plo = ""
 
+        if roll_person == True:
+            rp = "pi"
+        else:
+            rp = "0"
 
+        if hands_behind_head == True:
+            hbh = "_hbh"
+        else:
+            hbh = ""
 
-    def map_yifeng_random_selection_to_smpl_angles(self, get_new, alter_angles, roll_person):
-        sample_from_orig_yifeng_angles = False
+        np.save(self.filepath_prefix+"/data/init_poses/all_rand_nom_endhtbicheck_roll"+rp+plo+hbh+"_"+gender+"_"+posture+"_"+str(num_data)+"_set"+str(set)+".npy", np.array(shape_pose_vol_list))
 
-        if alter_angles == True:
-            if roll_person == True:
-                self.m.pose[1] = np.random.uniform(-np.pi, np.pi)
-            self.m.pose[2] = np.random.uniform(-np.pi/6, np.pi/6)
-            print '\n'
-            if get_new == True:
-                self.arm_limb_angs = []
-                for arm_side in ['left','right']:
-                    is_within_human_manifold = False
 
-                    while is_within_human_manifold == False:
-                        if sample_from_orig_yifeng_angles == True:
-                            i = self.curr_yifeng_arm_idx
-                            zxy_angs_copy = np.copy(self.yifeng_X_arm[i:i + 1, :])
-                            zxy_angs = np.squeeze(self.yifeng_X_arm[i:i + 1, :])
-                            is_valid_pose = np.squeeze(self.yifeng_y_arm[i:i + 1, :])
-
-                            print np.array(zxy_angs), is_valid_pose, 'orig'
-
-                            for j in range(3):
-                                if zxy_angs[j] > np.pi:
-                                    zxy_angs[j] = zxy_angs[j] - 2 * np.pi
-
-                            #print np.array(zxy_angs), prediction, 'orig'
-                            R = libKinematics.ZXYeulerAnglesToRotationMatrix(zxy_angs)
-                            #print R
-                            elbow = float(zxy_angs[3])
-
-                        else:
-                            dircos = [0.0, 0.0, 0.0]
-                            dircos[0] = np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4))
-                            dircos[1] = np.random.uniform(np.deg2rad(-140.7), np.deg2rad(43.7))
-                            dircos[2] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(80.4))
-                            #elbow = np.random.uniform(np.deg2rad(-147.3), np.deg2rad(2.8))
-                            elbow = np.random.uniform(np.deg2rad(-147.3), np.deg2rad(2.8))
-
-                            R = libKinematics.matrix_from_dir_cos_angles(dircos)
-                            #print R
-
-                            eulers, eulers2 = libKinematics.rotationMatrixToZXYEulerAngles(R)  # use THESE rather than the originals
-
-                            #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers)
-                            #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers2)
-
-                            print eulers, 'recomp eul solution 1 arm'
-                            print eulers2, 'recomp eul solution 2 arm'
-
-
-                            if int(self.arm_model.predict(np.array([[eulers[0], eulers[1], eulers[2], elbow]]))+0.5) == 1:
-                                is_within_human_manifold = True
-                            if int(self.arm_model.predict(np.array([[eulers2[0], eulers2[1], eulers2[2], elbow]]))+0.5) == 1:
-                                is_within_human_manifold = True
-
-
-                        if sample_from_orig_yifeng_angles == True:
-                            print self.arm_model.predict(zxy_angs_copy), int(self.arm_model.predict(zxy_angs_copy)+0.5)
-
-
-                            dircos = libKinematics.dir_cos_angles_from_matrix(R)
-                            print dircos, 'recomp dircos 1 arm', arm_side, self.curr_yifeng_arm_idx
-                            #print dircos2, 'recomp dircos 2'
-                            self.curr_yifeng_arm_idx += 1
-                            if int(is_valid_pose) == 1:
-                                is_within_human_manifold = True
-
-                            if dircos[0] < -88.9*np.pi/180 or dircos[0] > 81.4*np.pi/180:
-                                is_within_human_manifold = False
-                            elif dircos[1] < -140.7*np.pi/180 or dircos[1] > 43.7*np.pi/180:
-                                is_within_human_manifold = False
-                            elif dircos[2] < -90.0*np.pi/180 or dircos[2] > 80.4*np.pi/180:
-                                is_within_human_manifold = False
-
-
-                    self.arm_limb_angs.append([dircos[0], dircos[1], dircos[2], elbow])
-
-
-
-            self.m.pose[39] = self.arm_limb_angs[0][0]*1/3
-            self.m.pose[40] = self.arm_limb_angs[0][1]*1/3
-            self.m.pose[41] = self.arm_limb_angs[0][2]*1/3
-
-            self.m.pose[48] = self.arm_limb_angs[0][0]*2/3
-            self.m.pose[49] = self.arm_limb_angs[0][1]*2/3
-            self.m.pose[50] = self.arm_limb_angs[0][2]*2/3
-
-            self.m.pose[55] = self.arm_limb_angs[0][3]
-
-
-            self.m.pose[42] = self.arm_limb_angs[1][0]*1/3
-            self.m.pose[43] = -self.arm_limb_angs[1][1]*1/3
-            self.m.pose[44] = -self.arm_limb_angs[1][2]*1/3
-
-            self.m.pose[51] = self.arm_limb_angs[1][0]*2/3
-            self.m.pose[52] = -self.arm_limb_angs[1][1]*2/3
-            self.m.pose[53] = -self.arm_limb_angs[1][2]*2/3
-
-            self.m.pose[58] = -self.arm_limb_angs[1][3]
-            print '\n'
-
-
-
-            if get_new == True:
-                self.leg_limb_angs = []
-                for leg_side in ['left','right']:
-                    is_within_human_manifold = False
-
-                    while is_within_human_manifold == False:
-
-                        if sample_from_orig_yifeng_angles == True:
-                            i = self.curr_yifeng_leg_idx
-                            zxy_angs_copy = np.copy(self.yifeng_X_leg[i:i + 1, :4])
-                            zxy_angs = np.squeeze(self.yifeng_X_leg[i:i + 1, :4])
-                            is_valid_pose = np.squeeze(self.yifeng_y_leg[i:i + 1, :])
-
-                            print np.array(zxy_angs_copy), is_valid_pose, 'orig'
-
-                            for j in range(3):
-                                if zxy_angs[j] > np.pi:
-                                    zxy_angs[j] = zxy_angs[j] - 2 * np.pi
-
-                            #print np.array(zxy_angs), prediction, 'orig'
-                            R = libKinematics.ZXYeulerAnglesToRotationMatrix(zxy_angs)
-                            knee = float(zxy_angs[3])
-                        else:
-                            dircos = [0.0, 0.0, 0.0]
-                            dircos[0] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
-                            dircos[1] = np.random.uniform(np.deg2rad(-33.7), np.deg2rad(32.6))
-                            dircos[2] = np.random.uniform(np.deg2rad(-30.5), np.deg2rad(38.6))
-                            knee = np.random.uniform(np.deg2rad(-1.3), np.deg2rad(139.9))
-
-
-                            R = libKinematics.matrix_from_dir_cos_angles(dircos)
-                            #print R
-
-                            eulers, eulers2 = libKinematics.rotationMatrixToZXYEulerAngles(R)  # use THESE rather than the originals
-
-                            #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers)
-                            #print R - libKinematics.ZXYeulerAnglesToRotationMatrix(eulers2)
-
-                            print eulers, 'recomp eul solution 1 leg'
-                            print eulers2, 'recomp eul solution 2 leg'
-
-
-                            if int(self.leg_model.predict(np.array([[eulers[0], eulers[1], eulers[2], knee]]))+0.5) == 1:
-                                is_within_human_manifold = True
-                            if int(self.leg_model.predict(np.array([[eulers2[0], eulers2[1], eulers2[2], knee]]))+0.5) == 1:
-                                is_within_human_manifold = True
-
-                        if sample_from_orig_yifeng_angles == True:
-
-                            dircos = libKinematics.dir_cos_angles_from_matrix(R)
-                            print dircos, 'recomp dircos 1 arm', arm_side, self.curr_yifeng_arm_idx
-
-                            self.curr_yifeng_leg_idx += 1
-                            if int(is_valid_pose) == 1:
-                                is_within_human_manifold = True
-
-                            if dircos[0] < -90*np.pi/180 or dircos[0] > 17.8*np.pi/180:
-                                is_within_human_manifold = False
-                            elif dircos[1] < -33.7*np.pi/180 or dircos[1] > 32.6*np.pi/180:
-                                is_within_human_manifold = False
-                            elif dircos[2] < -30.5*np.pi/180 or dircos[2] > 38.6*np.pi/180:
-                                is_within_human_manifold = False
-
-                    self.leg_limb_angs.append([dircos[0], dircos[1], dircos[2], knee])
-
-            self.m.pose[3] = self.leg_limb_angs[0][0]
-            self.m.pose[4] = self.leg_limb_angs[0][1]
-            self.m.pose[5] = self.leg_limb_angs[0][2]
-
-            self.m.pose[12] = self.leg_limb_angs[0][3]
-
-            self.m.pose[6] = self.leg_limb_angs[1][0]
-            self.m.pose[7] = -self.leg_limb_angs[1][1]
-            self.m.pose[8] = -self.leg_limb_angs[1][2]
-
-            self.m.pose[15] = self.leg_limb_angs[1][3]
-
-
-            print '\n'
-
-
-
-
-
-
-
-        #self.m.pose[51] = selection_r
-        from capsule_body import get_capsules, joint2name, rots0
-        capsules = get_capsules(self.m)
-        joint2name = joint2name
-        rots0 = rots0
-
-        return self.m, capsules, joint2name, rots0
 
     def check_height(self, root_z_loc, distal_z_loc):
         if distal_z_loc < (root_z_loc - 0.2) or distal_z_loc > (root_z_loc + 0.2):
@@ -909,21 +723,25 @@ class GeneratePose():
                     print 'old left leg block: ', self.left_leg_block,
                     self.left_leg_block = int(np.random.randint(4))
                     print '   new block: ', self.left_leg_block
+                    self.try_idx = 0
             elif limb_tag == 'right_leg':
                 if np.min(global_joint_pos[:, 1]) <= 0.0 or self.try_idx > 20:
                     print 'old right leg block: ', self.right_leg_block,
                     self.right_leg_block = int(np.random.randint(4))
                     print '   new block: ', self.right_leg_block
+                    self.try_idx = 0
             elif limb_tag == 'left_arm':
                 if np.max(global_joint_pos[:, 1]) >= 2.55*2 or self.try_idx > 20:
                     print 'old left arm block: ', self.left_arm_block,
                     self.left_arm_block = int(np.random.randint(8))
                     print '   new block: ', self.left_arm_block
+                    self.try_idx = 0
             elif limb_tag == 'right_arm':
                 if np.max(global_joint_pos[:, 1]) >= 2.55*2 or self.try_idx > 20:
                     print 'old right arm block: ', self.right_arm_block,
                     self.right_arm_block = int(np.random.randint(8))
                     print '   new block: ', self.right_arm_block
+                    self.try_idx = 0
 
 
 
@@ -1104,7 +922,7 @@ if __name__ == "__main__":
     #generator.solve_ik_tree_smpl()
 
     #generator.read_precomp_set(gender=gender)
-    generator.generate_rand_dir_cos(gender=gender, posture='lay', num_data=3000, roll_person = True, set = 10, prevent_limb_overhang = True)
+    generator.generate_rand_dir_cos(gender=gender, posture='lay', num_data=1100, roll_person = False, set = 1, prevent_limb_overhang = True, hands_behind_head=True)
 
     #generator.save_yash_data_with_angles(posture)
     #generator.map_euler_angles_to_axis_angle()

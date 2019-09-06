@@ -55,8 +55,8 @@ import matplotlib.pyplot as plt
 #hmr
 from hmr.src.tf_smpl.batch_smpl import SMPL
 
-WEIGHT_LBS = 140.
-HEIGHT_IN = 72.
+WEIGHT_LBS = 190.
+HEIGHT_IN = 73.
 GENDER = 'm'
 
 
@@ -111,6 +111,7 @@ class GeneratePose():
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
         self.CTRL_PNL['mesh_bottom_dist'] = True
+        self.CTRL_PNL['full_body_rot'] = False
 
 
         self.count = 0
@@ -154,7 +155,7 @@ class GeneratePose():
 
         if bedangle > 180: bedangle = bedangle - 360
 
-        self.bedangle = bedangle
+        self.bedangle = bedangle + 5.
 
 
     def callback_bed_tags(self, data):
@@ -406,7 +407,7 @@ class GeneratePose():
             print self.m.r
             print OUTPUT_DICT['verts']
 
-            pyRender.mesh_render_pose_bed(self.m, root_shift_est, self.point_cloud_array, self.pc_isnew, pmat, self.markers, self.bedangle)
+            pyRender.mesh_render_pose_bed_orig(self.m, root_shift_est, self.point_cloud_array, self.pc_isnew, pmat, self.markers, self.bedangle)
             self.point_cloud_array = None
 
             #dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix, add_floor = False)

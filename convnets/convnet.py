@@ -210,6 +210,7 @@ class CNN(nn.Module):
         betas_est = scores[:,0:10].clone().detach().cpu().numpy()  # make sure to detach so the gradient flow of joints doesn't corrupt the betas
         root_shift_est = scores[:, 10:13].clone().detach().cpu().numpy()
 
+
         # normalize for tan activation function
         scores[:, 13:85] -= torch.mean(self.bounds[0:72, 0:2], dim=1)
         scores[:, 13:85] *= (2. / torch.abs(self.bounds[0:72, 0] - self.bounds[0:72, 1]))
@@ -272,7 +273,11 @@ class CNN(nn.Module):
         scores = self.CNN_fc1(scores_cnn)
 
         # weight the outputs, which are already centered around 0. First make them uniformly smaller than the direct output, which is too large.
-        scores = torch.mul(scores.clone(), 0.01)
+        if CTRL_PNL['full_body_rot'] == True:
+            scores = torch.mul(scores.clone(), 0.1)
+        else:
+            scores = torch.mul(scores.clone(), 0.01)
+
 
         #normalize the output of the network based on the range of the parameters
         if self.GPU == True:
@@ -293,6 +298,25 @@ class CNN(nn.Module):
             scores[:, 10] = torch.add(scores[:, 10].clone(), 0.6)
             scores[:, 11] = torch.add(scores[:, 11].clone(), 1.2)
             scores[:, 12] = torch.add(scores[:, 12].clone(), 0.1)
+
+        if CTRL_PNL['full_body_rot'] == True:
+            scores[:, 14] = torch.add(scores[:, 14].clone(), 1.0)
+            scores[:, 16] = torch.add(scores[:, 16].clone(), 1.0)
+            scores[:, 18] = torch.add(scores[:, 18].clone(), 1.0)
+            scores[:, 13] = torch.atan2(scores[:, 13].clone(), scores[:, 14].clone())
+            scores[:, 14] = torch.atan2(scores[:, 15].clone(), scores[:, 16].clone())
+            scores[:, 15] = torch.atan2(scores[:, 17].clone(), scores[:, 18].clone())
+            scores[:, 16:85] = scores[:, 19:88].clone()
+
+            scores = scores.unsqueeze(0)
+            scores = scores.unsqueeze(0)
+            scores = F.pad(scores, (0, -3, 0, 0))
+            scores = scores.squeeze(0)
+            scores = scores.squeeze(0)
+
+            output_size_adder = 3
+        else:
+            output_size_adder = 0
 
         #print scores[0, 0:10]
         if CTRL_PNL['adjust_ang_from_est'] == True:
@@ -330,6 +354,12 @@ class CNN(nn.Module):
 
             betas_est = scores[:, 0:10].clone()#.detach() #make sure to detach so the gradient flow of joints doesn't corrupt the betas
             root_shift_est = scores[:, 10:13].clone()
+
+            if CTRL_PNL['full_body_rot'] == True:
+                self.meshDepthLib.bounds[0:3, 0] = torch.Tensor(np.array(-2*np.pi))
+                self.meshDepthLib.bounds[0:3, 1] = torch.Tensor(np.array(2*np.pi))
+
+
 
             # normalize for tan activation function
             scores[:, 13:85] -= torch.mean(self.meshDepthLib.bounds[0:72, 0:2], dim=1)
