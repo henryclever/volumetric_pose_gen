@@ -118,7 +118,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['depth_map_labels'] = True #can only be true if we have 100% synthetic data for training
         self.CTRL_PNL['depth_map_labels_test'] = True #can only be true is we have 100% synth for testing
         self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
-        self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
+        self.CTRL_PNL['depth_map_input_est'] = True #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
@@ -240,20 +240,24 @@ class PhysicalTrainer():
         self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_f_synth, num_repeats = 1,
                                                         z_adj = -0.075, gender = "f", is_synth = True,
                                                         loss_vector_type = self.CTRL_PNL['loss_vector_type'],
-                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
+                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'],
+                                                        full_body_rot = self.CTRL_PNL['full_body_rot'])
         self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_m_synth, num_repeats = 1,
                                                         z_adj = -0.075, gender = "m", is_synth = True,
                                                         loss_vector_type = self.CTRL_PNL['loss_vector_type'],
-                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
+                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'],
+                                                        full_body_rot = self.CTRL_PNL['full_body_rot'])
 
         self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_f_real, num_repeats = repeat_real_data_ct,
                                                         z_adj = 0.0, gender = "m", is_synth = False,
                                                         loss_vector_type = self.CTRL_PNL['loss_vector_type'],
-                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
+                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'],
+                                                        full_body_rot = self.CTRL_PNL['full_body_rot'])
         self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_m_real, num_repeats = repeat_real_data_ct,
                                                         z_adj = 0.0, gender = "m", is_synth = False,
                                                         loss_vector_type = self.CTRL_PNL['loss_vector_type'],
-                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
+                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'],
+                                                        full_body_rot = self.CTRL_PNL['full_body_rot'])
         self.train_y_tensor = torch.Tensor(self.train_y_flat)
 
         print self.train_x_tensor.shape, 'Input training tensor shape'
@@ -456,15 +460,18 @@ class PhysicalTrainer():
                                             requires_grad=True)
 
 
-                    loss_eucl = self.criterion(scores[:, 10:34], scores_zeros[:, 10:34])*self.weight_joints*2
+                    loss_eucl = self.criterion(scores[:, 16:40], scores_zeros[:, 16:40])*self.weight_joints*2
+                    loss_bodyrot = self.criterion(scores[:, 10:16], scores_zeros[:, 10:16])*self.weight_joints
+                    if self.CTRL_PNL['adjust_ang_from_est'] == True:
+                        loss_bodyrot *= 0
                     loss_betas = self.criterion(scores[:, 0:10], scores_zeros[:, 0:10])*self.weight_joints
 
 
                     if self.CTRL_PNL['regr_angles'] == True:
                         loss_angs = self.criterion2(scores[:, 34:106], scores_zeros[:, 34:106])*self.weight_joints
-                        loss = (loss_betas + loss_eucl + loss_angs)
+                        loss = (loss_betas + loss_eucl + loss_bodyrot + loss_angs)
                     else:
-                        loss = (loss_betas + loss_eucl)
+                        loss = (loss_betas + loss_eucl + loss_bodyrot)
 
 
                     #print INPUT_DICT['batch_mdm'].size(), OUTPUT_DICT['batch_mdm_est'].size()
@@ -508,6 +515,7 @@ class PhysicalTrainer():
                         self.im_sample_ext2 = INPUT_DICT['batch_mdm'][0, :, :].squeeze().unsqueeze(0)*-1 #ground truth depth
                         self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().unsqueeze(0)*-1 #est depth output
 
+                    print scores[0, 10:16], 'scores of body rot'
 
                     #print self.im_sample.size(), self.im_sample_ext.size(), self.im_sample_ext2.size(), self.im_sample_ext3.size()
 
@@ -537,6 +545,9 @@ class PhysicalTrainer():
                         print_vals_list.append(1000*loss_eucl.data)
                         print_text_list.append('\n\t\t\t\t\t\t   Betas Loss: {:.2f}')
                         print_vals_list.append(1000*loss_betas.data)
+                        if self.CTRL_PNL['full_body_rot'] == True:
+                            print_text_list.append('\n\t\t\t\t\t\tBody Rot Loss: {:.2f}')
+                            print_vals_list.append(1000*loss_bodyrot.data)
                         if self.CTRL_PNL['regr_angles'] == True:
                             print_text_list.append('\n\t\t\t\t\t\t  Angles Loss: {:.2f}')
                             print_vals_list.append(1000*loss_angs.data)
@@ -786,18 +797,18 @@ if __name__ == "__main__":
 
 
     if opt.quick_test == True:
-        training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_f_lay_4000_none_stiff.p')
-        test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_f_lay_1000_none_stiff.p')
+        training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_f_lay_4000_none_stiff_output0p5.p')
+        test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_f_lay_1000_none_stiff_output0p5.p')
     else:
-        training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_f_lay_4000_none_stiff.p')
-        training_database_file_f.append(filepath_prefix+'synth/random/train_rollpi_f_lay_4000_none_stiff.p')
-        training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_plo_f_lay_4000_none_stiff.p')
-        training_database_file_f.append(filepath_prefix+'synth/random/train_rollpi_plo_f_lay_4000_none_stiff.p')
-        training_database_file_m.append(filepath_prefix+'synth/random/train_roll0_m_lay_4000_none_stiff.p')
-        training_database_file_m.append(filepath_prefix+'synth/random/train_rollpi_m_lay_4000_none_stiff.p')
-        training_database_file_m.append(filepath_prefix+'synth/random/train_roll0_plo_m_lay_4000_none_stiff.p')
-        training_database_file_m.append(filepath_prefix+'synth/random/train_rollpi_plo_m_lay_4000_none_stiff.p')
-        test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_f_lay_1000_none_stiff.p')
+        training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_f_lay_4000_none_stiff_output0p5.p')
+        training_database_file_f.append(filepath_prefix+'synth/random/train_rollpi_f_lay_4000_none_stiff_output0p5.p')
+        training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_plo_f_lay_4000_none_stiff_output0p5.p')
+        training_database_file_f.append(filepath_prefix+'synth/random/train_rollpi_plo_f_lay_4000_none_stiff_output0p5.p')
+        training_database_file_m.append(filepath_prefix+'synth/random/train_roll0_m_lay_4000_none_stiff_output0p5.p')
+        training_database_file_m.append(filepath_prefix+'synth/random/train_rollpi_m_lay_4000_none_stiff_output0p5.p')
+        training_database_file_m.append(filepath_prefix+'synth/random/train_roll0_plo_m_lay_4000_none_stiff_output0p5.p')
+        training_database_file_m.append(filepath_prefix+'synth/random/train_rollpi_plo_m_lay_4000_none_stiff_output0p5.p')
+        test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_f_lay_1000_none_stiff_output0p5.p')
 
 
     p = PhysicalTrainer(training_database_file_f, training_database_file_m, test_database_file_f, test_database_file_m, opt)

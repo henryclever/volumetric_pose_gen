@@ -257,7 +257,9 @@ class KinematicsLib():
 
         angle = torch.norm(theta_all + 1e-8, p=2, dim=2)
 
-        angle_repeated = angle.repeat(1, 3).view(-1, 3, 24).permute(0, 2, 1)
+        num_joints = theta_all.size()[1]
+
+        angle_repeated = angle.repeat(1, 3).view(-1, 3, num_joints).permute(0, 2, 1)
         normalized = torch.div(theta_all, angle_repeated)
         angle = angle * 0.5
 
@@ -271,7 +273,7 @@ class KinematicsLib():
                       2 * (Q[:,:,1] * Q[:,:,2] + Q[:,:,0] * Q[:,:,3]), 1 - 2 * (Q[:,:,1] * Q[:,:,1] + Q[:,:,3] * Q[:,:,3]), 2 * (Q[:,:,2] * Q[:,:,3] - Q[:,:,0] * Q[:,:,1]),
                       2 * (Q[:,:,1] * Q[:,:,3] - Q[:,:,0] * Q[:,:,2]), 2 * (Q[:,:,0] * Q[:,:,1] + Q[:,:,2] * Q[:,:,3]), 1 - 2 * (Q[:,:,1] * Q[:,:,1] + Q[:,:,2] * Q[:,:,2])])
 
-        R = R.permute(1, 2, 0).view(-1, 24, 3, 3)
+        R = R.permute(1, 2, 0).view(-1, num_joints, 3, 3)
 
         sy = torch.sqrt(R[:, :, 0, 0] * R[:, :, 0, 0] + R[:, :, 1, 0] * R[:, :, 1, 0])
         #print sy[0, 2]

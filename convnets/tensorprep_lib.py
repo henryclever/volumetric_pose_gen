@@ -151,7 +151,7 @@ class TensorPrepLib():
 
         return train_xa
 
-    def prep_labels(self, y_flat, dat, num_repeats, z_adj, gender, is_synth, loss_vector_type, initial_angle_est):
+    def prep_labels(self, y_flat, dat, num_repeats, z_adj, gender, is_synth, loss_vector_type, initial_angle_est, full_body_rot = False):
         if gender == "f":
             g1 = 1
             g2 = 0
@@ -180,6 +180,9 @@ class TensorPrepLib():
                                             dat['betas_est'][entry][0:10],
                                             dat['angles_est'][entry][0:72],
                                             dat['root_xyz_est'][entry][0:3]), axis = 0)
+                    if full_body_rot == True:
+                        c = np.concatenate((c,
+                                            dat['root_atan2_est'][entry][0:6]), axis = 0)
                     for i in range(num_repeats):
                         y_flat.append(c)
 

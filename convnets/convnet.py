@@ -34,17 +34,17 @@ class CNN(nn.Module):
 
         self.CNN_pack1 = nn.Sequential(
 
-            nn.Conv2d(in_channels, 256, kernel_size=7, stride=2, padding=3),
+            nn.Conv2d(in_channels, 192, kernel_size=7, stride=2, padding=3),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.1, inplace=False),
             nn.MaxPool2d(3, stride=2),
-            nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=0),
+            nn.Conv2d(192, 192, kernel_size=3, stride=1, padding=0),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.1, inplace=False),
-            nn.Conv2d(256, 512, kernel_size=3, stride=1, padding=0),
+            nn.Conv2d(192, 384, kernel_size=3, stride=1, padding=0),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.1, inplace=False),
-            nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=0),
+            nn.Conv2d(384, 384, kernel_size=3, stride=1, padding=0),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.1, inplace=False),
 
@@ -70,7 +70,7 @@ class CNN(nn.Module):
 
 
         self.CNN_fc1 = nn.Sequential(
-            nn.Linear(89600, out_size),
+            nn.Linear(67200, out_size), #89600, out_size),
         )
         self.CNN_fc2 = nn.Sequential(
             nn.Linear(11200, 10),
@@ -274,7 +274,7 @@ class CNN(nn.Module):
 
         # weight the outputs, which are already centered around 0. First make them uniformly smaller than the direct output, which is too large.
         if CTRL_PNL['full_body_rot'] == True:
-            scores = torch.mul(scores.clone(), 0.1)
+            scores = torch.mul(scores.clone(), 0.01)
         else:
             scores = torch.mul(scores.clone(), 0.01)
 
@@ -300,39 +300,46 @@ class CNN(nn.Module):
             scores[:, 12] = torch.add(scores[:, 12].clone(), 0.1)
 
         if CTRL_PNL['full_body_rot'] == True:
-            scores[:, 14] = torch.add(scores[:, 14].clone(), 1.0)
-            scores[:, 16] = torch.add(scores[:, 16].clone(), 1.0)
-            scores[:, 18] = torch.add(scores[:, 18].clone(), 1.0)
-            scores[:, 13] = torch.atan2(scores[:, 13].clone(), scores[:, 14].clone())
-            scores[:, 14] = torch.atan2(scores[:, 15].clone(), scores[:, 16].clone())
-            scores[:, 15] = torch.atan2(scores[:, 17].clone(), scores[:, 18].clone())
-            scores[:, 16:85] = scores[:, 19:88].clone()
 
             scores = scores.unsqueeze(0)
             scores = scores.unsqueeze(0)
-            scores = F.pad(scores, (0, -3, 0, 0))
+            scores = F.pad(scores, (0, 3, 0, 0))
             scores = scores.squeeze(0)
             scores = scores.squeeze(0)
 
-            output_size_adder = 3
+
+            if CTRL_PNL['adjust_ang_from_est'] == True:
+                scores[:, 13:19] = scores[:, 13:19].clone() + OUTPUT_EST_DICT['root_atan2']
+
+
+            scores[:, 22:91] = scores[:, 19:88].clone()
+
+            scores[:, 19] = torch.atan2(scores[:, 16].clone(), scores[:, 13].clone()) #pitch x, y
+            scores[:, 20] = torch.atan2(scores[:, 17].clone(), scores[:, 14].clone()) #roll x, y
+            scores[:, 21] = torch.atan2(scores[:, 18].clone(), scores[:, 15].clone()) #yaw x, y
+
+            OSA = 6 #output size adder
         else:
-            output_size_adder = 0
+            OSA = 0
 
         #print scores[0, 0:10]
         if CTRL_PNL['adjust_ang_from_est'] == True:
             scores[:, 0:10] =  OUTPUT_EST_DICT['betas'] + scores[:, 0:10].clone()
             scores[:, 10:13] = OUTPUT_EST_DICT['root_shift']
-
-            #print scores[0, 13:85]
-            #print OUTPUT_EST_DICT['angles'][0, :]
-
-            #scores[:, 13:85] = scores[:, 13:85].clone()
-            scores[:, 13:85] = scores[:, 13:85].clone() + OUTPUT_EST_DICT['angles']
+            if CTRL_PNL['full_body_rot'] == True:
+                scores[:, 22:91] = scores[:, 22:91].clone() + OUTPUT_EST_DICT['angles'][:, 3:72]
+            else:
+                scores[:, 13:85] = scores[:, 13:85].clone() + OUTPUT_EST_DICT['angles']
             #scores[:, 13:85] = OUTPUT_EST_DICT['angles']
 
 
+
+
+
         OUTPUT_DICT['batch_betas_est'] = scores[:, 0:10].clone().data
-        OUTPUT_DICT['batch_angles_est']  = scores[:, 13:85].clone().data
+        if CTRL_PNL['full_body_rot'] == True:
+            OUTPUT_DICT['batch_root_atan2_est'] = scores[:, 13:19].clone().data
+        OUTPUT_DICT['batch_angles_est']  = scores[:, 13+OSA:85+OSA].clone().data
         OUTPUT_DICT['batch_root_xyz_est'] = scores[:, 10:13].clone().data
 
 
@@ -360,61 +367,60 @@ class CNN(nn.Module):
                 self.meshDepthLib.bounds[0:3, 1] = torch.Tensor(np.array(2*np.pi))
 
 
-
             # normalize for tan activation function
-            scores[:, 13:85] -= torch.mean(self.meshDepthLib.bounds[0:72, 0:2], dim=1)
-            scores[:, 13:85] *= (2. / torch.abs(self.meshDepthLib.bounds[0:72, 0] - self.meshDepthLib.bounds[0:72, 1]))
-            scores[:, 13:85] = scores[:, 13:85].tanh()
-            scores[:, 13:85] /= (2. / torch.abs(self.meshDepthLib.bounds[0:72, 0] - self.meshDepthLib.bounds[0:72, 1]))
-            scores[:, 13:85] += torch.mean(self.meshDepthLib.bounds[0:72, 0:2], dim=1)
+            scores[:, 13+OSA:85+OSA] -= torch.mean(self.meshDepthLib.bounds[0:72, 0:2], dim=1)
+            scores[:, 13+OSA:85+OSA] *= (2. / torch.abs(self.meshDepthLib.bounds[0:72, 0] - self.meshDepthLib.bounds[0:72, 1]))
+            scores[:, 13+OSA:85+OSA] = scores[:, 13+OSA:85+OSA].tanh()
+            scores[:, 13+OSA:85+OSA] /= (2. / torch.abs(self.meshDepthLib.bounds[0:72, 0] - self.meshDepthLib.bounds[0:72, 1]))
+            scores[:, 13+OSA:85+OSA] += torch.mean(self.meshDepthLib.bounds[0:72, 0:2], dim=1)
 
 
             if self.loss_vector_type == 'anglesDC':
 
-                Rs_est = KinematicsLib().batch_rodrigues(scores[:, 13:85].view(-1, 24, 3).clone()).view(-1, 24, 3, 3)
+                Rs_est = KinematicsLib().batch_rodrigues(scores[:, 13+OSA:85+OSA].view(-1, 24, 3).clone()).view(-1, 24, 3, 3)
 
             elif self.loss_vector_type == 'anglesEU':
 
-                Rs_est = KinematicsLib().batch_euler_to_R(scores[:, 13:85].view(-1, 24, 3).clone(), self.meshDepthLib.zeros_cartesian, self.meshDepthLib.ones_cartesian).view(-1, 24, 3, 3)
+                Rs_est = KinematicsLib().batch_euler_to_R(scores[:, 13+OSA:85+OSA].view(-1, 24, 3).clone(), self.meshDepthLib.zeros_cartesian, self.meshDepthLib.ones_cartesian).view(-1, 24, 3, 3)
 
         else:
             #print betas[13, :], 'betas'
             betas_est = betas
             scores[:, 0:10] = betas.clone()
-            scores[:, 13:85] = angles_gt.clone()
+            scores[:, 13+OSA:85+OSA] = angles_gt.clone()
             root_shift_est = root_shift
 
             if self.loss_vector_type == 'anglesDC':
 
                 #normalize for tan activation function
-                scores[:, 13:85] -= torch.mean(self.meshDepthLib.bounds[0:72,0:2], dim = 1)
-                scores[:, 13:85] *= (2. / torch.abs(self.meshDepthLib.bounds[0:72, 0] - self.meshDepthLib.bounds[0:72, 1]))
-                scores[:, 13:85] = scores[:, 13:85].tanh()
-                scores[:, 13:85] /= (2. / torch.abs(self.meshDepthLib.bounds[0:72, 0] - self.meshDepthLib.bounds[0:72, 1]))
-                scores[:, 13:85] += torch.mean(self.meshDepthLib.bounds[0:72,0:2], dim = 1)
+                scores[:, 13+OSA:85+OSA] -= torch.mean(self.meshDepthLib.bounds[0:72,0:2], dim = 1)
+                scores[:, 13+OSA:85+OSA] *= (2. / torch.abs(self.meshDepthLib.bounds[0:72, 0] - self.meshDepthLib.bounds[0:72, 1]))
+                scores[:, 13+OSA:85+OSA] = scores[:, 13+OSA:85+OSA].tanh()
+                scores[:, 13+OSA:85+OSA] /= (2. / torch.abs(self.meshDepthLib.bounds[0:72, 0] - self.meshDepthLib.bounds[0:72, 1]))
+                scores[:, 13+OSA:85+OSA] += torch.mean(self.meshDepthLib.bounds[0:72,0:2], dim = 1)
 
 
-                Rs_est = KinematicsLib().batch_rodrigues(scores[:, 13:85].view(-1, 24, 3).clone()).view(-1, 24, 3, 3)
+                Rs_est = KinematicsLib().batch_rodrigues(scores[:, 13+OSA:85+OSA].view(-1, 24, 3).clone()).view(-1, 24, 3, 3)
             elif self.loss_vector_type == 'anglesEU':
 
                 #convert angles DC to EU
-                scores[:, 13:85] = KinematicsLib().batch_euler_angles_from_dir_cos_angles(scores[:, 13:85].view(-1, 24, 3).clone()).contiguous().view(-1, 72)
+                scores[:, 13+OSA:85+OSA] = KinematicsLib().batch_euler_angles_from_dir_cos_angles(scores[:, 13+OSA:85+OSA].view(-1, 24, 3).clone()).contiguous().view(-1, 72)
 
                 #normalize for tan activation function
-                scores[:, 13:85] -= torch.mean(self.meshDepthLib.bounds[0:72,0:2], dim = 1)
-                scores[:, 13:85] *= (2. / torch.abs(self.meshDepthLib.bounds[0:72, 0] - self.meshDepthLib.bounds[0:72, 1]))
-                scores[:, 13:85] = scores[:, 13:85].tanh()
-                scores[:, 13:85] /= (2. / torch.abs(self.meshDepthLib.bounds[0:72, 0] - self.meshDepthLib.bounds[0:72, 1]))
-                scores[:, 13:85] += torch.mean(self.meshDepthLib.bounds[0:72,0:2], dim = 1)
+                scores[:, 13+OSA:85+OSA] -= torch.mean(self.meshDepthLib.bounds[0:72,0:2], dim = 1)
+                scores[:, 13+OSA:85+OSA] *= (2. / torch.abs(self.meshDepthLib.bounds[0:72, 0] - self.meshDepthLib.bounds[0:72, 1]))
+                scores[:, 13+OSA:85+OSA] = scores[:, 13+OSA:85+OSA].tanh()
+                scores[:, 13+OSA:85+OSA] /= (2. / torch.abs(self.meshDepthLib.bounds[0:72, 0] - self.meshDepthLib.bounds[0:72, 1]))
+                scores[:, 13+OSA:85+OSA] += torch.mean(self.meshDepthLib.bounds[0:72,0:2], dim = 1)
 
-                Rs_est = KinematicsLib().batch_euler_to_R(scores[:, 13:85].view(-1, 24, 3).clone(), self.meshDepthLib.zeros_cartesian, self.meshDepthLib.ones_cartesian).view(-1, 24, 3, 3)
+                Rs_est = KinematicsLib().batch_euler_to_R(scores[:, 13+OSA:85+OSA].view(-1, 24, 3).clone(), self.meshDepthLib.zeros_cartesian, self.meshDepthLib.ones_cartesian).view(-1, 24, 3, 3)
 
         #print Rs_est[0, :]
 
 
 
         OUTPUT_DICT['batch_betas_est_post_clip'] = scores[:, 0:10].clone().data
-        OUTPUT_DICT['batch_angles_est_post_clip']  = KinematicsLib().batch_dir_cos_angles_from_euler_angles(scores[:, 13:85].view(-1, 24, 3).clone(), self.meshDepthLib.zeros_cartesian, self.meshDepthLib.ones_cartesian)
+        OUTPUT_DICT['batch_angles_est_post_clip']  = KinematicsLib().batch_dir_cos_angles_from_euler_angles(scores[:, 13+OSA:85+OSA].view(-1, 24, 3).clone(), self.meshDepthLib.zeros_cartesian, self.meshDepthLib.ones_cartesian)
         OUTPUT_DICT['batch_root_xyz_est_post_clip'] = scores[:, 10:13].clone().data
 
 
@@ -561,44 +567,51 @@ class CNN(nn.Module):
 
 
         #tweak this to change the lengths vector
-        scores[:, 34+add_idx:106+add_idx] = torch.mul(targets_est[:, 0:72], 1.)
+        scores[:, 34+add_idx+OSA:106+add_idx+OSA] = torch.mul(targets_est[:, 0:72], 1.)
 
         scores[:, 0:10] = torch.mul(synth_real_switch.unsqueeze(1), torch.sub(scores[:, 0:10], betas))#*.2
+        if CTRL_PNL['full_body_rot'] == True:
+            scores[:, 10:16] = scores[:, 13:19].clone()
+
+            scores[:, 10:13] = scores[:, 10:13].clone() - torch.cos(KinematicsLib().batch_euler_angles_from_dir_cos_angles(angles_gt[:, 0:3].view(-1, 1, 3).clone()).contiguous().view(-1, 3))
+            scores[:, 13:16] = scores[:, 13:16].clone() - torch.sin(KinematicsLib().batch_euler_angles_from_dir_cos_angles(angles_gt[:, 0:3].view(-1, 1, 3).clone()).contiguous().view(-1, 3))
+
+            #print euler_root_rot_gt[0, :], 'body rot angles gt'
 
         #compare the output angles to the target values
         if reg_angles == True:
             if self.loss_vector_type == 'anglesDC':
-                scores[:, 34:106] = angles_gt.clone().view(-1, 72) - scores[:, 13:85]
+                scores[:, 34+OSA:106+OSA] = angles_gt.clone().view(-1, 72) - scores[:, 13+OSA:85+OSA]
 
-                scores[:, 34:106] = torch.mul(synth_real_switch.unsqueeze(1), torch.sub(scores[:, 34:106], angles_gt.clone().view(-1, 72)))
+                scores[:, 34+OSA:106+OSA] = torch.mul(synth_real_switch.unsqueeze(1), torch.sub(scores[:, 34+OSA:106+OSA], angles_gt.clone().view(-1, 72)))
 
 
             elif self.loss_vector_type == 'anglesEU':
-                scores[:, 34:106] = KinematicsLib().batch_euler_angles_from_dir_cos_angles(angles_gt.view(-1, 24, 3).clone()).contiguous().view(-1, 72) - scores[:, 13:85]
+                scores[:, 34+OSA:106+OSA] = KinematicsLib().batch_euler_angles_from_dir_cos_angles(angles_gt.view(-1, 24, 3).clone()).contiguous().view(-1, 72) - scores[:, 13+OSA:85+OSA]
 
-            scores[:, 34:106] = torch.mul(synth_real_switch.unsqueeze(1), scores[:, 34:106].clone())
-
+            scores[:, 34+OSA:106+OSA] = torch.mul(synth_real_switch.unsqueeze(1), scores[:, 34+OSA:106+OSA].clone())
 
 
 
         #compare the output joints to the target values
-        scores[:, 34+add_idx:106+add_idx] = targets[:, 0:72]/1000 - scores[:, 34+add_idx:106+add_idx]
-        scores[:, 106+add_idx:178+add_idx] = ((scores[:, 34+add_idx:106+add_idx].clone())+0.0000001).pow(2)
+
+        scores[:, 34+add_idx+OSA:106+add_idx+OSA] = targets[:, 0:72]/1000 - scores[:, 34+add_idx+OSA:106+add_idx+OSA]
+        scores[:, 106+add_idx+OSA:178+add_idx+OSA] = ((scores[:, 34+add_idx+OSA:106+add_idx+OSA].clone())+0.0000001).pow(2)
 
 
         for joint_num in range(24):
             #print scores[:, 10+joint_num].size(), 'score size'
             #print synth_real_switch.size(), 'switch size'
             if joint_num in [0, 1, 2, 6, 9, 10, 11, 12, 13, 14, 16, 17, 22, 23]: #torso is 3 but forget training it
-                scores[:, 10+joint_num] = torch.mul(synth_real_switch,
-                                                    (scores[:, 106+add_idx+joint_num*3] +
-                                                     scores[:, 107+add_idx+joint_num*3] +
-                                                     scores[:, 108+add_idx+joint_num*3]).sqrt())
+                scores[:, 10+joint_num+OSA] = torch.mul(synth_real_switch,
+                                                    (scores[:, 106+add_idx+joint_num*3+OSA] +
+                                                     scores[:, 107+add_idx+joint_num*3+OSA] +
+                                                     scores[:, 108+add_idx+joint_num*3+OSA]).sqrt())
 
             else:
-                scores[:, 10+joint_num] = (scores[:, 106+add_idx+joint_num*3] +
-                                           scores[:, 107+add_idx+joint_num*3] +
-                                           scores[:, 108+add_idx+joint_num*3]).sqrt()
+                scores[:, 10+joint_num+OSA] = (scores[:, 106+add_idx+joint_num*3+OSA] +
+                                           scores[:, 107+add_idx+joint_num*3+OSA] +
+                                           scores[:, 108+add_idx+joint_num*3+OSA]).sqrt()
 
                 #print scores[:, 10+joint_num], 'score size'
                 #print synth_real_switch, 'switch size'
@@ -623,12 +636,15 @@ class CNN(nn.Module):
         #print scores[7, :]
 
         scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1/1.7312621950698526)) #weight the betas by std
-        scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), (1/0.1282715100608753)) #weight the 24 joints by std
-        if reg_angles == True: scores[:, 34:106] = torch.mul(scores[:, 34:106].clone(), (1/0.2130542427733348)) #weight the angles by how many there are
+        if CTRL_PNL['full_body_rot'] == True:
+            scores[:, 10:16] = torch.mul(scores[:, 10:16].clone(), (1/0.2130542427733348)*np.pi) #weight the body rotation by the std
+        scores[:, 10+OSA:34+OSA] = torch.mul(scores[:, 10+OSA:34+OSA].clone(), (1/0.1282715100608753)) #weight the 24 joints by std
+        if reg_angles == True: scores[:, 34+OSA:106+OSA] = torch.mul(scores[:, 34+OSA:106+OSA].clone(), (1/0.2130542427733348)) #weight the angles by how many there are
 
         #scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1./10)) #weight the betas by how many betas there are
         #scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), (1./24)) #weight the joints by how many there are
         #if reg_angles == True: scores[:, 34:106] = torch.mul(scores[:, 34:106].clone(), (1./72)) #weight the angles by how many there are
+
 
         return scores, OUTPUT_DICT
 

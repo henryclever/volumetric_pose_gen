@@ -76,6 +76,10 @@ class UnpackBatchLib():
             batch.append(batch[1][:, 162:172]) #betas est
             batch.append(batch[1][:, 172:244]) #angles est
             batch.append(batch[1][:, 244:247]) #root pos est
+            if CTRL_PNL['full_body_rot'] == True:
+                adj_ext_idx += 1
+                batch.append(batch[1][:, 247:253]) #root atan2 est
+
             extra_smpl_angles = batch[10]
             extra_targets = batch[11]
         else:
@@ -95,14 +99,14 @@ class UnpackBatchLib():
         batch[1] = batch[1][:, 0:72]
 
 
-        if is_training == True: #only do augmentation for real data that is in training mode
-            batch[0], batch[1], extra_targets, extra_smpl_angles = SyntheticLib().synthetic_master(batch[0], batch[1], batch[6],
-                                                                    num_images_manip = (CTRL_PNL['num_input_channels_batch0']-1),
-                                                                    flip=True, shift=True, scale=False,
-                                                                    include_inter=CTRL_PNL['incl_inter'],
-                                                                    loss_vector_type=CTRL_PNL['loss_vector_type'],
-                                                                    extra_targets=extra_targets,
-                                                                    extra_smpl_angles = extra_smpl_angles)
+        #if is_training == True: #only do augmentation for real data that is in training mode
+        #    batch[0], batch[1], extra_targets, extra_smpl_angles = SyntheticLib().synthetic_master(batch[0], batch[1], batch[6],
+        #                                                            num_images_manip = (CTRL_PNL['num_input_channels_batch0']-1),
+        #                                                            flip=True, shift=True, scale=False,
+        #                                                            include_inter=CTRL_PNL['incl_inter'],
+        #                                                            loss_vector_type=CTRL_PNL['loss_vector_type'],
+        #                                                            extra_targets=extra_targets,
+        #                                                            extra_smpl_angles = extra_smpl_angles)
 
         images_up_non_tensor = PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2)
 
@@ -136,6 +140,8 @@ class UnpackBatchLib():
             OUTPUT_EST_DICT['betas'] = Variable(batch[9].type(CTRL_PNL['dtype']), requires_grad=is_training)
             OUTPUT_EST_DICT['angles'] = Variable(extra_smpl_angles.type(CTRL_PNL['dtype']), requires_grad=is_training)
             OUTPUT_EST_DICT['root_shift'] = Variable(extra_targets.type(CTRL_PNL['dtype']), requires_grad=is_training)
+            if CTRL_PNL['full_body_rot'] == True:
+                OUTPUT_EST_DICT['root_atan2'] = Variable(batch[12].type(CTRL_PNL['dtype']), requires_grad=is_training)
 
         if CTRL_PNL['depth_map_labels'] == True:
             if CTRL_PNL['depth_map_labels_test'] == True or is_training == True:

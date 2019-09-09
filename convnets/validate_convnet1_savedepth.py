@@ -116,6 +116,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
         self.CTRL_PNL['mesh_bottom_dist'] = True
+        self.CTRL_PNL['full_body_rot'] = True
 
 
         self.filename = filename
@@ -161,6 +162,7 @@ class PhysicalTrainer():
                 self.dat['angles_est'] = []
                 self.dat['root_xyz_est'] = []
                 self.dat['betas_est'] = []
+                self.dat['root_atan2_est'] = []
 
 
         self.test_x_flat = []  # Initialize the testing pressure mat list
@@ -233,7 +235,6 @@ class PhysicalTrainer():
 
 
         if self.CTRL_PNL['loss_vector_type'] == 'direct':
-            fc_output_size = 72
             if GPU == True:
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_direct_real_s5_128b_300e.pt')
                 #self.model = torch.load('/home/henry/data/convnets/convnet_direct_real_s2_128b_300e.pt')
@@ -245,11 +246,11 @@ class PhysicalTrainer():
 
 
         elif self.CTRL_PNL['loss_vector_type'] == 'anglesDC' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU':
-            fc_output_size = 85## 10 + 3 + 24*3 --- betas, root shift, rotations
             if GPU == True:
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_planesreg_128b_100e.pt')
                 #self.model = torch.load('/home/henry/data/convnets/epochs_set_3/convnet_anglesEU_synthreal_s12_3xreal_128b_101e_300e.pt')
-                self.model = torch.load('/home/henry/data/convnets/planesreg/convnet_anglesEU_synth_s9_3xreal_128b_0.1rtojtdpth_pmatcntin_100e_00001lr.pt')
+                #self.model = torch.load('/home/henry/data/convnets/planesreg/convnet_anglesEU_synth_s9_3xreal_128b_0.1rtojtdpth_pmatcntin_100e_00001lr.pt')
+                self.model = torch.load('/home/henry/data/convnets/planesreg/convnet_anglesEU_synth_32000_128b_201e_0.5rtojtdpth_pmatcntin_200e_00001lr.pt')
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_300e.pt')
                 self.model = self.model.cuda()
             else:
@@ -332,6 +333,8 @@ class PhysicalTrainer():
                     self.dat['angles_est'].append(OUTPUT_DICT['batch_angles_est'][item].cpu().numpy().astype(float32))
                     self.dat['root_xyz_est'].append(OUTPUT_DICT['batch_root_xyz_est'][item].cpu().numpy().astype(float32))
                     self.dat['betas_est'].append(OUTPUT_DICT['batch_betas_est'][item].cpu().numpy().astype(float32))
+                    if self.CTRL_PNL['full_body_rot'] == True:
+                        self.dat['root_atan2_est'].append(OUTPUT_DICT['batch_root_atan2_est'][item].cpu().numpy().astype(float32))
 
             n_examples += self.CTRL_PNL['batch_size']
             #print n_examples
@@ -395,7 +398,7 @@ class PhysicalTrainer():
 
 
         #pkl.dump(self.dat,open('/media/henry/multimodal_data_2/'+self.filename+'_output0p7.p', 'wb'))
-        pkl.dump(self.dat,open('/home/henry/'+self.filename+'_output0p1.p', 'wb'))
+        pkl.dump(self.dat,open('/home/henry/'+self.filename+'_output0p5.p', 'wb'))
 
 
         #if GPU == True:
@@ -443,36 +446,23 @@ if __name__ == "__main__":
 
     network_design = True
 
-    filename_list_f = ['data/synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff',
-                    'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff',
-                    'data/synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff',
-                    'data/synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff',
-                    'data/synth/side_up_fw/train_f_lay_2000_of_2067_none_stiff',
-                    'data/synth/side_up_fw/train_f_sit_1000_of_1121_upperbody_stiff',
-                    'data/synth/side_up_fw/train_f_sit_1000_of_1087_rightside_stiff',
-                    'data/synth/side_up_fw/train_f_sit_1000_of_1102_leftside_stiff',
-                    'data/synth/side_up_fw/train_f_sit_1000_of_1106_lowerbody_stiff',
-                    'data/synth/side_up_fw/train_f_sit_1000_of_1096_none_stiff',
-                    'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll',
-                    'data/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll',
-                    'data/real/trainval8_150rh1_sit120rh',]
+    filename_list_f = [ 'data/synth/random/test_roll0_f_lay_1000_none_stiff',
+                        'data/synth/random/test_rollpi_f_lay_1000_none_stiff',
+                        'data/synth/random/test_roll0_plo_f_lay_1000_none_stiff',
+                        'data/synth/random/test_rollpi_plo_f_lay_1000_none_stiff',
+                        'data/synth/random/train_roll0_f_lay_4000_none_stiff',
+                        'data/synth/random/train_rollpi_f_lay_4000_none_stiff',
+                        'data/synth/random/train_roll0_plo_f_lay_4000_none_stiff',
+                        'data/synth/random/train_rollpi_plo_f_lay_4000_none_stiff',]
     
-    filename_list_m = [ 'data/synth/side_up_fw/train_m_lay_2000_of_2031_upperbody_stiff',
-                    'data/synth/side_up_fw/train_m_lay_2000_of_2016_rightside_stiff',
-                    'data/synth/side_up_fw/train_m_lay_2000_of_2016_leftside_stiff',
-                    'data/synth/side_up_fw/train_m_lay_2000_of_2012_lowerbody_stiff',
-                    'data/synth/side_up_fw/train_m_lay_2000_of_2006_none_stiff',
-                    'data/synth/side_up_fw/train_m_sit_1000_of_1147_upperbody_stiff',
-                    'data/synth/side_up_fw/train_m_sit_1000_of_1132_rightside_stiff',
-                    'data/synth/side_up_fw/train_m_sit_1000_of_1152_leftside_stiff',
-                    'data/synth/side_up_fw/train_m_sit_1000_of_1144_lowerbody_stiff',
-                    'data/synth/side_up_fw/train_m_sit_1000_of_1126_none_stiff',
-                    'data/real/s3_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll',
-                    'data/real/s4_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll',
-                    'data/real/s5_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll',
-                    'data/real/s6_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll',
-                    'data/real/s7_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll',
-                    'data/real/trainval4_150rh1_sit120rh']
+    filename_list_m = [ 'data/synth/random/test_roll0_m_lay_1000_none_stiff',
+                        'data/synth/random/test_rollpi_m_lay_1000_none_stiff',
+                        'data/synth/random/test_roll0_plo_m_lay_1000_none_stiff',
+                        'data/synth/random/test_rollpi_plo_m_lay_1000_none_stiff',
+                        'data/synth/random/train_roll0_m_lay_4000_none_stiff',
+                        'data/synth/random/train_rollpi_m_lay_4000_none_stiff',
+                        'data/synth/random/train_roll0_plo_m_lay_4000_none_stiff',
+                        'data/synth/random/train_rollpi_plo_m_lay_4000_none_stiff',]
 
     for filename in filename_list_f:
 
