@@ -133,6 +133,7 @@ class Viz3DPose():
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
         self.CTRL_PNL['mesh_bottom_dist'] = True
+        self.CTRL_PNL['full_body_rot'] = False
 
 
         self.count = 0
@@ -441,11 +442,41 @@ class Viz3DPose():
         smpl_verts = (self.m.r - self.m.J_transformed[0, :])+[root_shift_est[1]-0.286+0.15, root_shift_est[0]-0.286, 0.12-root_shift_est[2]]#*228./214.
         smpl_faces = np.array(self.m.f)
 
-        pc_autofil_red = self.trim_pc_sides()
+        pc_autofil_red = self.trim_pc_sides() #this is the point cloud
 
 
 
-        self.pyRender.mesh_render_pose_bed(smpl_verts, smpl_faces, pc_autofil_red, self.pc_isnew, pmat, markers_c, bedangle, segment_limbs=False)
+        camera_point = [1.09898028, 0.46441343, -1.53]
+
+        #render in 3D pyrender with pressure mat
+        #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
+        #                                          pc = None, pmat = pmat, smpl_render_points = False,
+        #                                          facing_cam_only=False, viz_type = None,
+        #                                          markers = None, segment_limbs=False)
+
+        #render in 3D pyrender with segmented limbs
+        #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
+        #                                          pc = None, pmat = None, smpl_render_points = False,
+        #                                          facing_cam_only=False, viz_type = None,
+        #                                          markers = None, segment_limbs=True)
+
+        #render the error of point cloud points relative to verts
+        #self.pyRender.eval_dist_render_open3d(smpl_verts, smpl_faces, pc_autofil_red, viz_type = 'pc_error',
+        #                                      camera_point = camera_point, segment_limbs=False)
+        self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
+                                                  pc = pc_autofil_red, pmat = None, smpl_render_points = False,
+                                                  facing_cam_only=True, viz_type = 'pc_error',
+                                                  markers = None, segment_limbs=False)
+
+        #render the error of verts relative to point cloud points
+        #self.pyRender.eval_dist_render_open3d(smpl_verts, smpl_faces, pc_autofil_red, viz_type = 'mesh_error',
+        #                                      camera_point = camera_point, segment_limbs=False)
+        #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
+        #                                          pc = pc_autofil_red, pmat = None, smpl_render_points = False,
+        #                                          facing_cam_only=True, viz_type = 'mesh_error',
+        #                                          markers = None, segment_limbs=False)
+
+        time.sleep(100)
         self.point_cloud_array = None
 
 
@@ -497,7 +528,8 @@ class Viz3DPose():
         blah = True
 
         #file_dir = "/media/henry/multimodal_data_2/test_data/data_072019_0007"
-        file_dir = "/media/henry/multimodal_data_2/test_data/data_072019_0006"
+        #file_dir = "/media/henry/multimodal_data_2/test_data/data_072019_0006"
+        file_dir = "/home/henry/test_data/data_072019_0006"
 
         V3D.load_next_file(file_dir)
 
@@ -650,7 +682,8 @@ class Viz3DPose():
 if __name__ ==  "__main__":
 
     filepath_prefix = "/home/henry"
-    model_prefix = "/media/henry/multimodal_data_2"
+    #model_prefix = "/media/henry/multimodal_data_2"
+    model_prefix = "/home/henry"
 
 
     V3D = Viz3DPose(filepath_prefix)

@@ -1,6 +1,6 @@
 
 
-#import open3d as o3d
+import open3d as o3d
 import trimesh
 import pyrender
 import pyglet
@@ -131,7 +131,8 @@ class pyRenderMesh():
         # dterms = 'vc', 'camera', 'bgcolor'
         self.first_pass = True
         self.scene = pyrender.Scene()
-        self.human_mat = pyrender.MetallicRoughnessMaterial(baseColorFactor=[0.0, 0.0, 1.0 ,0.0])
+        #self.human_mat = pyrender.MetallicRoughnessMaterial(baseColorFactor=[0.0, 0.0, 1.0 ,0.0])
+        self.human_mat = pyrender.MetallicRoughnessMaterial(baseColorFactor=[0.0, 0.0, 0.0 ,0.0])
         self.mesh_parts_mat_list = [
             pyrender.MetallicRoughnessMaterial(baseColorFactor=[166. / 255., 206. / 255., 227. / 255., 0.0]),
             pyrender.MetallicRoughnessMaterial(baseColorFactor=[31. / 255., 120. / 255., 180. / 255., 0.0]),
@@ -151,7 +152,6 @@ class pyRenderMesh():
         self.artag_facecolors_root = np.array([[0.0, 1.0, 0.0],[0.0, 1.0, 0.0],[0.0, 1.0, 0.0],[0.0, 1.0, 0.0],[0.0, 1.0, 0.0]])
         self.artag_facecolors = np.array([[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0],])
 
-        self.segmented_dict = load_pickle('segmented_mesh_idx_faces.p')
 
     def mesh_render(self,m):
 
@@ -454,8 +454,23 @@ class pyRenderMesh():
 
 
 
-    def eval_dist(self, pc, verts, faces, faces_red, camera_point):
+    def eval_dist_render_open3d(self, smpl_verts, smpl_faces, pc, viz_type, camera_point, segment_limbs):
+
+        human_mesh_vtx_parts, human_mesh_face_parts = self.get_human_mesh_parts(smpl_verts, smpl_faces, segment_limbs)
+
+        human_mesh_face_parts_red = []
+        #only use the vertices that are facing the camera
+        for part_idx in range(len(human_mesh_vtx_parts)):
+            human_mesh_face_parts_red.append(self.reduce_by_cam_dir(human_mesh_vtx_parts[part_idx], human_mesh_face_parts[part_idx], camera_point))
+
+
+        verts = human_mesh_vtx_parts[0]
+        faces = human_mesh_face_parts[0]
+        faces_red = human_mesh_face_parts_red[0]
+
+
         print pc.shape, verts.shape, np.shape(faces_red)
+        from matplotlib import cm
 
         verts_idx_red = np.unique(faces_red)
 
@@ -474,41 +489,104 @@ class pyRenderMesh():
         verts_norm = self.get_triangle_norm_to_vert(verts, faces, verts_idx_red)
         verts_red_norm = verts_norm[verts_idx_red, :]
 
-        print np.shape(pc_red), np.shape(verts_red)
-        print np.shape(pc_red_norm), np.shape(verts_red_norm)
-
         #plot the mesh with normals on the verts
         #self.plot_mesh_norms(verts_red, verts_red_norm)
 
-        allverts = o3d.geometry.PointCloud()
-        allverts.points = o3d.utility.Vector3dVector(verts_red)
-        allverts.normals = o3d.utility.Vector3dVector(verts_red_norm)
-        allverts.paint_uniform_color([55./256,126./256,184./256])
 
-
-        points = o3d.geometry.PointCloud()
-        points.points = o3d.utility.Vector3dVector(pc_red)
-        points.normals = o3d.utility.Vector3dVector(pc_red_norm)
-        points.paint_uniform_color([228./256,26./256,28./256])
-
-        o3d.visualization.draw_geometries([points, allverts])
 
 
         #get the nearest point from each pc point to some vert, regardless of the normal
         pc_to_nearest_vert_error_list = []
         for point_idx in range(pc_red.shape[0]):
             curr_point = pc_red[point_idx, :]
-
             all_dist = verts_red - curr_point
             all_eucl = np.linalg.norm(all_dist, axis = 1)
             curr_error = np.min(all_eucl)
             pc_to_nearest_vert_error_list.append(curr_error)
             #break
         print "average pc point to nearest vert error, regardless of normal:", np.mean(pc_to_nearest_vert_error_list)
+        pc_color_error = np.array(pc_to_nearest_vert_error_list)/np.max(pc_to_nearest_vert_error_list)
+        pc_color_jet = cm.jet(pc_color_error)[:, 0:3]
+
+
+
+
+        #get the nearest point from each vert to some pc point, regardless of the normal
+        vert_to_nearest_point_error_list = []
+        for vert_idx in range(verts_red.shape[0]):
+            curr_vtx = verts_red[vert_idx, :]
+            all_dist = pc_red - curr_vtx
+            all_eucl = np.linalg.norm(all_dist, axis = 1)
+            curr_error = np.min(all_eucl)
+            vert_to_nearest_point_error_list.append(curr_error)
+            #break
+        #print np.mean(vert_to_nearest_point_error_list)
+
+        #get the nearest point from ALL verts to some pc point, regardless of the normal - for coloring
+        #we need this as a hack because the face indexing only refers to the original set of verts
+        all_vert_to_nearest_point_error_list = []
+        for all_vert_idx in range(verts.shape[0]):
+            curr_vtx = verts[all_vert_idx, :]
+            all_dist = pc_red - curr_vtx
+            all_eucl = np.linalg.norm(all_dist, axis = 1)
+            curr_error = np.min(all_eucl)
+            all_vert_to_nearest_point_error_list.append(curr_error)
+
+        #normalize by the average area of triangles around each point. the verts are much less spatially distributed well
+        #than the points in the point cloud.
+        norm_area_avg = self.get_triangle_area_vert_weight(verts, faces_red, verts_idx_red)
+        norm_vert_to_nearest_point_error = np.array(vert_to_nearest_point_error_list)*norm_area_avg
+        print "average vert to nearest pc point error, regardless of normal:", np.mean(norm_vert_to_nearest_point_error)
+
+        verts_color_error = np.array(all_vert_to_nearest_point_error_list)/np.max(vert_to_nearest_point_error_list)
+        verts_color_jet = cm.jet(verts_color_error)[:, 0:3]
+
+
+        faces_red = np.array(faces_red)
+        faces_red_flipside = np.concatenate((faces_red[:, 0:1], faces_red[:, 2:3], faces_red[:, 1:2]), axis = 1)
+
+        if viz_type == 'mesh_error':
+            bodymesh = o3d.geometry.TriangleMesh()
+            bodymesh.vertices = o3d.utility.Vector3dVector(verts)
+            bodymesh.triangles = o3d.utility.Vector3iVector(faces_red)
+            bodymesh.vertex_colors = o3d.utility.Vector3dVector(verts_color_jet*1.5)
+
+            bodymesh_flipside = o3d.geometry.TriangleMesh()
+            bodymesh_flipside.vertices = o3d.utility.Vector3dVector(verts)
+            bodymesh_flipside.triangles = o3d.utility.Vector3iVector(faces_red_flipside)
+            bodymesh_flipside.vertex_colors = o3d.utility.Vector3dVector(verts_color_jet*0.5)
+
+            points = o3d.geometry.PointCloud()
+            points.points = o3d.utility.Vector3dVector(pc_red)
+            points.normals = o3d.utility.Vector3dVector(pc_red_norm)
+            pc_uniform_gray = [0.6, 0.6, 0.6]
+            points.paint_uniform_color(pc_uniform_gray)
+
+            o3d.visualization.draw_geometries([points, bodymesh, bodymesh_flipside])
+
+        elif viz_type == 'pc_error':
+            bodymesh = o3d.geometry.TriangleMesh()
+            bodymesh.vertices = o3d.utility.Vector3dVector(verts)
+            bodymesh.triangles = o3d.utility.Vector3iVector(faces_red)
+            bodymesh.paint_uniform_color([0.9, 0.9, 0.9])
+
+            bodymesh_flipside = o3d.geometry.TriangleMesh()
+            bodymesh_flipside.vertices = o3d.utility.Vector3dVector(verts)
+            bodymesh_flipside.triangles = o3d.utility.Vector3iVector(faces_red_flipside)
+            bodymesh_flipside.paint_uniform_color([0.6, 0.6, 0.6])
+
+            points = o3d.geometry.PointCloud()
+            points.points = o3d.utility.Vector3dVector(pc_red)
+            points.normals = o3d.utility.Vector3dVector(pc_red_norm)
+            points.colors = o3d.utility.Vector3dVector(pc_color_jet)
+
+            o3d.visualization.draw_geometries([points, bodymesh, bodymesh_flipside])
+
 
 
         #get the nearest point from each pc point to some vert, considering the normal
         #angle_cutoff = 45.0
+        '''
         for angle_cutoff in [90., 80., 70., 60., 50., 40., 30., 20., 10.]:
         #for angle_cutoff in [90.]:
             pc_to_nearest_vert_error_list = []
@@ -540,27 +618,11 @@ class pyRenderMesh():
 
             #print "average pc point to nearest vert error, considering the normal:", np.mean(pc_to_nearest_vert_error_list)," cutoff: ",angle_cutoff
             print np.mean(pc_to_nearest_vert_error_list)
-
-
-        #get the nearest point from each vert to some pc point, regardless of the normal
-        vert_to_nearest_point_error_list = []
-        for vert_idx in range(verts_red.shape[0]):
-            curr_vtx = verts_red[vert_idx, :]
-            all_dist = pc_red - curr_vtx
-            all_eucl = np.linalg.norm(all_dist, axis = 1)
-            curr_error = np.min(all_eucl)
-            vert_to_nearest_point_error_list.append(curr_error)
-            #break
-        #print np.mean(vert_to_nearest_point_error_list)
-
-        #normalize by the average area of triangles around each point. the verts are much less spatially distributed well
-        #than the points in the point cloud.
-        norm_area_avg = self.get_triangle_area_vert_weight(verts, faces_red, verts_idx_red)
-        norm_vert_to_nearest_point_error = np.array(vert_to_nearest_point_error_list)*norm_area_avg
-        print "average vert to nearest pc point error, regardless of normal:", np.mean(norm_vert_to_nearest_point_error)
+        '''
 
 
         #get the nearest point from each vert to some pc point, considering the normal
+        '''
         for angle_cutoff in [90., 80., 70., 60., 50., 40., 30., 20., 10.]:
         #for angle_cutoff in [90.]:
             vert_to_nearest_point_error_list = []
@@ -588,7 +650,7 @@ class pyRenderMesh():
                 #if curr_error < 0.5:
                 vert_to_nearest_point_error_list.append(curr_error)
 
-                '''
+                
                 #else:
                 #print curr_error
                 print curr_vtx
@@ -611,9 +673,12 @@ class pyRenderMesh():
                 points.paint_uniform_color([0.9, 0.1, 0.1])
     
                 o3d.visualization.draw_geometries([points, vert, allverts])
-                '''
+                
 
                 #break
+
+            
+        
             #normalize by the average area of triangles around each point. the verts are much less spatially distributed well
             #than the points in the point cloud.
 
@@ -625,9 +690,350 @@ class pyRenderMesh():
             norm_vert_to_nearest_point_error = np.array(vert_to_nearest_point_error_list)*norm_area_avg
             #print "average vert to nearest pc point error, considering the normal:", np.mean(norm_vert_to_nearest_point_error)," cutoff: ",angle_cutoff
             print np.mean(norm_vert_to_nearest_point_error)
-
+        '''
 
         print "DONE CALC"
+
+
+
+    def get_human_mesh_parts(self, smpl_verts, smpl_faces, segment_limbs = False):
+
+        segmented_dict = load_pickle('segmented_mesh_idx_faces.p')
+
+        if segment_limbs == True:
+            human_mesh_vtx_parts = [smpl_verts[segmented_dict['l_lowerleg_idx_list'], :],
+                                    smpl_verts[segmented_dict['r_lowerleg_idx_list'], :],
+                                    smpl_verts[segmented_dict['l_upperleg_idx_list'], :],
+                                    smpl_verts[segmented_dict['r_upperleg_idx_list'], :],
+                                    smpl_verts[segmented_dict['l_forearm_idx_list'], :],
+                                    smpl_verts[segmented_dict['r_forearm_idx_list'], :],
+                                    smpl_verts[segmented_dict['l_upperarm_idx_list'], :],
+                                    smpl_verts[segmented_dict['r_upperarm_idx_list'], :],
+                                    smpl_verts[segmented_dict['head_idx_list'], :],
+                                    smpl_verts[segmented_dict['torso_idx_list'], :]]
+            human_mesh_face_parts = [segmented_dict['l_lowerleg_face_list'],
+                                     segmented_dict['r_lowerleg_face_list'],
+                                     segmented_dict['l_upperleg_face_list'],
+                                     segmented_dict['r_upperleg_face_list'],
+                                     segmented_dict['l_forearm_face_list'],
+                                     segmented_dict['r_forearm_face_list'],
+                                     segmented_dict['l_upperarm_face_list'],
+                                     segmented_dict['r_upperarm_face_list'],
+                                     segmented_dict['head_face_list'],
+                                     segmented_dict['torso_face_list']]
+        else:
+            human_mesh_vtx_parts = [smpl_verts]
+            human_mesh_face_parts = [smpl_faces]
+
+        return human_mesh_vtx_parts, human_mesh_face_parts
+
+
+
+    def render_mesh_pc_bed_pyrender(self, smpl_verts, smpl_faces, camera_point, bedangle,
+                                    pc = None, pmat = None, smpl_render_points = False, facing_cam_only = False,
+                                    viz_type = None, markers = None, segment_limbs = False):
+
+        #downsample the point cloud and get the normals
+        if pc is not None:
+            pc_red, pc_red_norm = self.downspl_pc_get_normals(pc, camera_point)
+        else: pc_red = None
+
+        #segment_limbs = True
+
+        if pmat is not None:
+            if np.sum(pmat) < 5000:
+                smpl_verts = smpl_verts * 0.001
+
+        human_mesh_vtx_parts, human_mesh_face_parts = self.get_human_mesh_parts(smpl_verts, smpl_faces, segment_limbs)
+
+        if facing_cam_only == True:
+            human_mesh_face_parts_red = []
+            #only use the vertices that are facing the camera
+            for part_idx in range(len(human_mesh_vtx_parts)):
+                human_mesh_face_parts_red.append(self.reduce_by_cam_dir(human_mesh_vtx_parts[part_idx], human_mesh_face_parts[part_idx], camera_point))
+        else:
+            human_mesh_face_parts_red = human_mesh_face_parts
+
+
+        tm_list = []
+        for idx in range(len(human_mesh_vtx_parts)):
+            if viz_type == 'mesh_error' and segment_limbs == False:
+
+                verts_idx_red = np.unique(human_mesh_face_parts_red[0])
+                verts_red = human_mesh_vtx_parts[0][verts_idx_red, :]
+
+                # get the nearest point from each vert to some pc point, regardless of the normal
+                vert_to_nearest_point_error_list = []
+                for vert_idx in range(verts_red.shape[0]):
+                    curr_vtx = verts_red[vert_idx, :]
+                    all_dist = pc_red - curr_vtx
+                    all_eucl = np.linalg.norm(all_dist, axis=1)
+                    curr_error = np.min(all_eucl)
+                    vert_to_nearest_point_error_list.append(curr_error)
+
+                # get the nearest point from ALL verts to some pc point, regardless of the normal - for coloring
+                # we need this as a hack because the face indexing only refers to the original set of verts
+                all_vert_to_nearest_point_error_list = []
+                for all_vert_idx in range(human_mesh_vtx_parts[0].shape[0]):
+                    curr_vtx = human_mesh_vtx_parts[0][all_vert_idx, :]
+                    all_dist = pc_red - curr_vtx
+                    all_eucl = np.linalg.norm(all_dist, axis=1)
+                    curr_error = np.min(all_eucl)
+                    all_vert_to_nearest_point_error_list.append(curr_error)
+
+                # normalize by the average area of triangles around each point. the verts are much less spatially distributed well
+                # than the points in the point cloud.
+                norm_area_avg = self.get_triangle_area_vert_weight(human_mesh_vtx_parts[0], human_mesh_face_parts_red[0], verts_idx_red)
+                norm_vert_to_nearest_point_error = np.array(vert_to_nearest_point_error_list) * norm_area_avg
+                print "average vert to nearest pc point error, regardless of normal:", np.mean(
+                    norm_vert_to_nearest_point_error)
+
+                verts_color_error = np.array(all_vert_to_nearest_point_error_list) / np.max(vert_to_nearest_point_error_list)
+                verts_color_jet = cm.jet(verts_color_error)[:, 0:3]# * 5.
+
+                verts_color_jet_top = np.concatenate((verts_color_jet, np.ones((verts_color_jet.shape[0], 1))*0.9), axis = 1)
+                verts_color_jet_bot = np.concatenate((verts_color_jet*0.3, np.ones((verts_color_jet.shape[0], 1))*0.9), axis = 1)
+
+
+                all_verts = np.array(human_mesh_vtx_parts[0])
+                faces_red = np.array(human_mesh_face_parts_red[0])
+                faces_underside = np.concatenate((faces_red[:, 0:1],
+                                                  faces_red[:, 2:3],
+                                                  faces_red[:, 1:2]), axis = 1) + 6890
+
+                human_vtx_both_sides = np.concatenate((all_verts, all_verts+0.0001), axis = 0)
+                human_mesh_faces_both_sides = np.concatenate((faces_red, faces_underside), axis = 0)
+                verts_color_jet_both_sides = np.concatenate((verts_color_jet_top, verts_color_jet_bot), axis = 0)
+
+                tm_curr = trimesh.base.Trimesh(vertices=human_vtx_both_sides,
+                                               faces=human_mesh_faces_both_sides,
+                                               vertex_colors = verts_color_jet_both_sides)
+                tm_list.append(tm_curr)
+
+            elif viz_type == 'pc_error' and segment_limbs == False:
+
+                all_verts = np.array(human_mesh_vtx_parts[0])
+                faces_red = np.array(human_mesh_face_parts_red[0])
+                faces_underside = np.concatenate((faces_red[:, 0:1],
+                                                  faces_red[:, 2:3],
+                                                  faces_red[:, 1:2]), axis = 1) + 6890
+
+
+                verts_greysc_color = 1.0 * (all_verts[:, 2:3] - np.max(all_verts[:, 2])) / (np.min(all_verts[:, 2]) - np.max(all_verts[:, 2]))
+                print np.min(verts_greysc_color), np.max(verts_greysc_color), np.shape(verts_greysc_color)
+
+                verts_greysc_color = np.concatenate((verts_greysc_color, verts_greysc_color, verts_greysc_color), axis=1)
+                print np.shape(verts_greysc_color)
+
+                verts_color_grey_top = np.concatenate((verts_greysc_color, np.ones((verts_greysc_color.shape[0], 1))*0.7), axis = 1)
+                verts_color_grey_bot = np.concatenate((verts_greysc_color*0.3, np.ones((verts_greysc_color.shape[0], 1))*0.7), axis = 1)
+
+                human_vtx_both_sides = np.concatenate((all_verts, all_verts+0.0001), axis = 0)
+                human_mesh_faces_both_sides = np.concatenate((faces_red, faces_underside), axis = 0)
+                verts_color_jet_both_sides = np.concatenate((verts_color_grey_top, verts_color_grey_bot), axis = 0)
+
+                tm_curr = trimesh.base.Trimesh(vertices=human_vtx_both_sides,
+                                               faces=human_mesh_faces_both_sides,
+                                               vertex_colors = verts_color_jet_both_sides)
+                tm_list.append(tm_curr)
+
+            else:
+                tm_curr = trimesh.base.Trimesh(vertices=np.array(human_mesh_vtx_parts[idx]), faces = np.array(human_mesh_face_parts_red[idx]))
+                tm_list.append(tm_curr)
+
+        mesh_list = []
+        for idx in range(len(tm_list)):
+            if len(tm_list) == 1:
+                if viz_type is not None:
+                    mesh_list.append(pyrender.Mesh.from_trimesh(tm_list[idx], smooth = False))
+                else:
+                    mesh_list.append(pyrender.Mesh.from_trimesh(tm_list[idx], material = self.human_mat, wireframe = True))
+            else:
+                mesh_list.append(pyrender.Mesh.from_trimesh(tm_list[idx], material = self.mesh_parts_mat_list[idx], wireframe = True))
+
+
+        #smpl_tm = trimesh.base.Trimesh(vertices=smpl_verts, faces=smpl_faces)
+        #smpl_mesh = pyrender.Mesh.from_trimesh(smpl_tm, material=self.human_mat, wireframe = True)
+
+
+        #get Point cloud mesh
+        if pc_red is not None:
+            if viz_type == 'mesh_error':
+                pc_greysc_color = 0.3*(pc_red[:, 2:3] - np.max(pc_red[:, 2]))/(np.min(pc_red[:, 2])-np.max(pc_red[:, 2]))
+
+                pc_mesh = pyrender.Mesh.from_points(pc_red, colors = np.concatenate((pc_greysc_color, pc_greysc_color, pc_greysc_color), axis=1))
+            elif viz_type == 'pc_error':
+
+
+                from matplotlib import cm
+
+                faces_red = human_mesh_face_parts_red[0]
+                verts_idx_red = np.unique(faces_red)
+                verts_red = human_mesh_vtx_parts[0][verts_idx_red, :]
+
+                # get the nearest point from each pc point to some vert, regardless of the normal
+                pc_to_nearest_vert_error_list = []
+                for point_idx in range(pc_red.shape[0]):
+                    curr_point = pc_red[point_idx, :]
+                    all_dist = verts_red - curr_point
+                    all_eucl = np.linalg.norm(all_dist, axis=1)
+                    curr_error = np.min(all_eucl)
+                    pc_to_nearest_vert_error_list.append(curr_error)
+                    # break
+                print "average pc point to nearest vert error, regardless of normal:", np.mean(
+                    pc_to_nearest_vert_error_list)
+                pc_color_error = np.array(pc_to_nearest_vert_error_list) / np.max(pc_to_nearest_vert_error_list)
+                pc_color_jet = cm.jet(pc_color_error)[:, 0:3]
+
+                pc_mesh = pyrender.Mesh.from_points(pc_red, colors = pc_color_jet)
+
+            else:
+                pc_mesh = pyrender.Mesh.from_points(pc_red, colors = [1.0, 0.0, 0.0])
+        else: pc_mesh = None
+
+        if smpl_render_points == True:
+            verts_idx_red = np.unique(human_mesh_face_parts_red[0])
+
+            verts_red = smpl_verts[verts_idx_red, :]
+            smpl_pc_mesh = pyrender.Mesh.from_points(verts_red, colors = [5.0, 0.0, 0.0])
+        else: smpl_pc_mesh = None
+
+
+        #print m.r
+        #print artag_r
+        #create mini meshes for AR tags
+        artag_meshes = []
+        if markers is not None:
+            for marker in markers:
+                if markers[2] is None:
+                    artag_meshes.append(None)
+                elif marker is None:
+                    artag_meshes.append(None)
+                else:
+                    #print marker - markers[2]
+                    if marker is markers[2]:
+                        artag_tm = trimesh.base.Trimesh(vertices=self.artag_r+marker-markers[2], faces=self.artag_f, face_colors = self.artag_facecolors_root)
+                        artag_meshes.append(pyrender.Mesh.from_trimesh(artag_tm, smooth = False))
+                    else:
+                        artag_tm = trimesh.base.Trimesh(vertices=self.artag_r+marker-markers[2], faces=self.artag_f, face_colors = self.artag_facecolors)
+                        artag_meshes.append(pyrender.Mesh.from_trimesh(artag_tm, smooth = False))
+
+
+
+        if pmat is not None:
+            pmat_verts, pmat_faces, pmat_facecolors = self.get_3D_pmat_markers(pmat, bedangle)
+            pmat_tm = trimesh.base.Trimesh(vertices=pmat_verts, faces=pmat_faces, face_colors = pmat_facecolors)
+            pmat_mesh = pyrender.Mesh.from_trimesh(pmat_tm, smooth = False)
+        else:
+            pmat_mesh = None
+
+
+        #print "Viewing"
+        if self.first_pass == True:
+
+            for mesh_part in mesh_list:
+                self.scene.add(mesh_part)
+            if pc_mesh is not None:
+                self.scene.add(pc_mesh)
+            if pmat_mesh is not None:
+                self.scene.add(pmat_mesh)
+            if smpl_pc_mesh is not None:
+                self.scene.add(smpl_pc_mesh)
+
+            for artag_mesh in artag_meshes:
+                if artag_mesh is not None:
+                    self.scene.add(artag_mesh)
+
+            if segment_limbs == True:
+                lighting_intensity = 5.
+            else:
+                if viz_type == 'pc_error':
+                    lighting_intensity = 10.
+                else:
+                    lighting_intensity = 20.
+            self.viewer = pyrender.Viewer(self.scene, use_raymond_lighting=True, lighting_intensity=lighting_intensity,
+                                          point_size=5, run_in_thread=True)
+
+
+
+            self.first_pass = False
+
+            self.node_list = []
+            for mesh_part in mesh_list:
+                for node in self.scene.get_nodes(obj=mesh_part):
+                    self.node_list.append(node)
+
+            if pc_mesh is not None:
+                for node in self.scene.get_nodes(obj=pc_mesh):
+                    self.point_cloud_node = node
+            if smpl_pc_mesh is not None:
+                for node in self.scene.get_nodes(obj=smpl_pc_mesh):
+                    self.smpl_pc_mesh_node = node
+
+            self.artag_nodes = []
+            for artag_mesh in artag_meshes:
+                if artag_mesh is not None:
+                    for node in self.scene.get_nodes(obj=artag_mesh):
+                        self.artag_nodes.append(node)
+            if pmat_mesh is not None:
+                for node in self.scene.get_nodes(obj=pmat_mesh):
+                    self.pmat_node = node
+
+
+        else:
+            self.viewer.render_lock.acquire()
+
+            #reset the human mesh
+            for idx in range(len(mesh_list)):
+                self.scene.remove_node(self.node_list[idx])
+                self.scene.add(mesh_list[idx])
+                for node in self.scene.get_nodes(obj=mesh_list[idx]):
+                    self.node_list[idx] = node
+
+
+            #reset the point cloud mesh
+            if pc_mesh is not None:
+                self.scene.remove_node(self.point_cloud_node)
+                self.scene.add(pc_mesh)
+                for node in self.scene.get_nodes(obj=pc_mesh):
+                    self.point_cloud_node = node
+
+            #reset the vert pc mesh
+            if smpl_pc_mesh is not None:
+                self.scene.remove_node(self.smpl_pc_mesh_node)
+                self.scene.add(smpl_pc_mesh)
+                for node in self.scene.get_nodes(obj=smpl_pc_mesh):
+                    self.smpl_pc_mesh_node = node
+
+
+            #reset the artag meshes
+            for artag_node in self.artag_nodes:
+                self.scene.remove_node(artag_node)
+            for artag_mesh in artag_meshes:
+                if artag_mesh is not None:
+                    self.scene.add(artag_mesh)
+            self.artag_nodes = []
+            for artag_mesh in artag_meshes:
+                if artag_mesh is not None:
+                    for node in self.scene.get_nodes(obj=artag_mesh):
+                        self.artag_nodes.append(node)
+
+
+            #reset the pmat mesh
+            if pmat_mesh is not None:
+                self.scene.remove_node(self.pmat_node)
+                self.scene.add(pmat_mesh)
+                for node in self.scene.get_nodes(obj=pmat_mesh):
+                    self.pmat_node = node
+
+
+
+            #print self.scene.get_nodes()
+            self.viewer.render_lock.release()
+
+
+        print "BLAH"
+
 
     def mesh_render_pose_bed_orig(self, m, root_pos, pc, pc_isnew, pmat, markers, bedangle):
 
@@ -635,8 +1041,7 @@ class pyRenderMesh():
         smpl_verts = (m.r - m.J_transformed[0, :]) + [root_pos[1] - 0.286 + 0.15, root_pos[0] - 0.286,
                                                       0.12 - root_pos[2]]  # *228./214.
 
-        print
-        smpl_verts
+        print smpl_verts
 
         if np.sum(pmat) < 5000:
             smpl_verts = smpl_verts * 0.001
@@ -742,180 +1147,4 @@ class pyRenderMesh():
             self.viewer.render_lock.release()
 
         sleep(0.01)
-        print
-        "BLAH"
-
-    def mesh_render_pose_bed(self, smpl_verts, smpl_faces, pc, pc_isnew, pmat, markers, bedangle, segment_limbs = False):
-
-        camera_point = [1.09898028, 0.46441343, -1.53]
-
-
-        if np.sum(pmat) < 5000:
-            smpl_verts = smpl_verts * 0.001
-
-        if segment_limbs == True:
-            human_mesh_vtx_parts = [smpl_verts[self.segmented_dict['l_lowerleg_idx_list'], :],
-                                    smpl_verts[self.segmented_dict['r_lowerleg_idx_list'], :],
-                                    smpl_verts[self.segmented_dict['l_upperleg_idx_list'], :],
-                                    smpl_verts[self.segmented_dict['r_upperleg_idx_list'], :],
-                                    smpl_verts[self.segmented_dict['l_forearm_idx_list'], :],
-                                    smpl_verts[self.segmented_dict['r_forearm_idx_list'], :],
-                                    smpl_verts[self.segmented_dict['l_upperarm_idx_list'], :],
-                                    smpl_verts[self.segmented_dict['r_upperarm_idx_list'], :],
-                                    smpl_verts[self.segmented_dict['head_idx_list'], :],
-                                    smpl_verts[self.segmented_dict['torso_idx_list'], :]]
-            human_mesh_face_parts = [self.segmented_dict['l_lowerleg_face_list'],
-                                     self.segmented_dict['r_lowerleg_face_list'],
-                                     self.segmented_dict['l_upperleg_face_list'],
-                                     self.segmented_dict['r_upperleg_face_list'],
-                                     self.segmented_dict['l_forearm_face_list'],
-                                     self.segmented_dict['r_forearm_face_list'],
-                                     self.segmented_dict['l_upperarm_face_list'],
-                                     self.segmented_dict['r_upperarm_face_list'],
-                                     self.segmented_dict['head_face_list'],
-                                     self.segmented_dict['torso_face_list']]
-        else:
-            human_mesh_vtx_parts = [smpl_verts]
-            human_mesh_face_parts = [smpl_faces]
-
-        human_mesh_face_parts_red = []
-
-        #only use the vertices that are facing the camera
-        for part_idx in range(len(human_mesh_vtx_parts)):
-            human_mesh_face_parts_red.append(self.reduce_by_cam_dir(human_mesh_vtx_parts[part_idx], human_mesh_face_parts[part_idx], camera_point))
-
-
-
-        self.eval_dist(pc, human_mesh_vtx_parts[0], human_mesh_face_parts[0], human_mesh_face_parts_red[0], camera_point)
-
-
-        tm_list = []
-        for idx in range(len(human_mesh_vtx_parts)):
-            tm_list.append(trimesh.base.Trimesh(vertices=np.array(human_mesh_vtx_parts[idx]), faces = np.array(human_mesh_face_parts_red[idx])))
-
-        mesh_list = []
-        for idx in range(len(tm_list)):
-            if len(tm_list) == 1:
-                mesh_list.append(pyrender.Mesh.from_trimesh(tm_list[idx], material = self.human_mat, wireframe = True))
-            else:
-                mesh_list.append(pyrender.Mesh.from_trimesh(tm_list[idx], material = self.mesh_parts_mat_list[idx], wireframe = True))
-
-
-        #smpl_tm = trimesh.base.Trimesh(vertices=smpl_verts, faces=smpl_faces)
-        #smpl_mesh = pyrender.Mesh.from_trimesh(smpl_tm, material=self.human_mat, wireframe = True)
-
-
-        #get Point cloud mesh
-        if pc is not None:
-            pc_mesh = pyrender.Mesh.from_points(pc)
-        else:
-            pc_mesh = None
-
-
-        #print m.r
-        #print artag_r
-        #create mini meshes for AR tags
-        artag_meshes = []
-        for marker in markers:
-            if markers[2] is None:
-                artag_meshes.append(None)
-            elif marker is None:
-                artag_meshes.append(None)
-            else:
-                #print marker - markers[2]
-                if marker is markers[2]:
-                    artag_tm = trimesh.base.Trimesh(vertices=self.artag_r+marker-markers[2], faces=self.artag_f, face_colors = self.artag_facecolors_root)
-                    artag_meshes.append(pyrender.Mesh.from_trimesh(artag_tm, smooth = False))
-                else:
-                    artag_tm = trimesh.base.Trimesh(vertices=self.artag_r+marker-markers[2], faces=self.artag_f, face_colors = self.artag_facecolors)
-                    artag_meshes.append(pyrender.Mesh.from_trimesh(artag_tm, smooth = False))
-
-
-
-
-        pmat_verts, pmat_faces, pmat_facecolors = self.get_3D_pmat_markers(pmat, bedangle)
-        pmat_tm = trimesh.base.Trimesh(vertices=pmat_verts, faces=pmat_faces, face_colors = pmat_facecolors)
-        pmat_mesh = pyrender.Mesh.from_trimesh(pmat_tm, smooth = False)
-
-
-        #print "Viewing"
-        if self.first_pass == True:
-
-            for mesh_part in mesh_list:
-                self.scene.add(mesh_part)
-
-            self.scene.add(pc_mesh)
-            self.scene.add(pmat_mesh)
-
-            for artag_mesh in artag_meshes:
-                if artag_mesh is not None:
-                    self.scene.add(artag_mesh)
-
-
-            self.viewer = pyrender.Viewer(self.scene, use_raymond_lighting=True, run_in_thread=True)
-            self.first_pass = False
-
-            self.node_list = []
-            for mesh_part in mesh_list:
-                for node in self.scene.get_nodes(obj=mesh_part):
-                    self.node_list.append(node)
-
-
-            for node in self.scene.get_nodes(obj=pc_mesh):
-                self.point_cloud_node = node
-
-            self.artag_nodes = []
-            for artag_mesh in artag_meshes:
-                if artag_mesh is not None:
-                    for node in self.scene.get_nodes(obj=artag_mesh):
-                        self.artag_nodes.append(node)
-
-            for node in self.scene.get_nodes(obj=pmat_mesh):
-                self.pmat_node = node
-
-
-        else:
-            self.viewer.render_lock.acquire()
-
-            #reset the human mesh
-            for idx in range(len(mesh_list)):
-                self.scene.remove_node(self.node_list[idx])
-                self.scene.add(mesh_list[idx])
-                for node in self.scene.get_nodes(obj=mesh_list[idx]):
-                    self.node_list[idx] = node
-
-
-            #reset the point cloud mesh
-            if pc_mesh is not None:
-                self.scene.remove_node(self.point_cloud_node)
-                self.scene.add(pc_mesh)
-                for node in self.scene.get_nodes(obj=pc_mesh):
-                    self.point_cloud_node = node
-
-            #reset the artag meshes
-            for artag_node in self.artag_nodes:
-                self.scene.remove_node(artag_node)
-            for artag_mesh in artag_meshes:
-                if artag_mesh is not None:
-                    self.scene.add(artag_mesh)
-            self.artag_nodes = []
-            for artag_mesh in artag_meshes:
-                if artag_mesh is not None:
-                    for node in self.scene.get_nodes(obj=artag_mesh):
-                        self.artag_nodes.append(node)
-
-
-            #reset the pmat mesh
-            self.scene.remove_node(self.pmat_node)
-            self.scene.add(pmat_mesh)
-            for node in self.scene.get_nodes(obj=pmat_mesh):
-                self.pmat_node = node
-
-
-
-            #print self.scene.get_nodes()
-            self.viewer.render_lock.release()
-
-
-        sleep(100.01)
         print "BLAH"
