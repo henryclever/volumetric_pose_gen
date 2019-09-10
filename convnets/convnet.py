@@ -625,7 +625,7 @@ class CNN(nn.Module):
         scores = scores.squeeze(0)
 
         #here multiply by 24/10 when you are regressing to real data so it balances with the synthetic data
-        scores = torch.mul(torch.add(1.0, torch.mul(1.4, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
+        #scores = torch.mul(torch.add(1.0, torch.mul(1.4, torch.sub(1, synth_real_switch))).unsqueeze(1), scores)
         #scores = torch.mul(torch.add(1.0, torch.mul(1.937984, torch.sub(1, synth_real_switch))).unsqueeze(1), scores) #data bag ratio. if you duplicate things get rid of this
         #scores = torch.mul(torch.mul(2.4, torch.sub(1, synth_real_switch)).unsqueeze(1), scores)
 
@@ -635,11 +635,12 @@ class CNN(nn.Module):
         #print scores[0, :]
         #print scores[7, :]
 
-        scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1/1.7312621950698526)) #weight the betas by std
+
+        scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1/1.728158146914805))#1.7312621950698526)) #weight the betas by std
         if CTRL_PNL['full_body_rot'] == True:
-            scores[:, 10:16] = torch.mul(scores[:, 10:16].clone(), (1/0.2130542427733348)*np.pi) #weight the body rotation by the std
-        scores[:, 10+OSA:34+OSA] = torch.mul(scores[:, 10+OSA:34+OSA].clone(), (1/0.1282715100608753)) #weight the 24 joints by std
-        if reg_angles == True: scores[:, 34+OSA:106+OSA] = torch.mul(scores[:, 34+OSA:106+OSA].clone(), (1/0.2130542427733348)) #weight the angles by how many there are
+            scores[:, 10:16] = torch.mul(scores[:, 10:16].clone(), (1/0.3684988513298487))#0.2130542427733348)*np.pi) #weight the body rotation by the std
+        scores[:, 10+OSA:34+OSA] = torch.mul(scores[:, 10+OSA:34+OSA].clone(), (1/0.1752780723422608))#0.1282715100608753)) #weight the 24 joints by std
+        if reg_angles == True: scores[:, 34+OSA:106+OSA] = torch.mul(scores[:, 34+OSA:106+OSA].clone(), (1/0.29641429463719227))#0.2130542427733348)) #weight the angles by how many there are
 
         #scores[:, 0:10] = torch.mul(scores[:, 0:10].clone(), (1./10)) #weight the betas by how many betas there are
         #scores[:, 10:34] = torch.mul(scores[:, 10:34].clone(), (1./24)) #weight the joints by how many there are

@@ -140,8 +140,10 @@ class TensorPrepLib():
             mesh_depth_contact_maps_input_est = np.array(mesh_depth_contact_maps_input_est)
             train_xa = np.concatenate((mesh_depth_contact_maps_input_est, train_xa), axis = 1)
 
+
         if include_pmat_contact == True:
             train_xa = np.concatenate((train_contact, train_xa), axis=1)
+
 
         if include_mesh_depth_contact == True:
             mesh_depth_contact_maps = np.array(mesh_depth_contact_maps)

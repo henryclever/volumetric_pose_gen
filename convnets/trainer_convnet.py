@@ -653,7 +653,7 @@ class PhysicalTrainer():
 
                 else:
                     loss_to_add = 0
-                    loss_eucl = self.criterion(scores[:, 10:34], scores_zeros[:, 10:34]) * self.weight_joints * 2
+                    loss_eucl = self.criterion(scores[:, 10:34], scores_zeros[:, 10:34]) * self.weight_joints
                     loss_betas = self.criterion(scores[:, 0:10], scores_zeros[:, 0:10]) * self.weight_joints
 
                     if self.CTRL_PNL['regr_angles'] == True:
@@ -668,12 +668,13 @@ class PhysicalTrainer():
                     if self.CTRL_PNL['mesh_bottom_dist'] == True:
                         OUTPUT_DICT_VAL['batch_mdm_est'][OUTPUT_DICT_VAL['batch_mdm_est'] > 0] = 0
                     loss_mesh_depth = self.criterion(INPUT_DICT_VAL['batch_mdm'],
-                                                     OUTPUT_DICT_VAL['batch_mdm_est']) * self.weight_depth_planes / 20
+                                                     OUTPUT_DICT_VAL['batch_mdm_est']) * self.weight_depth_planes / 44.46155340000357
                     loss_mesh_contact = self.criterion(INPUT_DICT_VAL['batch_cm'],
-                                                       OUTPUT_DICT_VAL['batch_cm_est']) * self.weight_depth_planes * 2.0
+                                                       OUTPUT_DICT_VAL['batch_cm_est']) * self.weight_depth_planes / 0.4428100696329912
                     loss_to_add += loss_mesh_depth
                     loss_to_add += loss_mesh_contact
                     loss += loss_to_add
+
 
             #n_examples += self.CTRL_PNL['batch_size']
 
