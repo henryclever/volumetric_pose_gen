@@ -113,6 +113,7 @@ class MeshDepthLib():
                           # wrist, pi/36 or 5 deg
                           [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01],  # hand
                           [-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01]])).type(dtype)
+            self.bounds*=1.2
 
         elif self.loss_vector_type == 'anglesEU':
             self.bounds = torch.Tensor(
@@ -253,8 +254,9 @@ class MeshDepthLib():
                 # self.weights_repeat = self.weights_repeat.permute(1, 0, 2, 3).view(self.N, 2, self.R * 24)
                 self.weights_repeat = self.weights_repeat.permute(1, 0, 2, 3).view(self.N, 2, self.R_used * 24)
 
-                self.zeros_cartesian = torch.zeros([batch_size, 24]).type(dtype)
-                self.ones_cartesian = torch.ones([batch_size, 24]).type(dtype)
+                if self.loss_vector_type == 'anglesEU':
+                    self.zeros_cartesian = torch.zeros([batch_size, 24]).type(dtype)
+                    self.ones_cartesian = torch.ones([batch_size, 24]).type(dtype)
 
                 self.filler_taxels = []
                 for i in range(28):
@@ -368,9 +370,9 @@ class MeshDepthLib():
                 self.weights_repeat = torch.cat((self.weights_repeat_f, self.weights_repeat_m), 0)
                 # self.weights_repeat = self.weights_repeat.permute(1, 0, 2, 3).view(self.N, 2, self.R * 24)
                 self.weights_repeat = self.weights_repeat.permute(1, 0, 2, 3).view(self.N, 2, 10 * 24)
-
-                self.zeros_cartesian = torch.zeros([self.N, 24]).type(dtype)
-                self.ones_cartesian = torch.ones([self.N, 24]).type(dtype)
+                if self.loss_vector_type == 'anglesEU':
+                    self.zeros_cartesian = torch.zeros([self.N, 24]).type(dtype)
+                    self.ones_cartesian = torch.ones([self.N, 24]).type(dtype)
 
 
 

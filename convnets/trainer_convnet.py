@@ -460,11 +460,11 @@ class PhysicalTrainer():
                                             requires_grad=True)
 
 
-                    loss_eucl = self.criterion(scores[:, 16:40], scores_zeros[:, 16:40])*self.weight_joints*2
+                    loss_eucl = self.criterion(scores[:, 16:40], scores_zeros[:, 16:40])*self.weight_joints
                     loss_bodyrot = self.criterion(scores[:, 10:16], scores_zeros[:, 10:16])*self.weight_joints
-                    if self.CTRL_PNL['adjust_ang_from_est'] == True:
-                        loss_bodyrot *= 0
-                    loss_betas = self.criterion(scores[:, 0:10], scores_zeros[:, 0:10])*self.weight_joints
+                    #if self.CTRL_PNL['adjust_ang_from_est'] == True:
+                    #    loss_bodyrot *= 0
+                    loss_betas = self.criterion(scores[:, 0:10], scores_zeros[:, 0:10])*self.weight_joints*0.5
 
 
                     if self.CTRL_PNL['regr_angles'] == True:
@@ -480,8 +480,8 @@ class PhysicalTrainer():
                         INPUT_DICT['batch_mdm'][INPUT_DICT['batch_mdm'] > 0] = 0
                         if self.CTRL_PNL['mesh_bottom_dist'] == True:
                             OUTPUT_DICT['batch_mdm_est'][OUTPUT_DICT['batch_mdm_est'] > 0] = 0
-                        loss_mesh_depth = self.criterion(INPUT_DICT['batch_mdm'], OUTPUT_DICT['batch_mdm_est'])*self.weight_depth_planes / 20
-                        loss_mesh_contact = self.criterion(INPUT_DICT['batch_cm'], OUTPUT_DICT['batch_cm_est'])*self.weight_depth_planes * 2.0
+                        loss_mesh_depth = self.criterion(INPUT_DICT['batch_mdm'], OUTPUT_DICT['batch_mdm_est'])*self.weight_depth_planes * (1. / 44.46155340000357)
+                        loss_mesh_contact = self.criterion(INPUT_DICT['batch_cm'], OUTPUT_DICT['batch_cm_est'])*self.weight_depth_planes * (1. / 0.4428100696329912)
                         loss += loss_mesh_depth
                         loss += loss_mesh_contact
 
@@ -495,6 +495,9 @@ class PhysicalTrainer():
                     val_n_batches = 1
                     print "evaluating on ", val_n_batches
 
+                    im_display_idx = random.randint(0,127)
+
+
                     if GPU == True:
                         VisualizationLib().print_error_train(INPUT_DICT['batch_targets'].cpu(), OUTPUT_DICT['batch_targets_est'].cpu(),
                                                              self.output_size_train, self.CTRL_PNL['loss_vector_type'],
@@ -505,15 +508,15 @@ class PhysicalTrainer():
                                                              data='train')
 
                     if self.CTRL_PNL['depth_map_input_est'] == True: #two part reg
-                        self.im_sample = INPUT_DICT['batch_images'][0, 4:, :].squeeze() #pmat
-                        self.im_sample_ext = INPUT_DICT['batch_images'][0, 2:, :].squeeze() #estimated input
-                        self.im_sample_ext2 = INPUT_DICT['batch_mdm'][0, :, :].squeeze().unsqueeze(0)*-1 #ground truth depth
-                        self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().unsqueeze(0)*-1 #est depth output
+                        self.im_sample = INPUT_DICT['batch_images'][im_display_idx, 4:, :].squeeze() #pmat
+                        self.im_sample_ext = INPUT_DICT['batch_images'][im_display_idx, 2:, :].squeeze() #estimated input
+                        self.im_sample_ext2 = INPUT_DICT['batch_mdm'][im_display_idx, :, :].squeeze().unsqueeze(0)*-1 #ground truth depth
+                        self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][im_display_idx, :, :].squeeze().unsqueeze(0)*-1 #est depth output
                     else:
-                        self.im_sample = INPUT_DICT['batch_images'][0, 1:, :].squeeze() #pmat
-                        self.im_sample_ext = INPUT_DICT['batch_images'][0, 0:, :].squeeze() #pmat contact
-                        self.im_sample_ext2 = INPUT_DICT['batch_mdm'][0, :, :].squeeze().unsqueeze(0)*-1 #ground truth depth
-                        self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().unsqueeze(0)*-1 #est depth output
+                        self.im_sample = INPUT_DICT['batch_images'][im_display_idx, 1:, :].squeeze() #pmat
+                        self.im_sample_ext = INPUT_DICT['batch_images'][im_display_idx, 0:, :].squeeze() #pmat contact
+                        self.im_sample_ext2 = INPUT_DICT['batch_mdm'][im_display_idx, :, :].squeeze().unsqueeze(0)*-1 #ground truth depth
+                        self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][im_display_idx, :, :].squeeze().unsqueeze(0)*-1 #est depth output
 
                     print scores[0, 10:16], 'scores of body rot'
 
@@ -522,9 +525,9 @@ class PhysicalTrainer():
                     #self.publish_depth_marker_array(self.im_sample_ext3)
 
                     self.tar_sample = INPUT_DICT['batch_targets']
-                    self.tar_sample = self.tar_sample[0, :].squeeze() / 1000
+                    self.tar_sample = self.tar_sample[im_display_idx, :].squeeze() / 1000
                     self.sc_sample = OUTPUT_DICT['batch_targets_est'].clone()
-                    self.sc_sample = self.sc_sample[0, :].squeeze() / 1000
+                    self.sc_sample = self.sc_sample[im_display_idx, :].squeeze() / 1000
                     self.sc_sample = self.sc_sample.view(self.output_size_train)
 
                     val_loss = self.validate_convnet(n_batches=val_n_batches)
@@ -641,7 +644,7 @@ class PhysicalTrainer():
                                         requires_grad=False)
                 loss += self.criterion(scores, scores_zeros).data.item()
 
-            elif self.CTRL_PNL['loss_vector_type'] == 'anglesR' or self.CTRL_PNL['loss_vector_type'] == 'anglesDC' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU444':
+            elif self.CTRL_PNL['loss_vector_type'] == 'anglesR' or self.CTRL_PNL['loss_vector_type'] == 'anglesDC444' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU444':
                 scores, INPUT_DICT_VAL, OUTPUT_DICT_VAL = \
                     UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model=self.model, CTRL_PNL=self.CTRL_PNL)
                 self.criterion = nn.L1Loss()
