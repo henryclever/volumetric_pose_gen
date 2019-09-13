@@ -124,6 +124,8 @@ class PhysicalTrainer():
         self.CTRL_PNL['clip_betas'] = True
         self.CTRL_PNL['mesh_bottom_dist'] = True
         self.CTRL_PNL['full_body_rot'] = True
+        self.CTRL_PNL['normalize_input'] = True
+
 
 
         self.weight_joints = self.opt.j_d_ratio*2

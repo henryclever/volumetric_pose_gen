@@ -50,6 +50,23 @@ class CNN(nn.Module):
 
         )
 
+        self.CNN_packtanh = nn.Sequential(
+
+            nn.Conv2d(in_channels, 192, kernel_size=7, stride=2, padding=3),
+            nn.Tanh(inplace=True),
+            nn.Dropout(p=0.1, inplace=False),
+            nn.MaxPool2d(3, stride=2),
+            nn.Conv2d(192, 192, kernel_size=3, stride=1, padding=0),
+            nn.Tanh(inplace=True),
+            nn.Dropout(p=0.1, inplace=False),
+            nn.Conv2d(192, 384, kernel_size=3, stride=1, padding=0),
+            nn.Tanh(inplace=True),
+            nn.Dropout(p=0.1, inplace=False),
+            nn.Conv2d(384, 384, kernel_size=3, stride=1, padding=0),
+            nn.Tanh(inplace=True),
+            nn.Dropout(p=0.1, inplace=False),
+        )
+
         self.CNN_pack2 = nn.Sequential(
 
             nn.Conv2d(in_channels, 32, kernel_size = 7, stride = 2, padding = 3),

@@ -118,7 +118,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
         self.CTRL_PNL['mesh_bottom_dist'] = True
-        self.CTRL_PNL['full_body_rot'] = True
+        self.CTRL_PNL['full_body_rot'] = False
 
 
         if opt.losstype == 'direct':
@@ -212,20 +212,24 @@ class PhysicalTrainer():
         self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_f_synth, num_repeats = 1,
                                                         z_adj = -0.075, gender = "f", is_synth = True,
                                                         loss_vector_type = self.CTRL_PNL['loss_vector_type'],
-                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
+                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'],
+                                                        full_body_rot=self.CTRL_PNL['full_body_rot'])
         self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_m_synth, num_repeats = 1,
                                                         z_adj = -0.075, gender = "m", is_synth = True,
                                                         loss_vector_type = self.CTRL_PNL['loss_vector_type'],
-                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
+                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'],
+                                                        full_body_rot=self.CTRL_PNL['full_body_rot'])
 
         self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_f_real, num_repeats = repeat_real_data_ct,
                                                         z_adj = 0.0, gender = "m", is_synth = False,
                                                         loss_vector_type = self.CTRL_PNL['loss_vector_type'],
-                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
+                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'],
+                                                        full_body_rot=self.CTRL_PNL['full_body_rot'])
         self.train_y_flat = TensorPrepLib().prep_labels(self.train_y_flat, dat_m_real, num_repeats = repeat_real_data_ct,
                                                         z_adj = 0.0, gender = "m", is_synth = False,
                                                         loss_vector_type = self.CTRL_PNL['loss_vector_type'],
-                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
+                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'],
+                                                        full_body_rot=self.CTRL_PNL['full_body_rot'])
 
 
 
@@ -275,8 +279,8 @@ class PhysicalTrainer():
         std_of_joint_atan2 = np.std(joint_atan2_rel_mean)
         print std_of_joint_atan2, 'std of atan2 full body rot'
 
-        for i in range(72):
-            print i, np.min(self.train_y_flat[:, 82+i]), np.max(self.train_y_flat[:, 82+i])
+        #for i in range(72):
+        #    print i, np.min(self.train_y_flat[:, 82+i]), np.max(self.train_y_flat[:, 82+i])
 
 
         #now get the std of the depth matrix
@@ -297,6 +301,46 @@ class PhysicalTrainer():
         print std_of_cntct_matrix_down, 'std of cntct matrix'
 
 
+        #####################################################################
+        ########DO NOT SUBTRACT THE MEAN##############
+        print "now computing standard dev of the input"
+        print np.shape(self.train_x)
+
+        weight_matrix = np.repeat(self.train_y_flat[:, 160:161], 64*27, axis=1).reshape(np.shape(self.train_y_flat)[0], 1, 64, 27)
+        height_matrix = np.repeat(self.train_y_flat[:, 161:162], 64*27, axis=1).reshape(np.shape(self.train_y_flat)[0], 1, 64, 27)
+
+        print 'got here'
+        print weight_matrix.shape, 'weight mat'
+        print height_matrix.shape, 'height mat'
+        print weight_matrix[0, :, 0:2, 0:2]
+        print height_matrix[0, :, 0:2, 0:2]
+
+        input_array = np.concatenate((self.train_x, weight_matrix, height_matrix), axis = 1)
+        print input_array[0, 6, 0:2, 0:2]
+        print input_array[0, 7, 0:2, 0:2]
+        print input_array.shape
+
+        if self.CTRL_PNL['depth_map_input_est'] == True:
+            input_types = ['pmat_contact',
+                           'mdm est pos', 'mdm est neg', 'cm est',
+                           'pmat x5 clipped', 'pmat sobel', 'bed angle',
+                           'depth output', 'contact output',
+                           'weight_matrix', 'height_matrix']
+        else:
+            input_types = ['pmat_contact',
+                           'pmat x5 clipped', 'pmat sobel', 'bed angle',
+                           'depth output', 'contact output',
+                           'weight_matrix', 'height_matrix']
+
+
+        for i in range(len(input_types)):
+            some_layer = np.copy(input_array[:, i, :, :])
+            mean_some_layer = np.mean(some_layer, axis = 0)
+            some_layer_rel_mean = some_layer - mean_some_layer
+            std_some_layer = np.std(some_layer_rel_mean, axis = 0)
+            mean_some_layer = np.mean(mean_some_layer)
+            std_some_layer = np.mean(std_some_layer)
+            print i, input_types[i], '  mean is: ', mean_some_layer,  '    std is: ', std_some_layer
 
 
         num_epochs = self.num_epochs
@@ -471,13 +515,15 @@ if __name__ == "__main__":
 
     opt, args = p.parse_args()
 
-    filepath_prefix = '/media/henry/multimodal_data_2/data/'
+    #filepath_prefix = '/media/henry/multimodal_data_2/data/'
+    filepath_prefix = '/home/henry/data/'
 
     training_database_file_f = []
     training_database_file_m = []
     test_database_file_f = []
     test_database_file_m = []
 
+    '''
     training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_f_lay_4000_none_stiff.p')
     training_database_file_f.append(filepath_prefix+'synth/random/train_rollpi_f_lay_4000_none_stiff.p')
     training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_plo_f_lay_4000_none_stiff.p')
@@ -494,7 +540,9 @@ if __name__ == "__main__":
     training_database_file_m.append(filepath_prefix+'synth/random/test_rollpi_m_lay_1000_none_stiff.p')
     training_database_file_m.append(filepath_prefix+'synth/random/test_roll0_plo_m_lay_1000_none_stiff.p')
     training_database_file_m.append(filepath_prefix+'synth/random/test_rollpi_plo_m_lay_1000_none_stiff.p')
+    '''
 
+    training_database_file_f.append(filepath_prefix+'synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff.p')
     #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3555_upperbody_stiff.p')
     #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3681_rightside_stiff.p')
     #training_database_file_f.append(filepath_prefix_qt+'/synth/train_f_lay_3722_leftside_st    iff.p')
