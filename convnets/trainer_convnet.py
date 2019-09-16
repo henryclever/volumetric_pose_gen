@@ -850,8 +850,8 @@ if __name__ == "__main__":
         filepath_prefix = '/home/henry/data/'
         filepath_suffix = ''
 
-    filepath_suffix = '_output0p5'
-    #filepath_suffix = ''
+    #filepath_suffix = '_output0p5'
+    filepath_suffix = ''
 
     training_database_file_f = []
     training_database_file_m = []
@@ -862,18 +862,18 @@ if __name__ == "__main__":
 
     if opt.quick_test == True:
         #training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_f_lay_4000_none_stiff_output0p5.p')
-        test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_f_lay_1000_none_stiff_output0p5.p')
-        training_database_file_f.append(filepath_prefix+'synth/random/test_rollpi_f_lay_1000_none_stiff_output0p5.p')
+        test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_f_lay_1000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random/test_rollpi_f_lay_1000_none_stiff'+filepath_suffix+'.p')
     else:
-        training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_f_lay_4000_none_stiff_output0p5.p')
-        training_database_file_f.append(filepath_prefix+'synth/random/train_rollpi_f_lay_4000_none_stiff_output0p5.p')
-        training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_plo_f_lay_4000_none_stiff_output0p5.p')
-        training_database_file_f.append(filepath_prefix+'synth/random/train_rollpi_plo_f_lay_4000_none_stiff_output0p5.p')
-        training_database_file_m.append(filepath_prefix+'synth/random/train_roll0_m_lay_4000_none_stiff_output0p5.p')
-        training_database_file_m.append(filepath_prefix+'synth/random/train_rollpi_m_lay_4000_none_stiff_output0p5.p')
-        training_database_file_m.append(filepath_prefix+'synth/random/train_roll0_plo_m_lay_4000_none_stiff_output0p5.p')
-        training_database_file_m.append(filepath_prefix+'synth/random/train_rollpi_plo_m_lay_4000_none_stiff_output0p5.p')
-        test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_f_lay_1000_none_stiff_output0p5.p')
+        training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_f_lay_4000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random/train_rollpi_f_lay_4000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_plo_f_lay_4000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random/train_rollpi_plo_f_lay_4000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random/train_roll0_m_lay_4000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random/train_rollpi_m_lay_4000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random/train_roll0_plo_m_lay_4000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random/train_rollpi_plo_m_lay_4000_none_stiff'+filepath_suffix+'.p')
+        test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_f_lay_1000_none_stiff'+filepath_suffix+'.p')
 
 
     p = PhysicalTrainer(training_database_file_f, training_database_file_m, test_database_file_f, test_database_file_m, opt)
