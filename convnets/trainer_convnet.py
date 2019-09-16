@@ -525,7 +525,7 @@ class PhysicalTrainer():
 
 
                 if batch_idx % opt.log_interval == 0:# and batch_idx > 0:
-                    val_n_batches = 3
+                    val_n_batches = 4
                     print "evaluating on ", val_n_batches
 
                     im_display_idx = random.randint(0,127)
@@ -580,6 +580,8 @@ class PhysicalTrainer():
                     examples_this_epoch = batch_idx * len(INPUT_DICT['batch_images'])
                     epoch_progress = 100. * batch_idx / len(self.train_loader)
 
+                    val_loss = self.validate_convnet(n_batches=val_n_batches)
+
 
                     print_text_list = [ 'Train Epoch: {} ',
                                         '[{}',
@@ -609,6 +611,9 @@ class PhysicalTrainer():
                     print_text_list.append('\n\t\t\t\t\t\t   Total Loss: {:.2f}')
                     print_vals_list.append(train_loss)
 
+                    print_text_list.append('\n\t\t\t\t\t  Val Total Loss: {:.2f}')
+                    print_vals_list.append(train_loss)
+
 
 
                     print_text = ''
@@ -620,18 +625,8 @@ class PhysicalTrainer():
                     print 'appending to alldata losses'
                     self.train_val_losses['train' + self.save_name].append(train_loss)
                     self.train_val_losses['epoch' + self.save_name].append(epoch)
+                    self.train_val_losses['val' + self.save_name].append(val_loss)
 
-        
-                    val_loss = self.validate_convnet(n_batches=val_n_batches)
-
-                    print("VAL LOSS", val_loss)
-
-            #self.train_val_losses['val' + self.save_name].append(val_loss)
-
-            #for batch_idx, batch in enumerate(self.test_loader):
-            #    print "GOT HERE!!", torch.cuda.max_memory_allocated()
-            #    scores, INPUT_DICT, OUTPUT_DICT = \
-            #        UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=True, model = self.model, CTRL_PNL=self.CTRL_PNL)
 
     def publish_depth_marker_array(self, depth_array):
         depth_array = depth_array.squeeze().cpu().numpy()
@@ -840,7 +835,7 @@ if __name__ == "__main__":
     p.add_option('--verbose', '--v',  action='store_true', dest='verbose',
                  default=True, help='Printout everything (under construction).')
 
-    p.add_option('--log_interval', type=int, default=10, metavar='N',
+    p.add_option('--log_interval', type=int, default=15, metavar='N',
                  help='number of batches between logging train status')
 
     opt, args = p.parse_args()
