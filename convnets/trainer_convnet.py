@@ -623,15 +623,14 @@ class PhysicalTrainer():
                     self.train_val_losses['epoch' + self.save_name].append(epoch)
 
 
-            #val_loss = self.validate_convnet(n_batches=val_n_batches)
+            val_loss = self.validate_convnet(n_batches=val_n_batches)
 
             #print("VAL LOSS", val_loss)
 
             #self.train_val_losses['val' + self.save_name].append(val_loss)
 
             for batch_idx, batch in enumerate(self.test_loader):
-                print "GOT HERE!!"
-                self.optimizer.zero_grad()
+                print "GOT HERE!!", torch.cuda.max_memory_allocated()
                 scores, INPUT_DICT, OUTPUT_DICT = \
                     UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=True, model = self.model, CTRL_PNL=self.CTRL_PNL)
 
@@ -700,11 +699,10 @@ class PhysicalTrainer():
                                         requires_grad=False)
                 loss += self.criterion(scores, scores_zeros).data.item()
 
-            elif self.CTRL_PNL['loss_vector_type'] == 'anglesR' or self.CTRL_PNL['loss_vector_type'] == 'anglesDC' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU444':
+            elif self.CTRL_PNL['loss_vector_type'] == 'anglesR' or self.CTRL_PNL['loss_vector_type'] == 'anglesDC444' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU444':
                 print torch.cuda.max_memory_allocated(), '1pre'
                 scores, INPUT_DICT_VAL, OUTPUT_DICT_VAL = \
                     UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model=self.model, CTRL_PNL=self.CTRL_PNL)
-                print torch.cuda.max_memory_allocated(), '1post'
                 scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].shape[0], scores.size()[1]))).type(dtype),
                                         requires_grad=False)
 
