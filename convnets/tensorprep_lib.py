@@ -182,9 +182,9 @@ class TensorPrepLib():
                                             dat['betas_est'][entry][0:10],
                                             dat['angles_est'][entry][0:72],
                                             dat['root_xyz_est'][entry][0:3]), axis = 0)
-                    if full_body_rot == True:
-                        c = np.concatenate((c,
-                                            dat['root_atan2_est'][entry][0:6]), axis = 0)
+                        if full_body_rot == True:
+                            c = np.concatenate((c,
+                                                dat['root_atan2_est'][entry][0:6]), axis = 0)
                     for i in range(num_repeats):
                         y_flat.append(c)
 
