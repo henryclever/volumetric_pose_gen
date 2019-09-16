@@ -580,7 +580,6 @@ class PhysicalTrainer():
                     examples_this_epoch = batch_idx * len(INPUT_DICT['batch_images'])
                     epoch_progress = 100. * batch_idx / len(self.train_loader)
 
-                    val_loss = self.validate_convnet(n_batches=val_n_batches)
 
                     print_text_list = [ 'Train Epoch: {} ',
                                         '[{}',
@@ -623,6 +622,7 @@ class PhysicalTrainer():
                     self.train_val_losses['epoch' + self.save_name].append(epoch)
 
 
+            val_loss = self.validate_convnet(n_batches=val_n_batches)
 
             #print("VAL LOSS", val_loss)
 
@@ -684,8 +684,8 @@ class PhysicalTrainer():
 
 
     def validate_convnet(self, verbose=False, n_batches=None):
-        #print torch.cuda.max_memory_allocated(), '0'
-        self.model.eval()
+        print torch.cuda.max_memory_allocated(), '0'
+        #self.model.eval()
         loss = 0.
         n_examples = 0
         batch_ct = 1
@@ -698,7 +698,7 @@ class PhysicalTrainer():
                                         requires_grad=False)
                 loss += self.criterion(scores, scores_zeros).data.item()
 
-            elif self.CTRL_PNL['loss_vector_type'] == 'anglesR' or self.CTRL_PNL['loss_vector_type'] == 'anglesDC444' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU444':
+            elif self.CTRL_PNL['loss_vector_type'] == 'anglesR' or self.CTRL_PNL['loss_vector_type'] == 'anglesDC' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU444':
                 print torch.cuda.max_memory_allocated(), '1pre'
                 scores, INPUT_DICT_VAL, OUTPUT_DICT_VAL = \
                     UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model=self.model, CTRL_PNL=self.CTRL_PNL)
