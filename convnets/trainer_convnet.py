@@ -624,7 +624,7 @@ class PhysicalTrainer():
 
             val_loss = self.validate_convnet(n_batches=val_n_batches)
 
-            #print("VAL LOSS", val_loss)
+            print("VAL LOSS", val_loss)
 
             #self.train_val_losses['val' + self.save_name].append(val_loss)
 
@@ -684,8 +684,8 @@ class PhysicalTrainer():
 
 
     def validate_convnet(self, verbose=False, n_batches=None):
-        print torch.cuda.max_memory_allocated(), '0'
-        #self.model.eval()
+        #print torch.cuda.max_memory_allocated(), '0'
+        self.model.eval()
         loss = 0.
         n_examples = 0
         batch_ct = 1
@@ -697,7 +697,7 @@ class PhysicalTrainer():
 
         for batch_i, batch in enumerate(self.test_loader):
 
-            print torch.cuda.max_memory_allocated(), '1pre'
+            print torch.cuda.max_memory_allocated(), val, batch_i
             scores, INPUT_DICT_VAL, OUTPUT_DICT_VAL = \
                 UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model=self.model, CTRL_PNL=self.CTRL_PNL)
             scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].shape[0], scores.size()[1]))).type(dtype),
@@ -739,11 +739,11 @@ class PhysicalTrainer():
 
                 loss += loss_to_add
 
-            print loss
+            #print loss
             n_examples += self.CTRL_PNL['batch_size']
 
-            #if n_batches and (batch_i >= n_batches):
-            #    break
+            if n_batches and (batch_i >= n_batches):
+                break
 
             batch_ct += 1
             #break
