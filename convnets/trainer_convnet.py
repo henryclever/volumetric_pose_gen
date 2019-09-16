@@ -580,7 +580,7 @@ class PhysicalTrainer():
                     examples_this_epoch = batch_idx * len(INPUT_DICT['batch_images'])
                     epoch_progress = 100. * batch_idx / len(self.train_loader)
 
-
+                    val_loss = self.validate_convnet(n_batches=val_n_batches)
 
                     print_text_list = [ 'Train Epoch: {} ',
                                         '[{}',
@@ -623,16 +623,15 @@ class PhysicalTrainer():
                     self.train_val_losses['epoch' + self.save_name].append(epoch)
 
 
-            val_loss = self.validate_convnet(n_batches=val_n_batches)
 
             #print("VAL LOSS", val_loss)
 
             #self.train_val_losses['val' + self.save_name].append(val_loss)
 
-            for batch_idx, batch in enumerate(self.test_loader):
-                print "GOT HERE!!", torch.cuda.max_memory_allocated()
-                scores, INPUT_DICT, OUTPUT_DICT = \
-                    UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=True, model = self.model, CTRL_PNL=self.CTRL_PNL)
+            #for batch_idx, batch in enumerate(self.test_loader):
+            #    print "GOT HERE!!", torch.cuda.max_memory_allocated()
+            #    scores, INPUT_DICT, OUTPUT_DICT = \
+            #        UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=True, model = self.model, CTRL_PNL=self.CTRL_PNL)
 
     def publish_depth_marker_array(self, depth_array):
         depth_array = depth_array.squeeze().cpu().numpy()
