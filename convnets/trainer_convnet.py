@@ -525,7 +525,7 @@ class PhysicalTrainer():
 
 
                 if batch_idx % opt.log_interval == 0:# and batch_idx > 0:
-                    val_n_batches = 1
+                    val_n_batches = 3
                     print "evaluating on ", val_n_batches
 
                     im_display_idx = random.randint(0,127)
@@ -733,7 +733,7 @@ class PhysicalTrainer():
 
                     if self.CTRL_PNL['L2_contact'] == True:
                         loss_mesh_depth = self.criterion2(INPUT_DICT_VAL['batch_mdm'],OUTPUT_DICT_VAL['batch_mdm_est']) * self.weight_depth_planes * (1. / 44.46155340000357) * (1. / 44.46155340000357)
-                        loss_mesh_contact = self.criterion2(INPUT_DICT_VAL['batch_cm'],OUTPUT_DICT_VAL['batch_cm_est']) * self.weight_depth_planes * (1. / 0.4428100696329912) * (1. / 0.4428100696329912)
+                        loss_mesh_contact = self.criterion(INPUT_DICT_VAL['batch_cm'],OUTPUT_DICT_VAL['batch_cm_est']) * self.weight_depth_planes * (1. / 0.4428100696329912)
                     else:
                         loss_mesh_depth = self.criterion(INPUT_DICT_VAL['batch_mdm'],OUTPUT_DICT_VAL['batch_mdm_est']) * self.weight_depth_planes * (1. / 44.46155340000357)
                         loss_mesh_contact = self.criterion(INPUT_DICT_VAL['batch_cm'],OUTPUT_DICT_VAL['batch_cm_est']) * self.weight_depth_planes * (1. / 0.4428100696329912)
@@ -742,11 +742,11 @@ class PhysicalTrainer():
 
                     loss += loss_to_add
 
-
+            print loss
             n_examples += self.CTRL_PNL['batch_size']
 
-            #if n_batches and (batch_i >= n_batches):
-            #    break
+            if n_batches and (batch_i >= n_batches):
+                break
 
             batch_ct += 1
             #break
