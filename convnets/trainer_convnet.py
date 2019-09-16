@@ -703,6 +703,7 @@ class PhysicalTrainer():
             scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].shape[0], scores.size()[1]))).type(dtype),
                                     requires_grad=False)
 
+            '''
             if self.CTRL_PNL['full_body_rot'] == True:
                 OSA = 6
                 loss_bodyrot = self.criterion(scores[:, 10:16], scores_zeros[:, 10:16]) * self.weight_joints
@@ -745,6 +746,7 @@ class PhysicalTrainer():
 
             batch_ct += 1
             #break
+            '''
 
         loss /= batch_ct
         loss *= 1000
