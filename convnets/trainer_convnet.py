@@ -621,10 +621,10 @@ class PhysicalTrainer():
                     self.train_val_losses['train' + self.save_name].append(train_loss)
                     self.train_val_losses['epoch' + self.save_name].append(epoch)
 
+        
+                    val_loss = self.validate_convnet(n_batches=val_n_batches)
 
-            val_loss = self.validate_convnet(n_batches=val_n_batches)
-
-            print("VAL LOSS", val_loss)
+                    print("VAL LOSS", val_loss)
 
             #self.train_val_losses['val' + self.save_name].append(val_loss)
 
