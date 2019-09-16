@@ -700,7 +700,7 @@ class PhysicalTrainer():
                                         requires_grad=False)
                 loss += self.criterion(scores, scores_zeros).data.item()
 
-            elif self.CTRL_PNL['loss_vector_type'] == 'anglesR' or self.CTRL_PNL['loss_vector_type'] == 'anglesDC444' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU444':
+            elif self.CTRL_PNL['loss_vector_type'] == 'anglesR' or self.CTRL_PNL['loss_vector_type'] == 'anglesDC' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU444':
                 print torch.cuda.max_memory_allocated(), '1pre'
                 scores, INPUT_DICT_VAL, OUTPUT_DICT_VAL = \
                     UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model=self.model, CTRL_PNL=self.CTRL_PNL)
