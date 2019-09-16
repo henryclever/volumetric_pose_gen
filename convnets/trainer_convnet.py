@@ -623,17 +623,18 @@ class PhysicalTrainer():
                     self.train_val_losses['epoch' + self.save_name].append(epoch)
 
 
-            val_loss = self.validate_convnet(n_batches=val_n_batches)
-            
-            print("VAL LOSS", val_loss)
+            #val_loss = self.validate_convnet(n_batches=val_n_batches)
 
-            self.train_val_losses['val' + self.save_name].append(val_loss)
+            #print("VAL LOSS", val_loss)
 
-            #for batch_idx, batch in enumerate(self.test_loader):
-            #    print "GOT HERE!!"
-            #    self.optimizer.zero_grad()
-            #    scores, INPUT_DICT, OUTPUT_DICT = \
-            #        UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=True, model = self.model, CTRL_PNL=self.CTRL_PNL)
+            #self.train_val_losses['val' + self.save_name].append(val_loss)
+
+            for batch_idx, batch in enumerate(self.test_loader):
+                print "GOT HERE!!"
+                self.optimizer.zero_grad()
+                scores, INPUT_DICT, OUTPUT_DICT = \
+                    UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=True, model = self.model, CTRL_PNL=self.CTRL_PNL)
+
     def publish_depth_marker_array(self, depth_array):
         depth_array = depth_array.squeeze().cpu().numpy()
 
