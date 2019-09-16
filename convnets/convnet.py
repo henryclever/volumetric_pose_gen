@@ -53,17 +53,17 @@ class CNN(nn.Module):
         self.CNN_packtanh = nn.Sequential(
 
             nn.Conv2d(in_channels, 192, kernel_size=7, stride=2, padding=3),
-            nn.Tanh(inplace=True),
+            nn.Tanh(),
             nn.Dropout(p=0.1, inplace=False),
             nn.MaxPool2d(3, stride=2),
             nn.Conv2d(192, 192, kernel_size=3, stride=1, padding=0),
-            nn.Tanh(inplace=True),
+            nn.Tanh(),
             nn.Dropout(p=0.1, inplace=False),
             nn.Conv2d(192, 384, kernel_size=3, stride=1, padding=0),
-            nn.Tanh(inplace=True),
+            nn.Tanh(),
             nn.Dropout(p=0.1, inplace=False),
             nn.Conv2d(384, 384, kernel_size=3, stride=1, padding=0),
-            nn.Tanh(inplace=True),
+            nn.Tanh(),
             nn.Dropout(p=0.1, inplace=False),
         )
 
@@ -90,7 +90,7 @@ class CNN(nn.Module):
             nn.Linear(67200, out_size), #89600, out_size),
         )
         self.CNN_fc2 = nn.Sequential(
-            nn.Linear(11200, 10),
+            nn.Linear(11200, out_size),
         )
 
         print 'Out size:', out_size
@@ -137,7 +137,7 @@ class CNN(nn.Module):
 
 
         zero_joint_filler = torch.zeros(scores.size()[0], 3).type(self.dtype)
-        print scores.shape
+        #print scores.shape
 
         targets_est = scores.clone().detach()*1000
         targets_est = torch.cat((zero_joint_filler,
@@ -252,6 +252,7 @@ class CNN(nn.Module):
                                  targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None):
 
 
+
         reg_angles = CTRL_PNL['regr_angles']
 
         filepath_prefix = CTRL_PNL['filepath_prefix']
@@ -260,6 +261,7 @@ class CNN(nn.Module):
         self.GPU = CTRL_PNL['GPU']
         self.dtype = CTRL_PNL['dtype']
 
+        #print(torch.cuda.max_memory_allocated(), 'conv0', images.size())
         try:
             x = self.meshDepthLib.bounds
             #print blah
@@ -280,8 +282,14 @@ class CNN(nn.Module):
             self.meshDepthLib = MeshDepthLib(loss_vector_type=self.loss_vector_type, filepath_prefix=filepath_prefix,
                                              batch_size=images.size(0), verts_list = self.verts_list)
 
-        scores_cnn = self.CNN_pack1(images)
+        #print(torch.cuda.max_memory_allocated(), 'conv1')
+        if CTRL_PNL['all_tanh_activ'] == True:
+            scores_cnn = self.CNN_packtanh(images)
+        else:
+            scores_cnn = self.CNN_pack1(images)
+
         scores_size = scores_cnn.size()
+
 
         # This combines the height, width, and filters into a single dimension
         scores_cnn = scores_cnn.view(images.size(0),scores_size[1] *scores_size[2]*scores_size[3])
@@ -448,6 +456,7 @@ class CNN(nn.Module):
         gender_switch = gender_switch.unsqueeze(1)
         current_batch_size = gender_switch.size()[0]
 
+
         if CTRL_PNL['depth_map_output'] == True:
             # break things up into sub batches and pass through the mesh
             num_normal_sub_batches = current_batch_size / self.meshDepthLib.N
@@ -457,6 +466,9 @@ class CNN(nn.Module):
             else:
                 sub_batch_incr_list = num_normal_sub_batches * [self.meshDepthLib.N]
             start_incr, end_incr = 0, 0
+
+            #print len(sub_batch_incr_list), current_batch_size
+
             for sub_batch_incr in sub_batch_incr_list:
                 end_incr += sub_batch_incr
                 verts_sub, J_est_sub, targets_est_sub = self.meshDepthLib.compute_tensor_mesh(gender_switch, betas_est,

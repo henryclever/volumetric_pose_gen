@@ -258,3 +258,42 @@ class TensorPrepLib():
 
         return y_flat
 
+    def normalize_network_input(self, x, include_mesh_depth_contact_input_est):
+
+        if include_mesh_depth_contact_input_est == True:
+            normalizing_std_constants = [1./41.80684362163343,  #contact
+                                         1./16.69545796387731,  #pos est depth
+                                         1./45.08513083167194,  #neg est depth
+                                         1./43.55800622930469,  #cm est
+                                         1./25.50538629767412, #pmat x5
+                                         1./34.86393494050921, #pmat sobel
+                                         1./1.0,                #bed height mat
+                                         1./1.0,  #OUTPUT DO NOTHING
+                                         1./1.0]  #OUTPUT DO NOTHING
+
+            for i in range(x.shape[1]):
+                x[:, i, :, :] *= normalizing_std_constants[i]
+
+        else:
+            normalizing_std_constants = [1./41.80684362163343,  #contact
+                                         1./25.50538629767412, #pmat x5
+                                         1./34.86393494050921, #pmat sobel
+                                         1./1.0,                #bed height mat
+                                         1./1.0,  #OUTPUT DO NOTHING
+                                         1./1.0]  #OUTPUT DO NOTHING
+
+            for i in range(x.shape[1]):
+                x[:, i, :, :] *= normalizing_std_constants[i]
+
+        return x
+
+    def normalize_wt_ht(self, y):
+        normalizing_std_constants = [1./30.216647403349857,
+                                     1./14.629298141231091]
+
+        y = np.array(y)
+
+        y[:, 160] *= normalizing_std_constants[0]
+        y[:, 161] *= normalizing_std_constants[1]
+
+        return y

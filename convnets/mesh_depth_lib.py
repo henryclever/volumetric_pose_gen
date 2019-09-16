@@ -204,8 +204,6 @@ class MeshDepthLib():
                     [4294967295, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9, 12, 13, 14, 16, 17, 18, 19, 20, 21]).astype(
                     np.int32)
 
-                # print batch_size
-
                 if batch_size == 128:
                     batch_sub_divider = 8
                 elif batch_size == 64:
@@ -377,6 +375,7 @@ class MeshDepthLib():
 
 
     def compute_tensor_mesh(self, gender_switch, betas_est, Rs_est, root_shift_est, start_incr, end_incr, GPU):
+
         if GPU == False:
             self.dtype = torch.FloatTensor
             self.dtypeInt = torch.LongTensor
@@ -403,6 +402,7 @@ class MeshDepthLib():
         Jy = torch.bmm(v_shaped[:, :, 1].unsqueeze(1), J_regressor).squeeze(1)
         Jz = torch.bmm(v_shaped[:, :, 2].unsqueeze(1), J_regressor).squeeze(1)
 
+
         J_est = torch.stack([Jx, Jy, Jz],
                             dim=2)  # these are the joint locations with home pose (pose is 0 degree on all angles)
         # J_est = J_est - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
@@ -414,6 +414,7 @@ class MeshDepthLib():
         # if start_incr == 0:
         #    print root_shift_est[0, :], 'rootshift'
         #    print J_est[0, :],'Jest'
+
 
         targets_est = targets_est + root_shift_est[start_incr:end_incr, :].unsqueeze(1) - J_est[:, 0:1, :]
 
@@ -429,10 +430,16 @@ class MeshDepthLib():
         #                            v_shaped[:, 1960, :],  # l wrist
         #                            v_shaped[:, 5423, :]]).permute(1, 0, 2)  # r wrist
 
+
         pose_feature = (Rs_est[start_incr:end_incr, 1:, :, :]).sub(1.0, torch.eye(3).type(self.dtype)).view(-1, 207)
+
+        #print(torch.cuda.max_memory_allocated(), 'meshdepthlib4', gender_switch.size(), betas_est.size(), Rs_est.size(), root_shift_est.size(), start_incr, end_incr)
+
         posedirs = torch.bmm(gender_switch[start_incr:end_incr, :, :], self.posedirs[0:sub_batch_size, :, :]) \
             .view(sub_batch_size, self.R_used * self.D, 207) \
             .permute(0, 2, 1)
+
+        #print(torch.cuda.max_memory_allocated(), 'meshdepthlib5', gender_switch.size(), betas_est.size(), Rs_est.size(), root_shift_est.size(), start_incr, end_incr)
 
         v_posed = torch.bmm(pose_feature.unsqueeze(1), posedirs).view(-1, self.R_used, self.D)
 
@@ -447,6 +454,7 @@ class MeshDepthLib():
         v_homo = torch.matmul(T, torch.unsqueeze(v_posed_homo, -1))
 
         verts = v_homo[:, :, :3, 0] + root_shift_est[start_incr:end_incr, :].unsqueeze(1) - J_est[:, 0:1, :]
+
 
         return verts, J_est, targets_est
 

@@ -180,8 +180,6 @@ class UnpackBatchLib():
         #OUTPUT_DICT['batch_betas_est'] = betas_est_np
 
 
-        #print OUTPUT_DICT['batch_angles_est'][0, :], "est"
-        #print angles_gt[0, :], "GT"
         INPUT_DICT['batch_images'] = images.data
         INPUT_DICT['batch_targets'] = targets.data
 
@@ -221,37 +219,6 @@ class UnpackBatchLib():
 
         images, targets = Variable(batch[0].type(CTRL_PNL['dtype']), requires_grad=False), \
                           Variable(batch[1].type(CTRL_PNL['dtype']), requires_grad=False)
-
-
-        ###### THIS IS WHERE WE NORMALIZE THINGS ######## divide by standard deviation
-        if CTRL_PNL['normalize_input'] == True:
-            if CTRL_PNL['depth_map_input_est'] == True:
-                normalizing_std_constants = [1./41.09964258693157,  #contact
-                                             1./1.,
-                                             1./1.,
-                                             1./1.,
-                                             1./24.920132185258392, #pmat x5
-                                             1./35.263926737426786, #pmat sobel
-                                             1./1.0,                #bed height mat
-                                             1./32.13200645634247,  #weight
-                                             1./12.275657760530041] #height
-            else:
-                print torch.mean(images_up[:, 0, :])
-                print torch.mean(images_up[:, 1, :])
-                print torch.mean(images_up[:, 2, :])
-                print torch.mean(images_up[:, 3, :])
-                print torch.mean(images_up[:, 4, :])
-                print torch.mean(images_up[:, 5, :])
-                normalizing_std_constants = [1./41.09964258693157,  #contact
-                                             1./24.920132185258392, #pmat x5
-                                             1./35.263926737426786, #pmat sobel
-                                             1./1.0,                #bed height mat
-                                             1./32.13200645634247,  #weight
-                                             1./12.275657760530041] #height
-
-            print "number of layers to normalize: ", images_up.size()[1]
-            for input_layer in range(images_up.size()[1]):
-                images_up[:, input_layer, :] = torch.mul(images_up[:, input_layer, :], normalizing_std_constants[input_layer])
 
         scores, OUTPUT_DICT = model.forward_direct(images_up, targets, is_training=is_training)
 
