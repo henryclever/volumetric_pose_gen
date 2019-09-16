@@ -125,7 +125,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['mesh_bottom_dist'] = True
         self.CTRL_PNL['full_body_rot'] = True
         self.CTRL_PNL['normalize_input'] = True
-        self.CTRL_PNL['all_tanh_activ'] = False
+        self.CTRL_PNL['all_tanh_activ'] = True
         self.CTRL_PNL['L2_contact'] = False
 
 
@@ -510,7 +510,7 @@ class PhysicalTrainer():
 
                         if self.CTRL_PNL['L2_contact'] == True:
                             loss_mesh_depth = self.criterion2(INPUT_DICT['batch_mdm'], OUTPUT_DICT['batch_mdm_est'])*self.weight_depth_planes * (1. / 44.46155340000357) * (1. / 44.46155340000357)
-                            loss_mesh_contact = self.criterion2(INPUT_DICT['batch_cm'], OUTPUT_DICT['batch_cm_est'])*self.weight_depth_planes * (1. / 0.4428100696329912) * (1. / 0.4428100696329912)
+                            loss_mesh_contact = self.criterion(INPUT_DICT['batch_cm'], OUTPUT_DICT['batch_cm_est'])*self.weight_depth_planes * (1. / 0.4428100696329912)
                         else:
                             loss_mesh_depth = self.criterion(INPUT_DICT['batch_mdm'], OUTPUT_DICT['batch_mdm_est'])*self.weight_depth_planes * (1. / 44.46155340000357)
                             loss_mesh_contact = self.criterion(INPUT_DICT['batch_cm'], OUTPUT_DICT['batch_cm_est'])*self.weight_depth_planes * (1. / 0.4428100696329912)
@@ -626,9 +626,9 @@ class PhysicalTrainer():
             #    scores, INPUT_DICT, OUTPUT_DICT = \
             #        UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=True, model = self.model, CTRL_PNL=self.CTRL_PNL)
                     val_loss = self.validate_convnet(n_batches=val_n_batches)
-            #print_text_list.append('\n\t\t\t\t   Val Loss Total: {:.2f}')
-            #print_vals_list.append(val_loss)
-            #self.train_val_losses['val' + self.save_name].append(val_loss)
+                    print_text_list.append('\n\t\t\t\t   Val Loss Total: {:.2f}')
+                    print_vals_list.append(val_loss)
+                    self.train_val_losses['val' + self.save_name].append(val_loss)
 
     def publish_depth_marker_array(self, depth_array):
         depth_array = depth_array.squeeze().cpu().numpy()
@@ -738,16 +738,16 @@ class PhysicalTrainer():
                     loss += loss_to_add
 
 
-            #n_examples += self.CTRL_PNL['batch_size']
+            n_examples += self.CTRL_PNL['batch_size']
 
             #if n_batches and (batch_i >= n_batches):
             #    break
 
-            #batch_ct += 1
-            break
+            batch_ct += 1
+            #break
 
-        #loss /= batch_ct
-        #loss *= 1000
+        loss /= batch_ct
+        loss *= 1000
         #loss *= 10. / 34
 
         #if GPU == True:
@@ -874,6 +874,13 @@ if __name__ == "__main__":
         training_database_file_m.append(filepath_prefix+'synth/random/train_roll0_plo_m_lay_4000_none_stiff'+filepath_suffix+'.p')
         training_database_file_m.append(filepath_prefix+'synth/random/train_rollpi_plo_m_lay_4000_none_stiff'+filepath_suffix+'.p')
         test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_f_lay_1000_none_stiff'+filepath_suffix+'.p')
+        test_database_file_f.append(filepath_prefix+'synth/random/test_rollpi_f_lay_1000_none_stiff'+filepath_suffix+'.p')
+        test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_f_lay_1000_none_stiff'+filepath_suffix+'.p')
+        test_database_file_f.append(filepath_prefix+'synth/random/test_rollpi_plo_f_lay_1000_none_stiff'+filepath_suffix+'.p')
+        test_database_file_m.append(filepath_prefix+'synth/random/test_roll0_m_lay_1000_none_stiff'+filepath_suffix+'.p')
+        test_database_file_m.append(filepath_prefix+'synth/random/test_rollpi_m_lay_1000_none_stiff'+filepath_suffix+'.p')
+        test_database_file_m.append(filepath_prefix+'synth/random/test_roll0_plo_m_lay_1000_none_stiff'+filepath_suffix+'.p')
+        test_database_file_m.append(filepath_prefix+'synth/random/test_rollpi_plo_m_lay_1000_none_stiff'+filepath_suffix+'.p')
 
 
     p = PhysicalTrainer(training_database_file_f, training_database_file_m, test_database_file_f, test_database_file_m, opt)
