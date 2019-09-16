@@ -690,66 +690,58 @@ class PhysicalTrainer():
         n_examples = 0
         batch_ct = 1
 
-        for batch_idx, batch in enumerate(self.test_loader):
-            print "GOT HERE!!", torch.cuda.max_memory_allocated()
-            scores, INPUT_DICT, OUTPUT_DICT = \
-                UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=True, model = self.model, CTRL_PNL=self.CTRL_PNL)
+        #for batch_idx, batch in enumerate(self.test_loader):
+        #    print "GOT HERE!!", torch.cuda.max_memory_allocated()
+        #    scores, INPUT_DICT, OUTPUT_DICT = \
+        #        UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model = self.model, CTRL_PNL=self.CTRL_PNL)
 
         for batch_i, batch in enumerate(self.test_loader):
-            if self.CTRL_PNL['loss_vector_type'] == 'direct':
-                scores, INPUT_DICT_VAL, OUTPUT_DICT_VAL = \
-                    UnpackBatchLib().unpackage_batch_dir_pass(batch, is_training=False, model=self.model, CTRL_PNL = self.CTRL_PNL)
-                scores_zeros = Variable(torch.Tensor(np.zeros((batch[1].shape[0], scores.size()[1]))).type(dtype),
-                                        requires_grad=False)
-                loss += self.criterion(scores, scores_zeros).data.item()
 
+            print torch.cuda.max_memory_allocated(), '1pre'
+            scores, INPUT_DICT_VAL, OUTPUT_DICT_VAL = \
+                UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model=self.model, CTRL_PNL=self.CTRL_PNL)
+            scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].shape[0], scores.size()[1]))).type(dtype),
+                                    requires_grad=False)
 
-            elif self.CTRL_PNL['loss_vector_type'] == 'anglesR' or self.CTRL_PNL['loss_vector_type'] == 'anglesDC444' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU444':
-                print torch.cuda.max_memory_allocated(), '1pre'
-                scores, INPUT_DICT_VAL, OUTPUT_DICT_VAL = \
-                    UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model=self.model, CTRL_PNL=self.CTRL_PNL)
-                scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].shape[0], scores.size()[1]))).type(dtype),
-                                        requires_grad=False)
+            if self.CTRL_PNL['full_body_rot'] == True:
+                OSA = 6
+                loss_bodyrot = self.criterion(scores[:, 10:16], scores_zeros[:, 10:16]) * self.weight_joints
+                if self.CTRL_PNL['adjust_ang_from_est'] == True:
+                    loss_bodyrot *= 0
+            else: OSA = 0
 
-                if self.CTRL_PNL['full_body_rot'] == True:
-                    OSA = 6
-                    loss_bodyrot = self.criterion(scores[:, 10:16], scores_zeros[:, 10:16]) * self.weight_joints
-                    if self.CTRL_PNL['adjust_ang_from_est'] == True:
-                        loss_bodyrot *= 0
-                else: OSA = 0
+            loss_eucl = self.criterion(scores[:, 10+OSA:34+OSA], scores_zeros[:,  10+OSA:34+OSA]) * self.weight_joints
+            loss_betas = self.criterion(scores[:, 0:10], scores_zeros[:, 0:10]) * self.weight_joints * 0.5
 
-                loss_eucl = self.criterion(scores[:, 10+OSA:34+OSA], scores_zeros[:,  10+OSA:34+OSA]) * self.weight_joints
-                loss_betas = self.criterion(scores[:, 0:10], scores_zeros[:, 0:10]) * self.weight_joints * 0.5
+            if self.CTRL_PNL['regr_angles'] == True:
+                loss_angs = self.criterion(scores[:, 34+OSA:106+OSA], scores_zeros[:, 34+OSA:106+OSA]) * self.weight_joints
+                loss_to_add = (loss_betas + loss_eucl + loss_bodyrot + loss_angs)
+            else:
+                loss_to_add = (loss_betas + loss_eucl + loss_bodyrot)
 
-                if self.CTRL_PNL['regr_angles'] == True:
-                    loss_angs = self.criterion(scores[:, 34+OSA:106+OSA], scores_zeros[:, 34+OSA:106+OSA]) * self.weight_joints
-                    loss_to_add = (loss_betas + loss_eucl + loss_bodyrot + loss_angs)
+            # print INPUT_DICT_VAL['batch_mdm'].size(), OUTPUT_DICT_VAL['batch_mdm_est'].size()
+
+            if self.CTRL_PNL['depth_map_labels'] == True:
+                INPUT_DICT_VAL['batch_mdm'][INPUT_DICT_VAL['batch_mdm'] > 0] = 0
+                if self.CTRL_PNL['mesh_bottom_dist'] == True:
+                    OUTPUT_DICT_VAL['batch_mdm_est'][OUTPUT_DICT_VAL['batch_mdm_est'] > 0] = 0
+
+                if self.CTRL_PNL['L2_contact'] == True:
+                    loss_mesh_depth = self.criterion2(INPUT_DICT_VAL['batch_mdm'],OUTPUT_DICT_VAL['batch_mdm_est']) * self.weight_depth_planes * (1. / 44.46155340000357) * (1. / 44.46155340000357)
+                    loss_mesh_contact = self.criterion(INPUT_DICT_VAL['batch_cm'],OUTPUT_DICT_VAL['batch_cm_est']) * self.weight_depth_planes * (1. / 0.4428100696329912)
                 else:
-                    loss_to_add = (loss_betas + loss_eucl + loss_bodyrot)
+                    loss_mesh_depth = self.criterion(INPUT_DICT_VAL['batch_mdm'],OUTPUT_DICT_VAL['batch_mdm_est']) * self.weight_depth_planes * (1. / 44.46155340000357)
+                    loss_mesh_contact = self.criterion(INPUT_DICT_VAL['batch_cm'],OUTPUT_DICT_VAL['batch_cm_est']) * self.weight_depth_planes * (1. / 0.4428100696329912)
+                loss_to_add += loss_mesh_depth
+                loss_to_add += loss_mesh_contact
 
-                # print INPUT_DICT_VAL['batch_mdm'].size(), OUTPUT_DICT_VAL['batch_mdm_est'].size()
-
-                if self.CTRL_PNL['depth_map_labels'] == True:
-                    INPUT_DICT_VAL['batch_mdm'][INPUT_DICT_VAL['batch_mdm'] > 0] = 0
-                    if self.CTRL_PNL['mesh_bottom_dist'] == True:
-                        OUTPUT_DICT_VAL['batch_mdm_est'][OUTPUT_DICT_VAL['batch_mdm_est'] > 0] = 0
-
-                    if self.CTRL_PNL['L2_contact'] == True:
-                        loss_mesh_depth = self.criterion2(INPUT_DICT_VAL['batch_mdm'],OUTPUT_DICT_VAL['batch_mdm_est']) * self.weight_depth_planes * (1. / 44.46155340000357) * (1. / 44.46155340000357)
-                        loss_mesh_contact = self.criterion(INPUT_DICT_VAL['batch_cm'],OUTPUT_DICT_VAL['batch_cm_est']) * self.weight_depth_planes * (1. / 0.4428100696329912)
-                    else:
-                        loss_mesh_depth = self.criterion(INPUT_DICT_VAL['batch_mdm'],OUTPUT_DICT_VAL['batch_mdm_est']) * self.weight_depth_planes * (1. / 44.46155340000357)
-                        loss_mesh_contact = self.criterion(INPUT_DICT_VAL['batch_cm'],OUTPUT_DICT_VAL['batch_cm_est']) * self.weight_depth_planes * (1. / 0.4428100696329912)
-                    loss_to_add += loss_mesh_depth
-                    loss_to_add += loss_mesh_contact
-
-                    loss += loss_to_add
+                loss += loss_to_add
 
             print loss
             n_examples += self.CTRL_PNL['batch_size']
 
-            if n_batches and (batch_i >= n_batches):
-                break
+            #if n_batches and (batch_i >= n_batches):
+            #    break
 
             batch_ct += 1
             #break
