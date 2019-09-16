@@ -580,6 +580,10 @@ class PhysicalTrainer():
                     examples_this_epoch = batch_idx * len(INPUT_DICT['batch_images'])
                     epoch_progress = 100. * batch_idx / len(self.train_loader)
 
+                    val_loss = self.validate_convnet(n_batches=val_n_batches)
+
+
+
                     print_text_list = [ 'Train Epoch: {} ',
                                         '[{}',
                                         '/{} ',
@@ -608,6 +612,11 @@ class PhysicalTrainer():
                     print_text_list.append('\n\t\t\t\t\t\t   Total Loss: {:.2f}')
                     print_vals_list.append(train_loss)
 
+                    print_text_list.append('\n\t\t\t\t   Val Loss Total: {:.2f}')
+                    print_vals_list.append(val_loss)
+
+
+
                     print_text = ''
                     for item in print_text_list:
                         print_text += item
@@ -617,6 +626,7 @@ class PhysicalTrainer():
                     print 'appending to alldata losses'
                     self.train_val_losses['train' + self.save_name].append(train_loss)
                     self.train_val_losses['epoch' + self.save_name].append(epoch)
+                    self.train_val_losses['val' + self.save_name].append(val_loss)
 
 
 
@@ -625,11 +635,6 @@ class PhysicalTrainer():
             #    self.optimizer.zero_grad()
             #    scores, INPUT_DICT, OUTPUT_DICT = \
             #        UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=True, model = self.model, CTRL_PNL=self.CTRL_PNL)
-                    val_loss = self.validate_convnet(n_batches=val_n_batches)
-                    print_text_list.append('\n\t\t\t\t   Val Loss Total: {:.2f}')
-                    print_vals_list.append(val_loss)
-                    self.train_val_losses['val' + self.save_name].append(val_loss)
-
     def publish_depth_marker_array(self, depth_array):
         depth_array = depth_array.squeeze().cpu().numpy()
 
