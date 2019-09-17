@@ -111,7 +111,10 @@ class GeneratePose():
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
         self.CTRL_PNL['mesh_bottom_dist'] = True
-        self.CTRL_PNL['full_body_rot'] = False
+        self.CTRL_PNL['full_body_rot'] = True
+        self.CTRL_PNL['normalize_input'] = False
+        self.CTRL_PNL['all_tanh_activ'] = False
+        self.CTRL_PNL['L2_contact'] = False
 
 
         self.count = 0
@@ -424,5 +427,7 @@ if __name__ ==  "__main__":
 
 
     generator = GeneratePose(filepath_prefix)
-    generator.estimate_real_time(filepath_prefix+"/data/synth/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_100e_000005lr.pt",
-                                 filepath_prefix+"/data/synth/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.pt")
+    #generator.estimate_real_time(filepath_prefix+"/data/synth/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_100e_000005lr.pt",
+    #                             filepath_prefix+"/data/synth/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.pt")
+    generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_201e_0.5rtojtdpth_pmatcntin_100e_00001lr.pt",
+                                 filepath_prefix+"/data/convnets/planesreg_correction/convnet_anglesDC_synth_32000_128b_201e_0.5rtojtdpth_pmatcntin_depthestin_angleadj_50e_00001lr.pt")

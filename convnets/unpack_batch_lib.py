@@ -79,6 +79,7 @@ class UnpackBatchLib():
             if CTRL_PNL['full_body_rot'] == True:
                 adj_ext_idx += 1
                 batch.append(batch[1][:, 247:253]) #root atan2 est
+                print "appended root", batch[-1], batch[12]
 
             extra_smpl_angles = batch[10]
             extra_targets = batch[11]
@@ -142,6 +143,7 @@ class UnpackBatchLib():
             OUTPUT_EST_DICT['root_shift'] = Variable(extra_targets.type(CTRL_PNL['dtype']), requires_grad=is_training)
             if CTRL_PNL['full_body_rot'] == True:
                 OUTPUT_EST_DICT['root_atan2'] = Variable(batch[12].type(CTRL_PNL['dtype']), requires_grad=is_training)
+                print "root atan2", OUTPUT_EST_DICT['root_atan2']
 
         if CTRL_PNL['depth_map_labels'] == True:
             if CTRL_PNL['depth_map_labels_test'] == True or is_training == True:
@@ -150,6 +152,7 @@ class UnpackBatchLib():
         else:
             INPUT_DICT['batch_mdm'] = None
             INPUT_DICT['batch_cm'] = None
+
 
 
 

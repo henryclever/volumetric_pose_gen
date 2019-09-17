@@ -169,7 +169,7 @@ class PhysicalTrainer():
 
         self.train_x_flat = []  # Initialize the testing pressure mat list
         self.train_x_flat = TensorPrepLib().prep_images(self.train_x_flat, dat_f_synth, dat_m_synth, num_repeats = 1)
-        self.train_x_flat = list(np.clip(np.array(self.train_x_flat) * 5.0, a_min=0, a_max=100))
+        self.train_x_flat = list(np.clip(np.array(self.train_x_flat) * 4.0, a_min=0, a_max=100))
         self.train_x_flat = TensorPrepLib().prep_images(self.train_x_flat, dat_f_real, dat_m_real, num_repeats = repeat_real_data_ct)
         self.train_x_flat = PreprocessingLib().preprocessing_blur_images(self.train_x_flat, self.mat_size, sigma=0.5)
 
@@ -324,16 +324,16 @@ class PhysicalTrainer():
         print input_array.shape
 
         if self.CTRL_PNL['depth_map_input_est'] == True:
-            input_types = ['pmat_contact',
-                           'mdm est pos', 'mdm est neg', 'cm est',
-                           'pmat x5 clipped', 'pmat sobel', 'bed angle',
-                           'depth output', 'contact output',
-                           'weight_matrix', 'height_matrix']
+            input_types = ['pmat_contact   ',
+                           'mdm est pos    ', 'mdm est neg    ', 'cm est         ',
+                           'pmat x5 clipped', 'pmat sobel     ', 'bed angle      ',
+                           'depth output   ', 'contact output ',
+                           'weight_matrix  ', 'height_matrix ']
         else:
-            input_types = ['pmat_contact',
-                           'pmat x5 clipped', 'pmat sobel', 'bed angle',
-                           'depth output', 'contact output',
-                           'weight_matrix', 'height_matrix']
+            input_types = ['pmat_contact   ',
+                           'pmat x5 clipped', 'pmat sobel     ', 'bed angle      ',
+                           'depth output   ', 'contact output ',
+                           'weight_matrix  ', 'height_matrix  ']
 
 
         for i in range(len(input_types)):
@@ -343,7 +343,7 @@ class PhysicalTrainer():
             std_some_layer = np.std(some_layer_rel_mean, axis = 0)
             mean_some_layer = np.mean(mean_some_layer)
             std_some_layer = np.mean(std_some_layer)
-            print i, input_types[i], '  mean is: ', mean_some_layer,  '    std is: ', std_some_layer
+            print i, input_types[i], '  mean is: %.3f  \t  std is: %.14f \t  min/max: %.3f, \t %.3f' %(mean_some_layer, std_some_layer, np.min(some_layer), np.max(some_layer))
 
 
         num_epochs = self.num_epochs
@@ -523,8 +523,6 @@ if __name__ == "__main__":
 
     training_database_file_f = []
     training_database_file_m = []
-    test_database_file_f = []
-    test_database_file_m = []
 
 
     training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_f_lay_4000_none_stiff_output0p5.p')
@@ -542,6 +540,7 @@ if __name__ == "__main__":
     training_database_file_m.append(filepath_prefix+'synth/random/test_roll0_m_lay_1000_none_stiff_output0p5.p')
     training_database_file_m.append(filepath_prefix+'synth/random/test_rollpi_m_lay_1000_none_stiff_output0p5.p')
     training_database_file_m.append(filepath_prefix+'synth/random/test_roll0_plo_m_lay_1000_none_stiff_output0p5.p')
+
     training_database_file_m.append(filepath_prefix+'synth/random/test_rollpi_plo_m_lay_1000_none_stiff_output0p5.p')
 
 

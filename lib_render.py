@@ -1,6 +1,6 @@
 
 
-import open3d as o3d
+#import open3d as o3d
 import trimesh
 import pyrender
 import pyglet
@@ -1043,7 +1043,7 @@ class pyRenderMesh():
 
         print smpl_verts
 
-        if np.sum(pmat) < 5000:
+        if np.sum(pmat) < 2000:
             smpl_verts = smpl_verts * 0.001
 
         smpl_tm = trimesh.base.Trimesh(vertices=smpl_verts, faces=m.f)

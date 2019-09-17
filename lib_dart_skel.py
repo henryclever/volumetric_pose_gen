@@ -16,7 +16,7 @@ import sys
 from pydart2.gui.opengl.scene import OpenGLScene
 from time import time
 
-
+KEEP_ORIGINAL_ARM_POSE = True
 
 class LibDartSkel():
 
@@ -238,16 +238,26 @@ class LibDartSkel():
                 joint.set_spring_stiffness(1, head_stiffness)
                 joint.set_spring_stiffness(2, head_stiffness)
             elif joint.name == "leftShoulder":
-                joint.set_rest_position(0, 0.0)#float(m.pose[39]))
-                joint.set_rest_position(1, 0.0)#float(m.pose[40]))
-                joint.set_rest_position(2, (1./3.)*-np.pi/2)#float(m.pose[41]))
+                if KEEP_ORIGINAL_ARM_POSE == False:
+                    joint.set_rest_position(0, 0.0)#float(m.pose[39]))
+                    joint.set_rest_position(1, 0.0)#float(m.pose[40]))
+                    joint.set_rest_position(2, (1./3.)*-np.pi/2)#float(m.pose[41]))
+                else:
+                    joint.set_rest_position(0, float(m.pose[39]))
+                    joint.set_rest_position(1, float(m.pose[40]))
+                    joint.set_rest_position(2, float(m.pose[41]))
                 joint.set_spring_stiffness(0, l_arm_stiffness)
                 joint.set_spring_stiffness(1, l_arm_stiffness)
                 joint.set_spring_stiffness(2, l_arm_stiffness)
             elif joint.name == "rightShoulder":
-                joint.set_rest_position(0, 0.0)#float(m.pose[42]))
-                joint.set_rest_position(1, 0.0)#float(m.pose[43]))
-                joint.set_rest_position(2, (1./3.)*np.pi/2)#float(m.pose[44]))
+                if KEEP_ORIGINAL_ARM_POSE == False:
+                    joint.set_rest_position(0, 0.0)#float(m.pose[42]))
+                    joint.set_rest_position(1, 0.0)#float(m.pose[43]))
+                    joint.set_rest_position(2, (1./3.)*np.pi/2)#float(m.pose[44]))
+                else:
+                    joint.set_rest_position(0, float(m.pose[42]))
+                    joint.set_rest_position(1, float(m.pose[43]))
+                    joint.set_rest_position(2, float(m.pose[44]))
                 joint.set_spring_stiffness(0, r_arm_stiffness)
                 joint.set_spring_stiffness(1, r_arm_stiffness)
                 joint.set_spring_stiffness(2, r_arm_stiffness)
@@ -259,24 +269,40 @@ class LibDartSkel():
                 joint.set_spring_stiffness(1, head_stiffness)
                 joint.set_spring_stiffness(2, head_stiffness)
             elif joint.name == "leftUpperArm":
-                joint.set_rest_position(0, 0.0)#float(m.pose[48]))
-                joint.set_rest_position(1, 0.0)#float(m.pose[49]))
-                joint.set_rest_position(2, (2./3.)*-np.pi/2)#float(m.pose[50]))
+                if KEEP_ORIGINAL_ARM_POSE == False:
+                    joint.set_rest_position(0, 0.0)#float(m.pose[48]))
+                    joint.set_rest_position(1, 0.0)#float(m.pose[49]))
+                    joint.set_rest_position(2, (2./3.)*-np.pi/2)#float(m.pose[50]))
+                else:
+                    joint.set_rest_position(0, float(m.pose[48]))
+                    joint.set_rest_position(1, float(m.pose[49]))
+                    joint.set_rest_position(2, float(m.pose[50]))
                 joint.set_spring_stiffness(0, l_arm_stiffness)
                 joint.set_spring_stiffness(1, l_arm_stiffness)
                 joint.set_spring_stiffness(2, l_arm_stiffness)
             elif joint.name == "rightUpperArm":
-                joint.set_rest_position(0, 0.0)#float(m.pose[51]))
-                joint.set_rest_position(1, 0.0)#float(m.pose[52]))
-                joint.set_rest_position(2, (2./3.)*np.pi/2)#float(m.pose[53]))
+                if KEEP_ORIGINAL_ARM_POSE == False:
+                    joint.set_rest_position(0, 0.0)#float(m.pose[51]))
+                    joint.set_rest_position(1, 0.0)#float(m.pose[52]))
+                    joint.set_rest_position(2, (2./3.)*np.pi/2)#float(m.pose[53]))
+                else:
+                    joint.set_rest_position(0, float(m.pose[51]))
+                    joint.set_rest_position(1, float(m.pose[52]))
+                    joint.set_rest_position(2, float(m.pose[53]))
                 joint.set_spring_stiffness(0, r_arm_stiffness)
                 joint.set_spring_stiffness(1, r_arm_stiffness)
                 joint.set_spring_stiffness(2, r_arm_stiffness)
             elif joint.name == "leftForeArm":
-                joint.set_rest_position(0, 0.0)#float(m.pose[55]))
+                if KEEP_ORIGINAL_ARM_POSE == False:
+                    joint.set_rest_position(0, 0.0)#float(m.pose[55]))
+                else:
+                    joint.set_rest_position(0, float(m.pose[55]))
                 joint.set_spring_stiffness(0, l_elbow_stiffness)
             elif joint.name == "rightForeArm":
-                joint.set_rest_position(0, 0.0)#float(m.pose[58]))
+                if KEEP_ORIGINAL_ARM_POSE == False:
+                    joint.set_rest_position(0, 0.0)#float(m.pose[58]))
+                else:
+                    joint.set_rest_position(0, float(m.pose[58]))
                 joint.set_spring_stiffness(0, r_elbow_stiffness)
             elif joint.name == "leftHand":
                 joint.set_rest_position(0, 0.0)#float(m.pose[60]))

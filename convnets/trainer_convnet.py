@@ -125,8 +125,9 @@ class PhysicalTrainer():
         self.CTRL_PNL['mesh_bottom_dist'] = True
         self.CTRL_PNL['full_body_rot'] = True
         self.CTRL_PNL['normalize_input'] = True
-        self.CTRL_PNL['all_tanh_activ'] = True
-        self.CTRL_PNL['L2_contact'] = False
+        self.CTRL_PNL['all_tanh_activ'] = False
+        self.CTRL_PNL['L2_contact'] = True
+        self.CTRL_PNL['pmat_mult'] = int(1)
 
 
         self.weight_joints = self.opt.j_d_ratio*2
@@ -160,7 +161,8 @@ class PhysicalTrainer():
         self.save_name = '_' + opt.losstype + \
                          '_synth_32000' + \
                          '_' + str(self.CTRL_PNL['batch_size']) + 'b' + \
-                         '_' + str(self.CTRL_PNL['num_epochs']) + 'e'
+                         '_' + str(self.CTRL_PNL['num_epochs']) + 'e' + \
+                         '_x' + str(self.CTRL_PNL['pmat_mult']) + 'pmult'
 
 
         if self.CTRL_PNL['depth_map_labels'] == True:
@@ -200,7 +202,7 @@ class PhysicalTrainer():
 
         self.train_x_flat = []  # Initialize the testing pressure mat list
         self.train_x_flat = TensorPrepLib().prep_images(self.train_x_flat, dat_f_synth, dat_m_synth, num_repeats = 1)
-        self.train_x_flat = list(np.clip(np.array(self.train_x_flat) * 5.0, a_min=0, a_max=100))
+        self.train_x_flat = list(np.clip(np.array(self.train_x_flat) * float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100))
         self.train_x_flat = TensorPrepLib().prep_images(self.train_x_flat, dat_f_real, dat_m_real, num_repeats = repeat_real_data_ct)
         self.train_x_flat = PreprocessingLib().preprocessing_blur_images(self.train_x_flat, self.mat_size, sigma=0.5)
 
@@ -242,7 +244,7 @@ class PhysicalTrainer():
 
         #normalize the input
         if self.CTRL_PNL['normalize_input'] == True:
-            train_xa = TensorPrepLib().normalize_network_input(train_xa, include_mesh_depth_contact_input_est = self.CTRL_PNL['depth_map_input_est'])
+            train_xa = TensorPrepLib().normalize_network_input(train_xa, include_mesh_depth_contact_input_est = self.CTRL_PNL['depth_map_input_est'], pmat_mult = self.CTRL_PNL['pmat_mult'])
 
         self.train_x_tensor = torch.Tensor(train_xa)
 
@@ -290,7 +292,7 @@ class PhysicalTrainer():
 
         self.test_x_flat = []  # Initialize the testing pressure mat list
         self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, test_dat_f_synth, test_dat_m_synth, num_repeats = 1)
-        self.test_x_flat = list(np.clip(np.array(self.test_x_flat) * 5.0, a_min=0, a_max=100))
+        self.test_x_flat = list(np.clip(np.array(self.test_x_flat) * float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100))
         self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, test_dat_f_real, test_dat_m_real, num_repeats = 1)
         self.test_x_flat = PreprocessingLib().preprocessing_blur_images(self.test_x_flat, self.mat_size, sigma=0.5)
 
@@ -333,7 +335,7 @@ class PhysicalTrainer():
 
         #normalize the input
         if self.CTRL_PNL['normalize_input'] == True:
-            test_xa = TensorPrepLib().normalize_network_input(test_xa, include_mesh_depth_contact_input_est = self.CTRL_PNL['depth_map_input_est'])
+            test_xa = TensorPrepLib().normalize_network_input(test_xa, include_mesh_depth_contact_input_est = self.CTRL_PNL['depth_map_input_est'], pmat_mult = self.CTRL_PNL['pmat_mult'])
 
         self.test_x_tensor = torch.Tensor(test_xa)
 
@@ -679,74 +681,69 @@ class PhysicalTrainer():
 
 
     def validate_convnet(self, verbose=False, n_batches=None):
-        #print torch.cuda.max_memory_allocated(), '0'
         self.model.eval()
         loss = 0.
         n_examples = 0
         batch_ct = 1
 
-        #for batch_idx, batch in enumerate(self.test_loader):
-        #    print "GOT HERE!!", torch.cuda.max_memory_allocated()
-        #    scores, INPUT_DICT, OUTPUT_DICT = \
-        #        UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model = self.model, CTRL_PNL=self.CTRL_PNL)
+        if self.CTRL_PNL['aws'] == True:
+            for batch_i, batch in enumerate(self.test_loader):
 
-        for batch_i, batch in enumerate(self.test_loader):
-
-            #print torch.cuda.max_memory_allocated(), "val", batch_i
-            scores, INPUT_DICT_VAL, OUTPUT_DICT_VAL = \
-                UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model=self.model, CTRL_PNL=self.CTRL_PNL)
-            scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].shape[0], scores.size()[1]))).type(dtype),
-                                    requires_grad=False)
+                print('GPU memory val:', torch.cuda.max_memory_allocated())
+                scores, INPUT_DICT_VAL, OUTPUT_DICT_VAL = \
+                    UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model=self.model, CTRL_PNL=self.CTRL_PNL)
+                scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].shape[0], scores.size()[1]))).type(dtype),
+                                        requires_grad=False)
 
 
-            if self.CTRL_PNL['full_body_rot'] == True:
-                OSA = 6
-                loss_bodyrot = float(self.criterion(scores[:, 10:16], scores_zeros[:, 10:16]) * self.weight_joints)
-                if self.CTRL_PNL['adjust_ang_from_est'] == True:
-                    loss_bodyrot *= 0
-            else: OSA = 0
+                if self.CTRL_PNL['full_body_rot'] == True:
+                    OSA = 6
+                    loss_bodyrot = float(self.criterion(scores[:, 10:16], scores_zeros[:, 10:16]) * self.weight_joints)
+                    if self.CTRL_PNL['adjust_ang_from_est'] == True:
+                        loss_bodyrot *= 0
+                else: OSA = 0
 
-            loss_eucl = float(self.criterion(scores[:, 10+OSA:34+OSA], scores_zeros[:,  10+OSA:34+OSA]) * self.weight_joints)
-            loss_betas = float(self.criterion(scores[:, 0:10], scores_zeros[:, 0:10]) * self.weight_joints * 0.5)
+                loss_eucl = float(self.criterion(scores[:, 10+OSA:34+OSA], scores_zeros[:,  10+OSA:34+OSA]) * self.weight_joints)
+                loss_betas = float(self.criterion(scores[:, 0:10], scores_zeros[:, 0:10]) * self.weight_joints * 0.5)
 
 
-            if self.CTRL_PNL['regr_angles'] == True:
-                loss_angs = float(self.criterion(scores[:, 34+OSA:106+OSA], scores_zeros[:, 34+OSA:106+OSA]) * self.weight_joints)
-                loss_to_add = (loss_betas + loss_eucl + loss_bodyrot + loss_angs)
-            else:
-                loss_to_add = (loss_betas + loss_eucl + loss_bodyrot)
-
-            # print INPUT_DICT_VAL['batch_mdm'].size(), OUTPUT_DICT_VAL['batch_mdm_est'].size()
-
-            if self.CTRL_PNL['depth_map_labels'] == True:
-                INPUT_DICT_VAL['batch_mdm'][INPUT_DICT_VAL['batch_mdm'] > 0] = 0
-                if self.CTRL_PNL['mesh_bottom_dist'] == True:
-                    OUTPUT_DICT_VAL['batch_mdm_est'][OUTPUT_DICT_VAL['batch_mdm_est'] > 0] = 0
-
-                if self.CTRL_PNL['L2_contact'] == True:
-                    loss_mesh_depth = float(self.criterion2(INPUT_DICT_VAL['batch_mdm'],OUTPUT_DICT_VAL['batch_mdm_est']) * self.weight_depth_planes * (1. / 44.46155340000357) * (1. / 44.46155340000357))
-                    loss_mesh_contact = float(self.criterion(INPUT_DICT_VAL['batch_cm'],OUTPUT_DICT_VAL['batch_cm_est']) * self.weight_depth_planes * (1. / 0.4428100696329912))
+                if self.CTRL_PNL['regr_angles'] == True:
+                    loss_angs = float(self.criterion(scores[:, 34+OSA:106+OSA], scores_zeros[:, 34+OSA:106+OSA]) * self.weight_joints)
+                    loss_to_add = (loss_betas + loss_eucl + loss_bodyrot + loss_angs)
                 else:
-                    loss_mesh_depth = float(self.criterion(INPUT_DICT_VAL['batch_mdm'],OUTPUT_DICT_VAL['batch_mdm_est']) * self.weight_depth_planes * (1. / 44.46155340000357))
-                    loss_mesh_contact = float(self.criterion(INPUT_DICT_VAL['batch_cm'],OUTPUT_DICT_VAL['batch_cm_est']) * self.weight_depth_planes * (1. / 0.4428100696329912))
-                loss_to_add += loss_mesh_depth
-                loss_to_add += loss_mesh_contact
+                    loss_to_add = (loss_betas + loss_eucl + loss_bodyrot)
 
-                loss += loss_to_add
+                # print INPUT_DICT_VAL['batch_mdm'].size(), OUTPUT_DICT_VAL['batch_mdm_est'].size()
 
-            #print loss
-            n_examples += self.CTRL_PNL['batch_size']
+                if self.CTRL_PNL['depth_map_labels'] == True:
+                    INPUT_DICT_VAL['batch_mdm'][INPUT_DICT_VAL['batch_mdm'] > 0] = 0
+                    if self.CTRL_PNL['mesh_bottom_dist'] == True:
+                        OUTPUT_DICT_VAL['batch_mdm_est'][OUTPUT_DICT_VAL['batch_mdm_est'] > 0] = 0
 
-            if n_batches and (batch_i >= n_batches):
-                break
+                    if self.CTRL_PNL['L2_contact'] == True:
+                        loss_mesh_depth = float(self.criterion2(INPUT_DICT_VAL['batch_mdm'],OUTPUT_DICT_VAL['batch_mdm_est']) * self.weight_depth_planes * (1. / 44.46155340000357) * (1. / 44.46155340000357))
+                        loss_mesh_contact = float(self.criterion(INPUT_DICT_VAL['batch_cm'],OUTPUT_DICT_VAL['batch_cm_est']) * self.weight_depth_planes * (1. / 0.4428100696329912))
+                    else:
+                        loss_mesh_depth = float(self.criterion(INPUT_DICT_VAL['batch_mdm'],OUTPUT_DICT_VAL['batch_mdm_est']) * self.weight_depth_planes * (1. / 44.46155340000357))
+                        loss_mesh_contact = float(self.criterion(INPUT_DICT_VAL['batch_cm'],OUTPUT_DICT_VAL['batch_cm_est']) * self.weight_depth_planes * (1. / 0.4428100696329912))
+                    loss_to_add += loss_mesh_depth
+                    loss_to_add += loss_mesh_contact
 
-            batch_ct += 1
-            #break
+                    loss += loss_to_add
+
+                #print loss
+                n_examples += self.CTRL_PNL['batch_size']
+
+                if n_batches and (batch_i >= n_batches):
+                    break
+
+                batch_ct += 1
+                #break
 
 
-        loss /= batch_ct
-        loss *= 1000
-        #loss *= 10. / 34
+            loss /= batch_ct
+            loss *= 1000
+            #loss *= 10. / 34
 
         #if GPU == True:
         #    VisualizationLib().print_error_train(INPUT_DICT_VAL['batch_targets'].cpu(), OUTPUT_DICT_VAL['batch_targets_est'].cpu(), self.output_size_val,
