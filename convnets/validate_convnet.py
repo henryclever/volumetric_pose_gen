@@ -90,120 +90,201 @@ class PhysicalTrainer():
 
 
     def __init__(self, testing_database_file_f, testing_database_file_m, opt):
+
         '''Opens the specified pickle files to get the combined dataset:
-        This dataset is a dictionary of pressure maps with the corresponding
-        3d position and orientation of the markers associated with it.'''
+                This dataset is a dictionary of pressure maps with the corresponding
+                3d position and orientation of the markers associated with it.'''
 
         # change this to 'direct' when you are doing baseline methods
+
         self.CTRL_PNL = {}
-        self.CTRL_PNL['batch_size'] = 1
         self.CTRL_PNL['loss_vector_type'] = opt.losstype
+
         self.CTRL_PNL['verbose'] = opt.verbose
         self.opt = opt
-        self.CTRL_PNL['num_epochs'] = 101
+        self.CTRL_PNL['batch_size'] = 1
+        self.CTRL_PNL['num_epochs'] = 201
         self.CTRL_PNL['incl_inter'] = True
-        self.CTRL_PNL['shuffle'] = False
+        self.CTRL_PNL['shuffle'] = True
         self.CTRL_PNL['incl_ht_wt_channels'] = True
         self.CTRL_PNL['incl_pmat_cntct_input'] = True
+        self.CTRL_PNL['lock_root'] = False
         self.CTRL_PNL['num_input_channels'] = 3
         self.CTRL_PNL['GPU'] = GPU
         self.CTRL_PNL['dtype'] = dtype
-        self.CTRL_PNL['repeat_real_data_ct'] = 1
-        self.CTRL_PNL['regr_angles'] = 1
-        self.CTRL_PNL['depth_map_labels'] = False
-        self.CTRL_PNL['depth_map_labels_test'] = False
-        self.CTRL_PNL['depth_map_output'] = True
-        self.CTRL_PNL['depth_map_input_est'] = False#rue #do this if we're working in a two-part regression
-        self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
+        repeat_real_data_ct = 3
+        self.CTRL_PNL['regr_angles'] = False
+        self.CTRL_PNL['aws'] = False
+        self.CTRL_PNL['depth_map_labels'] = True  # can only be true if we have 100% synthetic data for training
+        self.CTRL_PNL['depth_map_labels_test'] = True  # can only be true is we have 100% synth for testing
+        self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
+        self.CTRL_PNL['depth_map_input_est'] = False  # do this if we're working in a two-part regression
+        self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL[
+            'depth_map_input_est']  # holds betas and root same as prior estimate
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
         self.CTRL_PNL['mesh_bottom_dist'] = True
+        self.CTRL_PNL['full_body_rot'] = True
+        self.CTRL_PNL['normalize_input'] = True
+        self.CTRL_PNL['all_tanh_activ'] = True
+        self.CTRL_PNL['L2_contact'] = True
+        self.CTRL_PNL['pmat_mult'] = int(5)
+        self.CTRL_PNL['cal_noise'] = False
 
 
-        self.count = 0
+        j_d_ratio = 0.5
+        self.weight_joints = j_d_ratio*2
+        self.weight_depth_planes = (1-j_d_ratio)*2
+
 
         if opt.losstype == 'direct':
             self.CTRL_PNL['depth_map_labels'] = False
             self.CTRL_PNL['depth_map_output'] = False
+
+        if self.CTRL_PNL['cal_noise'] == True:
+            self.CTRL_PNL['pmat_mult'] = int(1)
+            self.CTRL_PNL['incl_pmat_cntct_input'] = False  # if there's calibration noise we need to recompute this every batch
+            self.CTRL_PNL['clip_sobel'] = False
+
         if self.CTRL_PNL['incl_pmat_cntct_input'] == True:
             self.CTRL_PNL['num_input_channels'] += 1
-        if self.CTRL_PNL['depth_map_input_est'] == True: #for a two part regression
+        if self.CTRL_PNL['depth_map_input_est'] == True:  # for a two part regression
             self.CTRL_PNL['num_input_channels'] += 3
         self.CTRL_PNL['num_input_channels_batch0'] = np.copy(self.CTRL_PNL['num_input_channels'])
         if self.CTRL_PNL['incl_ht_wt_channels'] == True:
             self.CTRL_PNL['num_input_channels'] += 2
+        if self.CTRL_PNL['cal_noise'] == True:
+            self.CTRL_PNL['num_input_channels'] += 1
 
         self.CTRL_PNL['filepath_prefix'] = '/home/henry/'
-        self.CTRL_PNL['aws'] = False
-        self.CTRL_PNL['lock_root'] = False
+            # self.CTRL_PNL['filepath_prefix'] = '/media/henry/multimodal_data_2/'
 
+        if self.CTRL_PNL['depth_map_output'] == True:  # we need all the vertices if we're going to regress the depth maps
+            self.verts_list = "all"
+        else:
+            self.verts_list = [1325, 336, 1032, 4515, 1374, 4848, 1739, 5209, 1960, 5423]
+
+        print self.CTRL_PNL['num_epochs'], 'NUM EPOCHS!'
+        # Entire pressure dataset with coordinates in world frame
+
+        self.save_name = '_' + opt.losstype + \
+                         '_synth_32000' + \
+                         '_' + str(self.CTRL_PNL['batch_size']) + 'b' + \
+                         '_' + str(self.CTRL_PNL['num_epochs']) + 'e' + \
+                         '_x' + str(self.CTRL_PNL['pmat_mult']) + 'pmult'
+
+        if self.CTRL_PNL['depth_map_input_est'] == True:
+            self.save_name += '_depthestin'
+        if self.CTRL_PNL['adjust_ang_from_est'] == True:
+            self.save_name += '_angleadj'
+        if self.CTRL_PNL['all_tanh_activ'] == True:
+            self.save_name += '_alltanh'
+        if self.CTRL_PNL['L2_contact'] == True:
+            self.save_name += '_l2cnt'
+        if self.CTRL_PNL['cal_noise'] == True:
+            self.save_name += '_calnoise'
+
+        # self.save_name = '_' + opt.losstype+'_real_s9_alltest_' + str(self.CTRL_PNL['batch_size']) + 'b_'# + str(self.CTRL_PNL['num_epochs']) + 'e'
+
+        print 'appending to', 'train' + self.save_name
+        self.train_val_losses = {}
+        self.train_val_losses['train' + self.save_name] = []
+        self.train_val_losses['val' + self.save_name] = []
+        self.train_val_losses['epoch' + self.save_name] = []
 
         self.mat_size = (NUMOFTAXELS_X, NUMOFTAXELS_Y)
         self.output_size_train = (NUMOFOUTPUTNODES_TRAIN, NUMOFOUTPUTDIMS)
         self.output_size_val = (NUMOFOUTPUTNODES_TEST, NUMOFOUTPUTDIMS)
-        self.parents = np.array([4294967295, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9, 12, 13, 14, 16, 17, 18, 19, 20, 21]).astype(np.int32)
+        self.parents = np.array(
+            [4294967295, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9, 12, 13, 14, 16, 17, 18, 19, 20, 21]).astype(np.int32)
 
 
-
-        #################################### PREP TESTING ##########################################
-        #load testing synth data
-        dat_f_synth = TensorPrepLib().load_files_to_database(testing_database_file_f, 'synth')
-        dat_m_synth = TensorPrepLib().load_files_to_database(testing_database_file_m, 'synth')
-        dat_f_real = TensorPrepLib().load_files_to_database(testing_database_file_f, 'real')
-        dat_m_real = TensorPrepLib().load_files_to_database(testing_database_file_m, 'real')
+        #################################### PREP TESTING DATA ##########################################
+        # load in the test file
+        test_dat_f_synth = TensorPrepLib().load_files_to_database(testing_database_file_f, 'synth')
+        test_dat_m_synth = TensorPrepLib().load_files_to_database(testing_database_file_m, 'synth')
+        test_dat_f_real = TensorPrepLib().load_files_to_database(testing_database_file_f, 'real')
+        test_dat_m_real = TensorPrepLib().load_files_to_database(testing_database_file_m, 'real')
 
         self.test_x_flat = []  # Initialize the testing pressure mat list
-        self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, dat_f_synth, dat_m_synth, num_repeats = 1)
-        self.test_x_flat = list(np.clip(np.array(self.test_x_flat) * 5.0, a_min=0, a_max=100))
+        self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, test_dat_f_synth, test_dat_m_synth,
+                                                       num_repeats=1)
+        self.test_x_flat = list(
+            np.clip(np.array(self.test_x_flat) * float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100))
+        self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, test_dat_f_real, test_dat_m_real,
+                                                       num_repeats=1)
 
-        self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, dat_f_real, dat_m_real, num_repeats = self.CTRL_PNL['repeat_real_data_ct'])
+        if self.CTRL_PNL['cal_noise'] == False:
+            self.test_x_flat = PreprocessingLib().preprocessing_blur_images(self.test_x_flat, self.mat_size, sigma=0.5)
 
-        self.test_x_flat = PreprocessingLib().preprocessing_blur_images(self.test_x_flat, self.mat_size, sigma=0.5)
+        if len(self.test_x_flat) == 0: print("NO TESTING DATA INCLUDED")
 
-        if len(self.test_x_flat) == 0: print("NO testing DATA INCLUDED")
+        self.test_a_flat = []  # Initialize the testing pressure mat angle listhave
+        self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, test_dat_f_synth, test_dat_m_synth,
+                                                       num_repeats=1)
+        self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, test_dat_f_real, test_dat_m_real,
+                                                       num_repeats=1)
 
-        self.test_a_flat = []  # Initialize the testing pressure mat angle list
-        self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, dat_f_synth, dat_m_real, num_repeats = 1)
-        self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, dat_f_real, dat_m_real, num_repeats = self.CTRL_PNL['repeat_real_data_ct'])
-
-        if self.CTRL_PNL['depth_map_labels'] == True:
-            self.depth_contact_maps = [] #Initialize the precomputed depth and contact maps
-            self.depth_contact_maps = TensorPrepLib().prep_depth_contact(self.depth_contact_maps, dat_f_synth, dat_m_synth, num_repeats = 1)
+        if self.CTRL_PNL['depth_map_labels_test'] == True:
+            self.depth_contact_maps = []  # Initialize the precomputed depth and contact maps. only synth has this label.
+            self.depth_contact_maps = TensorPrepLib().prep_depth_contact(self.depth_contact_maps, test_dat_f_synth,
+                                                                         test_dat_m_synth, num_repeats=1)
         else:
             self.depth_contact_maps = None
 
+        if self.CTRL_PNL['depth_map_input_est'] == True:
+            self.depth_contact_maps_input_est = []  # Initialize the precomputed depth and contact map input estimates
+            self.depth_contact_maps_input_est = TensorPrepLib().prep_depth_contact_input_est(
+                self.depth_contact_maps_input_est,
+                test_dat_f_synth, test_dat_m_synth, num_repeats=1)
+            self.depth_contact_maps_input_est = TensorPrepLib().prep_depth_contact_input_est(
+                self.depth_contact_maps_input_est,
+                test_dat_f_real, test_dat_m_real, num_repeats=1)
+        else:
+            self.depth_contact_maps_input_est = None
+
+        print np.shape(self.test_x_flat), np.shape(self.test_a_flat)
+
         test_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.test_x_flat,
-                                                                                self.test_a_flat,
-                                                                                self.CTRL_PNL['incl_inter'], self.mat_size,
-                                                                                self.CTRL_PNL['clip_sobel'],
-                                                                                self.CTRL_PNL['verbose'])
+                                                                               self.test_a_flat,
+                                                                               self.mat_size,
+                                                                               self.CTRL_PNL)
 
         test_xa = TensorPrepLib().append_input_depth_contact(np.array(test_xa),
-                                                              include_pmat_contact = self.CTRL_PNL['incl_pmat_cntct_input'],
-                                                              mesh_depth_contact_maps = self.depth_contact_maps,
-                                                              include_mesh_depth_contact = self.CTRL_PNL['depth_map_labels'])
+                                                             CTRL_PNL=self.CTRL_PNL,
+                                                             mesh_depth_contact_maps_input_est=self.depth_contact_maps_input_est,
+                                                             mesh_depth_contact_maps=self.depth_contact_maps)
+
+        # normalize the input
+        if self.CTRL_PNL['normalize_input'] == True:
+            test_xa = TensorPrepLib().normalize_network_input(test_xa, self.CTRL_PNL)
 
         self.test_x_tensor = torch.Tensor(test_xa)
 
-        self.test_y_flat = []  # Initialize the testing ground truth list
-        self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_f_synth, num_repeats = 1,
-                                                        z_adj = -0.075, gender = "f", is_synth = True,
-                                                        loss_vector_type = self.CTRL_PNL['loss_vector_type'],
-                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
-        self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_m_synth, num_repeats = 1,
-                                                        z_adj = -0.075, gender = "m", is_synth = True,
-                                                        loss_vector_type = self.CTRL_PNL['loss_vector_type'],
-                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
+        test_y_flat = []  # Initialize the ground truth listhave
 
-        self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_f_real, num_repeats = self.CTRL_PNL['repeat_real_data_ct'],
-                                                        z_adj = 0.0, gender = "m", is_synth = False,
-                                                        loss_vector_type = self.CTRL_PNL['loss_vector_type'],
-                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
-        self.test_y_flat = TensorPrepLib().prep_labels(self.test_y_flat, dat_m_real, num_repeats = self.CTRL_PNL['repeat_real_data_ct'],
-                                                        z_adj = 0.0, gender = "m", is_synth = False,
-                                                        loss_vector_type = self.CTRL_PNL['loss_vector_type'],
-                                                        initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
-        self.test_y_tensor = torch.Tensor(self.test_y_flat)
+        test_y_flat = TensorPrepLib().prep_labels(test_y_flat, test_dat_f_synth, num_repeats=1,
+                                                  z_adj=-0.075, gender="f", is_synth=True,
+                                                  loss_vector_type=self.CTRL_PNL['loss_vector_type'],
+                                                  initial_angle_est=self.CTRL_PNL['adjust_ang_from_est'])
+        test_y_flat = TensorPrepLib().prep_labels(test_y_flat, test_dat_m_synth, num_repeats=1,
+                                                  z_adj=-0.075, gender="m", is_synth=True,
+                                                  loss_vector_type=self.CTRL_PNL['loss_vector_type'],
+                                                  initial_angle_est=self.CTRL_PNL['adjust_ang_from_est'])
+
+        test_y_flat = TensorPrepLib().prep_labels(test_y_flat, test_dat_f_real, num_repeats=1,
+                                                  z_adj=0.0, gender="f", is_synth=False,
+                                                  loss_vector_type=self.CTRL_PNL['loss_vector_type'],
+                                                  initial_angle_est=self.CTRL_PNL['adjust_ang_from_est'])
+        test_y_flat = TensorPrepLib().prep_labels(test_y_flat, test_dat_m_real, num_repeats=1,
+                                                  z_adj=0.0, gender="m", is_synth=False,
+                                                  loss_vector_type=self.CTRL_PNL['loss_vector_type'],
+                                                  initial_angle_est=self.CTRL_PNL['adjust_ang_from_est'])
+
+        if self.CTRL_PNL['normalize_input'] == True:
+            test_y_flat = TensorPrepLib().normalize_wt_ht(test_y_flat)
+
+        self.test_y_tensor = torch.Tensor(test_y_flat)
 
         print self.test_x_tensor.shape, 'Input testing tensor shape'
         print self.test_y_tensor.shape, 'Output testing tensor shape'
@@ -486,27 +567,22 @@ class PhysicalTrainer():
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_300e.pt')
                 self.model = self.model.cuda()
             else:
-                #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s6ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
+                #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg/convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_00001lr.pt', map_location = 'cpu')
+                self.model = torch.load('/media/henry/multimodal_data_1/convnets/convnet_anglesDC_synth_32000_128b_201e_0.5rtojtdpth_alltanh_l2cnt_100e.pt', map_location = 'cpu')
 
-                #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_planesreg_128b_100e.pt', map_location='cpu')
-
-                #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_4xsize_128b_200e.pt', map_location = 'cpu')
-                #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synthreal_s4_3xreal_128b_101e_htwt_legacy.pt', map_location = 'cpu')
-                self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/planesreg/convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_00001lr.pt', map_location = 'cpu')
-                #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
-                #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/2.0xsize/convnet_anglesEU_synthreal_tanh_s8ang_sig0p5_5xreal_voloff_128b_300e.pt', map_location='cpu')
 
             print 'LOADED anglesEU !!!!!!!!!!!!!!!!!'
             pp = 0
             for p in list(self.model.parameters()):
-                nn = 1
+                nnn = 1
                 for s in list(p.size()):
-                    nn = nn * s
-                pp += nn
+                    nnn = nnn * s
+                pp += nnn
             print pp, 'num params'
 
 
-        self.criterion = F.cross_entropy
+        self.criterion = nn.L1Loss()
+        self.criterion2 = nn.MSELoss()
 
 
         print 'done with epochs, now evaluating'
@@ -541,23 +617,46 @@ class PhysicalTrainer():
 
 
             elif self.CTRL_PNL['loss_vector_type'] == 'anglesR' or self.CTRL_PNL['loss_vector_type'] == 'anglesDC' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU':
-                scores, INPUT_DICT, OUTPUT_DICT = \
-                    UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model=self.model,
-                                                              CTRL_PNL=self.CTRL_PNL)
-                self.criterion = nn.L1Loss()
+
+                if self.CTRL_PNL['GPU'] == True: print('GPU memory val:', torch.cuda.max_memory_allocated())
+                scores, INPUT_DICT_VAL, OUTPUT_DICT_VAL = \
+                    UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model=self.model, CTRL_PNL=self.CTRL_PNL)
                 scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].shape[0], scores.size()[1]))).type(dtype),
                                         requires_grad=False)
 
-                loss_curr = self.criterion(scores[:, 10:34], scores_zeros[:, 10:34]).data.item() / 10.
+                if self.CTRL_PNL['full_body_rot'] == True:
+                    OSA = 6
+                    loss_bodyrot = float(self.criterion(scores[:, 10:16], scores_zeros[:, 10:16]) * self.weight_joints)
+                    if self.CTRL_PNL['adjust_ang_from_est'] == True:
+                        loss_bodyrot *= 0
+                else: OSA = 0
 
-                print loss_curr, 'loss'
-                #print scores[0, :], "SCORES!"
+                loss_eucl = float(self.criterion(scores[:, 10+OSA:34+OSA], scores_zeros[:,  10+OSA:34+OSA]) * self.weight_joints)
+                loss_betas = float(self.criterion(scores[:, 0:10], scores_zeros[:, 0:10]) * self.weight_joints * 0.5)
 
+
+                if self.CTRL_PNL['regr_angles'] == True:
+                    loss_angs = float(self.criterion(scores[:, 34+OSA:106+OSA], scores_zeros[:, 34+OSA:106+OSA]) * self.weight_joints)
+                    loss_to_add = (loss_betas + loss_eucl + loss_bodyrot + loss_angs)
+                else:
+                    loss_to_add = (loss_betas + loss_eucl + loss_bodyrot)
+
+                # print INPUT_DICT_VAL['batch_mdm'].size(), OUTPUT_DICT_VAL['batch_mdm_est'].size()
 
                 if self.CTRL_PNL['depth_map_labels'] == True:
-                    INPUT_DICT['batch_mdm'][INPUT_DICT['batch_mdm'] > 0] = 0
-                    OUTPUT_DICT['batch_mdm_est'][OUTPUT_DICT['batch_mdm_est'] > 0] = 0
-                loss += loss_curr
+                    INPUT_DICT_VAL['batch_mdm'][INPUT_DICT_VAL['batch_mdm'] > 0] = 0
+                    if self.CTRL_PNL['mesh_bottom_dist'] == True:
+                        OUTPUT_DICT_VAL['batch_mdm_est'][OUTPUT_DICT_VAL['batch_mdm_est'] > 0] = 0
+
+                    if self.CTRL_PNL['L2_contact'] == True:
+                        loss_mesh_depth = float(self.criterion2(INPUT_DICT_VAL['batch_mdm'],OUTPUT_DICT_VAL['batch_mdm_est']) * self.weight_depth_planes * (1. / 44.46155340000357) * (1. / 44.46155340000357))
+                        loss_mesh_contact = float(self.criterion(INPUT_DICT_VAL['batch_cm'],OUTPUT_DICT_VAL['batch_cm_est']) * self.weight_depth_planes * (1. / 0.4428100696329912))
+                    else:
+                        loss_mesh_depth = float(self.criterion(INPUT_DICT_VAL['batch_mdm'],OUTPUT_DICT_VAL['batch_mdm_est']) * self.weight_depth_planes * (1. / 44.46155340000357))
+                        loss_mesh_contact = float(self.criterion(INPUT_DICT_VAL['batch_cm'],OUTPUT_DICT_VAL['batch_cm_est']) * self.weight_depth_planes * (1. / 0.4428100696329912))
+                    loss_to_add += loss_mesh_depth
+                    loss_to_add += loss_mesh_contact
+
 
 
 
@@ -569,16 +668,16 @@ class PhysicalTrainer():
 
 
             try:
-                targets_print = torch.cat([targets_print, torch.mean(INPUT_DICT['batch_targets'], dim = 0).unsqueeze(0)], dim=0)
-                targets_est_print = torch.cat([targets_est_print, torch.mean(OUTPUT_DICT['batch_targets_est'], dim = 0).unsqueeze(0)], dim=0)
+                targets_print = torch.cat([targets_print, torch.mean(INPUT_DICT_VAL['batch_targets'], dim = 0).unsqueeze(0)], dim=0)
+                targets_est_print = torch.cat([targets_est_print, torch.mean(OUTPUT_DICT_VAL['batch_targets_est'], dim = 0).unsqueeze(0)], dim=0)
             except:
 
-                targets_print = torch.mean(INPUT_DICT['batch_targets'], dim = 0).unsqueeze(0)
-                targets_est_print = torch.mean(OUTPUT_DICT['batch_targets_est'], dim = 0).unsqueeze(0)
+                targets_print = torch.mean(INPUT_DICT_VAL['batch_targets'], dim = 0).unsqueeze(0)
+                targets_est_print = torch.mean(OUTPUT_DICT_VAL['batch_targets_est'], dim = 0).unsqueeze(0)
 
 
-            print targets_print.shape, INPUT_DICT['batch_targets'].shape
-            print targets_est_print.shape, OUTPUT_DICT['batch_targets_est'].shape
+            print targets_print.shape, INPUT_DICT_VAL['batch_targets'].shape
+            print targets_est_print.shape, OUTPUT_DICT_VAL['batch_targets_est'].shape
 
 
             if GPU == True:
@@ -600,19 +699,19 @@ class PhysicalTrainer():
                 loss *= 100
                 loss *= 1000
 
-                print INPUT_DICT['batch_images'].size()
-                NUM_IMAGES = INPUT_DICT['batch_images'].size()[0]
+                print INPUT_DICT_VAL['batch_images'].size()
+                NUM_IMAGES = INPUT_DICT_VAL['batch_images'].size()[0]
 
                 for image_ct in range(NUM_IMAGES):
                     # #self.im_sampleval = self.im_sampleval[:,0,:,:]
-                    self.im_sampleval = INPUT_DICT['batch_images'][image_ct, 1:].squeeze()
-                    self.im_sample_ext = INPUT_DICT['batch_mdm'][0, :, :].squeeze().cpu().unsqueeze(0)*-1
+                    self.im_sampleval = INPUT_DICT_VAL['batch_images'][image_ct, 1:].squeeze()*26.
+                    self.im_sample_ext = INPUT_DICT_VAL['batch_mdm'][0, :, :].squeeze().cpu().unsqueeze(0)*-1
 
                     #print self.im_sample_ext.size()
-                    self.im_sample_ext2 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().cpu().unsqueeze(0)*-1
+                    self.im_sample_ext2 = OUTPUT_DICT_VAL['batch_mdm_est'][0, :, :].squeeze().cpu().unsqueeze(0)*-1
 
-                    self.tar_sampleval = INPUT_DICT['batch_targets'][image_ct, :].squeeze() / 1000
-                    self.sc_sampleval = OUTPUT_DICT['batch_targets_est'][image_ct, :].squeeze() / 1000
+                    self.tar_sampleval = INPUT_DICT_VAL['batch_targets'][image_ct, :].squeeze() / 1000
+                    self.sc_sampleval = OUTPUT_DICT_VAL['batch_targets_est'][image_ct, :].squeeze() / 1000
                     self.sc_sampleval = self.sc_sampleval.view(24, 3)
 
 
@@ -620,7 +719,7 @@ class PhysicalTrainer():
                     #self.im_sample2 = GaussFitLib().get_pressure_under_legs(self.im_sampleval[0, :, :], np.copy(self.sc_sampleval))
 
 
-                    #self.im_sample2 = OUTPUT_DICT['batch_mdm_est'].data[image_ct, :].squeeze()*-1
+                    #self.im_sample2 = OUTPUT_DICT_VAL['batch_mdm_est'].data[image_ct, :].squeeze()*-1
 
 
                     if GPU == True:
@@ -634,7 +733,7 @@ class PhysicalTrainer():
                                                                   self.im_sample_ext, self.tar_sampleval, self.sc_sampleval,
                                                                   self.im_sample_ext2, self.tar_sampleval, self.sc_sampleval,
                                                                   block=False)
-                    #time.sleep(1)
+                    time.sleep(1)
 
         if GPU == True:
             error_norm, error_avg, _ = VisualizationLib().print_error_iros2018(targets_print.cpu(), targets_est_print.cpu(), self.output_size_val, self.CTRL_PNL['loss_vector_type'], data='validate')
@@ -677,7 +776,8 @@ if __name__ == "__main__":
 
     opt, args = p.parse_args()
 
-    filepath_prefix_qt = '/home/henry/'
+    #filepath_prefix_qt = '/home/henry/'
+    filepath_prefix_qt = '/media/henry/multimodal_data_1/'
 
 
     test_database_file_f = []
@@ -687,7 +787,7 @@ if __name__ == "__main__":
 
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2103_upperbody_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2086_rightside_stiff.p')
-    test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff.p')
+    #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2072_leftside_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2047_lowerbody_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_lay_2000_of_2067_none_stiff.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/synth/side_up_fw/train_f_sit_1000_of_1121_upperbody_stiff.p')
@@ -698,7 +798,7 @@ if __name__ == "__main__":
     #test_database_file_f.append(filepath_prefix_qt+'data/real/s2_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
     #test_database_file_f.append(filepath_prefix_qt+'data/real/s8_trainval_200rlh1_115rlh2_75rlh3_150rll_sit175rlh_sit120rll.p')
 
-    #test_database_file_f.append(filepath_prefix_qt+'data/real/trainval8_150rh1_sit120rh.p')
+    test_database_file_f.append(filepath_prefix_qt+'convnets/synth/test_rollpi_f_lay_1000_none_stiff.p')
 
     #test_database_file_m.append(filepath_prefix_qt+'data/synth/side_up_fw/train_m_lay_2000_of_2031_upperbody_stiff.p')
     #test_database_file_m.append(filepath_prefix_qt+'data/synth/side_up_fw/train_m_lay_2000_of_2016_rightside_stiff.p')

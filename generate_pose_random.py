@@ -462,22 +462,28 @@ class GeneratePose():
             self.num_collisions = 0
 
             while in_collision == True:
-                if self.num_collisions > 20:
+
+                if self.num_collisions > 20: self.num_collisions = 0
+                if self.num_collisions == 0:
                     generator.sample_body_shape(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
-                    self.num_collisions = 0
+                    shift_side = np.random.uniform(-0.2, 0.2)  # in meters
+                    shift_ud = np.random.uniform(-0.2, 0.2)  # in meters
+                    #shape_pose_vol[3] = root_rot
+                    shape_pose_vol[4] = shift_side
+                    shape_pose_vol[5] = shift_ud
+
+                    self.m.pose[0:3] = np.random.rand(3) * 0.
+                    if roll_person == True:
+                        self.m.pose[1] = np.random.uniform(-np.pi, np.pi)
+                    self.m.pose[2] = np.random.uniform(-np.pi/6, np.pi/6)
 
 
-                shift_side = np.random.uniform(-0.2, 0.2)  # in meters
-                shift_ud = np.random.uniform(-0.2, 0.2)  # in meters
-                #shape_pose_vol[3] = root_rot
-                shape_pose_vol[4] = shift_side
-                shape_pose_vol[5] = shift_ud
                 #m, capsules, joint2name, rots0 = generator.map_random_selection_to_smpl_angles(alter_angles = True)
 
                 print "GOT HERE", len(shape_pose_vol_list)
                 #time.sleep(2)
 
-                self.m.pose[:] = np.random.rand(self.m.pose.size) * 0.
+                self.m.pose[3:] = np.random.rand(self.m.pose.size - 3) * 0.
 
                 m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles(alter_angles= True, roll_person = roll_person,
                                                                                                            shift=np.array([shift_side, shift_ud, 0.0]),
@@ -711,12 +717,8 @@ class GeneratePose():
 
     def map_nom_limited_random_selection_to_smpl_angles(self, alter_angles, roll_person, shift, prevent_limb_overhang, hands_behind_head):
         if alter_angles == True:
-            mJtransformed = np.array(self.m.J_transformed)
             #print self.m.r
             #print mJtransformed, 'MJTRANS'
-            if roll_person == True:
-                self.m.pose[1] = np.random.uniform(-np.pi, np.pi)
-            self.m.pose[2] = np.random.uniform(-np.pi/6, np.pi/6)
             #print self.m.pose[2], 'yaw of person in space'
 
 
@@ -889,7 +891,7 @@ if __name__ == "__main__":
     #generator.solve_ik_tree_smpl()
 
     #generator.read_precomp_set(gender=gender)
-    generator.generate_rand_dir_cos(gender=gender, posture='lay', num_data=10, roll_person = False, set = 3, prevent_limb_overhang = True, hands_behind_head=True)
+    generator.generate_rand_dir_cos(gender=gender, posture='lay', num_data=2300, roll_person = True, set = 11, prevent_limb_overhang = True, hands_behind_head=False)
 
     #generator.save_yash_data_with_angles(posture)
     #generator.map_euler_angles_to_axis_angle()
