@@ -289,10 +289,16 @@ class VisualizationLib():
                                 p_map_ext2 = None, targets_ext2 = None, scores_ext2 = None,
                                 block = False, title = ' '):
 
+        p_map_mult = 1.
+        p_map_val_mult = 1.
+        p_map_ext_mult = 1.
+        p_map_ext2_mult = 1.
+
         try:
             p_map = p_map[0,:,:] #select the original image matrix from the intermediate amplifier matrix and the height matrix
+            if p_map.shape[0] == 128: p_map_mult = 2.
         except:
-            pass
+            if p_map.shape[0] == 128: p_map_mult = 2.
 
         plt.close()
         plt.pause(0.0001)
@@ -303,20 +309,23 @@ class VisualizationLib():
         if p_map_val is not None:
             try:
                 p_map_val = p_map_val[0, :, :]  # select the original image matrix from the intermediate amplifier matrix and the height matrix
+                if p_map_val.shape[0] == 128: p_map_val_mult = 2.
             except:
-                pass
+                if p_map_val.shape[0] == 128: p_map_val_mult = 2.
             num_subplots += 1
         if p_map_ext is not None:
             try:
                 p_map_ext = p_map_ext[0, :, :]  # select the original image matrix from the intermediate amplifier matrix and the height matrix
+                if p_map_ext.shape[0] == 128: p_map_ext_mult = 2.
             except:
-                pass
+                if p_map_ext.shape[0] == 128: p_map_ext_mult = 2.
             num_subplots += 1
         if p_map_ext2 is not None:
             try:
                 p_map_ext2 = p_map_ext2[0, :, :]  # select the original image matrix from the intermediate amplifier matrix and the height matrix
+                if p_map_ext2.shape[0] == 128: p_map_ext2_mult = 2.
             except:
-                pass
+                if p_map_ext2.shape[0] == 128: p_map_ext2_mult = 2.
             num_subplots += 1
 
 
@@ -327,12 +336,10 @@ class VisualizationLib():
 
         plt.pause(0.0001)
 
-        xlim = [-10.0, 37.0]
-        ylim = [74.0, -10.0]
 
         ax1 = fig.add_subplot(1, num_subplots, 1)
-        ax1.set_xlim(xlim)
-        ax1.set_ylim(ylim)
+        ax1.set_xlim([-10.0*p_map_mult, 37.0*p_map_mult])
+        ax1.set_ylim([74.0*p_map_mult, -10.0*p_map_mult])
         ax1.set_facecolor('cyan')
         ax1.imshow(p_map, interpolation='nearest', cmap=
         plt.cm.jet, origin='upper', vmin=0, vmax=100)
@@ -343,8 +350,8 @@ class VisualizationLib():
 
         if p_map_val is not None:
             ax2 = fig.add_subplot(1, num_subplots, 2)
-            ax2.set_xlim(xlim)
-            ax2.set_ylim(ylim)
+            ax2.set_xlim([-10.0*p_map_val_mult, 37.0*p_map_val_mult])
+            ax2.set_ylim([74.0*p_map_val_mult, -10.0*p_map_val_mult])
             ax2.set_facecolor('cyan')
             ax2.imshow(p_map_val, interpolation='nearest', cmap=
             plt.cm.jet, origin='upper', vmin=0, vmax=100)
@@ -352,8 +359,8 @@ class VisualizationLib():
 
         if p_map_ext is not None:
             ax3 = fig.add_subplot(1, num_subplots, 3)
-            ax3.set_xlim(xlim)
-            ax3.set_ylim(ylim)
+            ax3.set_xlim([-10.0*p_map_ext_mult, 37.0*p_map_ext_mult])
+            ax3.set_ylim([74.0*p_map_ext_mult, -10.0*p_map_ext_mult])
             ax3.set_facecolor('cyan')
             ax3.imshow(p_map_ext, interpolation='nearest', cmap=
             plt.cm.jet, origin='upper', vmin=0, vmax=100)
@@ -361,8 +368,8 @@ class VisualizationLib():
 
         if p_map_ext2 is not None:
             ax4 = fig.add_subplot(1, num_subplots, 4)
-            ax4.set_xlim(xlim)
-            ax4.set_ylim(ylim)
+            ax4.set_xlim([-10.0*p_map_ext2_mult, 37.0*p_map_ext2_mult])
+            ax4.set_ylim([74.0*p_map_ext2_mult, -10.0*p_map_ext2_mult])
             ax4.set_facecolor('cyan')
             ax4.imshow(p_map_ext2, interpolation='nearest', cmap=
             plt.cm.jet, origin='upper', vmin=0, vmax=100)
@@ -371,28 +378,28 @@ class VisualizationLib():
 
 
         # Visualize targets of training set
-        self.plot_joint_markers(targets_raw, ax1, 'green')
+        self.plot_joint_markers(targets_raw, p_map_mult, ax1, 'green')
 
         #Visualize estimated from training set
-        self.plot_joint_markers(scores_raw, ax1, 'yellow')
+        self.plot_joint_markers(scores_raw, p_map_mult, ax1, 'yellow')
 
         # Visualize targets of validation set
-        self.plot_joint_markers(targets_val, ax2, 'green')
+        self.plot_joint_markers(targets_val, p_map_val_mult, ax2, 'green')
 
         # Visualize estimated from val set
-        self.plot_joint_markers(scores_val, ax2, 'yellow')
+        self.plot_joint_markers(scores_val, p_map_val_mult, ax2, 'yellow')
 
         # Visualize targets of extra set
-        self.plot_joint_markers(targets_ext, ax3, 'green')
+        self.plot_joint_markers(targets_ext, p_map_ext_mult, ax3, 'green')
 
         # Visualize estimated from extra set
-        self.plot_joint_markers(scores_ext, ax3, 'yellow')
+        self.plot_joint_markers(scores_ext, p_map_ext_mult, ax3, 'yellow')
 
         # Visualize targets of extra set
-        self.plot_joint_markers(targets_ext2, ax4, 'green')
+        self.plot_joint_markers(targets_ext2, p_map_ext2_mult, ax4, 'green')
 
         # Visualize estimated from extra set
-        self.plot_joint_markers(scores_ext2, ax4, 'yellow')
+        self.plot_joint_markers(scores_ext2, p_map_ext2_mult, ax4, 'yellow')
 
         axkeep = plt.axes([0.01, 0.05, 0.15, 0.075])
         axdisc = plt.axes([0.01, 0.15, 0.15, 0.075])
@@ -407,7 +414,7 @@ class VisualizationLib():
         return self.skip_image
 
 
-    def plot_joint_markers(self, markers, ax, color):
+    def plot_joint_markers(self, markers, p_map_mult, ax, color):
         if markers is not None:
             if len(np.shape(markers)) == 1:
                 markers = np.reshape(markers, (len(markers) / 3, 3))
@@ -415,6 +422,7 @@ class VisualizationLib():
             target_coord[:, 0] -= 10
             target_coord[:, 1] -= (NUMOFTAXELS_X - 1)
             target_coord[:, 1] *= -1.0
+            target_coord*=p_map_mult
             ax.plot(target_coord[:, 0], target_coord[:, 1], marker = 'o', linestyle='None', markerfacecolor = color, markeredgecolor='black', ms=8)
         plt.pause(0.0001)
 

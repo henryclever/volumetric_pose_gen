@@ -247,28 +247,31 @@ class TensorPrepLib():
                     for i in range(num_repeats):
                         y_flat.append(c)
 
-
-
-
         return y_flat
 
-    def normalize_network_input(self, x, include_mesh_depth_contact_input_est, pmat_mult, cal_noise):
-        if cal_noise == True:
-            pmat_mult = 0
+
+    def normalize_network_input(self, x, CTRL_PNL):
+
+        pmat_mult = int(CTRL_PNL['pmat_mult'])
+
+        if CTRL_PNL['cal_noise'] == True:
+            pmat_mult = int(0)
 
         pmat_std_from_mult = [11.70153502792190, 11.70153502792190, 19.90905848383454, 23.07018866032369, 0.0, 25.50538629767412]
-        sobel_std_from_mult = [43.90279844880366, 29.80360490415032, 33.33532963163579, 34.14427844692501, 0.0, 34.86393494050921]
+        sobel_std_from_mult = [45.61635847182483, 29.80360490415032, 33.33532963163579, 34.14427844692501, 0.0, 34.86393494050921]
 
-        if include_mesh_depth_contact_input_est == True:
+        if CTRL_PNL['depth_map_input_est'] == True:
             normalizing_std_constants = [1./41.80684362163343,  #contact
                                          1./16.69545796387731,  #pos est depth
                                          1./45.08513083167194,  #neg est depth
                                          1./43.55800622930469,  #cm est
-                                         1./pmat_std_from_mult[int(pmat_mult)], #pmat x5
-                                         1./sobel_std_from_mult[int(pmat_mult)], #pmat sobel
+                                         1./pmat_std_from_mult[pmat_mult], #pmat x5
+                                         1./sobel_std_from_mult[pmat_mult], #pmat sobel
                                          1./1.0,                #bed height mat
                                          1./1.0,  #OUTPUT DO NOTHING
                                          1./1.0]  #OUTPUT DO NOTHING
+
+            if CTRL_PNL['cal_noise'] == True: normalizing_std_constants = normalizing_std_constants[1:] #here we don't precompute the contact
 
             for i in range(x.shape[1]):
                 x[:, i, :, :] *= normalizing_std_constants[i]
@@ -280,6 +283,8 @@ class TensorPrepLib():
                                          1./1.0,                #bed height mat
                                          1./1.0,  #OUTPUT DO NOTHING
                                          1./1.0]  #OUTPUT DO NOTHING
+
+            if CTRL_PNL['cal_noise'] == True: normalizing_std_constants = normalizing_std_constants[1:] #here we don't precompute the contact
 
             for i in range(x.shape[1]):
                 x[:, i, :, :] *= normalizing_std_constants[i]

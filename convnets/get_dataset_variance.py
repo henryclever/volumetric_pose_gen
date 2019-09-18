@@ -122,11 +122,19 @@ class PhysicalTrainer():
         self.CTRL_PNL['normalize_input'] = True
         self.CTRL_PNL['all_tanh_activ'] = False
         self.CTRL_PNL['L2_contact'] = False
+        self.CTRL_PNL['pmat_mult'] = int(1)
+        self.CTRL_PNL['cal_noise'] = False
 
 
         if opt.losstype == 'direct':
             self.CTRL_PNL['depth_map_labels'] = False
             self.CTRL_PNL['depth_map_output'] = False
+
+        if self.CTRL_PNL['cal_noise'] == True:
+            self.CTRL_PNL['pmat_mult'] = int(1)
+            self.CTRL_PNL['incl_pmat_cntct_input'] = False #if there's calibration noise we need to recompute this every batch
+            self.CTRL_PNL['clip_sobel'] = False
+
         if self.CTRL_PNL['incl_pmat_cntct_input'] == True:
             self.CTRL_PNL['num_input_channels'] += 1
         if self.CTRL_PNL['depth_map_input_est'] == True: #for a two part regression
@@ -134,6 +142,9 @@ class PhysicalTrainer():
         self.CTRL_PNL['num_input_channels_batch0'] = np.copy(self.CTRL_PNL['num_input_channels'])
         if self.CTRL_PNL['incl_ht_wt_channels'] == True:
             self.CTRL_PNL['num_input_channels'] += 2
+        if self.CTRL_PNL['cal_noise'] == True:
+            self.CTRL_PNL['num_input_channels'] += 1
+
 
         self.CTRL_PNL['filepath_prefix'] = '/home/henry/'
 
@@ -194,20 +205,27 @@ class PhysicalTrainer():
         else:
             self.depth_contact_maps_input_est = None
 
+        self.CTRL_PNL['clip_sobel'] = False
         #stack the bed height array on the pressure image as well as a sobel filtered image
         train_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.train_x_flat,
                                                                                 self.train_a_flat,
-                                                                                self.CTRL_PNL['incl_inter'], self.mat_size,
-                                                                                self.CTRL_PNL['clip_sobel'],
-                                                                                self.CTRL_PNL['verbose'])
+                                                                                self.mat_size,
+                                                                                self.CTRL_PNL)
+
+
+        #print np.shape(train_xa), 'shape@'
+        #train_xa = np.array(train_xa)
+
+        #train_xa[:, 1, :, :] = np.array(PreprocessingLib().preprocessing_blur_images(list(np.array(train_xa)[:, 1, :, :]), self.mat_size, sigma=0.5)).reshape(-1, self.mat_size[0], self.mat_size[1])
+
 
         #stack the depth and contact mesh images (and possibly a pmat contact image) together
         train_xa = TensorPrepLib().append_input_depth_contact(np.array(train_xa),
-                                                              include_pmat_contact = self.CTRL_PNL['incl_pmat_cntct_input'],
+                                                              CTRL_PNL = self.CTRL_PNL,
                                                               mesh_depth_contact_maps_input_est = self.depth_contact_maps_input_est,
-                                                              include_mesh_depth_contact_input_est = self.CTRL_PNL['depth_map_input_est'],
-                                                              mesh_depth_contact_maps = self.depth_contact_maps,
-                                                              include_mesh_depth_contact = self.CTRL_PNL['depth_map_labels'])
+                                                              mesh_depth_contact_maps = self.depth_contact_maps)
+
+
         self.train_x = train_xa
 
 
@@ -518,8 +536,8 @@ if __name__ == "__main__":
 
     opt, args = p.parse_args()
 
-    filepath_prefix = '/media/henry/multimodal_data_2/data/'
-    #filepath_prefix = '/home/henry/data/'
+    #filepath_prefix = '/media/henry/multimodal_data_2/data/'
+    filepath_prefix = '/home/henry/data/'
 
     training_database_file_f = []
     training_database_file_m = []

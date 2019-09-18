@@ -127,7 +127,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['normalize_input'] = True
         self.CTRL_PNL['all_tanh_activ'] = False
         self.CTRL_PNL['L2_contact'] = True
-        self.CTRL_PNL['pmat_mult'] = int(1)
+        self.CTRL_PNL['pmat_mult'] = int(5)
         self.CTRL_PNL['cal_noise'] = True
 
 
@@ -141,9 +141,11 @@ class PhysicalTrainer():
         if opt.losstype == 'direct':
             self.CTRL_PNL['depth_map_labels'] = False
             self.CTRL_PNL['depth_map_output'] = False
+
         if self.CTRL_PNL['cal_noise'] == True:
             self.CTRL_PNL['pmat_mult'] = int(1)
             self.CTRL_PNL['incl_pmat_cntct_input'] = False #if there's calibration noise we need to recompute this every batch
+            self.CTRL_PNL['clip_sobel'] = False
 
         if self.CTRL_PNL['incl_pmat_cntct_input'] == True:
             self.CTRL_PNL['num_input_channels'] += 1
@@ -152,6 +154,9 @@ class PhysicalTrainer():
         self.CTRL_PNL['num_input_channels_batch0'] = np.copy(self.CTRL_PNL['num_input_channels'])
         if self.CTRL_PNL['incl_ht_wt_channels'] == True:
             self.CTRL_PNL['num_input_channels'] += 2
+        if self.CTRL_PNL['cal_noise'] == True:
+            self.CTRL_PNL['num_input_channels'] += 1
+
 
         if self.opt.aws == True:
             self.CTRL_PNL['filepath_prefix'] = '/home/ubuntu/'
@@ -184,6 +189,8 @@ class PhysicalTrainer():
             self.save_name += '_alltanh'
         if self.CTRL_PNL['L2_contact'] == True:
             self.save_name += '_l2cnt'
+        if self.CTRL_PNL['cal_noise'] == True:
+            self.save_name += '_calnoise'
 
 
         # self.save_name = '_' + opt.losstype+'_real_s9_alltest_' + str(self.CTRL_PNL['batch_size']) + 'b_'# + str(self.CTRL_PNL['num_epochs']) + 'e'
@@ -241,10 +248,8 @@ class PhysicalTrainer():
         #stack the bed height array on the pressure image as well as a sobel filtered image
         train_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.train_x_flat,
                                                                                 self.train_a_flat,
-                                                                                self.CTRL_PNL['incl_inter'], self.mat_size,
-                                                                                self.CTRL_PNL['clip_sobel'],
-                                                                                self.CTRL_PNL['cal_noise'],
-                                                                                self.CTRL_PNL['verbose'])
+                                                                                self.mat_size,
+                                                                                self.CTRL_PNL)
 
         #stack the depth and contact mesh images (and possibly a pmat contact image) together
         train_xa = TensorPrepLib().append_input_depth_contact(np.array(train_xa),
@@ -254,7 +259,7 @@ class PhysicalTrainer():
 
         #normalize the input
         if self.CTRL_PNL['normalize_input'] == True:
-            train_xa = TensorPrepLib().normalize_network_input(train_xa, include_mesh_depth_contact_input_est = self.CTRL_PNL['depth_map_input_est'], pmat_mult = self.CTRL_PNL['pmat_mult'])
+            train_xa = TensorPrepLib().normalize_network_input(train_xa, self.CTRL_PNL)
 
         self.train_x_tensor = torch.Tensor(train_xa)
 
@@ -334,9 +339,8 @@ class PhysicalTrainer():
 
         test_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.test_x_flat,
                                                                                self.test_a_flat,
-                                                                               self.CTRL_PNL['incl_inter'], self.mat_size,
-                                                                               self.CTRL_PNL['clip_sobel'],
-                                                                               self.CTRL_PNL['verbose'])
+                                                                                self.mat_size,
+                                                                                self.CTRL_PNL)
 
 
         test_xa = TensorPrepLib().append_input_depth_contact(np.array(test_xa),
@@ -346,7 +350,7 @@ class PhysicalTrainer():
 
         #normalize the input
         if self.CTRL_PNL['normalize_input'] == True:
-            test_xa = TensorPrepLib().normalize_network_input(test_xa, include_mesh_depth_contact_input_est = self.CTRL_PNL['depth_map_input_est'], pmat_mult = self.CTRL_PNL['pmat_mult'])
+            test_xa = TensorPrepLib().normalize_network_input(test_xa, self.CTRL_PNL)
 
         self.test_x_tensor = torch.Tensor(test_xa)
 
@@ -541,7 +545,7 @@ class PhysicalTrainer():
                     val_n_batches = 4
                     print "evaluating on ", val_n_batches
 
-                    im_display_idx = random.randint(0,127)
+                    im_display_idx = random.randint(0,INPUT_DICT['batch_images'].size()[0])
 
 
                     if GPU == True:
@@ -559,8 +563,8 @@ class PhysicalTrainer():
                                                      16.69545796387731,  #pos est depth
                                                      45.08513083167194,  #neg est depth
                                                      43.55800622930469,  #cm est
-                                                     25.50538629767412, #pmat x5
-                                                     34.86393494050921] #pmat sobel
+                                                     11.70153502792190, #pmat cal noise
+                                                     45.61635847182483] #pmat sobel
 
                     else:
                         normalizing_std_constants = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
@@ -572,8 +576,9 @@ class PhysicalTrainer():
                         self.im_sample_ext2 = INPUT_DICT['batch_mdm'][im_display_idx, :, :].squeeze().unsqueeze(0)*-1 #ground truth depth
                         self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][im_display_idx, :, :].squeeze().unsqueeze(0)*-1 #est depth output
                     else:
-                        self.im_sample = INPUT_DICT['batch_images'][im_display_idx, 1:, :].squeeze()*normalizing_std_constants[4]  #pmat
-                        self.im_sample_ext = INPUT_DICT['batch_images'][im_display_idx, 0:, :].squeeze()*normalizing_std_constants[0]  #pmat contact
+                        self.im_sample = INPUT_DICT['batch_images'][im_display_idx, 1:, :].squeeze()*20.#normalizing_std_constants[4]*5.  #pmat
+                        self.im_sample_ext = INPUT_DICT['batch_images'][im_display_idx, 0:, :].squeeze()*20.#normalizing_std_constants[0]  #pmat contact
+                        #self.im_sample_ext2 = INPUT_DICT['batch_images'][im_display_idx, 2:, :].squeeze()*20.#normalizing_std_constants[4]  #sobel
                         self.im_sample_ext2 = INPUT_DICT['batch_mdm'][im_display_idx, :, :].squeeze().unsqueeze(0)*-1 #ground truth depth
                         self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][im_display_idx, :, :].squeeze().unsqueeze(0)*-1 #est depth output
 
@@ -869,7 +874,7 @@ if __name__ == "__main__":
     if opt.quick_test == True:
         #training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_f_lay_4000_none_stiff_output0p5.p')
         test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_f_lay_1000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random/test_rollpi_f_lay_1000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random/test_roll0_f_lay_1000_none_stiff'+filepath_suffix+'.p')
     else:
         training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_f_lay_4000_none_stiff'+filepath_suffix+'.p')
         training_database_file_f.append(filepath_prefix+'synth/random/train_rollpi_f_lay_4000_none_stiff'+filepath_suffix+'.p')

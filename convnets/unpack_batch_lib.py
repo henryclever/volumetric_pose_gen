@@ -109,20 +109,28 @@ class UnpackBatchLib():
         #                                                            extra_targets=extra_targets,
         #                                                            extra_smpl_angles = extra_smpl_angles)
 
-        images_up_non_tensor = PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2)
 
-        if is_training == True: #only add noise to training images
-            images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(images_up_non_tensor),
-                                                                                    pmat_chan_idx = (CTRL_PNL['num_input_channels_batch0']-3))
 
+        images_up_non_tensor = np.array(batch[0].numpy())
 
         #here perform synthetic calibration noise over pmat and sobel filtered pmat.
-        if is_training == True and CTRL_PNL['cal_noise'] == True:
-            images_up_non_tensor = PreprocessingLib().preprocessing_add_calibration_noise(np.array(images_up_non_tensor),
+        if CTRL_PNL['cal_noise'] == True:
+            images_up_non_tensor = PreprocessingLib().preprocessing_add_calibration_noise(images_up_non_tensor,
+                                                                                          pmat_chan_idx = (CTRL_PNL['num_input_channels_batch0']-3),
+                                                                                          is_training = is_training)
+
+
+
+
+        images_up_non_tensor = PreprocessingLib().preprocessing_pressure_map_upsample(images_up_non_tensor, multiple=2)
+
+        if is_training == True: #only add noise to training images
+            if CTRL_PNL['cal_noise'] == False:
+                images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(images_up_non_tensor),
                                                                                     pmat_chan_idx = (CTRL_PNL['num_input_channels_batch0']-3))
-
-
-
+            else:
+                images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(images_up_non_tensor),
+                                                                                    pmat_chan_idx = (CTRL_PNL['num_input_channels_batch0']-2))
 
         images_up = Variable(torch.Tensor(images_up_non_tensor).type(CTRL_PNL['dtype']), requires_grad=False)
 
@@ -137,9 +145,8 @@ class UnpackBatchLib():
             images_up = torch.cat((images_up, weight_input, height_input), 1)
 
 
-        images, targets, betas = Variable(batch[0].type(CTRL_PNL['dtype']), requires_grad=False), \
-                                 Variable(batch[1].type(CTRL_PNL['dtype']), requires_grad=False), \
-                                 Variable(batch[2].type(CTRL_PNL['dtype']), requires_grad=False)
+        targets, betas = Variable(batch[1].type(CTRL_PNL['dtype']), requires_grad=False), \
+                         Variable(batch[2].type(CTRL_PNL['dtype']), requires_grad=False)
 
         angles_gt = Variable(batch[3].type(CTRL_PNL['dtype']), requires_grad=is_training)
         root_shift = Variable(batch[4].type(CTRL_PNL['dtype']), requires_grad=is_training)
@@ -193,7 +200,7 @@ class UnpackBatchLib():
         #OUTPUT_DICT['batch_betas_est'] = betas_est_np
 
 
-        INPUT_DICT['batch_images'] = images.data
+        INPUT_DICT['batch_images'] = images_up.data
         INPUT_DICT['batch_targets'] = targets.data
 
         return scores, INPUT_DICT, OUTPUT_DICT
