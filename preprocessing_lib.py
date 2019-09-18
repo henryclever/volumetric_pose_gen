@@ -85,6 +85,12 @@ class PreprocessingLib():
         return images
 
 
+    def preprocessing_add_calibration_noise(self, images, pmat_chan_idx):
+        print pmat_chan_idx
+
+        return images
+
+
     def preprocessing_pressure_array_resize(self, data, mat_size, verbose):
         '''Will resize all elements of the dataset into the dimensions of the
         pressure map'''
@@ -127,7 +133,6 @@ class PreprocessingLib():
 
         p_map_dataset.append([p_map, p_map_inter, a_map])
 
-
         return p_map_dataset
 
 
@@ -146,8 +151,13 @@ class PreprocessingLib():
 
 
 
-    def preprocessing_create_pressure_angle_stack(self,x_data, a_data, include_inter, mat_size, clip_sobel, verbose):
+    def preprocessing_create_pressure_angle_stack(self,x_data, a_data, include_inter, mat_size, clip_sobel, cal_noise, verbose):
         '''This is for creating a 2-channel input using the height of the bed. '''
+
+        if cal_noise == True:
+            sobel_max = 1000.
+        else:
+            sobel_max = 100.
 
         if verbose: print np.max(x_data)
         x_data = np.clip(x_data, 0, 100)
@@ -186,7 +196,7 @@ class PreprocessingLib():
                 sy = ndimage.sobel(p_map, axis=1, mode='constant')
                 p_map_inter = np.hypot(sx, sy)
                 if clip_sobel == True:
-                    p_map_inter = np.clip(p_map_inter, a_min=0, a_max = 100)
+                    p_map_inter = np.clip(p_map_inter, a_min=0, a_max = sobel_max)
                 p_map_dataset.append([p_map, p_map_inter, a_map])
             else:
                 p_map_dataset.append([p_map, a_map])

@@ -114,6 +114,16 @@ class UnpackBatchLib():
         if is_training == True: #only add noise to training images
             images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(images_up_non_tensor),
                                                                                     pmat_chan_idx = (CTRL_PNL['num_input_channels_batch0']-3))
+
+
+        #here perform synthetic calibration noise over pmat and sobel filtered pmat.
+        if is_training == True and CTRL_PNL['cal_noise'] == True:
+            images_up_non_tensor = PreprocessingLib().preprocessing_add_calibration_noise(np.array(images_up_non_tensor),
+                                                                                    pmat_chan_idx = (CTRL_PNL['num_input_channels_batch0']-3))
+
+
+
+
         images_up = Variable(torch.Tensor(images_up_non_tensor).type(CTRL_PNL['dtype']), requires_grad=False)
 
 

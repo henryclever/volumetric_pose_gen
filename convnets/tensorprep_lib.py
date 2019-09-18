@@ -127,25 +127,19 @@ class TensorPrepLib():
                         depth_contact_input_est_list.append([mdm_est_pos, mdm_est_neg, dat['cm_est'][entry]*100, ])
         return depth_contact_input_est_list
 
-    def append_input_depth_contact(self, train_xa, include_pmat_contact = False,
-                                   mesh_depth_contact_maps_input_est = None, include_mesh_depth_contact_input_est = False,
-                                   mesh_depth_contact_maps = None, include_mesh_depth_contact = False):
-
-
-        if include_pmat_contact == True:
+    def append_input_depth_contact(self, train_xa, CTRL_PNL, mesh_depth_contact_maps_input_est = None, mesh_depth_contact_maps = None):
+        if CTRL_PNL['incl_pmat_cntct_input'] == True:
             train_contact = np.copy(train_xa[:, 0:1, :, :]) #get the pmat contact map
             train_contact[train_contact > 0] = 100.
 
-        if include_mesh_depth_contact_input_est == True:
+        if CTRL_PNL['depth_map_input_est'] == True:
             mesh_depth_contact_maps_input_est = np.array(mesh_depth_contact_maps_input_est)
             train_xa = np.concatenate((mesh_depth_contact_maps_input_est, train_xa), axis = 1)
 
-
-        if include_pmat_contact == True:
+        if CTRL_PNL['incl_pmat_cntct_input'] == True:
             train_xa = np.concatenate((train_contact, train_xa), axis=1)
 
-
-        if include_mesh_depth_contact == True:
+        if CTRL_PNL['depth_map_labels'] == True:
             mesh_depth_contact_maps = np.array(mesh_depth_contact_maps)
             train_xa = np.concatenate((train_xa, mesh_depth_contact_maps), axis=1)
 
@@ -258,9 +252,12 @@ class TensorPrepLib():
 
         return y_flat
 
-    def normalize_network_input(self, x, include_mesh_depth_contact_input_est, pmat_mult):
-        pmat_std_from_mult = [0.0, 11.70153502792190, 19.90905848383454, 23.07018866032369, 0.0, 25.50538629767412]
-        sobel_std_from_mult = [0.0, 29.80360490415032, 33.33532963163579, 34.14427844692501, 0.0, 34.86393494050921]
+    def normalize_network_input(self, x, include_mesh_depth_contact_input_est, pmat_mult, cal_noise):
+        if cal_noise == True:
+            pmat_mult = 0
+
+        pmat_std_from_mult = [11.70153502792190, 11.70153502792190, 19.90905848383454, 23.07018866032369, 0.0, 25.50538629767412]
+        sobel_std_from_mult = [43.90279844880366, 29.80360490415032, 33.33532963163579, 34.14427844692501, 0.0, 34.86393494050921]
 
         if include_mesh_depth_contact_input_est == True:
             normalizing_std_constants = [1./41.80684362163343,  #contact

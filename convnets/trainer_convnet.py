@@ -128,6 +128,11 @@ class PhysicalTrainer():
         self.CTRL_PNL['all_tanh_activ'] = False
         self.CTRL_PNL['L2_contact'] = True
         self.CTRL_PNL['pmat_mult'] = int(1)
+        self.CTRL_PNL['cal_noise'] = True
+
+
+
+
 
 
         self.weight_joints = self.opt.j_d_ratio*2
@@ -136,6 +141,10 @@ class PhysicalTrainer():
         if opt.losstype == 'direct':
             self.CTRL_PNL['depth_map_labels'] = False
             self.CTRL_PNL['depth_map_output'] = False
+        if self.CTRL_PNL['cal_noise'] == True:
+            self.CTRL_PNL['pmat_mult'] = int(1)
+            self.CTRL_PNL['incl_pmat_cntct_input'] = False #if there's calibration noise we need to recompute this every batch
+
         if self.CTRL_PNL['incl_pmat_cntct_input'] == True:
             self.CTRL_PNL['num_input_channels'] += 1
         if self.CTRL_PNL['depth_map_input_est'] == True: #for a two part regression
@@ -204,7 +213,9 @@ class PhysicalTrainer():
         self.train_x_flat = TensorPrepLib().prep_images(self.train_x_flat, dat_f_synth, dat_m_synth, num_repeats = 1)
         self.train_x_flat = list(np.clip(np.array(self.train_x_flat) * float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100))
         self.train_x_flat = TensorPrepLib().prep_images(self.train_x_flat, dat_f_real, dat_m_real, num_repeats = repeat_real_data_ct)
-        self.train_x_flat = PreprocessingLib().preprocessing_blur_images(self.train_x_flat, self.mat_size, sigma=0.5)
+
+        if self.CTRL_PNL['cal_noise'] == False:
+            self.train_x_flat = PreprocessingLib().preprocessing_blur_images(self.train_x_flat, self.mat_size, sigma=0.5)
 
         if len(self.train_x_flat) == 0: print("NO TRAINING DATA INCLUDED")
 
@@ -232,15 +243,14 @@ class PhysicalTrainer():
                                                                                 self.train_a_flat,
                                                                                 self.CTRL_PNL['incl_inter'], self.mat_size,
                                                                                 self.CTRL_PNL['clip_sobel'],
+                                                                                self.CTRL_PNL['cal_noise'],
                                                                                 self.CTRL_PNL['verbose'])
 
         #stack the depth and contact mesh images (and possibly a pmat contact image) together
         train_xa = TensorPrepLib().append_input_depth_contact(np.array(train_xa),
-                                                              include_pmat_contact = self.CTRL_PNL['incl_pmat_cntct_input'],
+                                                              CTRL_PNL = self.CTRL_PNL,
                                                               mesh_depth_contact_maps_input_est = self.depth_contact_maps_input_est,
-                                                              include_mesh_depth_contact_input_est = self.CTRL_PNL['depth_map_input_est'],
-                                                              mesh_depth_contact_maps = self.depth_contact_maps,
-                                                              include_mesh_depth_contact = self.CTRL_PNL['depth_map_labels'])
+                                                              mesh_depth_contact_maps = self.depth_contact_maps)
 
         #normalize the input
         if self.CTRL_PNL['normalize_input'] == True:
@@ -294,7 +304,9 @@ class PhysicalTrainer():
         self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, test_dat_f_synth, test_dat_m_synth, num_repeats = 1)
         self.test_x_flat = list(np.clip(np.array(self.test_x_flat) * float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100))
         self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, test_dat_f_real, test_dat_m_real, num_repeats = 1)
-        self.test_x_flat = PreprocessingLib().preprocessing_blur_images(self.test_x_flat, self.mat_size, sigma=0.5)
+
+        if self.CTRL_PNL['cal_noise'] == False:
+            self.test_x_flat = PreprocessingLib().preprocessing_blur_images(self.test_x_flat, self.mat_size, sigma=0.5)
 
         if len(self.test_x_flat) == 0: print("NO TESTING DATA INCLUDED")
 
@@ -326,12 +338,11 @@ class PhysicalTrainer():
                                                                                self.CTRL_PNL['clip_sobel'],
                                                                                self.CTRL_PNL['verbose'])
 
+
         test_xa = TensorPrepLib().append_input_depth_contact(np.array(test_xa),
-                                                              include_pmat_contact = self.CTRL_PNL['incl_pmat_cntct_input'],
+                                                              CTRL_PNL = self.CTRL_PNL,
                                                               mesh_depth_contact_maps_input_est = self.depth_contact_maps_input_est,
-                                                              include_mesh_depth_contact_input_est = self.CTRL_PNL['depth_map_input_est'],
-                                                              mesh_depth_contact_maps = self.depth_contact_maps,
-                                                              include_mesh_depth_contact = self.CTRL_PNL['depth_map_labels_test'])
+                                                              mesh_depth_contact_maps = self.depth_contact_maps)
 
         #normalize the input
         if self.CTRL_PNL['normalize_input'] == True:
