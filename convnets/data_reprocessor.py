@@ -189,6 +189,11 @@ def reprocess_synth_data():
                       ["m", "lay", "none", 1000, 1181, "pi", "set3", "train", "_plo"],
                       ["m", "lay", "none", 1000, 1192, "pi", "set4", "train", "_plo"]]
     all_data_names = [["m", "lay", "none", 1000, 1169, "pi", "TEST", "test", "_plo"]]
+    all_data_names = [["m", "lay", "none", 2000, 2043, "0", "set5", "train", ""],
+                      ["m", "lay", "none", 2000, 2048, "0", "set6", "train", ""],
+                      ["m", "lay", "none", 2000, 2054, "0", "set7", "train", ""],
+                      ["m", "lay", "none", 2000, 2040, "0", "set8", "train", ""],
+                      ["m", "lay", "none", 2000, 2042, "0", "set9", "train", ""],]
 
     num_data_points = 0
 
@@ -246,12 +251,12 @@ def reprocess_synth_data():
         # print m.pose
         # print "J x trans", m.J_transformed[:, 0]
 
-        resting_pose_data_list = np.load('/media/henry/multimodal_data_2/data/resting_poses/random/resting_pose_roll' + roll
+        resting_pose_data_list = np.load('/home/henry/data/resting_poses/random2/resting_pose_roll' + roll
                                          + isplo + '_'
                                          + gender + '_' + posture + '_' + set + '_' + str(num_resting_poses) + '_of_'
                                          + str(num_resting_poses_tried) + '_' + stiffness + '_stiff.npy', allow_pickle=True)
 
-        training_database_pmat_height_list = np.load('/media/henry/multimodal_data_2/data/pmat_height/random/pmat_height_roll' + roll
+        training_database_pmat_height_list = np.load('/home/henry/data/pmat_height/random2/pmat_height_roll' + roll
                                          + isplo + '_'
                                          + gender + '_' + posture + '_' + set + '_' + str(num_resting_poses)
                                          + '_' + stiffness + '_stiff.npy', allow_pickle=True)
@@ -259,12 +264,12 @@ def reprocess_synth_data():
 
 
         print len(resting_pose_data_list), len(training_database_pmat_height_list[0])
+        print np.shape(training_database_pmat_height_list[0])
 
         for resting_pose_data_ct in range(len(resting_pose_data_list)):
             num_data_points += 1
             resting_pose_data = resting_pose_data_list[resting_pose_data_ct]
             pmat = training_database_pmat_height_list[0, resting_pose_data_ct]
-            height = training_database_pmat_height_list[1, resting_pose_data_ct]
             capsule_angles = resting_pose_data[0].tolist()
             root_joint_pos_list = resting_pose_data[1]
             body_shape_list = resting_pose_data[2]
@@ -272,7 +277,7 @@ def reprocess_synth_data():
 
             # print "shape", body_shape_list
 
-            print np.shape(resting_pose_data), np.shape(pmat), np.shape(height), np.shape(capsule_angles), np.shape(
+            print np.shape(resting_pose_data), np.shape(pmat), np.shape(capsule_angles), np.shape(
                 root_joint_pos_list), np.shape(body_shape_list)
 
             for shape_param in range(10):
@@ -338,7 +343,7 @@ def reprocess_synth_data():
             root_shift_y = root_joint_pos_list[1] + 0.927099 + 10 * INTER_SENSOR_DISTANCE
             # root_shift_z = height
             root_shift_z = root_joint_pos_list[2] - 0.15
-            print height, root_shift_z
+            print root_shift_z
 
             x_positions = np.asarray(m.J_transformed)[:, 0] - np.asarray(m.J_transformed)[0, 0] + root_shift_x
             y_positions = np.asarray(m.J_transformed)[:, 1] - np.asarray(m.J_transformed)[0, 1] + root_shift_y
@@ -370,7 +375,7 @@ def reprocess_synth_data():
     #pickle.dump(training_data_dict, open(os.path.join(
     #    '/home/henry/data/synth/random/train_' + gender + '_' + posture + '_' + str(num_data_points) + '_' + stiffness + '_stiff.p'), 'wb'))
     pickle.dump(training_data_dict, open(os.path.join(
-        '/home/henry/data/synth/random/'+dattype+'_roll' + roll + isplo + '_'
+        '/home/henry/data/synth/random2/'+dattype+'_roll' + roll + isplo + '_'
                                      + gender + '_' + posture + '_' + str(num_data_points)
                                      + '_' + stiffness + '_stiff.p'), 'wb'))
 
@@ -568,7 +573,7 @@ def reprocess_real_data_height_wt():
         pickle.dump(current_data, open(os.path.join(filepath_prefix+filename), 'wb'))
 
 
-def get_contact_map_from_synth():
+def get_depth_cont_maps_from_synth():
     all_data_names = [["m", "lay", "none", 4000, "0", "train", "_plo"]]
 
     from visualization_lib import VisualizationLib
@@ -761,7 +766,7 @@ def get_contact_map_from_synth():
 
         filename =  '/home/henry/data/synth/random/' + dattype + '_roll' + roll + isplo + '_' \
                     + gender + '_' + posture + '_' + str(num_data_points) \
-                    + '_' + stiffness + '_stiff_wmaps.p'
+                    + '_' + stiffness + '_stiff.p'
 
         pickle.dump(training_data_dict, open(os.path.join(filename), 'wb'))
 
@@ -769,7 +774,7 @@ def get_contact_map_from_synth():
 
 
 if __name__ == "__main__":
-    get_contact_map_from_synth()
-    #reprocess_synth_data()
+    #get_depth_cont_maps_from_synth()
+    reprocess_synth_data()
     #get_direct_synth_marker_offsets()
 

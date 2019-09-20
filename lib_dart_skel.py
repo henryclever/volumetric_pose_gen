@@ -16,7 +16,7 @@ import sys
 from pydart2.gui.opengl.scene import OpenGLScene
 from time import time
 
-KEEP_ORIGINAL_ARM_POSE = True
+KEEP_ORIGINAL_ARM_POSE = False
 
 class LibDartSkel():
 
@@ -171,6 +171,7 @@ class LibDartSkel():
             l_leg_stiffness = 6.0*bm_fraction*1.
             r_knee_stiffness = 3.0*bm_fraction*1.
             l_knee_stiffness = 3.0*bm_fraction*1.
+
 
 
         for joint in skel.joints:

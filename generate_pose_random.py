@@ -589,7 +589,7 @@ class GeneratePose():
         else:
             hbh = ""
 
-        np.save(self.filepath_prefix+"/data/init_poses/all_rand_nom_endhtbicheck_roll"+rp+plo+hbh+"_"+gender+"_"+posture+"_"+str(num_data)+"_set"+str(set)+".npy", np.array(shape_pose_vol_list))
+        np.save(self.filepath_prefix+"/data/init_poses/all_rand_nom_endhtbicheck_roll"+rp+plo+hbh+"_"+gender+"_"+posture+"_set"+str(set)+"_"+str(num_data)+".npy", np.array(shape_pose_vol_list))
 
 
 
@@ -787,9 +787,13 @@ class GeneratePose():
             left_arm_chosen = False
             self.try_idx = 0
             while left_arm_chosen == False:
-                ls_roll = np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4))
+                if hands_behind_head == True:
+                    ls_roll = np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4+45.))
+                    ls_pitch = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(80.4+45.))
+                else:
+                    ls_roll = np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4))
+                    ls_pitch = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(80.4))
                 ls_yaw = np.random.uniform(np.deg2rad(-140.7), np.deg2rad(43.7))
-                ls_pitch = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(80.4))
 
                 self.m.pose[39] = ls_roll*1/3
                 self.m.pose[40] = ls_yaw*1/3
@@ -826,9 +830,13 @@ class GeneratePose():
             right_arm_chosen = False
             self.try_idx = 0
             while right_arm_chosen == False:
-                rs_roll = np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4))
+                if hands_behind_head == True:
+                    rs_roll = np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4+45.))
+                    rs_pitch = np.random.uniform(np.deg2rad(-(80.4+45.)), np.deg2rad(90.0))
+                else:
+                    rs_roll = np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4))
+                    rs_pitch = np.random.uniform(np.deg2rad(-80.4), np.deg2rad(90.0))
                 rs_yaw = np.random.uniform(np.deg2rad(-43.7), np.deg2rad(140.7))
-                rs_pitch = np.random.uniform(np.deg2rad(-80.4), np.deg2rad(90.0))
 
                 self.m.pose[42] = rs_roll*1/3
                 self.m.pose[43] = rs_yaw*1/3
@@ -859,7 +867,6 @@ class GeneratePose():
                         mJtransformed_red = np.stack((mJtransformed[19, :], mJtransformed[21, :], mJtransformed[23, :]))
                         right_arm_chosen = self.check_limb_overhang(mJ=mJ, mJtransformed_red=mJtransformed_red, shift=shift, limb_tag='right_arm')
 
-            print mJtransformed[21, 2] - mJtransformed[17, 2]
 
         #self.m.pose[51] = selection_r
         from capsule_body import get_capsules, joint2name, rots0
@@ -882,7 +889,7 @@ class GeneratePose():
 
 
 if __name__ == "__main__":
-    gender = 'f'
+    gender = 'm'
 
 
     generator = GeneratePose(sampling = "UNIFORM", sigma = 0, one_side_range = 0, gender=gender)
@@ -891,7 +898,7 @@ if __name__ == "__main__":
     #generator.solve_ik_tree_smpl()
 
     #generator.read_precomp_set(gender=gender)
-    generator.generate_rand_dir_cos(gender=gender, posture='lay', num_data=2300, roll_person = True, set = 11, prevent_limb_overhang = True, hands_behind_head=False)
+    generator.generate_rand_dir_cos(gender=gender, posture='lay', num_data=250, roll_person = False, set = 15, prevent_limb_overhang = True, hands_behind_head=True)
 
     #generator.save_yash_data_with_angles(posture)
     #generator.map_euler_angles_to_axis_angle()
