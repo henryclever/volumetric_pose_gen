@@ -15,6 +15,7 @@ import lib_kinematics as libKinematics
 import lib_render as libRender
 from process_yash_data import ProcessYashData
 from preprocessing_lib import PreprocessingLib
+from tensorprep_lib import TensorPrepLib
 import dart_skel_sim
 from time import sleep
 import rospy
@@ -92,7 +93,7 @@ class GeneratePose():
 
         self.CTRL_PNL = {}
         self.CTRL_PNL['batch_size'] = 1
-        self.CTRL_PNL['loss_vector_type'] = 'anglesEU'
+        self.CTRL_PNL['loss_vector_type'] = 'anglesDC' #'anglesEU'
         self.CTRL_PNL['verbose'] = False
         self.CTRL_PNL['num_epochs'] = 101
         self.CTRL_PNL['incl_inter'] = True
@@ -100,6 +101,7 @@ class GeneratePose():
         self.CTRL_PNL['incl_ht_wt_channels'] = True
         self.CTRL_PNL['incl_pmat_cntct_input'] = True
         self.CTRL_PNL['num_input_channels'] = 3
+        self.CTRL_PNL['lock_root'] = False
         self.CTRL_PNL['GPU'] = True
         self.CTRL_PNL['dtype'] = torch.cuda.FloatTensor
         self.CTRL_PNL['repeat_real_data_ct'] = 1
@@ -111,13 +113,19 @@ class GeneratePose():
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
         self.CTRL_PNL['mesh_bottom_dist'] = True
-        self.CTRL_PNL['full_body_rot'] = True
-        self.CTRL_PNL['normalize_input'] = False
+        self.CTRL_PNL['full_body_rot'] = True#False
+        self.CTRL_PNL['normalize_input'] = True#False
         self.CTRL_PNL['all_tanh_activ'] = False
-        self.CTRL_PNL['L2_contact'] = False
+        self.CTRL_PNL['L2_contact'] = True#False
+        self.CTRL_PNL['pmat_mult'] = int(5)
+        self.CTRL_PNL['cal_noise'] = True#False
 
 
-        self.count = 0
+
+        if self.CTRL_PNL['cal_noise'] == True:
+            self.CTRL_PNL['pmat_mult'] = int(1)
+            self.CTRL_PNL['incl_pmat_cntct_input'] = False #if there's calibration noise we need to recompute this every batch
+            self.CTRL_PNL['clip_sobel'] = False
 
         if self.CTRL_PNL['incl_pmat_cntct_input'] == True:
             self.CTRL_PNL['num_input_channels'] += 1
@@ -126,13 +134,15 @@ class GeneratePose():
         self.CTRL_PNL['num_input_channels_batch0'] = np.copy(self.CTRL_PNL['num_input_channels'])
         if self.CTRL_PNL['incl_ht_wt_channels'] == True:
             self.CTRL_PNL['num_input_channels'] += 2
+        if self.CTRL_PNL['cal_noise'] == True:
+            self.CTRL_PNL['num_input_channels'] += 1
 
         self.CTRL_PNL['filepath_prefix'] = '/home/henry/'
-        self.CTRL_PNL['aws'] = False
-        self.CTRL_PNL['lock_root'] = False
 
+        if self.CTRL_PNL['depth_map_output'] == True:  # we need all the vertices if we're going to regress the depth maps
+            self.verts_list = "all"
 
-
+        self.TPL = TensorPrepLib()
 
     def bed_config_callback(self, msg):
         '''This callback accepts incoming pressure map from
@@ -308,27 +318,35 @@ class GeneratePose():
             if filename2 is not None:
                 model2 = torch.load(filename2)
                 model2 = model2.cuda().eval()
+            else:
+                model2 = None
 
         else:
             model = torch.load(filename1, map_location='cpu').eval()
             if filename2 is not None:
                 model2 = torch.load(filename2, map_location='cpu').eval()
+            else:
+                model2 = None
 
         while not rospy.is_shutdown():
 
 
-            pmat = np.fliplr(np.flipud(np.clip(self.pressure.reshape(mat_size)*5.0, a_min=0, a_max=100)))
+            pmat = np.fliplr(np.flipud(np.clip(self.pressure.reshape(mat_size)*float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100)))
 
-            pmat = gaussian_filter(pmat, sigma= 0.5)
+            if self.CTRL_PNL['cal_noise'] == False:
+                pmat = gaussian_filter(pmat, sigma= 0.5)
 
 
             pmat_stack = PreprocessingLib().preprocessing_create_pressure_angle_stack_realtime(pmat, self.bedangle, mat_size)
-            pmat_stack = np.clip(pmat_stack, a_min=0, a_max=100)
+
+            if self.CTRL_PNL['cal_noise'] == False:
+                pmat_stack = np.clip(pmat_stack, a_min=0, a_max=100)
 
             pmat_stack = np.array(pmat_stack)
-            pmat_contact = np.copy(pmat_stack[:, 0:1, :, :])
-            pmat_contact[pmat_contact > 0] = 100
-            pmat_stack = np.concatenate((pmat_contact, pmat_stack), axis = 1)
+            if self.CTRL_PNL['incl_pmat_cntct_input'] == True:
+                pmat_contact = np.copy(pmat_stack[:, 0:1, :, :])
+                pmat_contact[pmat_contact > 0] = 100
+                pmat_stack = np.concatenate((pmat_contact, pmat_stack), axis = 1)
 
             weight_input = WEIGHT_LBS/2.20462
             height_input = (HEIGHT_IN*0.0254 - 1)*100
@@ -341,8 +359,15 @@ class GeneratePose():
             batch1[:, 160] += weight_input
             batch1[:, 161] += height_input
 
+            if self.CTRL_PNL['normalize_input'] == True:
+                self.CTRL_PNL['depth_map_input_est'] = False
+                pmat_stack = self.TPL.normalize_network_input(pmat_stack, self.CTRL_PNL)
+                batch1 = self.TPL.normalize_wt_ht(batch1)
+
+
             pmat_stack = torch.Tensor(pmat_stack)
             batch1 = torch.Tensor(batch1)
+
 
             batch = []
             batch.append(pmat_stack)
@@ -359,21 +384,23 @@ class GeneratePose():
             mdm_est_neg *= -1
             cm_est = OUTPUT_DICT['batch_cm_est'].clone().unsqueeze(1) * 100
 
-            batch_cor = []
-            batch_cor.append(torch.cat((pmat_stack[:, 0:1, :, :],
-                                      mdm_est_pos.type(torch.FloatTensor),
-                                      mdm_est_neg.type(torch.FloatTensor),
-                                      cm_est.type(torch.FloatTensor),
-                                      pmat_stack[:, 1:, :, :]), dim=1))
 
-            batch_cor.append(torch.cat((batch1,
-                              OUTPUT_DICT['batch_betas_est'].cpu(),
-                              OUTPUT_DICT['batch_angles_est'].cpu(),
-                              OUTPUT_DICT['batch_root_xyz_est'].cpu()), dim = 1))
+            if model2 is not None:
+                batch_cor = []
+                batch_cor.append(torch.cat((pmat_stack[:, 0:1, :, :],
+                                          mdm_est_pos.type(torch.FloatTensor),
+                                          mdm_est_neg.type(torch.FloatTensor),
+                                          cm_est.type(torch.FloatTensor),
+                                          pmat_stack[:, 1:, :, :]), dim=1))
+
+                batch_cor.append(torch.cat((batch1,
+                                  OUTPUT_DICT['batch_betas_est'].cpu(),
+                                  OUTPUT_DICT['batch_angles_est'].cpu(),
+                                  OUTPUT_DICT['batch_root_xyz_est'].cpu()), dim = 1))
 
 
-            self.CTRL_PNL['adjust_ang_from_est'] = True
-            scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch_cor, False, model2, self.CTRL_PNL)
+                self.CTRL_PNL['adjust_ang_from_est'] = True
+                scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch_cor, False, model2, self.CTRL_PNL)
 
             betas_est = np.squeeze(OUTPUT_DICT['batch_betas_est_post_clip'].cpu().numpy())
             angles_est = np.squeeze(OUTPUT_DICT['batch_angles_est_post_clip'])
@@ -410,7 +437,7 @@ class GeneratePose():
             print self.m.r
             print OUTPUT_DICT['verts']
 
-            pyRender.mesh_render_pose_bed_orig(self.m, root_shift_est, self.point_cloud_array, self.pc_isnew, pmat, self.markers, self.bedangle)
+            pyRender.mesh_render_pose_bed_orig(self.m, root_shift_est, self.point_cloud_array, self.pc_isnew, pmat*5./float(self.CTRL_PNL['pmat_mult']), self.markers, self.bedangle)
             self.point_cloud_array = None
 
             #dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix, add_floor = False)
@@ -428,6 +455,8 @@ if __name__ ==  "__main__":
 
     generator = GeneratePose(filepath_prefix)
     #generator.estimate_real_time(filepath_prefix+"/data/synth/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_100e_000005lr.pt",
-    #                             filepath_prefix+"/data/synth/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.pt")
-    generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_201e_0.5rtojtdpth_pmatcntin_100e_00001lr.pt",
-                                 filepath_prefix+"/data/convnets/planesreg_correction/convnet_anglesDC_synth_32000_128b_201e_0.5rtojtdpth_pmatcntin_depthestin_angleadj_50e_00001lr.pt")
+    #                             filepath_prefix+"/data/synth/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.pt") #init sampling from yash dataset
+    #generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_125e_00001lr.pt")
+    generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_l2cnt_calnoise_150e_00001lr.pt")
+    #generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_201e_0.5rtojtdpth_pmatcntin_100e_00001lr.pt",
+    #                             filepath_prefix+"/data/convnets/planesreg_correction/convnet_anglesDC_synth_32000_128b_201e_0.5rtojtdpth_pmatcntin_depthestin_angleadj_50e_00001lr.pt")

@@ -97,131 +97,23 @@ class DataVisualizer():
         from scipy.signal import savgol_filter
         fig = plt.figure()
 
-        plt.subplot(3, 2, 1)
-        plt.title('0.5 joint-to-depth ratio')
-        plt.axis([0,200,2000,3000])
+        plt.subplot(3, 3, 1)
+        plt.title('1.0 joint-to-depth ratio')
+        plt.axis([0,200,2000,8000])
         #plt.yticks([])
-        train_val_loss1 = load_pickle(self.dump_path + '/planesreg/convnet_losses_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_125e_00001lr.p')
+        train_val_loss1 = load_pickle(self.dump_path + '/planesreg/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_100e_000005lr.p')
         for key in train_val_loss1:
             print key
-        #train_val_loss1_cor = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.p')
-        y1 = savgol_filter(train_val_loss1['train_anglesDC_synth_32000_128b_201e_x5pmult_0.5rtojtdpth'], 501, 3)
-        y1_val = savgol_filter(train_val_loss1['val_anglesDC_synth_32000_128b_201e_x5pmult_0.5rtojtdpth'], 501, 3)
-        #corrected_y1 = savgol_filter(train_val_loss1_cor['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'], 501, 3)
+        train_val_loss1_cor = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.p')
+        y1 = savgol_filter(train_val_loss1['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin'], 501, 3)
+        corrected_y1 = savgol_filter(train_val_loss1_cor['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'], 501, 3)
 
-        plt.plot(train_val_loss1['epoch_anglesDC_synth_32000_128b_201e_x5pmult_0.5rtojtdpth'], y1, 'k')
-        plt.plot(train_val_loss1['epoch_anglesDC_synth_32000_128b_201e_x5pmult_0.5rtojtdpth'], y1_val, 'b')
-        #plt.plot(np.array(train_val_loss1_cor['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'])+100,
-        #                  corrected_y1, 'r')
-        plt.legend(['x5 relu', 'x5 relu val'])
+        plt.plot(train_val_loss1['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin'], y1, 'k')
+        plt.plot(np.array(train_val_loss1_cor['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'])+100,
+                          corrected_y1, 'r')
+        plt.legend(['Net 1, lr = 5e-6', 'Net 2, lr = 5e-6, betas reg'])
 
 
-
-
-        plt.subplot(3, 2, 2)
-        plt.title('0.5 joint-to-depth ratio')
-        plt.axis([0,200,2000,3000])
-        #plt.yticks([])
-        train_val_loss1 = load_pickle(self.dump_path + '/planesreg/convnet_losses_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_alltanh_150e_00001lr.p')
-        for key in train_val_loss1:
-            print key
-        #train_val_loss1_cor = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.p')
-        y1 = savgol_filter(train_val_loss1['train_anglesDC_synth_32000_128b_201e_x5pmult_0.5rtojtdpth_alltanh'], 501, 3)
-        y1_val = savgol_filter(train_val_loss1['val_anglesDC_synth_32000_128b_201e_x5pmult_0.5rtojtdpth_alltanh'], 501, 3)
-        #corrected_y1 = savgol_filter(train_val_loss1_cor['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'], 501, 3)
-
-        plt.plot(train_val_loss1['epoch_anglesDC_synth_32000_128b_201e_x5pmult_0.5rtojtdpth_alltanh'], y1, 'k')
-        plt.plot(train_val_loss1['epoch_anglesDC_synth_32000_128b_201e_x5pmult_0.5rtojtdpth_alltanh'], y1_val, 'b')
-        #plt.plot(np.array(train_val_loss1_cor['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'])+100,
-        #                  corrected_y1, 'r')
-        plt.legend(['x5 tanh', 'x5 tanh val'])
-
-
-        plt.subplot(3, 2, 3)
-        plt.title('0.5 joint-to-depth ratio')
-        plt.axis([0,200,2000,3000])
-        #plt.yticks([])
-        train_val_loss1 = load_pickle(self.dump_path + '/planesreg/convnet_losses_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_l2cnt_125e_00001lr.p')
-        for key in train_val_loss1:
-            print key
-        #train_val_loss1_cor = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.p')
-        y1 = savgol_filter(train_val_loss1['train_anglesDC_synth_32000_128b_201e_x5pmult_0.5rtojtdpth_l2cnt'], 501, 3)
-        y1_val = savgol_filter(train_val_loss1['val_anglesDC_synth_32000_128b_201e_x5pmult_0.5rtojtdpth_l2cnt'], 501, 3)
-        #corrected_y1 = savgol_filter(train_val_loss1_cor['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'], 501, 3)
-
-        plt.plot(train_val_loss1['epoch_anglesDC_synth_32000_128b_201e_x5pmult_0.5rtojtdpth_l2cnt'], y1, 'k')
-        plt.plot(train_val_loss1['epoch_anglesDC_synth_32000_128b_201e_x5pmult_0.5rtojtdpth_l2cnt'], y1_val, 'b')
-        #plt.plot(np.array(train_val_loss1_cor['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'])+100,
-        #                  corrected_y1, 'r')
-        plt.legend(['x5 relu l2', 'x5 relu val l2'])
-
-
-
-
-
-        plt.subplot(3, 2, 4)
-        plt.title('0.5 joint-to-depth ratio')
-        plt.axis([0,200,2000,3000])
-        #plt.yticks([])
-        train_val_loss1 = load_pickle(self.dump_path + '/planesreg/convnet_losses_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_125e_00001lr.p')
-        for key in train_val_loss1:
-            print key
-        #train_val_loss1_cor = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.p')
-        y1 = savgol_filter(train_val_loss1['train_anglesDC_synth_32000_128b_201e_x5pmult_0.5rtojtdpth_alltanh_l2cnt'], 501, 3)
-        y1_val = savgol_filter(train_val_loss1['val_anglesDC_synth_32000_128b_201e_x5pmult_0.5rtojtdpth_alltanh_l2cnt'], 501, 3)
-        #corrected_y1 = savgol_filter(train_val_loss1_cor['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'], 501, 3)
-
-        plt.plot(train_val_loss1['epoch_anglesDC_synth_32000_128b_201e_x5pmult_0.5rtojtdpth_alltanh_l2cnt'], y1, 'k')
-        plt.plot(train_val_loss1['epoch_anglesDC_synth_32000_128b_201e_x5pmult_0.5rtojtdpth_alltanh_l2cnt'], y1_val, 'b')
-        #plt.plot(np.array(train_val_loss1_cor['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'])+100,
-        #                  corrected_y1, 'r')
-        plt.legend(['x5 tanh l2', 'x5 tanh val l2'])
-
-
-
-
-        plt.subplot(3, 2, 5)
-        plt.title('0.5 joint-to-depth ratio')
-        plt.axis([0,200,2000,3000])
-        #plt.yticks([])
-        train_val_loss1 = load_pickle(self.dump_path + '/planesreg/convnet_losses_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_l2cnt_calnoise_150e_00001lr.p')
-        for key in train_val_loss1:
-            print key
-        #train_val_loss1_cor = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.p')
-        y1 = savgol_filter(train_val_loss1['train_anglesDC_synth_32000_128b_201e_x1pmult_0.5rtojtdpth_l2cnt_calnoise'], 501, 3)
-        y1_val = savgol_filter(train_val_loss1['val_anglesDC_synth_32000_128b_201e_x1pmult_0.5rtojtdpth_l2cnt_calnoise'], 501, 3)
-        #corrected_y1 = savgol_filter(train_val_loss1_cor['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'], 501, 3)
-
-        plt.plot(train_val_loss1['epoch_anglesDC_synth_32000_128b_201e_x1pmult_0.5rtojtdpth_l2cnt_calnoise'], y1, 'k')
-        plt.plot(train_val_loss1['epoch_anglesDC_synth_32000_128b_201e_x1pmult_0.5rtojtdpth_l2cnt_calnoise'], y1_val, 'b')
-        #plt.plot(np.array(train_val_loss1_cor['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'])+100,
-        #                  corrected_y1, 'r')
-        plt.legend(['x1 relu calnoise l2', 'x1 relu calnoise val l2'])
-
-
-        plt.subplot(3, 2, 6)
-        plt.title('0.5 joint-to-depth ratio')
-        plt.axis([0,200,2000,3000])
-        #plt.yticks([])
-        train_val_loss1 = load_pickle(self.dump_path + '/planesreg/convnet_losses_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_alltanh_l2cnt_calnoise_125e_00001lr.p')
-        for key in train_val_loss1:
-            print key
-        #train_val_loss1_cor = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.p')
-        y1 = savgol_filter(train_val_loss1['train_anglesDC_synth_32000_128b_201e_x1pmult_0.5rtojtdpth_alltanh_l2cnt_calnoise'], 501, 3)
-        y1_val = savgol_filter(train_val_loss1['val_anglesDC_synth_32000_128b_201e_x1pmult_0.5rtojtdpth_alltanh_l2cnt_calnoise'], 501, 3)
-        #corrected_y1 = savgol_filter(train_val_loss1_cor['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'], 501, 3)
-
-        plt.plot(train_val_loss1['epoch_anglesDC_synth_32000_128b_201e_x1pmult_0.5rtojtdpth_alltanh_l2cnt_calnoise'], y1, 'k')
-        plt.plot(train_val_loss1['epoch_anglesDC_synth_32000_128b_201e_x1pmult_0.5rtojtdpth_alltanh_l2cnt_calnoise'], y1_val, 'b')
-        #plt.plot(np.array(train_val_loss1_cor['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'])+100,
-        #                  corrected_y1, 'r')
-        plt.legend(['x1 relu tanh calnoise l2', 'x1 relu tanh calnoise val l2'])
-
-
-        '''
-        
-        
-        
 
 
         plt.subplot(3, 3, 4)
@@ -330,7 +222,7 @@ class DataVisualizer():
         plt.plot(train_val_loss9['epoch_anglesEU_synth_s9_3xreal_128b_201e_0.1rtojtdpth_pmatcntin'], y9, 'k')
         plt.legend(['Net 1, lr = 1e-5'])
 
-        '''
+
 
 
 
@@ -360,8 +252,7 @@ if __name__ == "__main__":
 
     #Path = '/media/henryclever/Seagate Backup Plus Drive/Autobed_OFFICIAL_Trials/'
     #Path = '/home/henry/data/synth/'
-    Path = '/home/henry/data/convnets/'
-    #Path = '/media/henry/multimodal_data_2/data/convnets/'
+    Path = '/media/henry/multimodal_data_2/data/convnets/'
 
     #Initialize trainer with a training database file
     p = DataVisualizer(pkl_directory=Path, opt = opt)

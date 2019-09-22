@@ -574,7 +574,7 @@ def reprocess_real_data_height_wt():
 
 
 def get_depth_cont_maps_from_synth():
-    all_data_names = [["m", "lay", "none", 4000, "0", "train", "_plo"]]
+    all_data_names = [["m", "lay", "none", 10000, "pi", "train", "_plo"]]
 
     from visualization_lib import VisualizationLib
 
@@ -608,7 +608,7 @@ def get_depth_cont_maps_from_synth():
         model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_' + gender + '_lbs_10_207_0_v1.0.0.pkl'
         m = load_model(model_path)
 
-        filename =  '/home/henry/data/synth/random/' + dattype + '_roll' + roll + isplo + '_' \
+        filename =  '/home/henry/data/synth/random2/' + dattype + '_roll' + roll + isplo + '_' \
                     + gender + '_' + posture + '_' + str(num_data_points) \
                     + '_' + stiffness + '_stiff.p'
 
@@ -764,9 +764,9 @@ def get_depth_cont_maps_from_synth():
             #break
 
 
-        filename =  '/home/henry/data/synth/random/' + dattype + '_roll' + roll + isplo + '_' \
+        filename =  '/home/henry/data/synth/random2/' + dattype + '_roll' + roll + isplo + '_' \
                     + gender + '_' + posture + '_' + str(num_data_points) \
-                    + '_' + stiffness + '_stiff.p'
+                    + '_' + stiffness + '_stiff_new.p'
 
         pickle.dump(training_data_dict, open(os.path.join(filename), 'wb'))
 
@@ -774,7 +774,7 @@ def get_depth_cont_maps_from_synth():
 
 
 if __name__ == "__main__":
-    #get_depth_cont_maps_from_synth()
-    reprocess_synth_data()
+    get_depth_cont_maps_from_synth()
+    #reprocess_synth_data()
     #get_direct_synth_marker_offsets()
 

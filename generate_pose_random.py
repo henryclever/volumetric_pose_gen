@@ -889,7 +889,7 @@ class GeneratePose():
 
 
 if __name__ == "__main__":
-    gender = 'm'
+    gender = 'f'
 
 
     generator = GeneratePose(sampling = "UNIFORM", sigma = 0, one_side_range = 0, gender=gender)

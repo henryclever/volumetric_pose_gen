@@ -530,6 +530,8 @@ if __name__ == "__main__":
                         'data/synth/random/train_roll0_plo_m_lay_4000_none_stiff',
                         'data/synth/random/train_rollpi_plo_m_lay_4000_none_stiff',]
 
+    filename_list_f = ['data/synth/random/test_roll0_f_lay_1000_none_stiff']
+
     for filename in filename_list_f:
 
         test_database_file_f = []
