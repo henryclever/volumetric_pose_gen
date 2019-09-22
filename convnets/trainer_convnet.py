@@ -409,8 +409,8 @@ class PhysicalTrainer():
             if self.CTRL_PNL['full_body_rot'] == True:
                 fc_output_size += 3
 
-            #self.model = convnet.CNN(fc_output_size, self.CTRL_PNL['loss_vector_type'], self.CTRL_PNL['batch_size'],
-            #                         verts_list = self.verts_list, filepath=self.CTRL_PNL['filepath_prefix'], in_channels=self.CTRL_PNL['num_input_channels'])
+            self.model = convnet.CNN(fc_output_size, self.CTRL_PNL['loss_vector_type'], self.CTRL_PNL['batch_size'],
+                                     verts_list = self.verts_list, filepath=self.CTRL_PNL['filepath_prefix'], in_channels=self.CTRL_PNL['num_input_channels'])
 
             #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_l2cnt_125e_00001lr.pt')
             #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_125e_00001lr.pt')
@@ -880,6 +880,14 @@ if __name__ == "__main__":
         test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_f_lay_1000_none_stiff'+filepath_suffix+'.p')
         training_database_file_f.append(filepath_prefix+'synth/random/test_roll0_f_lay_1000_none_stiff'+filepath_suffix+'.p')
     else:
+        training_database_file_f.append(filepath_prefix+'synth/random2/train_roll0_f_lay_10000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random2/train_rollpi_f_lay_10000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random2/train_roll0_plo_f_lay_10000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random2/train_rollpi_plo_f_lay_10000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random2/train_roll0_m_lay_10000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random2/train_rollpi_m_lay_10000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random2/train_roll0_plo_m_lay_10000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random2/train_rollpi_plo_m_lay_10000_none_stiff'+filepath_suffix+'.p')
         training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_f_lay_4000_none_stiff'+filepath_suffix+'.p')
         training_database_file_f.append(filepath_prefix+'synth/random/train_rollpi_f_lay_4000_none_stiff'+filepath_suffix+'.p')
         training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_plo_f_lay_4000_none_stiff'+filepath_suffix+'.p')
