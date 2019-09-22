@@ -71,12 +71,14 @@ LOW_TAXEL_THRESH_Y = 0
 HIGH_TAXEL_THRESH_X = (NUMOFTAXELS_X - 1)
 HIGH_TAXEL_THRESH_Y = (NUMOFTAXELS_Y - 1)
 TEST_SUBJECT = 9
+DEVICE = 5
 
 torch.set_num_threads(1)
 if torch.cuda.is_available():
     # Use for GPU
     GPU = True
     dtype = torch.cuda.FloatTensor
+    torch.cuda.set_device(DEVICE)
     print '######################### CUDA is available! #############################'
 else:
     # Use for CPU
@@ -103,7 +105,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['verbose'] = opt.verbose
         self.opt = opt
         self.CTRL_PNL['batch_size'] = 128
-        self.CTRL_PNL['num_epochs'] = 75
+        self.CTRL_PNL['num_epochs'] = 100
         self.CTRL_PNL['incl_inter'] = True
         self.CTRL_PNL['shuffle'] = True
         self.CTRL_PNL['incl_ht_wt_channels'] = True
@@ -412,7 +414,7 @@ class PhysicalTrainer():
             self.model = convnet.CNN(fc_output_size, self.CTRL_PNL['loss_vector_type'], self.CTRL_PNL['batch_size'],
                                      verts_list = self.verts_list, filepath=self.CTRL_PNL['filepath_prefix'], in_channels=self.CTRL_PNL['num_input_channels'])
 
-            #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_l2cnt_125e_00001lr.pt')
+            #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_l2cnt_125e_00001lr.pt', map_location={'cuda:0':'cuda:'+str(DEVICE)})
             #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_125e_00001lr.pt')
             #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_l2cnt_calnoise_150e_00001lr.pt')
             #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_alltanh_l2cnt_calnoise_125e_00001lr.pt')
