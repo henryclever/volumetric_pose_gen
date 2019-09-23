@@ -889,7 +889,7 @@ class GeneratePose():
 
 
 if __name__ == "__main__":
-    gender = 'f'
+    gender = 'm'
 
 
     generator = GeneratePose(sampling = "UNIFORM", sigma = 0, one_side_range = 0, gender=gender)
@@ -898,7 +898,7 @@ if __name__ == "__main__":
     #generator.solve_ik_tree_smpl()
 
     #generator.read_precomp_set(gender=gender)
-    generator.generate_rand_dir_cos(gender=gender, posture='lay', num_data=250, roll_person = False, set = 15, prevent_limb_overhang = True, hands_behind_head=True)
+    generator.generate_rand_dir_cos(gender=gender, posture='lay', num_data=250, roll_person = False, set = 25, prevent_limb_overhang = True, hands_behind_head=True)
 
     #generator.save_yash_data_with_angles(posture)
     #generator.map_euler_angles_to_axis_angle()

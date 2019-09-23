@@ -104,12 +104,14 @@ class PhysicalTrainer():
         self.CTRL_PNL['shuffle'] = False
         self.CTRL_PNL['incl_ht_wt_channels'] = True
         self.CTRL_PNL['incl_pmat_cntct_input'] = True
+        self.CTRL_PNL['lock_root'] = False
         self.CTRL_PNL['num_input_channels'] = 3
         self.CTRL_PNL['GPU'] = GPU
         self.CTRL_PNL['dtype'] = dtype
         self.CTRL_PNL['repeat_real_data_ct'] = 1
         self.CTRL_PNL['regr_angles'] = 1
         self.CTRL_PNL['depth_map_labels'] = False
+        self.CTRL_PNL['depth_map_labels_test'] = True #can only be true is we have 100% synth for testing
         self.CTRL_PNL['depth_map_output'] = True
         self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
@@ -117,18 +119,15 @@ class PhysicalTrainer():
         self.CTRL_PNL['clip_betas'] = True
         self.CTRL_PNL['mesh_bottom_dist'] = True
         self.CTRL_PNL['full_body_rot'] = True
-        self.CTRL_PNL['all_tanh_activ'] = False
+        self.CTRL_PNL['all_tanh_activ'] = True
+        self.CTRL_PNL['normalize_input'] = True
         self.CTRL_PNL['L2_contact'] = True
         self.CTRL_PNL['pmat_mult'] = int(5)
-        self.CTRL_PNL['cal_noise'] = True
+        self.CTRL_PNL['cal_noise'] = False
 
 
 
-
-
-
-        self.weight_joints = self.opt.j_d_ratio*2
-        self.weight_depth_planes = (1-self.opt.j_d_ratio)*2
+        self.filename = filename
 
         if opt.losstype == 'direct':
             self.CTRL_PNL['depth_map_labels'] = False
@@ -207,6 +206,20 @@ class PhysicalTrainer():
         test_dat_m_synth = TensorPrepLib().load_files_to_database(testing_database_file_m, 'synth')
         test_dat_f_real = TensorPrepLib().load_files_to_database(testing_database_file_f, 'real')
         test_dat_m_real = TensorPrepLib().load_files_to_database(testing_database_file_m, 'real')
+
+
+
+        for possible_dat in [test_dat_f_synth, test_dat_m_synth, test_dat_f_real, test_dat_m_real]:
+            if possible_dat is not None:
+                self.dat = possible_dat
+                self.dat['mdm_est'] = []
+                self.dat['cm_est'] = []
+                self.dat['angles_est'] = []
+                self.dat['root_xyz_est'] = []
+                self.dat['betas_est'] = []
+                self.dat['root_atan2_est'] = []
+
+
 
         self.test_x_flat = []  # Initialize the testing pressure mat list
         self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, test_dat_f_synth, test_dat_m_synth, num_repeats = 1)
@@ -316,7 +329,7 @@ class PhysicalTrainer():
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_planesreg_128b_100e.pt')
                 #self.model = torch.load('/home/henry/data/convnets/epochs_set_3/convnet_anglesEU_synthreal_s12_3xreal_128b_101e_300e.pt')
                 #self.model = torch.load('/home/henry/data/convnets/planesreg/convnet_anglesEU_synth_s9_3xreal_128b_0.1rtojtdpth_pmatcntin_100e_00001lr.pt')
-                self.model = torch.load('/home/henry/data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_201e_0.5rtojtdpth_pmatcntin_100e_00001lr.pt')
+                self.model = torch.load('/home/henry/data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_125e_00001lr.pt')
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_300e.pt')
                 self.model = self.model.cuda()
             else:
@@ -464,7 +477,7 @@ class PhysicalTrainer():
 
 
         #pkl.dump(self.dat,open('/media/henry/multimodal_data_2/'+self.filename+'_output0p7.p', 'wb'))
-        pkl.dump(self.dat,open('/home/henry/'+self.filename+'_output0p5.p', 'wb'))
+        pkl.dump(self.dat,open('/home/henry/'+self.filename+'_output0p5_alltanh_l2cnt.p', 'wb'))
 
 
         #if GPU == True:
@@ -500,6 +513,10 @@ if __name__ == "__main__":
                  dest='visualize', \
                  default=False, \
                  help='Visualize.')
+    p.add_option('--aws', action='store_true',
+                 dest='aws', \
+                 default=False, \
+                 help='Use ubuntu user dir instead of henry.')
     p.add_option('--verbose', '--v',  action='store_true', dest='verbose',
                  default=True, help='Printout everything (under construction).')
 
@@ -530,7 +547,7 @@ if __name__ == "__main__":
                         'data/synth/random/train_roll0_plo_m_lay_4000_none_stiff',
                         'data/synth/random/train_rollpi_plo_m_lay_4000_none_stiff',]
 
-    filename_list_f = ['data/synth/random/test_roll0_f_lay_1000_none_stiff']
+    #filename_list_f = ['data/synth/random/test_roll0_f_lay_1000_none_stiff']
 
     for filename in filename_list_f:
 

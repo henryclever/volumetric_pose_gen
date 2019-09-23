@@ -71,7 +71,7 @@ LOW_TAXEL_THRESH_Y = 0
 HIGH_TAXEL_THRESH_X = (NUMOFTAXELS_X - 1)
 HIGH_TAXEL_THRESH_Y = (NUMOFTAXELS_Y - 1)
 TEST_SUBJECT = 9
-DEVICE = 5
+DEVICE = 0
 
 torch.set_num_threads(1)
 if torch.cuda.is_available():
@@ -105,7 +105,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['verbose'] = opt.verbose
         self.opt = opt
         self.CTRL_PNL['batch_size'] = 128
-        self.CTRL_PNL['num_epochs'] = 100
+        self.CTRL_PNL['num_epochs'] = 75
         self.CTRL_PNL['incl_inter'] = True
         self.CTRL_PNL['shuffle'] = True
         self.CTRL_PNL['incl_ht_wt_channels'] = True
@@ -120,14 +120,14 @@ class PhysicalTrainer():
         self.CTRL_PNL['depth_map_labels'] = True #can only be true if we have 100% synthetic data for training
         self.CTRL_PNL['depth_map_labels_test'] = True #can only be true is we have 100% synth for testing
         self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
-        self.CTRL_PNL['depth_map_input_est'] = False  #do this if we're working in a two-part regression
+        self.CTRL_PNL['depth_map_input_est'] = True  #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
         self.CTRL_PNL['mesh_bottom_dist'] = True
         self.CTRL_PNL['full_body_rot'] = True
         self.CTRL_PNL['normalize_input'] = True
-        self.CTRL_PNL['all_tanh_activ'] = True
+        self.CTRL_PNL['all_tanh_activ'] = False
         self.CTRL_PNL['L2_contact'] = True
         self.CTRL_PNL['pmat_mult'] = int(5)
         self.CTRL_PNL['cal_noise'] = False
@@ -577,7 +577,7 @@ class PhysicalTrainer():
 
 
                     if self.CTRL_PNL['depth_map_input_est'] == True: #two part reg
-                        self.im_sample = INPUT_DICT['batch_images'][im_display_idx, 4:, :].squeeze()*normalizing_std_constants[4] #pmat
+                        self.im_sample = INPUT_DICT['batch_images'][im_display_idx, 4:, :].squeeze()*normalizing_std_constants[2] #pmat
                         self.im_sample_ext = INPUT_DICT['batch_images'][im_display_idx, 2:, :].squeeze()*normalizing_std_constants[2] #estimated input
                         self.im_sample_ext2 = INPUT_DICT['batch_mdm'][im_display_idx, :, :].squeeze().unsqueeze(0)*-1 #ground truth depth
                         self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][im_display_idx, :, :].squeeze().unsqueeze(0)*-1 #est depth output
@@ -867,8 +867,8 @@ if __name__ == "__main__":
         filepath_prefix = '/home/henry/data/'
         filepath_suffix = ''
 
-    #filepath_suffix = '_output0p5'
-    filepath_suffix = ''
+    filepath_suffix = '_output0p5_l2cnt'
+    #filepath_suffix = ''
 
     training_database_file_f = []
     training_database_file_m = []

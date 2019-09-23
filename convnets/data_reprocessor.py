@@ -770,11 +770,72 @@ def get_depth_cont_maps_from_synth():
 
         pickle.dump(training_data_dict, open(os.path.join(filename), 'wb'))
 
+def reprocess_hbh_small_bags():
+    from smpl.smpl_webuser.serialization import load_model
 
+    for gender in ["f", "m"]:
+
+
+        stiffness = "none"
+        posture = "lay"
+        num_data = "250"
+
+        plo = "_plo"
+        rp = "0"
+        hbh = "_hbh"
+
+        model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_' + gender + '_lbs_10_207_0_v1.0.0.pkl'
+        prechecked_pose_list_new = []
+        num_data_checked = 0
+        for set in [1,2,3,4,5,6,7,8,9,10]:
+
+            prechecked_pose_list = np.load("/home/henry/data/init_poses/random_hbh/all_rand_nom_endhtbicheck_roll0_plo_hbh_f_lay_set" + str(set) + "_" + num_data + ".npy", allow_pickle=True).tolist()
+            # prechecked_pose_list = np.load("/home/henry/data/init_poses/all_rand_nom_endhtbicheck_roll0_plo_hbh_m_lay_set" + set + "_" + num_data + ".npy", allow_pickle=True).tolist()
+
+            m = load_model(model_path)
+
+            # shuffle(prechecked_pose_list)
+
+            ct = 0
+            for shape_pose in prechecked_pose_list:  # 1, 6 #FOR all_rand_nom_endhtbicheck_roll0_plo_m_lay_set5_2200.npy
+                # flexbind.StartGpuWork()
+                # flexbind.Init(scenes, param_dict, False)
+                # flexbind.EndGpuWork()
+
+
+                for idx in range(len(shape_pose[0])):
+                    m.betas[idx] = shape_pose[0][idx]
+                for idx in range(len(shape_pose[1])):
+                    m.pose[shape_pose[1][idx]] = shape_pose[2][idx]
+
+                # Sample some new rotational angle and shifting on the bed over a normal distribution
+                root_rot = shape_pose[3] * 1  # np.random.uniform(-np.pi/16, np.pi/16)
+                m.pose[2] = root_rot
+                m.pose[1] = shape_pose[7] * 1.
+                # m.pose[0] = np.pi/2
+
+
+
+                mJtransformed = np.array(m.J_transformed)
+
+                PASSED = False
+
+                if mJtransformed[20, 1] > mJtransformed[16, 1]: #pose is OK
+                    if mJtransformed[21, 1] > mJtransformed[17, 1]: #pose is OK
+                        prechecked_pose_list_new.append(shape_pose)
+                        PASSED = True
+                        ct += 1
+                        num_data_checked += 1
+
+                print PASSED, ct
+
+            print "set:",set, "     num OK:", ct
+
+        np.save("/home/henry/data/init_poses/all_rand_nom_endhtbicheck_roll" + rp + plo + hbh + "_" + gender + "_" + posture + "_set" + str(11) + "_" + str(num_data_checked) + ".npy", np.array(shape_pose_vol_list))
 
 
 if __name__ == "__main__":
-    get_depth_cont_maps_from_synth()
+    #get_depth_cont_maps_from_synth()
     #reprocess_synth_data()
     #get_direct_synth_marker_offsets()
-
+    reprocess_hbh_small_bags()
