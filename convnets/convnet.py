@@ -252,7 +252,6 @@ class CNN(nn.Module):
                                  targets=None, is_training = True, betas=None, angles_gt = None, root_shift = None):
 
 
-
         reg_angles = CTRL_PNL['regr_angles']
 
         filepath_prefix = CTRL_PNL['filepath_prefix']
@@ -332,7 +331,6 @@ class CNN(nn.Module):
             scores = scores.squeeze(0)
             scores = scores.squeeze(0)
 
-
             if CTRL_PNL['adjust_ang_from_est'] == True:
                 scores[:, 13:19] = scores[:, 13:19].clone() + OUTPUT_EST_DICT['root_atan2']
 
@@ -356,8 +354,6 @@ class CNN(nn.Module):
             else:
                 scores[:, 13:85] = scores[:, 13:85].clone() + OUTPUT_EST_DICT['angles']
             #scores[:, 13:85] = OUTPUT_EST_DICT['angles']
-
-
 
 
 

@@ -275,20 +275,24 @@ class PhysicalTrainer():
         test_y_flat = TensorPrepLib().prep_labels(test_y_flat, test_dat_f_synth, num_repeats = 1,
                                                     z_adj = -0.075, gender = "f", is_synth = True,
                                                     loss_vector_type = self.CTRL_PNL['loss_vector_type'],
-                                                    initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
+                                                    initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'],
+                                                        full_body_rot = self.CTRL_PNL['full_body_rot'])
         test_y_flat = TensorPrepLib().prep_labels(test_y_flat, test_dat_m_synth, num_repeats = 1,
                                                     z_adj = -0.075, gender = "m", is_synth = True,
                                                     loss_vector_type = self.CTRL_PNL['loss_vector_type'],
-                                                    initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
+                                                    initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'],
+                                                        full_body_rot = self.CTRL_PNL['full_body_rot'])
 
         test_y_flat = TensorPrepLib().prep_labels(test_y_flat, test_dat_f_real, num_repeats = 1,
                                                     z_adj = 0.0, gender = "f", is_synth = False,
                                                     loss_vector_type = self.CTRL_PNL['loss_vector_type'],
-                                                    initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
+                                                    initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'],
+                                                        full_body_rot = self.CTRL_PNL['full_body_rot'])
         test_y_flat = TensorPrepLib().prep_labels(test_y_flat, test_dat_m_real, num_repeats = 1,
                                                     z_adj = 0.0, gender = "m", is_synth = False,
                                                     loss_vector_type = self.CTRL_PNL['loss_vector_type'],
-                                                    initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
+                                                    initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'],
+                                                        full_body_rot = self.CTRL_PNL['full_body_rot'])
 
         if self.CTRL_PNL['normalize_input'] == True:
             test_y_flat = TensorPrepLib().normalize_wt_ht(test_y_flat)
@@ -549,11 +553,11 @@ if __name__ == "__main__":
 
     #filename_list_f = ['data/synth/random/test_roll0_f_lay_1000_none_stiff']
 
-    for filename in filename_list_f:
+    for filename in filename_list_m:
 
         test_database_file_f = []
         test_database_file_m = []
-        test_database_file_f.append(filepath_prefix_qt + filename + '.p')
+        test_database_file_m.append(filepath_prefix_qt + filename + '.p')
 
         p = PhysicalTrainer(test_database_file_f, test_database_file_m, opt, filename)
 

@@ -782,7 +782,7 @@ def reprocess_hbh_small_bags():
 
         plo = "_plo"
         rp = "0"
-        hbh = "_hbh"
+        hbh = "_onehbh"
 
         model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_' + gender + '_lbs_10_207_0_v1.0.0.pkl'
         prechecked_pose_list_new = []
@@ -826,12 +826,27 @@ def reprocess_hbh_small_bags():
                         PASSED = True
                         ct += 1
                         num_data_checked += 1
+                #if mJtransformed[20, 1] > mJtransformed[16, 1] and mJtransformed[21, 1] > mJtransformed[17, 1]: #pose is OK
+                #    PASSED = False
+                #elif mJtransformed[20, 1] > mJtransformed[16, 1]:
+                #    PASSED = True
+                #    prechecked_pose_list_new.append(shape_pose)
+                #    ct += 1
+                #    num_data_checked += 1
+                #elif mJtransformed[21, 1] > mJtransformed[17, 1]:
+                #    prechecked_pose_list_new.append(shape_pose)
+                #    PASSED = True
+                #    ct += 1
+                #    num_data_checked += 1
+
+
+
 
                 print PASSED, ct
 
             print "set:",set, "     num OK:", ct
 
-        np.save("/home/henry/data/init_poses/all_rand_nom_endhtbicheck_roll" + rp + plo + hbh + "_" + gender + "_" + posture + "_set" + str(11) + "_" + str(num_data_checked) + ".npy", np.array(shape_pose_vol_list))
+        np.save("/home/henry/data/init_poses/all_rand_nom_endhtbicheck_roll" + rp + plo + hbh + "_" + gender + "_" + posture + "_set" + str(12) + "_" + str(num_data_checked) + ".npy", np.array(prechecked_pose_list_new))
 
 
 if __name__ == "__main__":

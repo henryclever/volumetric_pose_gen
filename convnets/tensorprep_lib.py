@@ -60,7 +60,7 @@ class TensorPrepLib():
        # print "GOT HERE!!", database_file
         dat = None
         for some_subject in database_file:
-            print creation_type, some_subject, 'some subject'
+            #print creation_type, some_subject, 'some subject'
             if creation_type in some_subject:
                 dat_curr = load_pickle(some_subject)
                 print some_subject, dat_curr['bed_angle_deg'][0]
@@ -177,8 +177,7 @@ class TensorPrepLib():
                                             dat['angles_est'][entry][0:72],
                                             dat['root_xyz_est'][entry][0:3]), axis = 0)
                         if full_body_rot == True:
-                            c = np.concatenate((c,
-                                                dat['root_atan2_est'][entry][0:6]), axis = 0)
+                            c = np.concatenate((c, dat['root_atan2_est'][entry][0:6]), axis = 0)
                     for i in range(num_repeats):
                         y_flat.append(c)
 
