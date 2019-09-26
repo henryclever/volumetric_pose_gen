@@ -751,7 +751,7 @@ class GeneratePose():
 
                     if left_leg_chosen == True and prevent_limb_overhang == True: #only check off the edges if we know the block is OK
                         mJtransformed_red = np.stack((mJtransformed[4, :], mJtransformed[7, :], mJtransformed[10, :]))
-                        left_leg_chosen = self.check_limb_overhang(mJ=mJ, mJtransformed_red=mJtransformed_red, shift=shift, limb_tag='left_leg', hands_behind_head = hands_behind_head)
+                        left_leg_chosen = self.check_limb_overhang(mJ=mJ, mJtransformed_red=mJtransformed_red, shift=shift, limb_tag='left_leg')
 
 
             print mJtransformed[7, 2] - mJtransformed[1, 2],'   picking right leg...', self.right_leg_block
