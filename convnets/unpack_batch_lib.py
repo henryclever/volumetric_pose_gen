@@ -68,8 +68,6 @@ class UnpackBatchLib():
         batch.append(batch[1][:, 160:161])  # mass, kg
         batch.append(batch[1][:, 161:162])  # height, kg
 
-
-
         if CTRL_PNL['adjust_ang_from_est'] == True:
             adj_ext_idx += 3
             batch.append(batch[1][:, 162:172]) #betas est
@@ -159,7 +157,6 @@ class UnpackBatchLib():
             OUTPUT_EST_DICT['root_shift'] = Variable(extra_targets.type(CTRL_PNL['dtype']), requires_grad=is_training)
             if CTRL_PNL['full_body_rot'] == True:
                 OUTPUT_EST_DICT['root_atan2'] = Variable(batch[12].type(CTRL_PNL['dtype']), requires_grad=is_training)
-                #print "root atan2", OUTPUT_EST_DICT['root_atan2']
 
         if CTRL_PNL['depth_map_labels'] == True:
             if CTRL_PNL['depth_map_labels_test'] == True or is_training == True:

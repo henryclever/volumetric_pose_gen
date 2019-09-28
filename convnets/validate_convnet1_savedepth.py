@@ -333,7 +333,7 @@ class PhysicalTrainer():
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_planesreg_128b_100e.pt')
                 #self.model = torch.load('/home/henry/data/convnets/epochs_set_3/convnet_anglesEU_synthreal_s12_3xreal_128b_101e_300e.pt')
                 #self.model = torch.load('/home/henry/data/convnets/planesreg/convnet_anglesEU_synth_s9_3xreal_128b_0.1rtojtdpth_pmatcntin_100e_00001lr.pt')
-                self.model = torch.load('/home/henry/data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_125e_00001lr.pt')
+                self.model = torch.load('/home/henry/data/convnets/planesreg/DC_L2depth/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_50e_00001lr.pt', map_location={'cuda:5':'cuda:0'})
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_300e.pt')
                 self.model = self.model.cuda()
             else:
@@ -481,7 +481,7 @@ class PhysicalTrainer():
 
 
         #pkl.dump(self.dat,open('/media/henry/multimodal_data_2/'+self.filename+'_output0p7.p', 'wb'))
-        pkl.dump(self.dat,open('/home/henry/'+self.filename+'_output0p5_alltanh_l2cnt.p', 'wb'))
+        pkl.dump(self.dat,open('/home/henry/'+self.filename+'_output0p5_112k_50e_alltanh.p', 'wb'))
 
 
         #if GPU == True:
@@ -550,6 +550,19 @@ if __name__ == "__main__":
                         'data/synth/random/train_rollpi_m_lay_4000_none_stiff',
                         'data/synth/random/train_roll0_plo_m_lay_4000_none_stiff',
                         'data/synth/random/train_rollpi_plo_m_lay_4000_none_stiff',]
+
+    filename_list_f = [ 'data/synth/random2/train_roll0_f_lay_10000_none_stiff',
+                        'data/synth/random2/train_rollpi_f_lay_10000_none_stiff',
+                        'data/synth/random2/train_roll0_plo_f_lay_10000_none_stiff',
+                        'data/synth/random2/train_rollpi_plo_f_lay_10000_none_stiff',]
+
+    filename_list_m = [ 'data/synth/random2/train_roll0_m_lay_10000_none_stiff',
+                        'data/synth/random2/train_rollpi_m_lay_10000_none_stiff',
+                        'data/synth/random2/train_roll0_plo_m_lay_10000_none_stiff',
+                        'data/synth/random2/train_rollpi_plo_m_lay_10000_none_stiff',]
+
+
+
 
     #filename_list_f = ['data/synth/random/test_roll0_f_lay_1000_none_stiff']
 

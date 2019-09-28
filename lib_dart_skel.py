@@ -16,7 +16,7 @@ import sys
 from pydart2.gui.opengl.scene import OpenGLScene
 from time import time
 
-KEEP_ORIGINAL_ARM_POSE = False
+HANDS_BEHIND_HEAD = False
 
 class LibDartSkel():
 

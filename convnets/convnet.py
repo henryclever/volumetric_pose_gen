@@ -282,6 +282,10 @@ class CNN(nn.Module):
                                              batch_size=images.size(0), verts_list = self.verts_list)
 
         #print(torch.cuda.max_memory_allocated(), 'conv1')
+
+        for i in range(images.size()[1]):
+            print "channel:", i, "  mean:", torch.mean(images[:, i, :, :]), "  std:", torch.std(images[:, i, :, :])
+
         if CTRL_PNL['all_tanh_activ'] == True:
             scores_cnn = self.CNN_packtanh(images)
         else:
@@ -332,6 +336,7 @@ class CNN(nn.Module):
             scores = scores.squeeze(0)
 
             if CTRL_PNL['adjust_ang_from_est'] == True:
+
                 scores[:, 13:19] = scores[:, 13:19].clone() + OUTPUT_EST_DICT['root_atan2']
 
 

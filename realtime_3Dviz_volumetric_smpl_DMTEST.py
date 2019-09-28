@@ -94,6 +94,7 @@ class GeneratePose():
         self.CTRL_PNL = {}
         self.CTRL_PNL['batch_size'] = 1
         self.CTRL_PNL['loss_vector_type'] = 'anglesDC' #'anglesEU'
+        self.CTRL_PNL['loss_vector_type'] = 'anglesDC' #'anglesEU'
         self.CTRL_PNL['verbose'] = False
         self.CTRL_PNL['num_epochs'] = 101
         self.CTRL_PNL['incl_inter'] = True
@@ -115,10 +116,10 @@ class GeneratePose():
         self.CTRL_PNL['mesh_bottom_dist'] = True
         self.CTRL_PNL['full_body_rot'] = True#False
         self.CTRL_PNL['normalize_input'] = True#False
-        self.CTRL_PNL['all_tanh_activ'] = False
+        self.CTRL_PNL['all_tanh_activ'] = True#False
         self.CTRL_PNL['L2_contact'] = True#False
         self.CTRL_PNL['pmat_mult'] = int(5)
-        self.CTRL_PNL['cal_noise'] = True#False
+        self.CTRL_PNL['cal_noise'] = True
 
 
 
@@ -313,11 +314,21 @@ class GeneratePose():
         from torch.autograd import Variable
 
         if GPU == True:
-            model = torch.load(filename1)
-            model = model.cuda().eval()
+            for i in range(0, 8):
+                try:
+                    model = torch.load(filename1, map_location={'cuda:'+str(i):'cuda:0'})
+                    model = model.cuda().eval()
+                    break
+                except:
+                    pass
             if filename2 is not None:
-                model2 = torch.load(filename2)
-                model2 = model2.cuda().eval()
+                for i in range(0, 8):
+                    try:
+                        model2 = torch.load(filename2, map_location={'cuda:'+str(i):'cuda:0'})
+                        model2 = model2.cuda().eval()
+                        break
+                    except:
+                        pass
             else:
                 model2 = None
 
@@ -331,7 +342,7 @@ class GeneratePose():
         while not rospy.is_shutdown():
 
 
-            pmat = np.fliplr(np.flipud(np.clip(self.pressure.reshape(mat_size)*float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100)))
+            pmat = np.fliplr(np.flipud(np.clip(self.pressure.reshape(mat_size)*float(self.CTRL_PNL['pmat_mult'])*3., a_min=0, a_max=100)))
 
             if self.CTRL_PNL['cal_noise'] == False:
                 pmat = gaussian_filter(pmat, sigma= 0.5)
@@ -377,13 +388,16 @@ class GeneratePose():
             scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch, False, model, self.CTRL_PNL)
 
 
-            mdm_est_pos = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1)
-            mdm_est_neg = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1)
+            mdm_est_pos = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1) / 16.69545796387731
+            mdm_est_neg = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1) / 45.08513083167194
             mdm_est_pos[mdm_est_pos < 0] = 0
             mdm_est_neg[mdm_est_neg > 0] = 0
             mdm_est_neg *= -1
-            cm_est = OUTPUT_DICT['batch_cm_est'].clone().unsqueeze(1) * 100
+            cm_est = OUTPUT_DICT['batch_cm_est'].clone().unsqueeze(1) * 100 / 43.55800622930469
 
+            #1. / 16.69545796387731,  # pos est depth
+            #1. / 45.08513083167194,  # neg est depth
+            #1. / 43.55800622930469,  # cm est
 
             if model2 is not None:
                 batch_cor = []
@@ -393,10 +407,17 @@ class GeneratePose():
                                           cm_est.type(torch.FloatTensor),
                                           pmat_stack[:, 1:, :, :]), dim=1))
 
-                batch_cor.append(torch.cat((batch1,
-                                  OUTPUT_DICT['batch_betas_est'].cpu(),
-                                  OUTPUT_DICT['batch_angles_est'].cpu(),
-                                  OUTPUT_DICT['batch_root_xyz_est'].cpu()), dim = 1))
+                if self.CTRL_PNL['full_body_rot'] == False:
+                    batch_cor.append(torch.cat((batch1,
+                                      OUTPUT_DICT['batch_betas_est'].cpu(),
+                                      OUTPUT_DICT['batch_angles_est'].cpu(),
+                                      OUTPUT_DICT['batch_root_xyz_est'].cpu()), dim = 1))
+                elif self.CTRL_PNL['full_body_rot'] == True:
+                    batch_cor.append(torch.cat((batch1,
+                                      OUTPUT_DICT['batch_betas_est'].cpu(),
+                                      OUTPUT_DICT['batch_angles_est'].cpu(),
+                                      OUTPUT_DICT['batch_root_xyz_est'].cpu(),
+                                      OUTPUT_DICT['batch_root_atan2_est'].cpu()), dim = 1))
 
 
                 self.CTRL_PNL['adjust_ang_from_est'] = True
@@ -456,7 +477,12 @@ if __name__ ==  "__main__":
     generator = GeneratePose(filepath_prefix)
     #generator.estimate_real_time(filepath_prefix+"/data/synth/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_100e_000005lr.pt",
     #                             filepath_prefix+"/data/synth/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.pt") #init sampling from yash dataset
-    #generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_125e_00001lr.pt")
-    generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_l2cnt_calnoise_150e_00001lr.pt")
+    #generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/DC_L2depth/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_125e_00001lr.pt",
+     #                            filepath_prefix+"/data/convnets/planesreg_correction/DC_L2depth/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_depthestin_angleadj_alltanh_l2cnt_125e_200e_00001lr.pt")
+
+
+    generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/DC_L2depth/convnet_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_alltanh_l2cnt_calnoise_300e_00001lr.pt")
+
+    #generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_l2cnt_calnoise_150e_00001lr.pt")
     #generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_201e_0.5rtojtdpth_pmatcntin_100e_00001lr.pt",
     #                             filepath_prefix+"/data/convnets/planesreg_correction/convnet_anglesDC_synth_32000_128b_201e_0.5rtojtdpth_pmatcntin_depthestin_angleadj_50e_00001lr.pt")
