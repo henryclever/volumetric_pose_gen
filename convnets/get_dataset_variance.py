@@ -122,7 +122,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['normalize_input'] = True
         self.CTRL_PNL['all_tanh_activ'] = False
         self.CTRL_PNL['L2_contact'] = False
-        self.CTRL_PNL['pmat_mult'] = int(5)
+        self.CTRL_PNL['pmat_mult'] = int(3)
         self.CTRL_PNL['cal_noise'] = True
 
 
@@ -131,8 +131,8 @@ class PhysicalTrainer():
             self.CTRL_PNL['depth_map_output'] = False
 
         if self.CTRL_PNL['cal_noise'] == True:
-            self.CTRL_PNL['pmat_mult'] = int(1)
-            self.CTRL_PNL['incl_pmat_cntct_input'] = False #if there's calibration noise we need to recompute this every batch
+            #self.CTRL_PNL['pmat_mult'] = int(1)
+            #self.CTRL_PNL['incl_pmat_cntct_input'] = False #if there's calibration noise we need to recompute this every batch
             self.CTRL_PNL['clip_sobel'] = False
 
         if self.CTRL_PNL['incl_pmat_cntct_input'] == True:
@@ -217,10 +217,10 @@ class PhysicalTrainer():
 
 
         #print np.shape(train_xa), 'shape@'
-        #train_xa = np.array(train_xa)
+        train_xa = np.array(train_xa)
 
         if self.CTRL_PNL['cal_noise'] == True:
-            #train_xa[:, 0, :, :] = np.array(PreprocessingLib().preprocessing_blur_images(list(np.array(train_xa)[:, 0, :, :]), self.mat_size, sigma=0.5)).reshape(-1, self.mat_size[0], self.mat_size[1])
+            train_xa[:, 0, :, :] = np.array(PreprocessingLib().preprocessing_blur_images(list(np.array(train_xa)[:, 0, :, :]), self.mat_size, sigma=0.5)).reshape(-1, self.mat_size[0], self.mat_size[1])
             train_xa[:, 1, :, :] = np.array(PreprocessingLib().preprocessing_blur_images(list(np.array(train_xa)[:, 1, :, :]), self.mat_size, sigma=0.5)).reshape(-1, self.mat_size[0], self.mat_size[1])
 
 
@@ -541,8 +541,8 @@ if __name__ == "__main__":
 
     opt, args = p.parse_args()
 
-    filepath_prefix = '/media/henry/multimodal_data_2/data/'
-    #filepath_prefix = '/home/henry/data/'
+    #filepath_prefix = '/media/henry/multimodal_data_2/data/'
+    filepath_prefix = '/home/henry/data/'
 
     training_database_file_f = []
     training_database_file_m = []

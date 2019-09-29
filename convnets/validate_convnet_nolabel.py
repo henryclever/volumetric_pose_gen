@@ -134,9 +134,7 @@ class PhysicalTrainer():
             self.CTRL_PNL['depth_map_output'] = False
 
         if self.CTRL_PNL['cal_noise'] == True:
-            self.CTRL_PNL['pmat_mult'] = int(1)
-            self.CTRL_PNL[
-                'incl_pmat_cntct_input'] = False  # if there's calibration noise we need to recompute this every batch
+            self.CTRL_PNL['incl_pmat_cntct_input'] = False  # if there's calibration noise we need to recompute this every batch
             self.CTRL_PNL['clip_sobel'] = False
 
         if self.CTRL_PNL['incl_pmat_cntct_input'] == True:
@@ -149,13 +147,11 @@ class PhysicalTrainer():
         if self.CTRL_PNL['cal_noise'] == True:
             self.CTRL_PNL['num_input_channels'] += 1
 
-
+        pmat_std_from_mult = ['N/A', 11.70153502792190, 19.90905848383454, 23.07018866032369, 0.0, 25.50538629767412]
         if self.CTRL_PNL['cal_noise'] == False:
-            pmat_std_from_mult = ['N/A', 11.70153502792190, 19.90905848383454, 23.07018866032369, 0.0, 25.50538629767412]
             sobel_std_from_mult = ['N/A', 29.80360490415032, 33.33532963163579, 34.14427844692501, 0.0, 34.86393494050921]
         else:
-            pmat_std_from_mult = ['N/A', 11.70153502792190]
-            sobel_std_from_mult = ['N/A', 45.61635847182483]
+            sobel_std_from_mult = ['N/A', 45.61635847182483, 77.74920396659292, 88.89398421073700, 0.0, 97.90075708182506]
 
         self.CTRL_PNL['norm_std_coeffs'] =  [1./41.80684362163343,  #contact
                                              1./16.69545796387731,  #pos est depth
@@ -168,7 +164,6 @@ class PhysicalTrainer():
                                              1./1.0,                #OUTPUT DO NOTHING
                                              1. / 30.216647403350,  #weight
                                              1. / 14.629298141231]  #height
-
 
         self.CTRL_PNL['filepath_prefix'] = '/home/henry/'
             # self.CTRL_PNL['filepath_prefix'] = '/media/henry/multimodal_data_2/'

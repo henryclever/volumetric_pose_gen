@@ -140,7 +140,6 @@ class PhysicalTrainer():
             self.CTRL_PNL['depth_map_output'] = False
 
         if self.CTRL_PNL['cal_noise'] == True:
-            self.CTRL_PNL['pmat_mult'] = int(1)
             self.CTRL_PNL['incl_pmat_cntct_input'] = False #if there's calibration noise we need to recompute this every batch
             self.CTRL_PNL['clip_sobel'] = False
 
@@ -154,12 +153,11 @@ class PhysicalTrainer():
         if self.CTRL_PNL['cal_noise'] == True:
             self.CTRL_PNL['num_input_channels'] += 1
 
+        pmat_std_from_mult = ['N/A', 11.70153502792190, 19.90905848383454, 23.07018866032369, 0.0, 25.50538629767412]
         if self.CTRL_PNL['cal_noise'] == False:
-            pmat_std_from_mult = ['N/A', 11.70153502792190, 19.90905848383454, 23.07018866032369, 0.0, 25.50538629767412]
             sobel_std_from_mult = ['N/A', 29.80360490415032, 33.33532963163579, 34.14427844692501, 0.0, 34.86393494050921]
         else:
-            pmat_std_from_mult = ['N/A', 11.70153502792190]
-            sobel_std_from_mult = ['N/A', 45.61635847182483]
+            sobel_std_from_mult = ['N/A', 45.61635847182483, 77.74920396659292, 88.89398421073700, 0.0, 97.90075708182506]
 
         self.CTRL_PNL['norm_std_coeffs'] =  [1./41.80684362163343,  #contact
                                              1./16.69545796387731,  #pos est depth
@@ -569,7 +567,7 @@ class PhysicalTrainer():
                     val_n_batches = 4
                     print "evaluating on ", val_n_batches
 
-                    im_display_idx = random.randint(0,INPUT_DICT['batch_images'].size()[0])
+                    im_display_idx = 0.#random.randint(0,INPUT_DICT['batch_images'].size()[0])
 
 
                     if GPU == True:
@@ -582,21 +580,9 @@ class PhysicalTrainer():
                                                              data='train')
 
 
-                    if self.CTRL_PNL['normalize_input'] == True:
-                        normalizing_std_constants = [41.80684362163343,  #contact
-                                                     16.69545796387731,  #pos est depth
-                                                     45.08513083167194,  #neg est depth
-                                                     43.55800622930469,  #cm est
-                                                     11.70153502792190, #pmat cal noise
-                                                     45.61635847182483] #pmat sobel
-
-                    else:
-                        normalizing_std_constants = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-
-
                     if self.CTRL_PNL['depth_map_input_est'] == True: #two part reg
-                        self.im_sample = INPUT_DICT['batch_images'][im_display_idx, 4:, :].squeeze()*normalizing_std_constants[2] #pmat
-                        self.im_sample_ext = INPUT_DICT['batch_images'][im_display_idx, 2:, :].squeeze()*normalizing_std_constants[2] #estimated input
+                        self.im_sample = INPUT_DICT['batch_images'][im_display_idx, 4:, :].squeeze()*20. #pmat
+                        self.im_sample_ext = INPUT_DICT['batch_images'][im_display_idx, 2:, :].squeeze()*20. #estimated input
                         self.im_sample_ext2 = INPUT_DICT['batch_mdm'][im_display_idx, :, :].squeeze().unsqueeze(0)*-1 #ground truth depth
                         self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][im_display_idx, :, :].squeeze().unsqueeze(0)*-1 #est depth output
                     else:
@@ -882,8 +868,8 @@ if __name__ == "__main__":
         filepath_prefix = '/home/ubuntu/data/'
         filepath_suffix = ''
     else:
-        #filepath_prefix = '/home/henry/data/'
-        filepath_prefix = '/media/henry/multimodal_data_2/data/'
+        filepath_prefix = '/home/henry/data/'
+        #filepath_prefix = '/media/henry/multimodal_data_2/data/'
         filepath_suffix = ''
 
     #filepath_suffix = '_output0p5_alltanh_l2cnt'
@@ -901,30 +887,30 @@ if __name__ == "__main__":
         test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_f_lay_1000_none_stiff'+filepath_suffix+'.p')
         training_database_file_f.append(filepath_prefix+'synth/random/test_roll0_f_lay_1000_none_stiff'+filepath_suffix+'.p')
     else:
-        #training_database_file_f.append(filepath_prefix+'synth/random2/train_roll0_f_lay_10000_none_stiff'+filepath_suffix+'.p')
-        #training_database_file_f.append(filepath_prefix+'synth/random2/train_rollpi_f_lay_10000_none_stiff'+filepath_suffix+'.p')
-        #training_database_file_f.append(filepath_prefix+'synth/random2/train_roll0_plo_f_lay_10000_none_stiff'+filepath_suffix+'.p')
-        #training_database_file_f.append(filepath_prefix+'synth/random2/train_rollpi_plo_f_lay_10000_none_stiff'+filepath_suffix+'.p')
-        #training_database_file_m.append(filepath_prefix+'synth/random2/train_roll0_m_lay_10000_none_stiff'+filepath_suffix+'.p')
-        #training_database_file_m.append(filepath_prefix+'synth/random2/train_rollpi_m_lay_10000_none_stiff'+filepath_suffix+'.p')
-        #training_database_file_m.append(filepath_prefix+'synth/random2/train_roll0_plo_m_lay_10000_none_stiff'+filepath_suffix+'.p')
-        #training_database_file_m.append(filepath_prefix+'synth/random2/train_rollpi_plo_m_lay_10000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random2/train_roll0_f_lay_10000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random2/train_rollpi_f_lay_10000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random2/train_roll0_plo_f_lay_10000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random2/train_rollpi_plo_f_lay_10000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random2/train_roll0_m_lay_10000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random2/train_rollpi_m_lay_10000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random2/train_roll0_plo_m_lay_10000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random2/train_rollpi_plo_m_lay_10000_none_stiff'+filepath_suffix+'.p')
         training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_f_lay_4000_none_stiff'+filepath_suffix+'.p')
         training_database_file_f.append(filepath_prefix+'synth/random/train_rollpi_f_lay_4000_none_stiff'+filepath_suffix+'.p')
         training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_plo_f_lay_4000_none_stiff'+filepath_suffix+'.p')
         training_database_file_f.append(filepath_prefix+'synth/random/train_rollpi_plo_f_lay_4000_none_stiff'+filepath_suffix+'.p')
-        #training_database_file_m.append(filepath_prefix+'synth/random/train_roll0_m_lay_4000_none_stiff'+filepath_suffix+'.p')
-        #training_database_file_m.append(filepath_prefix+'synth/random/train_rollpi_m_lay_4000_none_stiff'+filepath_suffix+'.p')
-        #training_database_file_m.append(filepath_prefix+'synth/random/train_roll0_plo_m_lay_4000_none_stiff'+filepath_suffix+'.p')
-        #training_database_file_m.append(filepath_prefix+'synth/random/train_rollpi_plo_m_lay_4000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random/train_roll0_m_lay_4000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random/train_rollpi_m_lay_4000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random/train_roll0_plo_m_lay_4000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random/train_rollpi_plo_m_lay_4000_none_stiff'+filepath_suffix+'.p')
         test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_f_lay_1000_none_stiff'+filepath_suffix+'.p')
         test_database_file_f.append(filepath_prefix+'synth/random/test_rollpi_f_lay_1000_none_stiff'+filepath_suffix+'.p')
         test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_f_lay_1000_none_stiff'+filepath_suffix+'.p')
         test_database_file_f.append(filepath_prefix+'synth/random/test_rollpi_plo_f_lay_1000_none_stiff'+filepath_suffix+'.p')
-        #test_database_file_m.append(filepath_prefix+'synth/random/test_roll0_m_lay_1000_none_stiff'+filepath_suffix+'.p')
-        #test_database_file_m.append(filepath_prefix+'synth/random/test_rollpi_m_lay_1000_none_stiff'+filepath_suffix+'.p')
-        #test_database_file_m.append(filepath_prefix+'synth/random/test_roll0_plo_m_lay_1000_none_stiff'+filepath_suffix+'.p')
-        #test_database_file_m.append(filepath_prefix+'synth/random/test_rollpi_plo_m_lay_1000_none_stiff'+filepath_suffix+'.p')
+        test_database_file_m.append(filepath_prefix+'synth/random/test_roll0_m_lay_1000_none_stiff'+filepath_suffix+'.p')
+        test_database_file_m.append(filepath_prefix+'synth/random/test_rollpi_m_lay_1000_none_stiff'+filepath_suffix+'.p')
+        test_database_file_m.append(filepath_prefix+'synth/random/test_roll0_plo_m_lay_1000_none_stiff'+filepath_suffix+'.p')
+        test_database_file_m.append(filepath_prefix+'synth/random/test_rollpi_plo_m_lay_1000_none_stiff'+filepath_suffix+'.p')
 
 
     p = PhysicalTrainer(training_database_file_f, training_database_file_m, test_database_file_f, test_database_file_m, opt)
