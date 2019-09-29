@@ -132,11 +132,6 @@ class PhysicalTrainer():
         self.CTRL_PNL['pmat_mult'] = int(5)
         self.CTRL_PNL['cal_noise'] = True
 
-
-
-
-
-
         self.weight_joints = self.opt.j_d_ratio*2
         self.weight_depth_planes = (1-self.opt.j_d_ratio)*2
 
@@ -158,6 +153,25 @@ class PhysicalTrainer():
             self.CTRL_PNL['num_input_channels'] += 2
         if self.CTRL_PNL['cal_noise'] == True:
             self.CTRL_PNL['num_input_channels'] += 1
+
+        if self.CTRL_PNL['cal_noise'] == False:
+            pmat_std_from_mult = ['N/A', 11.70153502792190, 19.90905848383454, 23.07018866032369, 0.0, 25.50538629767412]
+            sobel_std_from_mult = ['N/A', 29.80360490415032, 33.33532963163579, 34.14427844692501, 0.0, 34.86393494050921]
+        else:
+            pmat_std_from_mult = ['N/A', 11.70153502792190]
+            sobel_std_from_mult = ['N/A', 45.61635847182483]
+
+        self.CTRL_PNL['norm_std_coeffs'] =  [1./41.80684362163343,  #contact
+                                             1./16.69545796387731,  #pos est depth
+                                             1./45.08513083167194,  #neg est depth
+                                             1./43.55800622930469,  #cm est
+                                             1./pmat_std_from_mult[int(self.CTRL_PNL['pmat_mult'])], #pmat x5
+                                             1./sobel_std_from_mult[int(self.CTRL_PNL['pmat_mult'])], #pmat sobel
+                                             1./1.0,                #bed height mat
+                                             1./1.0,                #OUTPUT DO NOTHING
+                                             1./1.0,                #OUTPUT DO NOTHING
+                                             1. / 30.216647403350,  #weight
+                                             1. / 14.629298141231]  #height
 
 
         if self.opt.aws == True:
@@ -290,7 +304,7 @@ class PhysicalTrainer():
 
         # normalize the height and weight
         if self.CTRL_PNL['normalize_input'] == True:
-            train_y_flat = TensorPrepLib().normalize_wt_ht(train_y_flat)
+            train_y_flat = TensorPrepLib().normalize_wt_ht(train_y_flat, self.CTRL_PNL)
 
         self.train_y_tensor = torch.Tensor(train_y_flat)
 
@@ -379,7 +393,7 @@ class PhysicalTrainer():
                                                     initial_angle_est = self.CTRL_PNL['adjust_ang_from_est'])
 
         if self.CTRL_PNL['normalize_input'] == True:
-            test_y_flat = TensorPrepLib().normalize_wt_ht(test_y_flat)
+            test_y_flat = TensorPrepLib().normalize_wt_ht(test_y_flat, self.CTRL_PNL)
 
         self.test_y_tensor = torch.Tensor(test_y_flat)
 
@@ -484,7 +498,8 @@ class PhysicalTrainer():
 
             # This will loop a total = training_images/batch_size times
             for batch_idx, batch in enumerate(self.train_loader):
-                print "GPU memory:", torch.cuda.max_memory_allocated()
+                if GPU == True:
+                    print "GPU memory:", torch.cuda.max_memory_allocated()
                 if self.CTRL_PNL['loss_vector_type'] == 'direct':
 
                     self.optimizer.zero_grad()
@@ -867,11 +882,12 @@ if __name__ == "__main__":
         filepath_prefix = '/home/ubuntu/data/'
         filepath_suffix = ''
     else:
-        filepath_prefix = '/home/henry/data/'
+        #filepath_prefix = '/home/henry/data/'
+        filepath_prefix = '/media/henry/multimodal_data_2/data/'
         filepath_suffix = ''
 
-    filepath_suffix = '_output0p5_alltanh_l2cnt'
-    #filepath_suffix = ''
+    #filepath_suffix = '_output0p5_alltanh_l2cnt'
+    filepath_suffix = ''
 
     training_database_file_f = []
     training_database_file_m = []

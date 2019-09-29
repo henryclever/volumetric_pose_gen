@@ -114,6 +114,7 @@ class UnpackBatchLib():
         if CTRL_PNL['cal_noise'] == True:
             images_up_non_tensor = PreprocessingLib().preprocessing_add_calibration_noise(images_up_non_tensor,
                                                                                           pmat_chan_idx = (CTRL_PNL['num_input_channels_batch0']-3),
+                                                                                          norm_std_coeffs = CTRL_PNL['norm_std_coeffs'],
                                                                                           is_training = is_training)
 
 
@@ -124,10 +125,12 @@ class UnpackBatchLib():
         if is_training == True: #only add noise to training images
             if CTRL_PNL['cal_noise'] == False:
                 images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(images_up_non_tensor),
-                                                                                    pmat_chan_idx = (CTRL_PNL['num_input_channels_batch0']-3))
+                                                                                    pmat_chan_idx = (CTRL_PNL['num_input_channels_batch0']-3),
+                                                                                    norm_std_coeffs = CTRL_PNL['norm_std_coeffs'])
             else:
                 images_up_non_tensor = PreprocessingLib().preprocessing_add_image_noise(np.array(images_up_non_tensor),
-                                                                                    pmat_chan_idx = (CTRL_PNL['num_input_channels_batch0']-2))
+                                                                                    pmat_chan_idx = (CTRL_PNL['num_input_channels_batch0']-2),
+                                                                                    norm_std_coeffs = CTRL_PNL['norm_std_coeffs'])
 
         images_up = Variable(torch.Tensor(images_up_non_tensor).type(CTRL_PNL['dtype']), requires_grad=False)
 

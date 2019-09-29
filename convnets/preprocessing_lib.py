@@ -46,7 +46,7 @@ LOW_TAXEL_THRESH_Y = 0
 HIGH_TAXEL_THRESH_X = (NUMOFTAXELS_X - 1)
 HIGH_TAXEL_THRESH_Y = (NUMOFTAXELS_Y - 1)
 
-
+from visualization_lib import VisualizationLib
 
 
 class PreprocessingLib():
@@ -62,7 +62,7 @@ class PreprocessingLib():
 
 
 
-    def preprocessing_add_image_noise(self, images, pmat_chan_idx):
+    def preprocessing_add_image_noise(self, images, pmat_chan_idx, norm_std_coeffs):
 
         queue = np.copy(images[:, pmat_chan_idx:pmat_chan_idx+2, :, :])
         queue[queue != 0] = 1.
@@ -77,51 +77,70 @@ class PreprocessingLib():
         
         image_noise = image_noise*queue
         image_noise = image_noise.astype(float)
-        image_noise[:, 0, :, :] /= 11.70153502792190
-        image_noise[:, 1, :, :] /= 45.61635847182483
+        #image_noise[:, 0, :, :] /= 11.70153502792190
+        #image_noise[:, 1, :, :] /= 45.61635847182483
+        image_noise[:, 0, :, :] *= norm_std_coeffs[4]
+        image_noise[:, 1, :, :] *= norm_std_coeffs[5]
 
         images[:, pmat_chan_idx:pmat_chan_idx+2, :, :] += image_noise
 
         #print images[0, 0, 50, 10:25], 'added noise'
 
         #clip noise so we dont go outside sensor limits
-        images[:, pmat_chan_idx, :, :] = np.clip(images[:, pmat_chan_idx, :, :], 0, 100/11.70153502792190)
+        #images[:, pmat_chan_idx, :, :] = np.clip(images[:, pmat_chan_idx, :, :], 0, 100/11.70153502792190)
+        images[:, pmat_chan_idx, :, :] = np.clip(images[:, pmat_chan_idx, :, :], 0, 100.*norm_std_coeffs[4])
         #images[:, pmat_chan_idx+1, :, :] = np.clip(images[:, pmat_chan_idx+1, :, :], 0, 10000)
         return images
 
 
-    def preprocessing_add_calibration_noise(self, images, pmat_chan_idx, is_training):
+    def preprocessing_add_calibration_noise(self, images, pmat_chan_idx, norm_std_coeffs, is_training):
 
         if is_training == True:
-            pmat_contact_orig = np.copy(images[:, pmat_chan_idx, :, :])
-            pmat_contact_orig[pmat_contact_orig != 0] = 1.
-            sobel_contact_orig = np.copy(images[:, pmat_chan_idx+1, :, :])
-            sobel_contact_orig[sobel_contact_orig != 0] = 1.
+            variation_amount = 0.1
+
+            #pmat_contact_orig = np.copy(images[:, pmat_chan_idx, :, :])
+            #pmat_contact_orig[pmat_contact_orig != 0] = 1.
+            #sobel_contact_orig = np.copy(images[:, pmat_chan_idx+1, :, :])
+            #sobel_contact_orig[sobel_contact_orig != 0] = 1.
 
             for map_index in range(images.shape[0]):
 
+                pmat_contact_orig = np.copy(images[map_index, pmat_chan_idx, :, :])
+                pmat_contact_orig[pmat_contact_orig != 0] = 1.
+                sobel_contact_orig = np.copy(images[map_index, pmat_chan_idx + 1, :, :])
+                sobel_contact_orig[sobel_contact_orig != 0] = 1.
+
+
                 # first multiply
-                amount_to_mult_im = random.normalvariate(mu = 1.0, sigma = 0.2) #mult a variation of 10%
-                amount_to_mult_sobel = random.normalvariate(mu = 1.0, sigma = 0.2) #mult a variation of 10%
+                amount_to_mult_im = random.normalvariate(mu = 1.0, sigma = variation_amount) #mult a variation of 10%
+                amount_to_mult_sobel = random.normalvariate(mu = 1.0, sigma = variation_amount) #mult a variation of 10%
                 images[map_index, pmat_chan_idx, :, :] = images[map_index, pmat_chan_idx, :, :] * amount_to_mult_im
                 images[map_index, pmat_chan_idx+1, :, :] = images[map_index, pmat_chan_idx+1, :, :] * amount_to_mult_sobel
 
                 # then add
-                amount_to_add_im = random.normalvariate(mu = 0.0, sigma = (1./11.70153502792190)*(98.666 - 0.0)*0.2) #add a variation of 10% of the range
-                amount_to_add_sobel = random.normalvariate(mu = 0.0, sigma = (1./45.61635847182483)*(386.509 - 0.0)*0.2) #add a variation of 10% of the range
+                #amount_to_add_im = random.normalvariate(mu = 0.0, sigma = (1./11.70153502792190)*(98.666 - 0.0)*0.1) #add a variation of 10% of the range
+                #amount_to_add_sobel = random.normalvariate(mu = 0.0, sigma = (1./45.61635847182483)*(386.509 - 0.0)*0.1) #add a variation of 10% of the range
+                amount_to_add_im = random.normalvariate(mu = 0.0, sigma = norm_std_coeffs[4]*(98.666 - 0.0)*variation_amount) #add a variation of 10% of the range
+                amount_to_add_sobel = random.normalvariate(mu = 0.0, sigma = norm_std_coeffs[5]*(386.509 - 0.0)*variation_amount) #add a variation of 10% of the range
+
                 images[map_index, pmat_chan_idx, :, :] = images[map_index, pmat_chan_idx, :, :] + amount_to_add_im
                 images[map_index, pmat_chan_idx+1, :, :] = images[map_index, pmat_chan_idx+1, :, :] + amount_to_add_sobel
+                images[map_index, pmat_chan_idx, :, :] = np.clip(images[map_index, pmat_chan_idx, :, :], a_min = 0., a_max = 10000)
+                images[map_index, pmat_chan_idx+1, :, :] = np.clip(images[map_index, pmat_chan_idx+1, :, :], a_min = 0., a_max = 10000)
 
                 #cut out the background. need to do this after adding.
-                images[map_index, pmat_chan_idx, :, :] *= pmat_contact_orig[map_index, :, :]
-                images[map_index, pmat_chan_idx+1, :, :] *= sobel_contact_orig[map_index, :, :]
+                images[map_index, pmat_chan_idx, :, :] *= pmat_contact_orig#[map_index, :, :]
+                images[map_index, pmat_chan_idx+1, :, :] *= sobel_contact_orig#[map_index, :, :]
 
-                amount_to_gauss_filter_im = random.normalvariate(mu = 0.5, sigma = 0.2)
-                amount_to_gauss_filter_sobel = random.normalvariate(mu = 0.5, sigma = 0.2)
+
+                amount_to_gauss_filter_im = random.normalvariate(mu = 0.5, sigma = variation_amount)
+                amount_to_gauss_filter_sobel = random.normalvariate(mu = 0.5, sigma = variation_amount)
                 images[map_index, pmat_chan_idx, :, :] = gaussian_filter(images[map_index, pmat_chan_idx, :, :], sigma= amount_to_gauss_filter_im) #pmap
                 images[map_index, pmat_chan_idx+1, :, :] = gaussian_filter(images[map_index, pmat_chan_idx+1, :, :], sigma= amount_to_gauss_filter_sobel) #sobel #NOW
 
-            images[:, pmat_chan_idx, :, :] = np.clip(images[:, pmat_chan_idx, :, :], 0, 100/11.70153502792190)
+
+            #images[:, pmat_chan_idx, :, :] = np.clip(images[:, pmat_chan_idx, :, :], 0, 100/11.70153502792190)
+            images[:, pmat_chan_idx, :, :] = np.clip(images[:, pmat_chan_idx, :, :], 0, 100.*norm_std_coeffs[4])
 
         else:  #if its NOT training we should still blur things by 0.5
             for map_index in range(images.shape[0]):
@@ -129,13 +148,21 @@ class PreprocessingLib():
                 images[map_index, pmat_chan_idx+1, :, :] = gaussian_filter(images[map_index, pmat_chan_idx+1, :, :], sigma= 0.5) #sobel
 
 
-        images[:, pmat_chan_idx, :, :] = np.clip(images[:, pmat_chan_idx, :, :], 0, 100/11.70153502792190)
+
+        #images[:, pmat_chan_idx, :, :] = np.clip(images[:, pmat_chan_idx, :, :], 0, 100/11.70153502792190)
+        images[:, pmat_chan_idx, :, :] = np.clip(images[:, pmat_chan_idx, :, :], 0, 100*norm_std_coeffs[4])
 
         #now calculate the contact map AFTER we've blurred it
         pmat_contact = np.copy(images[:, pmat_chan_idx:pmat_chan_idx+1, :, :])
-        pmat_contact[pmat_contact != 0] = 100./41.80684362163343
+        #pmat_contact[pmat_contact != 0] = 100./41.80684362163343
+        pmat_contact[pmat_contact != 0] = 100.*norm_std_coeffs[0]
         images = np.concatenate((pmat_contact, images), axis = 1)
 
+        #for i in range(0, 20):
+        #    VisualizationLib().visualize_pressure_map(images[i, 0, :, :] * 20., None, None,
+        #                                              images[i, 1, :, :] * 20., None, None,
+        #                                              block=False)
+        #    time.sleep(0.5)
 
         return images
 

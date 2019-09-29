@@ -32,7 +32,8 @@ def load_pickle(filename):
 # Pose Estimation Libraries
 from visualization_lib import VisualizationLib
 from preprocessing_lib import PreprocessingLib
-
+from tensorprep_lib import TensorPrepLib
+from unpack_batch_lib import UnpackBatchLib
 
 import cPickle as pkl
 import random
@@ -92,122 +93,159 @@ class PhysicalTrainer():
         This dataset is a dictionary of pressure maps with the corresponding
         3d position and orientation of the markers associated with it.'''
 
-        # change this to 'direct' when you are doing baseline methods
-        self.loss_vector_type = opt.losstype
-
-        self.GPU = GPU
-
         self.verbose = opt.verbose
+
+        self.CTRL_PNL = {}
+        self.CTRL_PNL['loss_vector_type'] = opt.losstype
+
+        self.CTRL_PNL['verbose'] = opt.verbose
         self.opt = opt
-        self.batch_size = 1
-        self.num_epochs = 300
-        self.include_inter = True
-        self.shuffle = True
+        self.CTRL_PNL['batch_size'] = 128
+        self.CTRL_PNL['num_epochs'] = 100
+        self.CTRL_PNL['incl_inter'] = True
+        self.CTRL_PNL['shuffle'] = True
+        self.CTRL_PNL['incl_ht_wt_channels'] = True
+        self.CTRL_PNL['incl_pmat_cntct_input'] = True
+        self.CTRL_PNL['lock_root'] = False
+        self.CTRL_PNL['num_input_channels'] = 3
+        self.CTRL_PNL['GPU'] = GPU
+        self.CTRL_PNL['dtype'] = dtype
+        repeat_real_data_ct = 3
+        self.CTRL_PNL['regr_angles'] = opt.reg_angles
+        self.CTRL_PNL['aws'] = False
+        self.CTRL_PNL['depth_map_labels'] = False  # can only be true if we have 100% synthetic data for training
+        self.CTRL_PNL['depth_map_labels_test'] = False  # can only be true is we have 100% synth for testing
+        self.CTRL_PNL['depth_map_output'] = True
+        self.CTRL_PNL['depth_map_input_est'] = False  # do this if we're working in a two-part regression
+        self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL[
+            'depth_map_input_est']  # holds betas and root same as prior estimate
+        self.CTRL_PNL['clip_sobel'] = True
+        self.CTRL_PNL['clip_betas'] = True
+        self.CTRL_PNL['mesh_bottom_dist'] = True
+        self.CTRL_PNL['full_body_rot'] = True
+        self.CTRL_PNL['normalize_input'] = True
+        self.CTRL_PNL['all_tanh_activ'] = True
+        self.CTRL_PNL['L2_contact'] = True
+        self.CTRL_PNL['pmat_mult'] = int(5)
+        self.CTRL_PNL['cal_noise'] = True
 
-        self.count = 0
+        if opt.losstype == 'direct':
+            self.CTRL_PNL['depth_map_labels'] = False
+            self.CTRL_PNL['depth_map_output'] = False
 
-        #print testing_database_file_f
-        print self.num_epochs, 'NUM EPOCHS!'
-        # Entire pressure dataset with coordinates in world frame
+        if self.CTRL_PNL['cal_noise'] == True:
+            self.CTRL_PNL['pmat_mult'] = int(1)
+            self.CTRL_PNL[
+                'incl_pmat_cntct_input'] = False  # if there's calibration noise we need to recompute this every batch
+            self.CTRL_PNL['clip_sobel'] = False
+
+        if self.CTRL_PNL['incl_pmat_cntct_input'] == True:
+            self.CTRL_PNL['num_input_channels'] += 1
+        if self.CTRL_PNL['depth_map_input_est'] == True:  # for a two part regression
+            self.CTRL_PNL['num_input_channels'] += 3
+        self.CTRL_PNL['num_input_channels_batch0'] = np.copy(self.CTRL_PNL['num_input_channels'])
+        if self.CTRL_PNL['incl_ht_wt_channels'] == True:
+            self.CTRL_PNL['num_input_channels'] += 2
+        if self.CTRL_PNL['cal_noise'] == True:
+            self.CTRL_PNL['num_input_channels'] += 1
+
+
+        if self.CTRL_PNL['cal_noise'] == False:
+            pmat_std_from_mult = ['N/A', 11.70153502792190, 19.90905848383454, 23.07018866032369, 0.0, 25.50538629767412]
+            sobel_std_from_mult = ['N/A', 29.80360490415032, 33.33532963163579, 34.14427844692501, 0.0, 34.86393494050921]
+        else:
+            pmat_std_from_mult = ['N/A', 11.70153502792190]
+            sobel_std_from_mult = ['N/A', 45.61635847182483]
+
+        self.CTRL_PNL['norm_std_coeffs'] =  [1./41.80684362163343,  #contact
+                                             1./16.69545796387731,  #pos est depth
+                                             1./45.08513083167194,  #neg est depth
+                                             1./43.55800622930469,  #cm est
+                                             1./pmat_std_from_mult[int(self.CTRL_PNL['pmat_mult'])], #pmat x5
+                                             1./sobel_std_from_mult[int(self.CTRL_PNL['pmat_mult'])], #pmat sobel
+                                             1./1.0,                #bed height mat
+                                             1./1.0,                #OUTPUT DO NOTHING
+                                             1./1.0,                #OUTPUT DO NOTHING
+                                             1. / 30.216647403350,  #weight
+                                             1. / 14.629298141231]  #height
+
+
+        self.CTRL_PNL['filepath_prefix'] = '/home/henry/'
+            # self.CTRL_PNL['filepath_prefix'] = '/media/henry/multimodal_data_2/'
+
+        if self.CTRL_PNL['depth_map_output'] == True:  # we need all the vertices if we're going to regress the depth maps
+            self.verts_list = "all"
+        else:
+            self.verts_list = [1325, 336, 1032, 4515, 1374, 4848, 1739, 5209, 1960, 5423]
 
 
         self.mat_size = (NUMOFTAXELS_X, NUMOFTAXELS_Y)
+        self.output_size_train = (NUMOFOUTPUTNODES_TRAIN, NUMOFOUTPUTDIMS)
         self.output_size_val = (NUMOFOUTPUTNODES_TEST, NUMOFOUTPUTDIMS)
-
-        #print training_database_file_f, training_database_file_m
-
-
-        # load in the test file
-        test_dat_f = self.load_files_to_database(testing_database_file_f, 'unlabeled_pmat_data', 'training f real')
-        test_dat_m = self.load_files_to_database(testing_database_file_m, 'unlabeled_pmat_data', 'training f real')
-
-        # create a tensor for our testing dataset.  First print out how many input/output sets we have and what data we have
-        if test_dat_f is not None:
-            for key in test_dat_f:
-                print 'testing set: ', key, np.array(test_dat_f[key]).shape
-        if test_dat_m is not None:
-            for key in test_dat_m:
-                print 'testing set: ', key, np.array(test_dat_m[key]).shape
-
-        self.test_x_flat = []  # Initialize the testing pressure mat listhave
-        if test_dat_f is not None:
-            for entry in range(len(test_dat_f['images'])):
-                self.test_x_flat.append(np.clip(np.array(test_dat_f['images'][entry])*5.0, a_min=0, a_max=100))
-        if test_dat_m is not None:
-            for entry in range(len(test_dat_m['images'])):
-                self.test_x_flat.append(np.clip(np.array(test_dat_m['images'][entry])*5.0, a_min=0, a_max=100))
-
-
-        self.test_x_flat = PreprocessingLib().preprocessing_blur_images(self.test_x_flat, self.mat_size, sigma=0.5)
-
-        self.test_a_flat = []  # Initialize the testing pressure mat angle listhave
-        if test_dat_f is not None:
-            for entry in range(len(test_dat_f['images'])):
-                self.test_a_flat.append(test_dat_f['bed_angle_deg'][entry])
-        if test_dat_m is not None:
-            for entry in range(len(test_dat_m['images'])):
-                self.test_a_flat.append(test_dat_m['bed_angle_deg'][entry])
-
-        if len(self.test_x_flat) == 0: print("NO TESTING DATA INCLUDED")
-
-        test_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.test_x_flat, self.test_a_flat,
-                                                                               self.include_inter, self.mat_size,
-                                                                               self.verbose)
-        test_xa = np.array(test_xa)
-        self.test_x_tensor = torch.Tensor(test_xa)
-
-        self.test_y_flat = []  # Initialize the ground truth listhave
-        if test_dat_f is not None:
-            for entry in range(len(test_dat_f['images'])):
-                c = np.concatenate(([1], [0]), axis=0)  # shapedirs (N, 6890, 3, 10)
-                self.test_y_flat.append(c)
-
-        if test_dat_m is not None:
-            for entry in range(len(test_dat_m['images'])):
-                c = np.concatenate(([0], [1]), axis=0)  # shapedirs (N, 6890, 3, 10)
-                self.test_y_flat.append(c)
-
-        self.test_y_tensor = torch.Tensor(self.test_y_flat)
-
         self.parents = np.array(
             [4294967295, 0, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9, 12, 13, 14, 16, 17, 18, 19, 20, 21]).astype(np.int32)
 
-    def load_files_to_database(self, database_file, creation_type, descriptor):
-        # load in the training or testing files.  This may take a while.
-        try:
-            for some_subject in database_file:
-                print "got here"
-                print some_subject
-                if creation_type in some_subject:
-                    print "some creation type"
-                    dat_curr = load_pickle(some_subject)
-                    print some_subject, dat_curr['bed_angle_deg'][0]
-                    for key in dat_curr:
-                        if np.array(dat_curr[key]).shape[0] != 0:
-                            for inputgoalset in np.arange(len(dat_curr['images'])):
-                                datcurr_to_append = dat_curr[key][inputgoalset]
-                                if key == 'images' and np.shape(datcurr_to_append)[0] == 3948:
-                                    datcurr_to_append = list(
-                                        np.array(datcurr_to_append).reshape(84, 47)[10:74, 10:37].reshape(1728))
-                                try:
-                                    dat[key].append(datcurr_to_append)
-                                except:
-                                    try:
-                                        dat[key] = []
-                                        dat[key].append(datcurr_to_append)
-                                    except:
-                                        dat = {}
-                                        dat[key] = []
-                                        dat[key].append(datcurr_to_append)
-                else:
-                    pass
 
-            for key in dat:
-                print descriptor, key, np.array(dat[key]).shape
-        except:
-            print "COULD NOT LOAD"
-            dat = None
-        return dat
+
+        #################################### PREP TESTING DATA ##########################################
+        # load in the test file
+        test_dat_f_real = TensorPrepLib().load_files_to_database(testing_database_file_f, 'synth')
+        test_dat_m_real = TensorPrepLib().load_files_to_database(testing_database_file_m, 'unlabeled')
+
+        self.test_x_flat = []  # Initialize the testing pressure mat list
+        self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, test_dat_f_real, test_dat_m_real, num_repeats = 1)
+        self.test_x_flat = list(np.clip(np.array(self.test_x_flat) * float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100))
+
+        if self.CTRL_PNL['cal_noise'] == False:
+            self.test_x_flat = PreprocessingLib().preprocessing_blur_images(self.test_x_flat, self.mat_size, sigma=0.5)
+
+        if len(self.test_x_flat) == 0: print("NO TESTING DATA INCLUDED")
+
+        self.test_a_flat = []  # Initialize the testing pressure mat angle listhave
+        self.test_a_flat = TensorPrepLib().prep_angles(self.test_a_flat, test_dat_f_real, test_dat_m_real, num_repeats = 1)
+
+
+        self.depth_contact_maps = None
+        self.depth_contact_maps_input_est = None
+
+        print np.shape(self.test_x_flat), np.shape(self.test_a_flat)
+
+        test_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.test_x_flat,
+                                                                               self.test_a_flat,
+                                                                                self.mat_size,
+                                                                                self.CTRL_PNL)
+
+
+        test_xa = TensorPrepLib().append_input_depth_contact(np.array(test_xa),
+                                                              CTRL_PNL = self.CTRL_PNL,
+                                                              mesh_depth_contact_maps_input_est = self.depth_contact_maps_input_est,
+                                                              mesh_depth_contact_maps = self.depth_contact_maps)
+
+        #normalize the input
+        if self.CTRL_PNL['normalize_input'] == True:
+            test_xa = TensorPrepLib().normalize_network_input(test_xa, self.CTRL_PNL)
+
+        self.test_x_tensor = torch.Tensor(test_xa)
+        test_y_flat = []  # Initialize the ground truth listhave
+
+        test_y_flat = TensorPrepLib().prep_labels(test_y_flat, test_dat_f_real, num_repeats=1,
+                                                  z_adj=0.0, gender="f", is_synth='real_nolabels',
+                                                  loss_vector_type=self.CTRL_PNL['loss_vector_type'],
+                                                  initial_angle_est=self.CTRL_PNL['adjust_ang_from_est'])
+        test_y_flat = TensorPrepLib().prep_labels(test_y_flat, test_dat_m_real, num_repeats=1,
+                                                  z_adj=0.0, gender="m", is_synth='real_nolabels',
+                                                  loss_vector_type=self.CTRL_PNL['loss_vector_type'],
+                                                  initial_angle_est=self.CTRL_PNL['adjust_ang_from_est'])
+
+        if self.CTRL_PNL['normalize_input'] == True:
+            test_y_flat = TensorPrepLib().normalize_wt_ht(test_y_flat, self.CTRL_PNL)
+
+        self.test_y_tensor = torch.Tensor(test_y_flat)
+
+        print self.test_x_tensor.shape, 'Input testing tensor shape'
+        print self.test_y_tensor.shape, 'Output testing tensor shape'
+
+
 
     def visualize_3d_data(self):
 
@@ -323,6 +361,8 @@ class PhysicalTrainer():
                                             self.weights_repeat[:, :, 2208, :],
                                             self.weights_repeat[:, :, 5669, :]])
         self.weights_repeat = self.weights_repeat.permute(1, 2, 0, 3).contiguous().view(self.N, 2, 10*24)
+
+
 
 
 
@@ -471,18 +511,17 @@ class PhysicalTrainer():
 
 
 
-        num_epochs = self.num_epochs
         hidden_dim = 12
         kernel_size = 10
 
 
         #self.test_x_tensor = self.test_x_tensor.unsqueeze(1)
         self.test_dataset = torch.utils.data.TensorDataset(self.test_x_tensor, self.test_y_tensor)
-        self.test_loader = torch.utils.data.DataLoader(self.test_dataset, self.batch_size, shuffle=self.shuffle)
+        self.test_loader = torch.utils.data.DataLoader(self.test_dataset, batch_size=self.CTRL_PNL['batch_size'], shuffle=self.CTRL_PNL['shuffle'])
 
 
 
-        if self.loss_vector_type == 'direct':
+        if self.CTRL_PNL['loss_vector_type'] == 'direct':
             fc_output_size = 72
             if GPU == True:
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_direct_real_s5_128b_300e.pt')
@@ -494,7 +533,7 @@ class PhysicalTrainer():
                 self.model = torch.load('/home/henry/data/convnets/convnet_direct_real_s9_alltest_128b_300e_noscale.pt', map_location='cpu')
 
 
-        elif self.loss_vector_type == 'anglesR':
+        elif self.CTRL_PNL['loss_vector_type'] == 'anglesR':
             fc_output_size = 229# 10 + 3 + 24*3*3 --- betas, root shift, rotations
             self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.loss_vector_type, self.batch_size)
             #self.model = torch.load('/home/ubuntu/Autobed_OFFICIAL_Trials' + '/subject_' + str(self.opt.leave_out) + '/convnets/convnet_9to18_'+str(self.loss_vector_type)+'_sTrue_128b_200e_' + str(self.opt.leave_out) + '.pt', map_location=lambda storage, loc: storage)
@@ -507,7 +546,7 @@ class PhysicalTrainer():
                 pp += nn
             print pp, 'num params'
 
-        elif self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
+        elif self.CTRL_PNL['loss_vector_type'] == 'anglesDC' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU':
             fc_output_size = 85## 10 + 3 + 24*3 --- betas, root shift, rotations
             if GPU == True:
                 #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s7ang_sig0p5_5xreal_voloff_128b_200e.pt')
@@ -515,7 +554,7 @@ class PhysicalTrainer():
                 self.model = self.model.cuda()
             else:
                 #self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_200e.pt', map_location='cpu')
-                self.model = torch.load('/home/henry/data/convnets/convnet_anglesEU_synthreal_s4_3xreal_4xsize_detach_128b_200e.pt', map_location='cpu')
+                self.model = torch.load('/home/henry/data/convnets/planesreg/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_100e_000005lr.pt', map_location='cpu')
                 #pass
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/2.0xsize/convnet_anglesEU_synthreal_tanh_s8ang_sig0p5_5xreal_voloff_128b_300e.pt', map_location='cpu')
 
@@ -553,74 +592,10 @@ class PhysicalTrainer():
                 batch[0] = batch[0].repeat(25, 1, 1, 1)
                 batch[1] = batch[1].repeat(25, 1)
             #self.model.train()
-
-            if self.loss_vector_type == 'direct':
-
-
-                images_up_non_tensor = np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy()[:, :, :, :], multiple = 2))
-                images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
-                images = Variable(batch[0].type(dtype), requires_grad=False)
-
-                scores, targets_est, targets_est_reduced = self.model.forward_direct(images_up, 0, targets, is_training = False)
-
-                self.criterion = nn.L1Loss()
-
-                loss = self.criterion(scores, scores_zeros)
-                loss = loss.data.item()
-
-
-
-
-            elif self.loss_vector_type == 'anglesR' or self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
-
-
-
-                images_up_non_tensor = np.array(PreprocessingLib().preprocessing_pressure_map_upsample(batch[0].numpy(), multiple=2))
-                images_up = Variable(torch.Tensor(images_up_non_tensor).type(dtype), requires_grad=False)
-                images = Variable(batch[0].type(dtype), requires_grad=False)
-
-                gender_switch = Variable(batch[1].type(dtype), requires_grad=False)
-
-
-
-                if self.loss_vector_type == 'anglesR':
-                    scores, targets_est, targets_est_reduced, betas_est = self.model.forward_kinematic_R(images_up, gender_switch,
-                                                                                                         0, targets=None, is_training=False)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
-                elif self.loss_vector_type == 'anglesDC' or self.loss_vector_type == 'anglesEU':
-                    scores, targets_est, targets_est_reduced, betas_est = self.model.forward_kinematic_angles(images_up, gender_switch,
-                                                                                                              0, targets=None, is_training=False,
-                                                                                                              reg_angles = self.opt.reg_angles)  # scores is a variable with 27 for 10 euclidean errors and 17 lengths in meters. targets est is a numpy array in mm.
-
-                #print("VAL SCORES",
-                #      np.sum(np.abs(scores.data.numpy())),
-                #      np.sum(np.abs(scores.data.numpy())),
-                #      np.sum(np.abs(scores.data.numpy()))/(scores.size()[0] * scores.size()[1]),
-                #      np.sum(np.abs(scores.data.numpy()))/(scores.size()[0] * 24))
-
-
-
-
-            if self.loss_vector_type == 'anglesR':
-                #print angles_est[0, :], 'validation angles'
-                print betas_est[0, :], 'validation betas'
-
-
-            NUM_IMAGES = images.data.size()[0]
-
-            for image_ct in range(NUM_IMAGES):
-                # #self.im_sampleval = self.im_sampleval[:,0,:,:]
-                self.im_sampleval = images.data[image_ct, :].squeeze()
-                self.sc_sampleval = targets_est[image_ct, :].squeeze() / 1000
-                self.sc_sampleval = self.sc_sampleval.view(24, 3)
-
-
-                if GPU == True:
-                    VisualizationLib().visualize_pressure_map(self.im_sampleval.cpu(), self.sc_sampleval.cpu(), block=False)
-                else:
-                    VisualizationLib().visualize_pressure_map(self.im_sampleval, self.sc_sampleval, block=False)
-                time.sleep(1)
-
-
+            scores, INPUT_DICT, OUTPUT_DICT = \
+                UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model=self.model,
+                                                          CTRL_PNL=self.CTRL_PNL)
+            # print torch.cuda.max_memory_allocated(), '1post train'
 
 
 if __name__ == "__main__":
@@ -666,8 +641,11 @@ if __name__ == "__main__":
     test_database_file_f = []
     test_database_file_m = []
 
+    filepath_prefix = '/media/henry/multimodal_data_2/data/'
+
     #test_database_file_f.append(filepath_prefix_qt+'data/real/trainval4_150rh1_sit120rh.p')
     test_database_file_m.append('/home/henry/data/unlabeled_pmat_data/henryc_on_bed_05102019.p')
+    #test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_f_lay_1000_none_stiff.p')
 
     #test_database_file_m.append('/home/henry/data/unlabeled_pmat_data/henrye_on_bed_09102019.p')
 

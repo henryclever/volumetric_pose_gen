@@ -113,7 +113,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['depth_map_labels'] = True #can only be true if we have 100% synthetic data for training
         self.CTRL_PNL['depth_map_labels_test'] = True #can only be true is we have 100% synth for testing
         self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
-        self.CTRL_PNL['depth_map_input_est'] = True #do this if we're working in a two-part regression
+        self.CTRL_PNL['depth_map_input_est'] = False #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
@@ -122,8 +122,8 @@ class PhysicalTrainer():
         self.CTRL_PNL['normalize_input'] = True
         self.CTRL_PNL['all_tanh_activ'] = False
         self.CTRL_PNL['L2_contact'] = False
-        self.CTRL_PNL['pmat_mult'] = int(1)
-        self.CTRL_PNL['cal_noise'] = False
+        self.CTRL_PNL['pmat_mult'] = int(5)
+        self.CTRL_PNL['cal_noise'] = True
 
 
         if opt.losstype == 'direct':
@@ -180,9 +180,12 @@ class PhysicalTrainer():
 
         self.train_x_flat = []  # Initialize the testing pressure mat list
         self.train_x_flat = TensorPrepLib().prep_images(self.train_x_flat, dat_f_synth, dat_m_synth, num_repeats = 1)
-        self.train_x_flat = list(np.clip(np.array(self.train_x_flat) * 1.0, a_min=0, a_max=100))
+        self.train_x_flat = list(np.clip(np.array(self.train_x_flat) * float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100))
         self.train_x_flat = TensorPrepLib().prep_images(self.train_x_flat, dat_f_real, dat_m_real, num_repeats = repeat_real_data_ct)
-        self.train_x_flat = PreprocessingLib().preprocessing_blur_images(self.train_x_flat, self.mat_size, sigma=0.5)
+
+
+        if self.CTRL_PNL['cal_noise'] == False:
+            self.train_x_flat = PreprocessingLib().preprocessing_blur_images(self.train_x_flat, self.mat_size, sigma=0.5)
 
         if len(self.train_x_flat) == 0: print("NO TRAINING DATA INCLUDED")
 
@@ -205,7 +208,7 @@ class PhysicalTrainer():
         else:
             self.depth_contact_maps_input_est = None
 
-        self.CTRL_PNL['clip_sobel'] = False
+        #self.CTRL_PNL['clip_sobel'] = False
         #stack the bed height array on the pressure image as well as a sobel filtered image
         train_xa = PreprocessingLib().preprocessing_create_pressure_angle_stack(self.train_x_flat,
                                                                                 self.train_a_flat,
@@ -216,7 +219,9 @@ class PhysicalTrainer():
         #print np.shape(train_xa), 'shape@'
         #train_xa = np.array(train_xa)
 
-        #train_xa[:, 1, :, :] = np.array(PreprocessingLib().preprocessing_blur_images(list(np.array(train_xa)[:, 1, :, :]), self.mat_size, sigma=0.5)).reshape(-1, self.mat_size[0], self.mat_size[1])
+        if self.CTRL_PNL['cal_noise'] == True:
+            #train_xa[:, 0, :, :] = np.array(PreprocessingLib().preprocessing_blur_images(list(np.array(train_xa)[:, 0, :, :]), self.mat_size, sigma=0.5)).reshape(-1, self.mat_size[0], self.mat_size[1])
+            train_xa[:, 1, :, :] = np.array(PreprocessingLib().preprocessing_blur_images(list(np.array(train_xa)[:, 1, :, :]), self.mat_size, sigma=0.5)).reshape(-1, self.mat_size[0], self.mat_size[1])
 
 
         #stack the depth and contact mesh images (and possibly a pmat contact image) together
@@ -536,14 +541,14 @@ if __name__ == "__main__":
 
     opt, args = p.parse_args()
 
-    #filepath_prefix = '/media/henry/multimodal_data_2/data/'
-    filepath_prefix = '/home/henry/data/'
+    filepath_prefix = '/media/henry/multimodal_data_2/data/'
+    #filepath_prefix = '/home/henry/data/'
 
     training_database_file_f = []
     training_database_file_m = []
 
-    filepath_suffix = '_output0p5'
-    #filepath_suffix = ''
+    #filepath_suffix = '_output0p5'
+    filepath_suffix = ''
 
 
     if opt.quick_test == True:

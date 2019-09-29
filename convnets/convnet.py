@@ -7,6 +7,9 @@ from kinematics_lib import KinematicsLib
 from mesh_depth_lib import MeshDepthLib
 import scipy.stats as ss
 import torchvision
+import time
+
+from visualization_lib import VisualizationLib
 
 
 class CNN(nn.Module):
@@ -283,8 +286,20 @@ class CNN(nn.Module):
 
         #print(torch.cuda.max_memory_allocated(), 'conv1')
 
-        for i in range(images.size()[1]):
-            print "channel:", i, "  mean:", torch.mean(images[:, i, :, :]), "  std:", torch.std(images[:, i, :, :])
+        #for i in range(images.size()[1]):
+        #    print "channel:", i, "  mean:", torch.mean(images[:, i, :, :]), "  std:", torch.std(images[:, i, :, :])
+
+        for i in range(0, 25):
+            print
+            for j in range(images.size()[1]):
+                print "channel:", j, "  mean:", torch.mean(images[i, j, :, :]), "  std:", torch.std(images[i, j, :, :])
+            VisualizationLib().visualize_pressure_map(images[i, 0, :, :].cpu()*20., None, None,
+                                                      images[i, 1, :, :].cpu()*20., None, None,
+                                                      images[i, 2, :, :].cpu()*20., None, None,
+                                                      images[i, 5, :, :].cpu()*20., None, None,
+                                                      block=False)
+            time.sleep(0.5)
+
 
         if CTRL_PNL['all_tanh_activ'] == True:
             scores_cnn = self.CNN_packtanh(images)

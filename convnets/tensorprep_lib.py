@@ -66,7 +66,7 @@ class TensorPrepLib():
                 print some_subject, dat_curr['bed_angle_deg'][0]
                 for key in dat_curr:
                     if np.array(dat_curr[key]).shape[0] != 0:
-                        for inputgoalset in np.arange(len(dat_curr['markers_xyz_m'])):
+                        for inputgoalset in np.arange(len(dat_curr['images'])):
                             datcurr_to_append = dat_curr[key][inputgoalset]
                             if key == 'images' and np.shape(datcurr_to_append)[0] == 3948:
                                 datcurr_to_append = list(
@@ -246,6 +246,30 @@ class TensorPrepLib():
                     for i in range(num_repeats):
                         y_flat.append(c)
 
+        elif is_synth == 'real_nolabels':
+            s1 = 1
+            WEIGHT_LBS = 190.
+            HEIGHT_IN = 73.
+            weight_input = WEIGHT_LBS/2.20462
+            height_input = (HEIGHT_IN*0.0254 - 1)*100
+
+            if dat is not None:
+                for entry in range(len(dat['images'])):
+                    c = np.concatenate((np.array(157 * [0]),
+                                        [g1], [g2], [s1],
+                                        [weight_input],
+                                        [height_input],), axis=0)  # [x1], [x2], [x3]: female synth: 1, 0, 1.
+                    if initial_angle_est == True:
+                        c = np.concatenate((c,
+                                            dat['betas_est'][entry][0:10],
+                                            dat['angles_est'][entry][0:72],
+                                            dat['root_xyz_est'][entry][0:3]), axis = 0)
+                        if full_body_rot == True:
+                            c = np.concatenate((c, dat['root_atan2_est'][entry][0:6]), axis = 0)
+                    for i in range(num_repeats):
+                        y_flat.append(c)
+
+
         return y_flat
 
 
@@ -256,19 +280,9 @@ class TensorPrepLib():
         if CTRL_PNL['cal_noise'] == True:
             pmat_mult = int(0)
 
-        pmat_std_from_mult = [11.70153502792190, 11.70153502792190, 19.90905848383454, 23.07018866032369, 0.0, 25.50538629767412]
-        sobel_std_from_mult = [45.61635847182483, 29.80360490415032, 33.33532963163579, 34.14427844692501, 0.0, 34.86393494050921]
 
         if CTRL_PNL['depth_map_input_est'] == True:
-            normalizing_std_constants = [1./41.80684362163343,  #contact
-                                         1./16.69545796387731,  #pos est depth
-                                         1./45.08513083167194,  #neg est depth
-                                         1./43.55800622930469,  #cm est
-                                         1./pmat_std_from_mult[pmat_mult], #pmat x5
-                                         1./sobel_std_from_mult[pmat_mult], #pmat sobel
-                                         1./1.0,                #bed height mat
-                                         1./1.0,  #OUTPUT DO NOTHING
-                                         1./1.0]  #OUTPUT DO NOTHING
+            normalizing_std_constants = CTRL_PNL['norm_std_coeffs']
 
             if CTRL_PNL['cal_noise'] == True: normalizing_std_constants = normalizing_std_constants[1:] #here we don't precompute the contact
 
@@ -276,12 +290,14 @@ class TensorPrepLib():
                 x[:, i, :, :] *= normalizing_std_constants[i]
 
         else:
-            normalizing_std_constants = [1./41.80684362163343,  #contact
-                                         1./pmat_std_from_mult[int(pmat_mult)], #pmat x5
-                                         1./sobel_std_from_mult[int(pmat_mult)], #pmat sobel
-                                         1./1.0,                #bed height mat
-                                         1./1.0,  #OUTPUT DO NOTHING
-                                         1./1.0]  #OUTPUT DO NOTHING
+            normalizing_std_constants = []
+            normalizing_std_constants.append(CTRL_PNL['norm_std_coeffs'][0])
+            normalizing_std_constants.append(CTRL_PNL['norm_std_coeffs'][4])
+            normalizing_std_constants.append(CTRL_PNL['norm_std_coeffs'][5])
+            normalizing_std_constants.append(CTRL_PNL['norm_std_coeffs'][6])
+            normalizing_std_constants.append(CTRL_PNL['norm_std_coeffs'][7])
+            normalizing_std_constants.append(CTRL_PNL['norm_std_coeffs'][8])
+
 
             if CTRL_PNL['cal_noise'] == True: normalizing_std_constants = normalizing_std_constants[1:] #here we don't precompute the contact
 
@@ -290,13 +306,17 @@ class TensorPrepLib():
 
         return x
 
-    def normalize_wt_ht(self, y):
-        normalizing_std_constants = [1./30.216647403349857,
-                                     1./14.629298141231091]
+    def normalize_wt_ht(self, y, CTRL_PNL):
+        #normalizing_std_constants = [1./30.216647403349857,
+        #                             1./14.629298141231091]
 
         y = np.array(y)
 
-        y[:, 160] *= normalizing_std_constants[0]
-        y[:, 161] *= normalizing_std_constants[1]
+        #y[:, 160] *= normalizing_std_constants[0]
+        #y[:, 161] *= normalizing_std_constants[1]
+        y[:, 160] *= CTRL_PNL['norm_std_coeffs'][9]
+        y[:, 161] *= CTRL_PNL['norm_std_coeffs'][10]
+
+
 
         return y
