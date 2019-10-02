@@ -1,7 +1,8 @@
 import numpy as np
 import random
 import copy
-import lib_render as libRender
+import lib_pyrender as libRender
+import lib_pyrender as libPyRender
 from opendr.renderer import ColoredRenderer
 from opendr.renderer import DepthRenderer
 from opendr.lighting import LambertianPointLight
@@ -10,6 +11,13 @@ from smpl.smpl_webuser.serialization import load_model
 from cv_bridge import CvBridge, CvBridgeError
 from util import batch_global_rigid_transformation, batch_rodrigues, batch_lrotmin, reflect_pose
 
+
+# some_file.py
+import sys
+# insert at 1, 0 is the script path (or '' in REPL)
+sys.path.insert(1, '/home/henry/git/volumetric_pose_gen/convnets')
+
+
 #volumetric pose gen libraries
 import lib_visualization as libVisualization
 import lib_kinematics as libKinematics
@@ -17,6 +25,7 @@ from multipose_lib import ArTagLib
 from multipose_lib import VizLib
 from process_yash_data import ProcessYashData
 from preprocessing_lib import PreprocessingLib
+from tensorprep_lib import TensorPrepLib
 from time import sleep
 import rospy
 import roslib
@@ -60,9 +69,9 @@ import matplotlib.pyplot as plt
 #hmr
 from hmr.src.tf_smpl.batch_smpl import SMPL
 
-WEIGHT_LBS = 190.
-HEIGHT_IN = 78.
-GENDER = 'm'
+WEIGHT_LBS = 125.#190.
+HEIGHT_IN = 67.#72.
+GENDER = 'f'
 
 MAT_SIZE = (64, 27)
 
@@ -77,7 +86,7 @@ from unpack_batch_lib import UnpackBatchLib
 import convnet as convnet
 from torch.autograd import Variable
 
-if torch.cuda.is_available():
+if False:#torch.cuda.is_available():
     # Use for GPU
     GPU = True
     dtype = torch.cuda.FloatTensor
@@ -133,10 +142,17 @@ class Viz3DPose():
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
         self.CTRL_PNL['mesh_bottom_dist'] = True
-        self.CTRL_PNL['full_body_rot'] = False
+        self.CTRL_PNL['full_body_rot'] = True#False
+        self.CTRL_PNL['normalize_input'] = True#False
+        self.CTRL_PNL['all_tanh_activ'] = True#False
+        self.CTRL_PNL['L2_contact'] = True#False
+        self.CTRL_PNL['pmat_mult'] = int(5)
+        self.CTRL_PNL['cal_noise'] = False
 
 
-        self.count = 0
+        if self.CTRL_PNL['cal_noise'] == True:
+            self.CTRL_PNL['incl_pmat_cntct_input'] = False #if there's calibration noise we need to recompute this every batch
+            self.CTRL_PNL['clip_sobel'] = False
 
         if self.CTRL_PNL['incl_pmat_cntct_input'] == True:
             self.CTRL_PNL['num_input_channels'] += 1
@@ -145,6 +161,38 @@ class Viz3DPose():
         self.CTRL_PNL['num_input_channels_batch0'] = np.copy(self.CTRL_PNL['num_input_channels'])
         if self.CTRL_PNL['incl_ht_wt_channels'] == True:
             self.CTRL_PNL['num_input_channels'] += 2
+        if self.CTRL_PNL['cal_noise'] == True:
+            self.CTRL_PNL['num_input_channels'] += 1
+
+        pmat_std_from_mult = ['N/A', 11.70153502792190, 19.90905848383454, 23.07018866032369, 0.0, 25.50538629767412]
+        if self.CTRL_PNL['cal_noise'] == False:
+            sobel_std_from_mult = ['N/A', 29.80360490415032, 33.33532963163579, 34.14427844692501, 0.0, 34.86393494050921]
+        else:
+            sobel_std_from_mult = ['N/A', 45.61635847182483, 77.74920396659292, 88.89398421073700, 0.0, 97.90075708182506]
+
+        self.CTRL_PNL['norm_std_coeffs'] =  [1./41.80684362163343,  #contact
+                                             1./16.69545796387731,  #pos est depth
+                                             1./45.08513083167194,  #neg est depth
+                                             1./43.55800622930469,  #cm est
+                                             1./pmat_std_from_mult[int(self.CTRL_PNL['pmat_mult'])], #pmat x5
+                                             1./sobel_std_from_mult[int(self.CTRL_PNL['pmat_mult'])], #pmat sobel
+                                             1./1.0,                #bed height mat
+                                             1./1.0,                #OUTPUT DO NOTHING
+                                             1./1.0,                #OUTPUT DO NOTHING
+                                             1. / 30.216647403350,  #weight
+                                             1. / 14.629298141231]  #height
+
+
+        self.CTRL_PNL['filepath_prefix'] = '/home/henry/'
+
+        if self.CTRL_PNL['depth_map_output'] == True:  # we need all the vertices if we're going to regress the depth maps
+            self.verts_list = "all"
+
+        self.TPL = TensorPrepLib()
+
+
+        self.count = 0
+
 
         self.CTRL_PNL['filepath_prefix'] = '/home/henry/'
         self.CTRL_PNL['aws'] = False
@@ -346,23 +394,27 @@ class Viz3DPose():
 
 
     def estimate_pose(self, pmat, bedangle, markers_c, model, model2):
+        mat_size = (64, 27)
 
 
-        pmat = np.fliplr(np.flipud(np.clip(pmat.reshape(MAT_SIZE)*5.0, a_min=0, a_max=100)))
+        pmat = np.fliplr(np.flipud(np.clip(pmat.reshape(MAT_SIZE)*float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100)))
 
-        pmat = gaussian_filter(pmat, sigma= 0.5)
+        if self.CTRL_PNL['cal_noise'] == False:
+            pmat = gaussian_filter(pmat, sigma=0.5)
 
+        pmat_stack = PreprocessingLib().preprocessing_create_pressure_angle_stack_realtime(pmat, 0.0, mat_size)
 
-        pmat_stack = PreprocessingLib().preprocessing_create_pressure_angle_stack_realtime(pmat, bedangle, MAT_SIZE)
-        pmat_stack = np.clip(pmat_stack, a_min=0, a_max=100)
+        if self.CTRL_PNL['cal_noise'] == False:
+            pmat_stack = np.clip(pmat_stack, a_min=0, a_max=100)
 
         pmat_stack = np.array(pmat_stack)
-        pmat_contact = np.copy(pmat_stack[:, 0:1, :, :])
-        pmat_contact[pmat_contact > 0] = 100
-        pmat_stack = np.concatenate((pmat_contact, pmat_stack), axis = 1)
+        if self.CTRL_PNL['incl_pmat_cntct_input'] == True:
+            pmat_contact = np.copy(pmat_stack[:, 0:1, :, :])
+            pmat_contact[pmat_contact > 0] = 100
+            pmat_stack = np.concatenate((pmat_contact, pmat_stack), axis=1)
 
-        weight_input = WEIGHT_LBS/2.20462
-        height_input = (HEIGHT_IN*0.0254 - 1)*100
+        weight_input = WEIGHT_LBS / 2.20462
+        height_input = (HEIGHT_IN * 0.0254 - 1) * 100
 
         batch1 = np.zeros((1, 162))
         if GENDER == 'f':
@@ -371,6 +423,11 @@ class Viz3DPose():
             batch1[:, 158] += 1
         batch1[:, 160] += weight_input
         batch1[:, 161] += height_input
+
+        if self.CTRL_PNL['normalize_input'] == True:
+            self.CTRL_PNL['depth_map_input_est'] = False
+            pmat_stack = self.TPL.normalize_network_input(pmat_stack, self.CTRL_PNL)
+            batch1 = self.TPL.normalize_wt_ht(batch1, self.CTRL_PNL)
 
         pmat_stack = torch.Tensor(pmat_stack)
         batch1 = torch.Tensor(batch1)
@@ -382,58 +439,67 @@ class Viz3DPose():
         self.CTRL_PNL['adjust_ang_from_est'] = False
         scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch, False, model, self.CTRL_PNL)
 
-
-        mdm_est_pos = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1)
-        mdm_est_neg = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1)
+        mdm_est_pos = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1) / 16.69545796387731
+        mdm_est_neg = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1) / 45.08513083167194
         mdm_est_pos[mdm_est_pos < 0] = 0
         mdm_est_neg[mdm_est_neg > 0] = 0
         mdm_est_neg *= -1
-        cm_est = OUTPUT_DICT['batch_cm_est'].clone().unsqueeze(1) * 100
+        cm_est = OUTPUT_DICT['batch_cm_est'].clone().unsqueeze(1) * 100 / 43.55800622930469
 
-        batch_cor = []
-        batch_cor.append(torch.cat((pmat_stack[:, 0:1, :, :],
-                                  mdm_est_pos.type(torch.FloatTensor),
-                                  mdm_est_neg.type(torch.FloatTensor),
-                                  cm_est.type(torch.FloatTensor),
-                                  pmat_stack[:, 1:, :, :]), dim=1))
+        # 1. / 16.69545796387731,  # pos est depth
+        # 1. / 45.08513083167194,  # neg est depth
+        # 1. / 43.55800622930469,  # cm est
 
-        batch_cor.append(torch.cat((batch1,
-                          OUTPUT_DICT['batch_betas_est'].cpu(),
-                          OUTPUT_DICT['batch_angles_est'].cpu(),
-                          OUTPUT_DICT['batch_root_xyz_est'].cpu()), dim = 1))
+        if model2 is not None:
+            batch_cor = []
+            batch_cor.append(torch.cat((pmat_stack[:, 0:1, :, :],
+                                        mdm_est_pos.type(torch.FloatTensor),
+                                        mdm_est_neg.type(torch.FloatTensor),
+                                        cm_est.type(torch.FloatTensor),
+                                        pmat_stack[:, 1:, :, :]), dim=1))
 
+            if self.CTRL_PNL['full_body_rot'] == False:
+                batch_cor.append(torch.cat((batch1,
+                                            OUTPUT_DICT['batch_betas_est'].cpu(),
+                                            OUTPUT_DICT['batch_angles_est'].cpu(),
+                                            OUTPUT_DICT['batch_root_xyz_est'].cpu()), dim=1))
+            elif self.CTRL_PNL['full_body_rot'] == True:
+                batch_cor.append(torch.cat((batch1,
+                                            OUTPUT_DICT['batch_betas_est'].cpu(),
+                                            OUTPUT_DICT['batch_angles_est'].cpu(),
+                                            OUTPUT_DICT['batch_root_xyz_est'].cpu(),
+                                            OUTPUT_DICT['batch_root_atan2_est'].cpu()), dim=1))
 
-        self.CTRL_PNL['adjust_ang_from_est'] = True
-        scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch_cor, False, model2, self.CTRL_PNL)
+            self.CTRL_PNL['adjust_ang_from_est'] = True
+            scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch_cor, False, model2,
+                                                                                        self.CTRL_PNL)
 
         betas_est = np.squeeze(OUTPUT_DICT['batch_betas_est_post_clip'].cpu().numpy())
         angles_est = np.squeeze(OUTPUT_DICT['batch_angles_est_post_clip'])
         root_shift_est = np.squeeze(OUTPUT_DICT['batch_root_xyz_est_post_clip'].cpu().numpy())
 
+        # print betas_est.shape, root_shift_est.shape, angles_est.shape
 
-        #print betas_est.shape, root_shift_est.shape, angles_est.shape
-
-        #print betas_est, root_shift_est, angles_est
+        # print betas_est, root_shift_est, angles_est
         angles_est = angles_est.reshape(72)
 
         for idx in range(10):
-            #print shape_pose_vol[0][idx]
+            # print shape_pose_vol[0][idx]
             self.m.betas[idx] = betas_est[idx]
-
 
         for idx in range(72):
             self.m.pose[idx] = angles_est[idx]
 
-
-        init_root = np.array(self.m.pose[0:3])+0.000001
+        init_root = np.array(self.m.pose[0:3]) + 0.000001
         init_rootR = libKinematics.matrix_from_dir_cos_angles(init_root)
-        root_rot = libKinematics.eulerAnglesToRotationMatrix([np.pi, 0.0, np.pi/2])
-        #print root_rot
+        root_rot = libKinematics.eulerAnglesToRotationMatrix([np.pi, 0.0, np.pi / 2])
+        # print root_rot
         trans_root = libKinematics.dir_cos_angles_from_matrix(np.matmul(root_rot, init_rootR))
 
         self.m.pose[0] = trans_root[0]
         self.m.pose[1] = trans_root[1]
         self.m.pose[2] = trans_root[2]
+
 
         #print self.m.J_transformed[1, :], self.m.J_transformed[4, :]
         # self.m.pose[51] = selection_r
@@ -448,6 +514,13 @@ class Viz3DPose():
 
         camera_point = [1.09898028, 0.46441343, -1.53]
 
+        #render everything
+        self.pyRender.render_mesh_pc_bed_pyrender_everything(smpl_verts, smpl_faces, camera_point, bedangle,
+                                                              pc = pc_autofil_red, pmat = pmat, smpl_render_points = False,
+                                                              facing_cam_only=False, viz_type = None,
+                                                              markers = None, segment_limbs=False)
+
+
         #render in 3D pyrender with pressure mat
         #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
         #                                          pc = None, pmat = pmat, smpl_render_points = False,
@@ -461,22 +534,22 @@ class Viz3DPose():
         #                                          markers = None, segment_limbs=True)
 
         #render the error of point cloud points relative to verts
-        #self.pyRender.eval_dist_render_open3d(smpl_verts, smpl_faces, pc_autofil_red, viz_type = 'pc_error',
+        #self.Render.eval_dist_render_open3d(smpl_verts, smpl_faces, pc_autofil_red, viz_type = 'pc_error',
         #                                      camera_point = camera_point, segment_limbs=False)
-        self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
-                                                  pc = pc_autofil_red, pmat = None, smpl_render_points = False,
-                                                  facing_cam_only=True, viz_type = 'pc_error',
-                                                  markers = None, segment_limbs=False)
+        #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
+        #                                          pc = pc_autofil_red, pmat = None, smpl_render_points = False,
+        #                                          facing_cam_only=True, viz_type = 'pc_error',
+        #                                          markers = None, segment_limbs=False)
 
         #render the error of verts relative to point cloud points
-        #self.pyRender.eval_dist_render_open3d(smpl_verts, smpl_faces, pc_autofil_red, viz_type = 'mesh_error',
+        #self.Render.eval_dist_render_open3d(smpl_verts, smpl_faces, pc_autofil_red, viz_type = 'mesh_error',
         #                                      camera_point = camera_point, segment_limbs=False)
         #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
         #                                          pc = pc_autofil_red, pmat = None, smpl_render_points = False,
         #                                          facing_cam_only=True, viz_type = 'mesh_error',
         #                                          markers = None, segment_limbs=False)
 
-        time.sleep(100)
+        time.sleep(1)
         self.point_cloud_array = None
 
 
@@ -492,20 +565,35 @@ class Viz3DPose():
     def evaluate_data(self, function_input, filename1, filename2):
 
 
-        self.pyRender = libRender.pyRenderMesh()
+        self.Render = libRender.pyRenderMesh()
+        self.pyRender = libPyRender.pyRenderMesh()
 
+        #model = torch.load(filename1, map_location={'cuda:5': 'cuda:0'})
         if GPU == True:
-            model = torch.load(filename1)
-            model = model.cuda().eval()
+            for i in range(0, 8):
+                try:
+                    model = torch.load(filename1, map_location={'cuda:'+str(i):'cuda:0'})
+                    model = model.cuda().eval()
+                    break
+                except:
+                    pass
             if filename2 is not None:
-                model2 = torch.load(filename2)
-                model2 = model2.cuda().eval()
+                for i in range(0, 8):
+                    try:
+                        model2 = torch.load(filename2, map_location={'cuda:'+str(i):'cuda:0'})
+                        model2 = model2.cuda().eval()
+                        break
+                    except:
+                        pass
+            else:
+                model2 = None
 
         else:
             model = torch.load(filename1, map_location='cpu').eval()
             if filename2 is not None:
                 model2 = torch.load(filename2, map_location='cpu').eval()
 
+        print model
 
         function_input = np.array(function_input)*np.array([10, 10, 10, 10, 10, 10, 0.1, 0.1, 0.1, 0.1, 1])
         function_input += np.array([2.2, 32, -1, 1.2, 32, -5, 1.0, 1.0, 0.96, 0.95, 0.8])
@@ -529,11 +617,11 @@ class Viz3DPose():
 
         #file_dir = "/media/henry/multimodal_data_2/test_data/data_072019_0007"
         #file_dir = "/media/henry/multimodal_data_2/test_data/data_072019_0006"
-        file_dir = "/home/henry/test_data/data_072019_0006"
+        file_dir = "/home/henry/ivy_test_data/data_102019_sleepleft_0000"
 
         V3D.load_next_file(file_dir)
 
-        start_num = 51
+        start_num = 1
         #for im_num in range(29, 100):
         for im_num in range(start_num, 100):
 
@@ -780,6 +868,12 @@ if __name__ ==  "__main__":
         folder_idx = 3
         image_idx = 4
 
+
     F_eval = V3D.evaluate_data(file_optimization_picks[calib_index], \
-                               model_prefix+"/data/convnets/planesreg/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_100e_000005lr.pt", \
-                               model_prefix+"/data/convnets/planesreg_correction/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.pt")
+                               model_prefix+"/data/convnets/planesreg/DC_L2depth/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_100e_00001lr.pt", \
+                               model_prefix+"/data/convnets/planesreg_correction/DC_L2depth/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_depthestin_angleadj_alltanh_l2cnt_50e_100e_00001lr.pt")
+
+
+    #F_eval = V3D.evaluate_data(file_optimization_picks[calib_index], \
+    #                           model_prefix+"/data/convnets/planesreg/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_100e_000005lr.pt", \
+    #                           model_prefix+"/data/convnets/planesreg_correction/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.pt")

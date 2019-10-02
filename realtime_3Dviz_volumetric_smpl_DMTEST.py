@@ -124,7 +124,6 @@ class GeneratePose():
 
 
         if self.CTRL_PNL['cal_noise'] == True:
-            self.CTRL_PNL['pmat_mult'] = int(1)
             self.CTRL_PNL['incl_pmat_cntct_input'] = False #if there's calibration noise we need to recompute this every batch
             self.CTRL_PNL['clip_sobel'] = False
 
@@ -342,7 +341,7 @@ class GeneratePose():
         while not rospy.is_shutdown():
 
 
-            pmat = np.fliplr(np.flipud(np.clip(self.pressure.reshape(mat_size)*float(self.CTRL_PNL['pmat_mult'])*3., a_min=0, a_max=100)))
+            pmat = np.fliplr(np.flipud(np.clip(self.pressure.reshape(mat_size)*float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100)))
 
             if self.CTRL_PNL['cal_noise'] == False:
                 pmat = gaussian_filter(pmat, sigma= 0.5)
