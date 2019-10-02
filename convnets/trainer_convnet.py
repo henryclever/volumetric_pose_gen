@@ -120,7 +120,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['depth_map_labels'] = True #can only be true if we have 100% synthetic data for training
         self.CTRL_PNL['depth_map_labels_test'] = True #can only be true is we have 100% synth for testing
         self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
-        self.CTRL_PNL['depth_map_input_est'] = False  #do this if we're working in a two-part regression
+        self.CTRL_PNL['depth_map_input_est'] = True  #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
@@ -130,7 +130,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['all_tanh_activ'] = True
         self.CTRL_PNL['L2_contact'] = True
         self.CTRL_PNL['pmat_mult'] = int(5)
-        self.CTRL_PNL['cal_noise'] = True
+        self.CTRL_PNL['cal_noise'] = False
 
         self.weight_joints = self.opt.j_d_ratio*2
         self.weight_depth_planes = (1-self.opt.j_d_ratio)*2
@@ -428,7 +428,13 @@ class PhysicalTrainer():
             self.model = convnet.CNN(fc_output_size, self.CTRL_PNL['loss_vector_type'], self.CTRL_PNL['batch_size'],
                                      verts_list = self.verts_list, filepath=self.CTRL_PNL['filepath_prefix'], in_channels=self.CTRL_PNL['num_input_channels'])
 
-            #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_l2cnt_125e_00001lr.pt', map_location={'cuda:0':'cuda:'+str(DEVICE)})
+
+            for i in range(0, 8):
+                try:
+                    self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_l2cnt_125e_00001lr.pt', map_location={'cuda:'+str(i):'cuda:'+str(DEVICE)})
+                    break
+                except:
+                    pass
             #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_125e_00001lr.pt')
             #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_l2cnt_calnoise_150e_00001lr.pt')
             #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_alltanh_l2cnt_calnoise_125e_00001lr.pt')
@@ -567,7 +573,7 @@ class PhysicalTrainer():
                     val_n_batches = 4
                     print "evaluating on ", val_n_batches
 
-                    im_display_idx = 0.#random.randint(0,INPUT_DICT['batch_images'].size()[0])
+                    im_display_idx = 0 #random.randint(0,INPUT_DICT['batch_images'].size()[0])
 
 
                     if GPU == True:
@@ -872,8 +878,8 @@ if __name__ == "__main__":
         #filepath_prefix = '/media/henry/multimodal_data_2/data/'
         filepath_suffix = ''
 
-    #filepath_suffix = '_output0p5_alltanh_l2cnt'
-    filepath_suffix = ''
+    filepath_suffix = '_output0p5_112k_100e_alltanh'
+    #filepath_suffix = ''
 
     training_database_file_f = []
     training_database_file_m = []

@@ -125,8 +125,6 @@ class PhysicalTrainer():
         self.CTRL_PNL['pmat_mult'] = int(5)
         self.CTRL_PNL['cal_noise'] = False
 
-
-
         self.filename = filename
 
         if opt.losstype == 'direct':
@@ -134,7 +132,6 @@ class PhysicalTrainer():
             self.CTRL_PNL['depth_map_output'] = False
 
         if self.CTRL_PNL['cal_noise'] == True:
-            self.CTRL_PNL['pmat_mult'] = int(1)
             self.CTRL_PNL['incl_pmat_cntct_input'] = False #if there's calibration noise we need to recompute this every batch
             self.CTRL_PNL['clip_sobel'] = False
 
@@ -147,6 +144,25 @@ class PhysicalTrainer():
             self.CTRL_PNL['num_input_channels'] += 2
         if self.CTRL_PNL['cal_noise'] == True:
             self.CTRL_PNL['num_input_channels'] += 1
+
+        pmat_std_from_mult = ['N/A', 11.70153502792190, 19.90905848383454, 23.07018866032369, 0.0, 25.50538629767412]
+        if self.CTRL_PNL['cal_noise'] == False:
+            sobel_std_from_mult = ['N/A', 29.80360490415032, 33.33532963163579, 34.14427844692501, 0.0, 34.86393494050921]
+        else:
+            sobel_std_from_mult = ['N/A', 45.61635847182483, 77.74920396659292, 88.89398421073700, 0.0, 97.90075708182506]
+
+        self.CTRL_PNL['norm_std_coeffs'] =  [1./41.80684362163343,  #contact
+                                             1./16.69545796387731,  #pos est depth
+                                             1./45.08513083167194,  #neg est depth
+                                             1./43.55800622930469,  #cm est
+                                             1./pmat_std_from_mult[int(self.CTRL_PNL['pmat_mult'])], #pmat x5
+                                             1./sobel_std_from_mult[int(self.CTRL_PNL['pmat_mult'])], #pmat sobel
+                                             1./1.0,                #bed height mat
+                                             1./1.0,                #OUTPUT DO NOTHING
+                                             1./1.0,                #OUTPUT DO NOTHING
+                                             1. / 30.216647403350,  #weight
+                                             1. / 14.629298141231]  #height
+
 
 
         if self.opt.aws == True:
@@ -295,7 +311,7 @@ class PhysicalTrainer():
                                                         full_body_rot = self.CTRL_PNL['full_body_rot'])
 
         if self.CTRL_PNL['normalize_input'] == True:
-            test_y_flat = TensorPrepLib().normalize_wt_ht(test_y_flat)
+            test_y_flat = TensorPrepLib().normalize_wt_ht(test_y_flat, self.CTRL_PNL)
 
         self.test_y_tensor = torch.Tensor(test_y_flat)
 
@@ -333,7 +349,7 @@ class PhysicalTrainer():
                 #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_planesreg_128b_100e.pt')
                 #self.model = torch.load('/home/henry/data/convnets/epochs_set_3/convnet_anglesEU_synthreal_s12_3xreal_128b_101e_300e.pt')
                 #self.model = torch.load('/home/henry/data/convnets/planesreg/convnet_anglesEU_synth_s9_3xreal_128b_0.1rtojtdpth_pmatcntin_100e_00001lr.pt')
-                self.model = torch.load('/home/henry/data/convnets/planesreg/DC_L2depth/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_50e_00001lr.pt', map_location={'cuda:5':'cuda:0'})
+                self.model = torch.load('/home/henry/data/convnets/planesreg/DC_L2depth/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_100e_00001lr.pt', map_location={'cuda:5':'cuda:0'})
                 #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_300e.pt')
                 self.model = self.model.cuda()
             else:
@@ -481,7 +497,7 @@ class PhysicalTrainer():
 
 
         #pkl.dump(self.dat,open('/media/henry/multimodal_data_2/'+self.filename+'_output0p7.p', 'wb'))
-        pkl.dump(self.dat,open('/home/henry/'+self.filename+'_output0p5_112k_50e_alltanh.p', 'wb'))
+        pkl.dump(self.dat,open('/home/henry/'+self.filename+'_output0p5_112k_100e_alltanh.p', 'wb'))
 
 
         #if GPU == True:
@@ -540,7 +556,12 @@ if __name__ == "__main__":
                         'data/synth/random/train_roll0_f_lay_4000_none_stiff',
                         'data/synth/random/train_rollpi_f_lay_4000_none_stiff',
                         'data/synth/random/train_roll0_plo_f_lay_4000_none_stiff',
-                        'data/synth/random/train_rollpi_plo_f_lay_4000_none_stiff',]
+                        'data/synth/random/train_rollpi_plo_f_lay_4000_none_stiff',
+                        'data/synth/random2/train_roll0_f_lay_10000_none_stiff',
+                        'data/synth/random2/train_rollpi_f_lay_10000_none_stiff',
+                        'data/synth/random2/train_roll0_plo_f_lay_10000_none_stiff',
+                        'data/synth/random2/train_rollpi_plo_f_lay_10000_none_stiff']
+
     
     filename_list_m = [ 'data/synth/random/test_roll0_m_lay_1000_none_stiff',
                         'data/synth/random/test_rollpi_m_lay_1000_none_stiff',
@@ -549,18 +570,11 @@ if __name__ == "__main__":
                         'data/synth/random/train_roll0_m_lay_4000_none_stiff',
                         'data/synth/random/train_rollpi_m_lay_4000_none_stiff',
                         'data/synth/random/train_roll0_plo_m_lay_4000_none_stiff',
-                        'data/synth/random/train_rollpi_plo_m_lay_4000_none_stiff',]
-
-    filename_list_f = [ 'data/synth/random2/train_roll0_f_lay_10000_none_stiff',
-                        'data/synth/random2/train_rollpi_f_lay_10000_none_stiff',
-                        'data/synth/random2/train_roll0_plo_f_lay_10000_none_stiff',
-                        'data/synth/random2/train_rollpi_plo_f_lay_10000_none_stiff',]
-
-    filename_list_m = [ 'data/synth/random2/train_roll0_m_lay_10000_none_stiff',
+                        'data/synth/random/train_rollpi_plo_m_lay_4000_none_stiff',
+                        'data/synth/random2/train_roll0_m_lay_10000_none_stiff',
                         'data/synth/random2/train_rollpi_m_lay_10000_none_stiff',
                         'data/synth/random2/train_roll0_plo_m_lay_10000_none_stiff',
-                        'data/synth/random2/train_rollpi_plo_m_lay_10000_none_stiff',]
-
+                        'data/synth/random2/train_rollpi_plo_m_lay_10000_none_stiff']
 
 
 
@@ -571,6 +585,18 @@ if __name__ == "__main__":
         test_database_file_f = []
         test_database_file_m = []
         test_database_file_m.append(filepath_prefix_qt + filename + '.p')
+
+        p = PhysicalTrainer(test_database_file_f, test_database_file_m, opt, filename)
+
+        print "GOT HERE!"
+        p.init_convnet_test()
+        #p.visualize_3d_data()
+
+    for filename in filename_list_f:
+
+        test_database_file_f = []
+        test_database_file_m = []
+        test_database_file_f.append(filepath_prefix_qt + filename + '.p')
 
         p = PhysicalTrainer(test_database_file_f, test_database_file_m, opt, filename)
 

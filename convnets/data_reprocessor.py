@@ -773,12 +773,27 @@ def get_depth_cont_maps_from_synth():
 def reprocess_hbh_small_bags():
     from smpl.smpl_webuser.serialization import load_model
 
-    for gender in ["f", "m"]:
+    for gender in ["m"]:#, "m"]:
 
 
         stiffness = "none"
         posture = "lay"
-        num_data = "250"
+
+        set_num_pairs = [[11, "250"],
+                         [12, "250"],
+                         [13, "250"],
+                         [14, "250"],
+                         [15, "250"],
+                         [21, "200"],
+                         [22, "200"],
+                         [23, "200"],
+                         [24, "200"],
+                         [25, "200"],
+                         [26, "200"],
+                         [27, "200"],
+                         [28, "200"],
+                         [29, "200"],
+                         [30, "200"],]
 
         plo = "_plo"
         rp = "0"
@@ -787,9 +802,12 @@ def reprocess_hbh_small_bags():
         model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_' + gender + '_lbs_10_207_0_v1.0.0.pkl'
         prechecked_pose_list_new = []
         num_data_checked = 0
-        for set in [1,2,3,4,5,6,7,8,9,10]:
 
-            prechecked_pose_list = np.load("/home/henry/data/init_poses/random_hbh/all_rand_nom_endhtbicheck_roll0_plo_hbh_f_lay_set" + str(set) + "_" + num_data + ".npy", allow_pickle=True).tolist()
+        for pair in set_num_pairs:
+            set = pair[0]
+            num_data = pair[1]
+
+            prechecked_pose_list = np.load("/home/henry/data/init_poses/random_hbh3/all_rand_nom_endhtbicheck_roll0_plo_hbh_f_lay_set" + str(set) + "_" + num_data + ".npy", allow_pickle=True).tolist()
             # prechecked_pose_list = np.load("/home/henry/data/init_poses/all_rand_nom_endhtbicheck_roll0_plo_hbh_m_lay_set" + set + "_" + num_data + ".npy", allow_pickle=True).tolist()
 
             m = load_model(model_path)
