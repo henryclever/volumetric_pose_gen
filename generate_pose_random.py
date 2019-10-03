@@ -3,9 +3,9 @@ import random
 
 from keras.models import load_model as load_keras_model
 
-from opendr.renderer import ColoredRenderer
-from opendr.lighting import LambertianPointLight
-from opendr.camera import ProjectPoints
+#from opendr.renderer import ColoredRenderer
+#from opendr.lighting import LambertianPointLight
+#from opendr.camera import ProjectPoints
 
 
 from smpl.smpl_webuser.serialization import load_model as load_smpl_model
@@ -53,6 +53,8 @@ import scipy.io as sio
 #hmr
 from hmr.src.tf_smpl.batch_smpl import SMPL
 
+computer_type = 'henry/'
+#computer_type = 'ubuntu/'
 
 
 class GeneratePose():
@@ -60,11 +62,11 @@ class GeneratePose():
         ## Load SMPL model (here we load the female model)
 
 
-        model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_'+gender+'_lbs_10_207_0_v1.0.0.pkl'
+        model_path = '/home/'+computer_type+'git/SMPL_python_v.1.0.0/smpl/models/basicModel_'+gender+'_lbs_10_207_0_v1.0.0.pkl'
         self.m = load_smpl_model(model_path)
         print "changed body to: ",gender
 
-        self.filepath_prefix = '/home/henry'
+        self.filepath_prefix = '/home/'+computer_type
 
         ## Assign random pose and shape parameters
 
@@ -176,7 +178,7 @@ class GeneratePose():
         #print self.m.pose.shape
         #print self.m.pose, 'pose'
         #print self.m.betas, 'betas'
-        self.load_yifeng_data()
+        #self.load_yifeng_data()
 
 
 
@@ -226,7 +228,7 @@ class GeneratePose():
 
 
     def read_precomp_set(self, gender):
-        precomp_data = np.load('/home/henry/data/init_poses/random/all_rand_nom_endhtbicheck_rollpi_'+gender+'_lay_1500_set1.npy', allow_pickle = True)
+        precomp_data = np.load('/home/'+computer_type+'data/init_poses/random/all_rand_nom_endhtbicheck_rollpi_'+gender+'_lay_1500_set1.npy', allow_pickle = True)
         precomp_data = list(precomp_data)
         print len(precomp_data)
         #print precomp_data[7]
@@ -405,10 +407,10 @@ class GeneratePose():
 
         #scipy.io.savemat('/home/henry/data/init_poses/random/generous_limit_'+gender+'_'+str(num_samples)+'_samp_lay.mat', mdict={'arr':only_17_joints})
         #np.save('/home/henry/data/init_poses/random/generous_limit_'+gender+'_'+str(num_samples)+'_samp_lay.npy', np.array(shape_pose_17joints_list))
-        scipy.io.savemat('/home/henry/data/init_poses/random/nom_limit_'+gender+'_'+str(num_samples)+'_samp_lay.mat', mdict={'arr':only_17_joints})
-        np.save('/home/henry/data/init_poses/random/nom_limit_'+gender+'_'+str(num_samples)+'_samp_lay.npy', np.array(shape_pose_17joints_list))
+        scipy.io.savemat('/home/'+computer_type+'data/init_poses/random/nom_limit_'+gender+'_'+str(num_samples)+'_samp_lay.mat', mdict={'arr':only_17_joints})
+        np.save('/home/'+computer_type+'data/init_poses/random/nom_limit_'+gender+'_'+str(num_samples)+'_samp_lay.npy', np.array(shape_pose_17joints_list))
 
-    def generate_rand_dir_cos(self, gender, posture, num_data, roll_person, set, prevent_limb_overhang, hands_behind_head):
+    def generate_rand_dir_cos(self, gender, posture, num_data, roll_person, set, prevent_limb_overhang, hands_behind_head, straight_limbs, ensure_crossed_legs, prone_hands_up):
 
         #NEED FOR DATASET: pose Nx72, shape Nx10
         shape_pose_vol_list = []
@@ -450,20 +452,35 @@ class GeneratePose():
             dss.world.reset()
             dss.world.destroy()
 
-            if hands_behind_head == True:
-                arm_choices = 4
+            if hands_behind_head == True or prone_hands_up == True:
+                self.left_arm_block = int(np.random.randint(4))
+                self.right_arm_block = int(np.random.randint(4))
+            elif prevent_limb_overhang == True and straight_limbs == True:
+                self.left_arm_block = 7
+                self.right_arm_block = 7
             else:
-                arm_choices = 8
+                self.left_arm_block = int(np.random.randint(8))
+                self.right_arm_block = int(np.random.randint(8))
 
-            self.left_arm_block = int(np.random.randint(arm_choices))
-            self.right_arm_block = int(np.random.randint(arm_choices))
-            self.left_leg_block = int(np.random.randint(4))
-            self.right_leg_block = int(np.random.randint(4))
+
+            if straight_limbs == True:
+                self.left_leg_block = 0
+                self.right_leg_block = 0
+            elif ensure_crossed_legs == True:
+                self.left_leg_block = int(np.random.randint(3))
+                self.right_leg_block = int(np.random.randint(3))
+            else:
+                self.left_leg_block = int(np.random.randint(4))
+                self.right_leg_block = int(np.random.randint(4))
+
             self.num_collisions = 0
+            self.num_straight_limb_off = 0
 
             while in_collision == True:
 
-                if self.num_collisions > 20: self.num_collisions = 0
+                if self.num_collisions > 20:
+                    self.num_collisions = 0
+                    self.num_straight_limb_off = 0
                 if self.num_collisions == 0:
                     generator.sample_body_shape(sampling = "UNIFORM", sigma = 0, one_side_range = 3)
                     shift_side = np.random.uniform(-0.2, 0.2)  # in meters
@@ -475,12 +492,14 @@ class GeneratePose():
                     self.m.pose[0:3] = np.random.rand(3) * 0.
                     if roll_person == True:
                         self.m.pose[1] = np.random.uniform(-np.pi, np.pi)
+                    if prone_hands_up == True:
+                        self.m.pose[1] = np.pi
                     self.m.pose[2] = np.random.uniform(-np.pi/6, np.pi/6)
 
 
                 #m, capsules, joint2name, rots0 = generator.map_random_selection_to_smpl_angles(alter_angles = True)
 
-                print "GOT HERE", len(shape_pose_vol_list)
+                print "GOT HERE", len(shape_pose_vol_list), self.num_straight_limb_off, self.num_collisions
                 #time.sleep(2)
 
                 self.m.pose[3:] = np.random.rand(self.m.pose.size - 3) * 0.
@@ -488,76 +507,84 @@ class GeneratePose():
                 m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles(alter_angles= True, roll_person = roll_person,
                                                                                                            shift=np.array([shift_side, shift_ud, 0.0]),
                                                                                                            prevent_limb_overhang = prevent_limb_overhang,
-                                                                                                           hands_behind_head = hands_behind_head)
+                                                                                                           hands_behind_head = hands_behind_head,
+                                                                                                           straight_limbs = straight_limbs,
+                                                                                                           ensure_crossed_legs = ensure_crossed_legs,
+                                                                                                           prone_hands_up = prone_hands_up)
                 #m, capsules, joint2name, rots0 = generator.map_yifeng_random_selection_to_smpl_angles(get_new=True, alter_angles= True, roll_person = roll_person)
 
-                shape_pose_vol[3] = np.copy(m.pose[2])
-                shape_pose_vol[7] = np.copy(m.pose[1])
+                if self.num_straight_limb_off > 20:
+                    in_collision = True
+                    self.num_collisions = 30
+                else:
+
+                    shape_pose_vol[3] = np.copy(m.pose[2])
+                    shape_pose_vol[7] = np.copy(m.pose[1])
 
 
-                print "GOT HERE2, num collision tries: ", self.num_collisions
-                #time.sleep(2)
+                    print "GOT HERE2, num collision tries: ", self.num_collisions
+                    #time.sleep(2)
 
-                shape_pose_vol[0] = np.asarray(m.betas).tolist()
+                    shape_pose_vol[0] = np.asarray(m.betas).tolist()
 
-                #print "stepping", m.pose
-                dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture = posture, stiffness=None, check_only_distal = True, filepath_prefix=self.filepath_prefix, add_floor = False)
+                    #print "stepping", m.pose
+                    dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture = posture, stiffness=None, check_only_distal = True, filepath_prefix=self.filepath_prefix, add_floor = False)
 
-                #print "stepping", m.pose
-                invalid_pose = False
-                #run a step to check for collisions
-                dss.run_sim_step()
+                    #print "stepping", m.pose
+                    invalid_pose = False
+                    #run a step to check for collisions
+                    dss.run_sim_step()
 
-                dss.world.check_collision()
-                print "checked collisions"
-                #print dss.world.CollisionResult()
-                #print "is valid pose?", is_valid_pose
-                print dss.world.collision_result.contacted_bodies
+                    dss.world.check_collision()
+                    print "checked collisions"
+                    #print dss.world.CollisionResult()
+                    #print "is valid pose?", is_valid_pose
+                    print dss.world.collision_result.contacted_bodies
 
-                #dss.run_simulation(1)
+                    #dss.run_simulation(1)
 
-                print dss.world.collision_result.contact_sets
-                if len(dss.world.collision_result.contacted_bodies) != 0:
-                    for contact_set in dss.world.collision_result.contact_sets:
-                        if contact_set[0] in contact_check_bns or contact_set[1] in contact_check_bns: #consider removing spine 3 and upper legs
-                            if contact_set in contact_exceptions:
-                                pass
+                    print dss.world.collision_result.contact_sets
+                    if len(dss.world.collision_result.contacted_bodies) != 0:
+                        for contact_set in dss.world.collision_result.contact_sets:
+                            if contact_set[0] in contact_check_bns or contact_set[1] in contact_check_bns: #consider removing spine 3 and upper legs
+                                if contact_set in contact_exceptions:
+                                    pass
 
-                            else:
-                                #print "one of the limbs in contact"
-                                print contact_set
-                                #dss.run_simulation(1)
+                                else:
+                                    #print "one of the limbs in contact"
+                                    print contact_set
+                                    #dss.run_simulation(1)
 
-                                print "resampling pose from the same shape, invalid pose"
-                                #dss.run_simulation(1000)
-                                #libRender.standard_render(self.m)
-                                in_collision = True
-                                invalid_pose = True
-                            break
+                                    print "resampling pose from the same shape, invalid pose"
+                                    #dss.run_simulation(1000)
+                                    #libRender.standard_render(self.m)
+                                    in_collision = True
+                                    invalid_pose = True
+                                break
 
-                    if invalid_pose == False:
-                        print "resampling shape and pose, collision not important."
+                        if invalid_pose == False:
+                            print "resampling shape and pose, collision not important."
 
-                        #libRender.standard_render(self.m)
+                            #libRender.standard_render(self.m)
+                            in_collision = False
+                    else: # no contacts anywhere.
+
+                        print "resampling shape and pose, no collision."
                         in_collision = False
-                else: # no contacts anywhere.
+                        #libRender.standard_render(self.m)
 
-                    print "resampling shape and pose, no collision."
-                    in_collision = False
+
+
+                    #shape_pose_vol[7] = [is_valid_pose, in_collision]
+                    #in_collision = False
+
+                    #dss.world.skeletons[0].remove_all_collision_pairs()
+
                     #libRender.standard_render(self.m)
+                    dss.world.reset()
+                    dss.world.destroy()
 
-
-
-                #shape_pose_vol[7] = [is_valid_pose, in_collision]
-                #in_collision = False
-
-                #dss.world.skeletons[0].remove_all_collision_pairs()
-
-                #libRender.standard_render(self.m)
-                dss.world.reset()
-                dss.world.destroy()
-
-                self.num_collisions += 1
+                    self.num_collisions += 1
 
             pose_indices = [0, 3, 4, 5, 6, 7, 8, 9, 12, 15, 18, 27, 36, 39, 40, 41, 42, 43, 44, 45, 48, 49, 50, 51, 52, 53, 55, 58]
             pose_angles = []
@@ -572,7 +599,7 @@ class GeneratePose():
 
         print "SAVING! "
         #print shape_pose_vol_list
-        #pickle.dump(shape_pose_vol_list, open("/home/henry/git/volumetric_pose_gen/valid_shape_pose_vol_list1.pkl", "wb"))
+        #pickle.dump(shape_pose_vol_list, open("/home/'+computer_type+'git/volumetric_pose_gen/valid_shape_pose_vol_list1.pkl", "wb"))
 
         if prevent_limb_overhang == True:
             plo = "_plo"
@@ -589,7 +616,22 @@ class GeneratePose():
         else:
             hbh = ""
 
-        np.save(self.filepath_prefix+"/data/init_poses/all_rand_nom_endhtbicheck_roll"+rp+plo+hbh+"_"+gender+"_"+posture+"_set"+str(set)+"_"+str(num_data)+".npy", np.array(shape_pose_vol_list))
+        if straight_limbs == True:
+            sl = "_sl"
+        else:
+            sl = ""
+
+        if ensure_crossed_legs == True:
+            xl = "_xl"
+        else:
+            xl = ""
+
+        if prone_hands_up == True:
+            xl = "_phu"
+        else:
+            xl = ""
+
+        np.save(self.filepath_prefix+"/data/init_poses/all_rand_nom_endhtbicheck_roll"+rp+plo+hbh+sl+xl+"_"+gender+"_"+posture+"_set"+str(set)+"_"+str(num_data)+".npy", np.array(shape_pose_vol_list))
 
 
 
@@ -607,16 +649,16 @@ class GeneratePose():
         return is_ht_ok
 
     def check_leg_block(self, leg_block, hip_y_loc, ankle_y_loc, leg_length):
-        if leg_block == 0:
+        if leg_block == 3:
             if ankle_y_loc > hip_y_loc - leg_length * 1 / 4: is_leg_chosen = True
             else: is_leg_chosen = False
-        elif leg_block == 1:
+        elif leg_block == 2:
             if ankle_y_loc <= hip_y_loc - leg_length * 1 / 4 and ankle_y_loc > hip_y_loc - leg_length * 1 / 2: is_leg_chosen = True
             else: is_leg_chosen = False
-        elif leg_block == 2:
+        elif leg_block == 1:
             if ankle_y_loc <= hip_y_loc - leg_length * 1 / 2 and ankle_y_loc > hip_y_loc - leg_length * 3 / 4: is_leg_chosen = True
             else: is_leg_chosen = False
-        elif leg_block == 3:
+        elif leg_block == 0:
             if ankle_y_loc <= hip_y_loc - leg_length * 3 / 4: is_leg_chosen = True
             else: is_leg_chosen = False
         else:
@@ -663,7 +705,7 @@ class GeneratePose():
         return is_arm_chosen
 
 
-    def check_limb_overhang(self, mJ, mJtransformed_red, shift, limb_tag, hands_behind_head = False):
+    def check_limb_overhang(self, mJ, mJtransformed_red, shift, limb_tag, hands_behind_head = False, straight_limbs=False, ensure_crossed_legs=False, prone_hands_up=False):
         #print mJtransformed_red
         #print mJtransformed_red - mJ[0, :]
         #print mJtransformed_red - mJ[0, :] + np.array(shift)
@@ -671,10 +713,17 @@ class GeneratePose():
         global_joint_pos = (mJtransformed_red - mJ[0, :] + np.array(shift))*2.58872 + np.array([1.185, 2.55, 0.0])
         #print global_joint_pos, 'final mesh tree'
 
-        if hands_behind_head == True:
+        if hands_behind_head == True or prone_hands_up == True:
             arm_choices = 4
         else:
             arm_choices = 8
+
+        if straight_limbs == True:
+            leg_choices = 1
+        elif ensure_crossed_legs == True:
+            leg_choices = 3
+        else:
+            leg_choices = 4
 
         #print np.min(global_joint_pos[:, 0]), np.max(global_joint_pos[:, 0])
         #print np.min(global_joint_pos[:, 1]), np.max(global_joint_pos[:, 1])
@@ -686,26 +735,40 @@ class GeneratePose():
             if limb_tag == 'left_leg':
                 if np.min(global_joint_pos[:, 1]) <= 0.0 or self.try_idx > 20:
                     print 'old left leg block: ', self.left_leg_block,
-                    self.left_leg_block = int(np.random.randint(4))
+                    self.left_leg_block = int(np.random.randint(leg_choices))
                     print '   new block: ', self.left_leg_block
                     self.try_idx = 0
+                    if straight_limbs == True:
+                        self.num_straight_limb_off += 1
+                        print '    num straight limb off tries: ', self.num_straight_limb_off
             elif limb_tag == 'right_leg':
                 if np.min(global_joint_pos[:, 1]) <= 0.0 or self.try_idx > 20:
                     print 'old right leg block: ', self.right_leg_block,
-                    self.right_leg_block = int(np.random.randint(4))
+                    self.right_leg_block = int(np.random.randint(leg_choices))
                     print '   new block: ', self.right_leg_block
+                    if straight_limbs == True:
+                        self.num_straight_limb_off += 1
+                        print '    num straight limb off tries: ', self.num_straight_limb_off
                     self.try_idx = 0
             elif limb_tag == 'left_arm':
                 if np.max(global_joint_pos[:, 1]) >= 2.55*2 or self.try_idx > 20:
                     print 'old left arm block: ', self.left_arm_block,
                     self.left_arm_block = int(np.random.randint(arm_choices))
                     print '   new block: ', self.left_arm_block
+                    if straight_limbs == True:
+                        self.left_arm_block = 7
+                        self.num_straight_limb_off += 1
+                        print '    num straight limb off tries: ', self.num_straight_limb_off
                     self.try_idx = 0
             elif limb_tag == 'right_arm':
                 if np.max(global_joint_pos[:, 1]) >= 2.55*2 or self.try_idx > 20:
                     print 'old right arm block: ', self.right_arm_block,
                     self.right_arm_block = int(np.random.randint(arm_choices))
                     print '   new block: ', self.right_arm_block
+                    if straight_limbs == True:
+                        self.right_arm_block = 7
+                        self.num_straight_limb_off += 1
+                        print '    num straight limb off tries: ', self.num_straight_limb_off
                     self.try_idx = 0
 
 
@@ -715,7 +778,7 @@ class GeneratePose():
         return is_limb_chosen
 
 
-    def map_nom_limited_random_selection_to_smpl_angles(self, alter_angles, roll_person, shift, prevent_limb_overhang, hands_behind_head):
+    def map_nom_limited_random_selection_to_smpl_angles(self, alter_angles, roll_person, shift, prevent_limb_overhang, hands_behind_head, straight_limbs, ensure_crossed_legs, prone_hands_up):
         if alter_angles == True:
             #print self.m.r
             #print mJtransformed, 'MJTRANS'
@@ -726,67 +789,98 @@ class GeneratePose():
 
             leg_length = np.linalg.norm(np.array(mJtransformed[7, :])-np.array(mJtransformed[4, :]))+np.linalg.norm(np.array(mJtransformed[4, :])-np.array(mJtransformed[1, :]))
 
-            print 'picking left leg...', self.left_leg_block
-            left_leg_chosen = False
-            self.try_idx = 0
-            while left_leg_chosen == False:
-                # self.m.pose[3] = np.random.uniform(np.deg2rad(-132.1), np.deg2rad(17.8))
-                self.m.pose[3] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
-                self.m.pose[4] = np.random.uniform(np.deg2rad(-33.7), np.deg2rad(32.6))
-                self.m.pose[5] = np.random.uniform(np.deg2rad(-30.5), np.deg2rad(38.6))
-                self.m.pose[12] = np.random.uniform(np.deg2rad(-1.3), np.deg2rad(139.9))
+            legs_not_crossed = True
+            leg_cross_try_idx = 0
 
-                mJtransformed = np.array(self.m.J_transformed)
-                mJ = np.array(self.m.J)
+            while legs_not_crossed == True and self.num_straight_limb_off < 25:
 
-                #check if the ankle falls in the correct block to ensure more even distribution across the space
-                left_leg_chosen = self.check_height(root_z_loc=mJtransformed[1, 2], distal_z_loc=mJtransformed[7, 2])
+                print 'picking left leg...', self.left_leg_block
+                left_leg_chosen = False
+                self.try_idx = 0
+                while left_leg_chosen == False and self.num_straight_limb_off < 25:
+                    # self.m.pose[3] = np.random.uniform(np.deg2rad(-132.1), np.deg2rad(17.8))
+                    self.m.pose[3] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
+                    self.m.pose[4] = np.random.uniform(np.deg2rad(-33.7), np.deg2rad(32.6))
+                    self.m.pose[5] = np.random.uniform(np.deg2rad(-30.5), np.deg2rad(38.6))
+                    if straight_limbs == False:
+                        self.m.pose[12] = np.random.uniform(np.deg2rad(-1.3), np.deg2rad(139.9))
 
-                if left_leg_chosen == True:
-                    #if prevent_limb_overhang == False:
-                    left_leg_chosen = self.check_leg_block(leg_block=self.left_leg_block,
-                                                           hip_y_loc=mJtransformed[1, 1],
-                                                           ankle_y_loc=mJtransformed[7, 1],
-                                                           leg_length=leg_length)
+                    mJtransformed = np.array(self.m.J_transformed)
+                    mJ = np.array(self.m.J)
 
-                    if left_leg_chosen == True and prevent_limb_overhang == True: #only check off the edges if we know the block is OK
-                        mJtransformed_red = np.stack((mJtransformed[4, :], mJtransformed[7, :], mJtransformed[10, :]))
-                        left_leg_chosen = self.check_limb_overhang(mJ=mJ, mJtransformed_red=mJtransformed_red, shift=shift, limb_tag='left_leg')
+                    #check if the ankle falls in the correct block to ensure more even distribution across the space
+                    left_leg_chosen = self.check_height(root_z_loc=mJtransformed[1, 2], distal_z_loc=mJtransformed[7, 2])
 
+                    if left_leg_chosen == True:
+                        #if prevent_limb_overhang == False:
+                        left_leg_chosen = self.check_leg_block(leg_block=self.left_leg_block,
+                                                               hip_y_loc=mJtransformed[1, 1],
+                                                               ankle_y_loc=mJtransformed[7, 1],
+                                                               leg_length=leg_length)
 
-            print mJtransformed[7, 2] - mJtransformed[1, 2],'   picking right leg...', self.right_leg_block
-            right_leg_chosen = False
-            self.try_idx = 0
-            while right_leg_chosen == False:
-                self.m.pose[6] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
-                self.m.pose[7] = np.random.uniform(np.deg2rad(-32.6), np.deg2rad(33.7))
-                self.m.pose[8] = np.random.uniform(np.deg2rad(-38.6), np.deg2rad(30.5))
-
-                self.m.pose[15] = np.random.uniform(np.deg2rad(-1.3), np.deg2rad(139.9))
-
-                mJtransformed = np.array(self.m.J_transformed)
-                mJ = np.array(self.m.J)
+                        if left_leg_chosen == True and prevent_limb_overhang == True: #only check off the edges if we know the block is OK
+                            mJtransformed_red = np.stack((mJtransformed[4, :], mJtransformed[7, :], mJtransformed[10, :]))
+                            left_leg_chosen = self.check_limb_overhang(mJ=mJ, mJtransformed_red=mJtransformed_red, shift=shift, limb_tag='left_leg',
+                                                                       straight_limbs=straight_limbs, ensure_crossed_legs=ensure_crossed_legs, prone_hands_up=prone_hands_up)
 
 
-                right_leg_chosen = self.check_height(root_z_loc=mJtransformed[2, 2], distal_z_loc=mJtransformed[8, 2])
+                print mJtransformed[7, 2] - mJtransformed[1, 2],'   picking right leg...', self.right_leg_block
+                right_leg_chosen = False
+                self.try_idx = 0
+                while right_leg_chosen == False and self.num_straight_limb_off < 25:
+                    self.m.pose[6] = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(17.8))
+                    self.m.pose[7] = np.random.uniform(np.deg2rad(-32.6), np.deg2rad(33.7))
+                    self.m.pose[8] = np.random.uniform(np.deg2rad(-38.6), np.deg2rad(30.5))
+                    if straight_limbs == False:
+                        self.m.pose[15] = np.random.uniform(np.deg2rad(-1.3), np.deg2rad(139.9))
 
-                if right_leg_chosen == True:
-                    #if prevent_limb_overhang == False:
-                    right_leg_chosen = self.check_leg_block(leg_block=self.right_leg_block,
-                                                                hip_y_loc=mJtransformed[2, 1],
-                                                                ankle_y_loc=mJtransformed[8, 1],
-                                                                leg_length=leg_length)
+                    mJtransformed = np.array(self.m.J_transformed)
+                    mJ = np.array(self.m.J)
 
-                    if right_leg_chosen == True and prevent_limb_overhang == True: #only check off the edges if we know the block is OK
-                        mJtransformed_red = np.stack((mJtransformed[5, :], mJtransformed[8, :], mJtransformed[11, :]))
-                        right_leg_chosen = self.check_limb_overhang(mJ=mJ, mJtransformed_red=mJtransformed_red, shift=shift, limb_tag='right_leg')
+
+                    right_leg_chosen = self.check_height(root_z_loc=mJtransformed[2, 2], distal_z_loc=mJtransformed[8, 2])
+
+                    if right_leg_chosen == True:
+                        #if prevent_limb_overhang == False:
+                        right_leg_chosen = self.check_leg_block(leg_block=self.right_leg_block,
+                                                                    hip_y_loc=mJtransformed[2, 1],
+                                                                    ankle_y_loc=mJtransformed[8, 1],
+                                                                    leg_length=leg_length)
+
+                        if right_leg_chosen == True and prevent_limb_overhang == True: #only check off the edges if we know the block is OK
+                            mJtransformed_red = np.stack((mJtransformed[5, :], mJtransformed[8, :], mJtransformed[11, :]))
+                            right_leg_chosen = self.check_limb_overhang(mJ=mJ, mJtransformed_red=mJtransformed_red, shift=shift, limb_tag='right_leg',
+                                                                       straight_limbs=straight_limbs, ensure_crossed_legs=ensure_crossed_legs, prone_hands_up=prone_hands_up)
+
+
+                #print 'l hip:', mJtransformed[1, 0], '  l ankle:', mJtransformed[7, 0]
+                #print 'r hip:', mJtransformed[2, 0], '  r ankle:', mJtransformed[8, 0]
+
+
+                if ensure_crossed_legs == True:
+                    if mJtransformed[7, 0] > mJtransformed[8, 0]:
+                        legs_not_crossed = True
+                        print "legs aren't crossed. trying again.", leg_cross_try_idx
+
+                        if leg_cross_try_idx >= 20:
+                            self.left_leg_block = int(np.random.randint(3))
+                            self.right_leg_block = int(np.random.randint(3))
+                            leg_cross_try_idx = 0
+                        else:
+                            leg_cross_try_idx += 1
+
+                    else:
+                        legs_not_crossed = False
+                else: legs_not_crossed = False
+
+
 
 
             arm_length = np.linalg.norm(np.array(mJtransformed[20, :])-np.array(mJtransformed[18, :]))+np.linalg.norm(np.array(mJtransformed[18, :])-np.array(mJtransformed[16, :]))
             print mJtransformed[8, 2] - mJtransformed[2, 2],'   picking left arm...', self.left_arm_block
             left_arm_chosen = False
             self.try_idx = 0
-            while left_arm_chosen == False:
+            while left_arm_chosen == False and self.num_straight_limb_off < 25:
                 if hands_behind_head == True:
                     ls_roll = np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4+45.))
                     ls_pitch = np.random.uniform(np.deg2rad(-90.0), np.deg2rad(80.4+45.))
@@ -801,8 +895,8 @@ class GeneratePose():
                 self.m.pose[48] = ls_roll*2/3
                 self.m.pose[49] = ls_yaw*2/3
                 self.m.pose[50] = ls_pitch*2/3
-
-                self.m.pose[55] = np.random.uniform(np.deg2rad(-147.3), np.deg2rad(2.8))
+                if straight_limbs == False:
+                    self.m.pose[55] = np.random.uniform(np.deg2rad(-147.3), np.deg2rad(2.8))
 
 
                 mJtransformed = np.array(self.m.J_transformed)
@@ -823,13 +917,17 @@ class GeneratePose():
 
                     if left_arm_chosen == True and prevent_limb_overhang == True: #only check off the edges if we know the block is OK
                         mJtransformed_red = np.stack((mJtransformed[18, :], mJtransformed[20, :], mJtransformed[22, :]))
-                        left_arm_chosen = self.check_limb_overhang(mJ=mJ, mJtransformed_red=mJtransformed_red, shift=shift, limb_tag='left_arm')
+                        left_arm_chosen = self.check_limb_overhang(mJ=mJ, mJtransformed_red=mJtransformed_red, shift=shift, limb_tag='left_arm',
+                                                                   hands_behind_head=hands_behind_head,
+                                                                   straight_limbs=straight_limbs,
+                                                                   ensure_crossed_legs=ensure_crossed_legs,
+                                                                   prone_hands_up=prone_hands_up)
 
 
             print mJtransformed[20, 2] - mJtransformed[16, 2],'   picking right arm...', self.right_arm_block
             right_arm_chosen = False
             self.try_idx = 0
-            while right_arm_chosen == False:
+            while right_arm_chosen == False and self.num_straight_limb_off < 25:
                 if hands_behind_head == True:
                     rs_roll = np.random.uniform(np.deg2rad(-88.9), np.deg2rad(81.4+45.))
                     rs_pitch = np.random.uniform(np.deg2rad(-(80.4+45.)), np.deg2rad(90.0))
@@ -844,8 +942,8 @@ class GeneratePose():
                 self.m.pose[51] = rs_roll*2/3
                 self.m.pose[52] = rs_yaw*2/3
                 self.m.pose[53] = rs_pitch*2/3
-
-                self.m.pose[58] = np.random.uniform(np.deg2rad(-2.8), np.deg2rad(147.3))
+                if straight_limbs == False:
+                    self.m.pose[58] = np.random.uniform(np.deg2rad(-2.8), np.deg2rad(147.3))
 
                 mJtransformed = np.array(self.m.J_transformed)
                 mJ = np.array(self.m.J)
@@ -865,7 +963,11 @@ class GeneratePose():
 
                     if right_arm_chosen == True and prevent_limb_overhang == True: #only check off the edges if we know the block is OK
                         mJtransformed_red = np.stack((mJtransformed[19, :], mJtransformed[21, :], mJtransformed[23, :]))
-                        right_arm_chosen = self.check_limb_overhang(mJ=mJ, mJtransformed_red=mJtransformed_red, shift=shift, limb_tag='right_arm')
+                        right_arm_chosen = self.check_limb_overhang(mJ=mJ, mJtransformed_red=mJtransformed_red, shift=shift, limb_tag='right_arm',
+                                                                    hands_behind_head=hands_behind_head,
+                                                                    straight_limbs=straight_limbs,
+                                                                    ensure_crossed_legs=ensure_crossed_legs,
+                                                                    prone_hands_up=prone_hands_up)
 
 
         #self.m.pose[51] = selection_r
@@ -898,7 +1000,16 @@ if __name__ == "__main__":
     #generator.solve_ik_tree_smpl()
 
     #generator.read_precomp_set(gender=gender)
-    generator.generate_rand_dir_cos(gender=gender, posture='lay', num_data=2700, roll_person = True, set = 24, prevent_limb_overhang = False, hands_behind_head=False)
+    generator.generate_rand_dir_cos(gender=gender,
+                                    posture='lay',
+                                    num_data=2700,
+                                    roll_person = False,
+                                    set = 2,
+                                    prevent_limb_overhang = True,
+                                    hands_behind_head=False,
+                                    straight_limbs = False,
+                                    ensure_crossed_legs=False,
+                                    prone_hands_up=True)
 
     #generator.save_yash_data_with_angles(posture)
     #generator.map_euler_angles_to_axis_angle()

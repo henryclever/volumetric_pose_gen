@@ -119,7 +119,7 @@ class GeneratePose():
         self.CTRL_PNL['all_tanh_activ'] = True#False
         self.CTRL_PNL['L2_contact'] = True#False
         self.CTRL_PNL['pmat_mult'] = int(5)
-        self.CTRL_PNL['cal_noise'] = True
+        self.CTRL_PNL['cal_noise'] = False
 
 
 
@@ -136,6 +136,25 @@ class GeneratePose():
             self.CTRL_PNL['num_input_channels'] += 2
         if self.CTRL_PNL['cal_noise'] == True:
             self.CTRL_PNL['num_input_channels'] += 1
+
+        pmat_std_from_mult = ['N/A', 11.70153502792190, 19.90905848383454, 23.07018866032369, 0.0, 25.50538629767412]
+        if self.CTRL_PNL['cal_noise'] == False:
+            sobel_std_from_mult = ['N/A', 29.80360490415032, 33.33532963163579, 34.14427844692501, 0.0, 34.86393494050921]
+        else:
+            sobel_std_from_mult = ['N/A', 45.61635847182483, 77.74920396659292, 88.89398421073700, 0.0, 97.90075708182506]
+
+        self.CTRL_PNL['norm_std_coeffs'] =  [1./41.80684362163343,  #contact
+                                             1./16.69545796387731,  #pos est depth
+                                             1./45.08513083167194,  #neg est depth
+                                             1./43.55800622930469,  #cm est
+                                             1./pmat_std_from_mult[int(self.CTRL_PNL['pmat_mult'])], #pmat x5
+                                             1./sobel_std_from_mult[int(self.CTRL_PNL['pmat_mult'])], #pmat sobel
+                                             1./1.0,                #bed height mat
+                                             1./1.0,                #OUTPUT DO NOTHING
+                                             1./1.0,                #OUTPUT DO NOTHING
+                                             1. / 30.216647403350,  #weight
+                                             1. / 14.629298141231]  #height
+
 
         self.CTRL_PNL['filepath_prefix'] = '/home/henry/'
 
@@ -341,7 +360,7 @@ class GeneratePose():
         while not rospy.is_shutdown():
 
 
-            pmat = np.fliplr(np.flipud(np.clip(self.pressure.reshape(mat_size)*float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100)))
+            pmat = np.fliplr(np.flipud(np.clip(self.pressure.reshape(mat_size)*float(self.CTRL_PNL['pmat_mult'])*5., a_min=0, a_max=100)))
 
             if self.CTRL_PNL['cal_noise'] == False:
                 pmat = gaussian_filter(pmat, sigma= 0.5)
@@ -372,7 +391,7 @@ class GeneratePose():
             if self.CTRL_PNL['normalize_input'] == True:
                 self.CTRL_PNL['depth_map_input_est'] = False
                 pmat_stack = self.TPL.normalize_network_input(pmat_stack, self.CTRL_PNL)
-                batch1 = self.TPL.normalize_wt_ht(batch1)
+                batch1 = self.TPL.normalize_wt_ht(batch1, self.CTRL_PNL)
 
 
             pmat_stack = torch.Tensor(pmat_stack)
@@ -480,7 +499,9 @@ if __name__ ==  "__main__":
      #                            filepath_prefix+"/data/convnets/planesreg_correction/DC_L2depth/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_depthestin_angleadj_alltanh_l2cnt_125e_200e_00001lr.pt")
 
 
-    generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/DC_L2depth/convnet_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_alltanh_l2cnt_calnoise_300e_00001lr.pt")
+    #generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/DC_L2depth/convnet_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_alltanh_l2cnt_calnoise_300e_00001lr.pt")
+    generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/DC_L2depth/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_100e_00001lr.pt",
+                                 filepath_prefix+"/data/convnets/planesreg_correction/DC_L2depth/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_depthestin_angleadj_alltanh_l2cnt_50e_100e_00001lr.pt")
 
     #generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_l2cnt_calnoise_150e_00001lr.pt")
     #generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_201e_0.5rtojtdpth_pmatcntin_100e_00001lr.pt",
