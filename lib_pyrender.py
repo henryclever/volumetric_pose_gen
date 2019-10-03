@@ -680,8 +680,8 @@ class pyRenderMesh():
 
 
     def render_mesh_pc_bed_pyrender_everything(self, smpl_verts, smpl_faces, camera_point, bedangle,
-                                    pc = None, pmat = None, smpl_render_points = False, facing_cam_only = False,
-                                    viz_type = None, markers = None, segment_limbs = False):
+                                    pc = None, pmat = None, smpl_render_points = False, markers = None,
+                                    dropout_variance=None):
 
 
         #segment_limbs = True
@@ -710,6 +710,10 @@ class pyRenderMesh():
         transform_D[1, 3] = 3.0 #move things over
         smpl_verts_D = np.swapaxes(np.matmul(transform_D, smpl_verts_quad), 0, 1)[:, 0:3]
 
+        transform_E = np.identity(4)
+        transform_E[1, 3] = 4.0 #move things over
+        smpl_verts_E = np.swapaxes(np.matmul(transform_E, smpl_verts_quad), 0, 1)[:, 0:3]
+
 
 
 
@@ -735,18 +739,18 @@ class pyRenderMesh():
 
 
 
-
-
         human_mesh_vtx_all, human_mesh_face_all = self.get_human_mesh_parts(smpl_verts, smpl_faces, segment_limbs=False)
         human_mesh_vtx_parts, human_mesh_face_parts = self.get_human_mesh_parts(smpl_verts_B, smpl_faces, segment_limbs=True)
         human_mesh_vtx_mesherr, human_mesh_face_mesherr = self.get_human_mesh_parts(smpl_verts_C, smpl_faces, segment_limbs=False)
         human_mesh_vtx_pcerr, human_mesh_face_pcerr = self.get_human_mesh_parts(smpl_verts_D, smpl_faces, segment_limbs=False)
+        human_mesh_vtx_mcd, human_mesh_face_mcd = self.get_human_mesh_parts(smpl_verts_E, smpl_faces, segment_limbs=False)
 
 
         human_mesh_face_mesherr_red = []
         #only use the vertices that are facing the camera
         for part_idx in range(len(human_mesh_vtx_mesherr)):
             human_mesh_face_mesherr_red.append(self.reduce_by_cam_dir(human_mesh_vtx_mesherr[part_idx], human_mesh_face_mesherr[part_idx], camera_point_C))
+
 
         human_mesh_face_pcerr_red = []
         #only use the vertices that are facing the camera
@@ -852,6 +856,15 @@ class pyRenderMesh():
 
 
 
+        #GET MONTE CARLO DROPOUT COLORED MESH
+        verts_mcd_color = (dropout_variance - np.min(dropout_variance)) / (np.max(dropout_variance) - np.min(dropout_variance))
+        verts_mcd_color_jet = cm.Reds(verts_mcd_color)[:, 0:3]
+        verts_mcd_color_jet = np.concatenate((verts_mcd_color_jet, np.ones((verts_mcd_color_jet.shape[0], 1))*0.9), axis = 1)
+        tm_curr = trimesh.base.Trimesh(vertices=human_mesh_vtx_mcd[0],
+                                       faces=human_mesh_face_mcd[0],
+                                       vertex_colors = verts_mcd_color_jet)
+        tm_list_mcd =[tm_curr]
+
 
         mesh_list = []
         mesh_list.append(pyrender.Mesh.from_trimesh(tm_list[0], material = self.human_mat, wireframe = True))
@@ -866,6 +879,9 @@ class pyRenderMesh():
 
         mesh_list_pcerr = []
         mesh_list_pcerr.append(pyrender.Mesh.from_trimesh(tm_list_pcerr[0], material = self.human_mat_D, smooth=False))
+
+        mesh_list_mcd = []
+        mesh_list_mcd.append(pyrender.Mesh.from_trimesh(tm_list_mcd[0], smooth=False))
 
 
 
@@ -955,12 +971,16 @@ class pyRenderMesh():
                 self.scene.add(mesh_part_mesherr)
             for mesh_part_pcerr in mesh_list_pcerr:
                 self.scene.add(mesh_part_pcerr)
+            for mesh_part_mcd in mesh_list_mcd:
+                self.scene.add(mesh_part_mcd)
 
 
             if pc_mesh_mesherr is not None:
                 self.scene.add(pc_mesh_mesherr)
             if pc_mesh_pcerr is not None:
                 self.scene.add(pc_mesh_pcerr)
+
+
             if pmat_mesh is not None:
                 self.scene.add(pmat_mesh)
             if smpl_pc_mesh is not None:
@@ -996,6 +1016,10 @@ class pyRenderMesh():
             for mesh_part_pcerr in mesh_list_pcerr:
                 for node in self.scene.get_nodes(obj=mesh_part_pcerr):
                     self.node_list_pcerr.append(node)
+            self.node_list_mcd = []
+            for mesh_part_mcd in mesh_list_mcd:
+                for node in self.scene.get_nodes(obj=mesh_part_mcd):
+                    self.node_list_mcd.append(node)
 
 
 
@@ -1052,6 +1076,13 @@ class pyRenderMesh():
                 self.scene.add(mesh_list_pcerr[idx])
                 for node in self.scene.get_nodes(obj=mesh_list_pcerr[idx]):
                     self.node_list_pcerr[idx] = node
+
+            #reset the mcd human rendering
+            for idx in range(len(mesh_list_mcd)):
+                self.scene.remove_node(self.node_list_mcd[idx])
+                self.scene.add(mesh_list_mcd[idx])
+                for node in self.scene.get_nodes(obj=mesh_list_mcd[idx]):
+                    self.node_list_mcd[idx] = node
 
 
 

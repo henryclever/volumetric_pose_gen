@@ -78,6 +78,8 @@ MAT_SIZE = (64, 27)
 PC_WRT_ARTAG_ADJ = [0.11, -0.02, 0.07]
 ARTAG_WRT_PMAT = [0.08, 0.05, 0.0]
 
+DROPOUT = True
+
 
 import sys
 
@@ -135,6 +137,7 @@ class Viz3DPose():
         self.CTRL_PNL['dtype'] = dtype
         self.CTRL_PNL['repeat_real_data_ct'] = 1
         self.CTRL_PNL['regr_angles'] = 1
+        self.CTRL_PNL['dropout'] = DROPOUT
         self.CTRL_PNL['depth_map_labels'] = False
         self.CTRL_PNL['depth_map_output'] = True
         self.CTRL_PNL['depth_map_input_est'] = False#rue #do this if we're working in a two-part regression
@@ -148,6 +151,7 @@ class Viz3DPose():
         self.CTRL_PNL['L2_contact'] = True#False
         self.CTRL_PNL['pmat_mult'] = int(5)
         self.CTRL_PNL['cal_noise'] = False
+
 
 
         if self.CTRL_PNL['cal_noise'] == True:
@@ -432,9 +436,18 @@ class Viz3DPose():
         pmat_stack = torch.Tensor(pmat_stack)
         batch1 = torch.Tensor(batch1)
 
+
+        if DROPOUT == True:
+            pmat_stack = pmat_stack.repeat(25, 1, 1, 1)
+            batch1 = batch1.repeat(25, 1)
+
+
         batch = []
         batch.append(pmat_stack)
         batch.append(batch1)
+
+
+
 
         self.CTRL_PNL['adjust_ang_from_est'] = False
         scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch, False, model, self.CTRL_PNL)
@@ -480,8 +493,18 @@ class Viz3DPose():
 
         # print betas_est.shape, root_shift_est.shape, angles_est.shape
 
+        print OUTPUT_DICT['verts'].shape
+
         # print betas_est, root_shift_est, angles_est
-        angles_est = angles_est.reshape(72)
+        if self.CTRL_PNL['dropout'] == True:
+            dropout_variance = np.std(OUTPUT_DICT['verts'], axis=0)
+            dropout_variance = np.linalg.norm(dropout_variance, axis = 1)
+        else:
+            dropout_variance = None
+
+        angles_est = torch.mean(angles_est, dim=0).reshape(72)
+        betas_est = np.mean(betas_est, axis=0)
+        root_shift_est = np.mean(root_shift_est, axis=0)
 
         for idx in range(10):
             # print shape_pose_vol[0][idx]
@@ -517,8 +540,7 @@ class Viz3DPose():
         #render everything
         self.pyRender.render_mesh_pc_bed_pyrender_everything(smpl_verts, smpl_faces, camera_point, bedangle,
                                                               pc = pc_autofil_red, pmat = pmat, smpl_render_points = False,
-                                                              facing_cam_only=False, viz_type = None,
-                                                              markers = None, segment_limbs=False)
+                                                              markers = None, dropout_variance = dropout_variance)
 
 
         #render in 3D pyrender with pressure mat
@@ -573,7 +595,10 @@ class Viz3DPose():
             for i in range(0, 8):
                 try:
                     model = torch.load(filename1, map_location={'cuda:'+str(i):'cuda:0'})
-                    model = model.cuda().eval()
+                    if self.CTRL_PNL['dropout'] == True:
+                        model = model.cuda().train()
+                    else:
+                        model = model.cuda().eval()
                     break
                 except:
                     pass
@@ -581,19 +606,28 @@ class Viz3DPose():
                 for i in range(0, 8):
                     try:
                         model2 = torch.load(filename2, map_location={'cuda:'+str(i):'cuda:0'})
-                        model2 = model2.cuda().eval()
+                        if self.CTRL_PNL['dropout'] == True:
+                            model2 = model2.cuda().train()
+                        else:
+                            model2 = model2.cuda().eval()
                         break
                     except:
                         pass
             else:
                 model2 = None
-
         else:
-            model = torch.load(filename1, map_location='cpu').eval()
+            model = torch.load(filename1, map_location='cpu')
+            if self.CTRL_PNL['dropout'] == True:
+                model = model.train()
+            else:
+                model = model.eval()
             if filename2 is not None:
-                model2 = torch.load(filename2, map_location='cpu').eval()
+                model2 = torch.load(filename2, map_location='cpu')
+                if self.CTRL_PNL['dropout'] == True:
+                    model2 = model2.train()
+                else:
+                    model2 = model2.eval()
 
-        print model
 
         function_input = np.array(function_input)*np.array([10, 10, 10, 10, 10, 10, 0.1, 0.1, 0.1, 0.1, 1])
         function_input += np.array([2.2, 32, -1, 1.2, 32, -5, 1.0, 1.0, 0.96, 0.95, 0.8])
@@ -617,7 +651,8 @@ class Viz3DPose():
 
         #file_dir = "/media/henry/multimodal_data_2/test_data/data_072019_0007"
         #file_dir = "/media/henry/multimodal_data_2/test_data/data_072019_0006"
-        file_dir = "/home/henry/ivy_test_data/data_102019_sleepleft_0000"
+        #file_dir = "/home/henry/ivy_test_data/data_102019_sleepleft_0000"
+        file_dir = "/media/henry/multimodal_data_1/ivy_test_data/data_102019_kneeup_0000"
 
         V3D.load_next_file(file_dir)
 
@@ -770,8 +805,8 @@ class Viz3DPose():
 if __name__ ==  "__main__":
 
     filepath_prefix = "/home/henry"
-    #model_prefix = "/media/henry/multimodal_data_2"
-    model_prefix = "/home/henry"
+    model_prefix = "/media/henry/multimodal_data_1"
+    #model_prefix = "/home/henry"
 
 
     V3D = Viz3DPose(filepath_prefix)

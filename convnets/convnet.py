@@ -509,7 +509,6 @@ class CNN(nn.Module):
 
             OUTPUT_DICT['batch_mdm_est'] = OUTPUT_DICT['batch_mdm_est'].type(self.dtype)
             OUTPUT_DICT['batch_cm_est'] = OUTPUT_DICT['batch_cm_est'].type(self.dtype)
-            OUTPUT_DICT['verts'] = verts
 
             verts_red = torch.stack([verts[:, 1325, :],
                                      verts[:, 336, :],  # head
@@ -589,6 +588,8 @@ class CNN(nn.Module):
             OUTPUT_DICT['batch_cm_est'] = None
 
 
+        if CTRL_PNL['dropout'] == True:
+            OUTPUT_DICT['verts'] = verts.clone().detach().cpu().numpy()
 
         targets_est_detached = torch.Tensor(targets_est.clone().detach().cpu().numpy()).type(self.dtype)
         synth_joint_addressed = [3, 15, 4, 5, 7, 8, 18, 19, 20, 21]
