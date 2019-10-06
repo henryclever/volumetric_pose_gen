@@ -213,7 +213,7 @@ class DataVisualizer():
         plt.title('ReLU, Training size: 112K')
         plt.axis([0,300,2000,3000])
         #plt.yticks([])
-        train_val_loss1 = load_pickle(self.dump_path + '/planesreg/112K/convnet_losses_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_l2cnt_50e_00001lr.p')
+        train_val_loss1 = load_pickle(self.dump_path + '/planesreg/112K/convnet_losses_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_l2cnt_100e_00001lr.p')
         for key in train_val_loss1:
             print key
         #train_val_loss1_cor = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.p')
@@ -241,13 +241,13 @@ class DataVisualizer():
         train_val_loss1 = load_pickle(self.dump_path + '/planesreg/112K/convnet_losses_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_100e_00001lr.p')
         for key in train_val_loss1:
             print key
-        train_val_loss2 = load_pickle(self.dump_path + '/planesreg_correction/112K/convnet_losses_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_depthestin_angleadj_alltanh_l2cnt_50e_125e_00001lr.p')
+        train_val_loss2 = load_pickle(self.dump_path + '/planesreg_correction/112K/convnet_losses_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_depthestin_angleadj_alltanh_l2cnt_50e_150e_00001lr.p')
         for key in train_val_loss2:
             print key
         train_val_loss3 = load_pickle(self.dump_path + '/planesreg_correction/112K/convnet_losses_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_depthestin_angleadj_alltanh_l2cnt_100e_150e_00001lr.p')
         for key in train_val_loss3:
             print key
-        train_val_loss4 = load_pickle(self.dump_path + '/planesreg/112K/convnet_losses_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_100e_150e_00001lr.p')
+        train_val_loss4 = load_pickle(self.dump_path + '/planesreg/112K/convnet_losses_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_100e_200e_00001lr.p')
         for key in train_val_loss4:
             print key
         #train_val_loss1_cor = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.p')
@@ -285,7 +285,7 @@ class DataVisualizer():
         plt.title('ReLU calib. noise, Training size: 112K')
         plt.axis([0,300,2000,3000])
         #plt.yticks([])
-        train_val_loss1 = load_pickle(self.dump_path + '/planesreg/112K/convnet_losses_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_l2cnt_calnoise_50e_00001lr.p')
+        train_val_loss1 = load_pickle(self.dump_path + '/planesreg/112K/convnet_losses_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_l2cnt_calnoise_100e_00001lr.p')
         for key in train_val_loss1:
             print key
         #train_val_loss1_cor = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.p')
@@ -311,7 +311,7 @@ class DataVisualizer():
         plt.title('tanh calib. noise, Training size: 112K')
         plt.axis([0,300,2000,3000])
         #plt.yticks([])
-        train_val_loss1 = load_pickle(self.dump_path + '/planesreg/112K/convnet_losses_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_calnoise_50e_00001lr.p')
+        train_val_loss1 = load_pickle(self.dump_path + '/planesreg/112K/convnet_losses_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_calnoise_100e_00001lr.p')
         for key in train_val_loss1:
             print key
         #train_val_loss1_cor = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.p')
