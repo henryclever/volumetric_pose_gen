@@ -184,16 +184,21 @@ def reprocess_synth_data():
     # stiffness = "leftside"
     # num_resting_poses = 3722
 
-    all_data_names = [["m", "lay", "none", 1000, 1191, "pi", "set1", "train", "_plo"],
-                      ["m", "lay", "none", 1000, 1188, "pi", "set2", "train", "_plo"],
-                      ["m", "lay", "none", 1000, 1181, "pi", "set3", "train", "_plo"],
-                      ["m", "lay", "none", 1000, 1192, "pi", "set4", "train", "_plo"]]
     all_data_names = [["m", "lay", "none", 1000, 1169, "pi", "TEST", "test", "_plo"]]
-    all_data_names = [["m", "lay", "none", 2000, 2043, "0", "set5", "train", ""],
-                      ["m", "lay", "none", 2000, 2048, "0", "set6", "train", ""],
-                      ["m", "lay", "none", 2000, 2054, "0", "set7", "train", ""],
-                      ["m", "lay", "none", 2000, 2040, "0", "set8", "train", ""],
-                      ["m", "lay", "none", 2000, 2042, "0", "set9", "train", ""],]
+    all_data_names = [["m", "lay", "none", 2000, 2043, "0", "set5", "train", ""]]
+    #all_data_names = [["m", "lay", "none", 2000, 2442, "pi", "set10", "train", "_plo"],
+    #                  ["m", "lay", "none", 2000, 2467, "pi", "set11", "train", "_plo"],
+    #                  ["m", "lay", "none", 2000, 2429, "pi", "set12", "train", "_plo"],
+    #                  ["m", "lay", "none", 2000, 2450, "pi", "set13", "train", "_plo"],
+    #                  ["m", "lay", "none", 2000, 2412, "pi", "set14", "train", "_plo"],
+    #                  ["m", "lay", "none", 2000, 2423, "pi", "set15", "train", "_plo"],
+    #                  ["m", "lay", "none", 2000, 2480, "pi", "set16", "train", "_plo"],
+    #                  ["m", "lay", "none", 2000, 2382, "pi", "set17", "train", "_plo"]]
+    all_data_names = [["f", "lay", "none", 502, 700, "pi", "set23", "test", ""],
+                      ["f", "lay", "none", 436, 600, "pi", "set24", "test", ""]]
+                      #["m", "lay", "none", 2000, 2141, "0", "set12", "train", "_plo"],
+                      #["m", "lay", "none", 2000, 2111, "0", "set13", "train", "_plo"]]
+                      #["f", "lay", "none", 2000, 2511, "pi", "set22", "train", "_plo"]]
 
     num_data_points = 0
 
@@ -251,12 +256,12 @@ def reprocess_synth_data():
         # print m.pose
         # print "J x trans", m.J_transformed[:, 0]
 
-        resting_pose_data_list = np.load('/home/henry/data/resting_poses/random2/resting_pose_roll' + roll
+        resting_pose_data_list = np.load('/home/henry/data/resting_poses/random3/resting_pose_roll' + roll
                                          + isplo + '_'
                                          + gender + '_' + posture + '_' + set + '_' + str(num_resting_poses) + '_of_'
                                          + str(num_resting_poses_tried) + '_' + stiffness + '_stiff.npy', allow_pickle=True)
 
-        training_database_pmat_height_list = np.load('/home/henry/data/pmat_height/random2/pmat_height_roll' + roll
+        training_database_pmat_height_list = np.load('/home/henry/data/pmat_height/random3/pmat_height_roll' + roll
                                          + isplo + '_'
                                          + gender + '_' + posture + '_' + set + '_' + str(num_resting_poses)
                                          + '_' + stiffness + '_stiff.npy', allow_pickle=True)
@@ -267,128 +272,136 @@ def reprocess_synth_data():
         print np.shape(training_database_pmat_height_list[0])
 
         for resting_pose_data_ct in range(len(resting_pose_data_list)):
-            num_data_points += 1
-            resting_pose_data = resting_pose_data_list[resting_pose_data_ct]
-            pmat = training_database_pmat_height_list[0, resting_pose_data_ct]
-            capsule_angles = resting_pose_data[0].tolist()
-            root_joint_pos_list = resting_pose_data[1]
-            body_shape_list = resting_pose_data[2]
-            body_mass = resting_pose_data[3]
+            if set ==  "set3" and resting_pose_data_ct < 160:
+                pass
+            else:
 
-            # print "shape", body_shape_list
+                num_data_points += 1
+                resting_pose_data = resting_pose_data_list[resting_pose_data_ct]
+                pmat = training_database_pmat_height_list[0, resting_pose_data_ct]
+                capsule_angles = resting_pose_data[0].tolist()
+                root_joint_pos_list = resting_pose_data[1]
+                body_shape_list = resting_pose_data[2]
+                body_mass = resting_pose_data[3]
 
-            print np.shape(resting_pose_data), np.shape(pmat), np.shape(capsule_angles), np.shape(
-                root_joint_pos_list), np.shape(body_shape_list)
+                # print "shape", body_shape_list
 
-            for shape_param in range(10):
-                m.betas[shape_param] = float(body_shape_list[shape_param])
+                #print np.shape(resting_pose_data), np.shape(pmat), np.shape(capsule_angles), np.shape(
+                #    root_joint_pos_list), np.shape(body_shape_list)
 
-            m.pose[:] = np.random.rand(m.pose.size) * 0.
-            '''
-            dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture=posture, stiffness=None,
-                                            check_only_distal=True, filepath_prefix='/home/henry', add_floor=False)
-            # print self.m.pose
-            volumes = dss.getCapsuleVolumes(mm_resolution=1.)[2]
-            dss.world.reset()
-            dss.world.destroy()
-            dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture=posture, stiffness=None,
-                                            check_only_distal=True, filepath_prefix='/home/henry', add_floor=False,
-                                            volume=volumes)
-            # print self.m.pose
-            
-            #training_data_dict['body_mass'].append(dss.body_mass)  # , "person's mass"
-            dss.world.reset()
-            dss.world.destroy()
-            '''
+                for shape_param in range(10):
+                    m.betas[shape_param] = float(body_shape_list[shape_param])
 
-            training_data_dict['body_mass'].append(body_mass)
-            training_data_dict['body_height'].append(np.abs(np.min(m.r[:, 1]) - np.max(m.r[:, 1])))
+                m.pose[:] = np.random.rand(m.pose.size) * 0.
+                '''
+                dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture=posture, stiffness=None,
+                                                check_only_distal=True, filepath_prefix='/home/henry', add_floor=False)
+                # print self.m.pose
+                volumes = dss.getCapsuleVolumes(mm_resolution=1.)[2]
+                dss.world.reset()
+                dss.world.destroy()
+                dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture=posture, stiffness=None,
+                                                check_only_distal=True, filepath_prefix='/home/henry', add_floor=False,
+                                                volume=volumes)
+                # print self.m.pose
+                
+                #training_data_dict['body_mass'].append(dss.body_mass)  # , "person's mass"
+                dss.world.reset()
+                dss.world.destroy()
+                '''
 
-            print training_data_dict['body_mass'][-1] * 2.20462, 'MASS, lbs'
-            print training_data_dict['body_height'][-1] * 3.28084, 'HEIGHT, ft'
+                training_data_dict['body_mass'].append(body_mass)
+                training_data_dict['body_height'].append(np.abs(np.min(m.r[:, 1]) - np.max(m.r[:, 1])))
 
-            m.pose[0:3] = capsule_angles[0:3]
-            m.pose[3:6] = capsule_angles[6:9]
-            m.pose[6:9] = capsule_angles[9:12]
-            m.pose[9:12] = capsule_angles[12:15]
-            m.pose[12] = capsule_angles[15]
-            m.pose[15] = capsule_angles[16]
-            m.pose[18:21] = capsule_angles[17:20]
-            m.pose[21:24] = capsule_angles[20:23]
-            m.pose[24:27] = capsule_angles[23:26]
-            m.pose[27:30] = capsule_angles[26:29]
-            m.pose[36:39] = capsule_angles[29:32]  # neck
-            m.pose[39:42] = capsule_angles[32:35]
-            m.pose[42:45] = capsule_angles[35:38]
-            m.pose[45:48] = capsule_angles[38:41]  # head
-            m.pose[48:51] = capsule_angles[41:44]
-            m.pose[51:54] = capsule_angles[44:47]
-            m.pose[55] = capsule_angles[47]
-            m.pose[58] = capsule_angles[48]
-            m.pose[60:63] = capsule_angles[49:52]
-            m.pose[63:66] = capsule_angles[52:55]
+                #print training_data_dict['body_mass'][-1] * 2.20462, 'MASS, lbs'
+                #print training_data_dict['body_height'][-1] * 3.28084, 'HEIGHT, ft'
 
-            training_data_dict['joint_angles'].append(np.array(m.pose).astype(float))
-            training_data_dict['body_shape'].append(np.array(m.betas).astype(float))
-            # print "dict", training_data_dict['body_shape'][-1]
+                m.pose[0:3] = capsule_angles[0:3]
+                m.pose[3:6] = capsule_angles[6:9]
+                m.pose[6:9] = capsule_angles[9:12]
+                m.pose[9:12] = capsule_angles[12:15]
+                m.pose[12] = capsule_angles[15]
+                m.pose[15] = capsule_angles[16]
+                m.pose[18:21] = capsule_angles[17:20]
+                m.pose[21:24] = capsule_angles[20:23]
+                m.pose[24:27] = capsule_angles[23:26]
+                m.pose[27:30] = capsule_angles[26:29]
+                m.pose[36:39] = capsule_angles[29:32]  # neck
+                m.pose[39:42] = capsule_angles[32:35]
+                m.pose[42:45] = capsule_angles[35:38]
+                m.pose[45:48] = capsule_angles[38:41]  # head
+                m.pose[48:51] = capsule_angles[41:44]
+                m.pose[51:54] = capsule_angles[44:47]
+                m.pose[55] = capsule_angles[47]
+                m.pose[58] = capsule_angles[48]
+                m.pose[60:63] = capsule_angles[49:52]
+                m.pose[63:66] = capsule_angles[52:55]
 
-            # training_data_dict['v_template'].append(np.asarray(m.v_template))
-            # training_data_dict['shapedirs'].append(np.asarray(m.shapedirs))
+                training_data_dict['joint_angles'].append(np.array(m.pose).astype(float))
+                training_data_dict['body_shape'].append(np.array(m.betas).astype(float))
+                # print "dict", training_data_dict['body_shape'][-1]
 
-            # print np.sum(np.array(m.v_template))
-            # print np.sum(np.array(m.shapedirs))
-            # print np.sum(np.zeros((np.shape(np.array(m.J_regressor)))) + np.array(m.J_regressor))
+                # training_data_dict['v_template'].append(np.asarray(m.v_template))
+                # training_data_dict['shapedirs'].append(np.asarray(m.shapedirs))
 
-            root_shift_x = root_joint_pos_list[0] + 0.374648 + 10 * INTER_SENSOR_DISTANCE
-            root_shift_y = root_joint_pos_list[1] + 0.927099 + 10 * INTER_SENSOR_DISTANCE
-            # root_shift_z = height
-            root_shift_z = root_joint_pos_list[2] - 0.15
-            print root_shift_z
+                # print np.sum(np.array(m.v_template))
+                # print np.sum(np.array(m.shapedirs))
+                # print np.sum(np.zeros((np.shape(np.array(m.J_regressor)))) + np.array(m.J_regressor))
 
-            x_positions = np.asarray(m.J_transformed)[:, 0] - np.asarray(m.J_transformed)[0, 0] + root_shift_x
-            y_positions = np.asarray(m.J_transformed)[:, 1] - np.asarray(m.J_transformed)[0, 1] + root_shift_y
-            z_positions = np.asarray(m.J_transformed)[:, 2] - np.asarray(m.J_transformed)[0, 2] + root_shift_z
+                root_shift_x = root_joint_pos_list[0] + 0.374648 + 10 * INTER_SENSOR_DISTANCE
+                root_shift_y = root_joint_pos_list[1] + 0.927099 + 10 * INTER_SENSOR_DISTANCE
+                # root_shift_z = height
+                root_shift_z = root_joint_pos_list[2] - 0.15
+                #print root_shift_z
 
-            if resting_pose_data_ct == 0:
-                print m.betas
-                print m.pose
-                print "J x trans", m.J_transformed[:, 0]
+                x_positions = np.asarray(m.J_transformed)[:, 0] - np.asarray(m.J_transformed)[0, 0] + root_shift_x
+                y_positions = np.asarray(m.J_transformed)[:, 1] - np.asarray(m.J_transformed)[0, 1] + root_shift_y
+                z_positions = np.asarray(m.J_transformed)[:, 2] - np.asarray(m.J_transformed)[0, 2] + root_shift_z
 
-            xyz_positions = np.transpose([x_positions, y_positions, z_positions])
-            xyz_positions_shape = np.shape(xyz_positions)
-            xyz_positions = xyz_positions.reshape(xyz_positions_shape[0] * xyz_positions_shape[1])
-            training_data_dict['markers_xyz_m'].append(xyz_positions)
-            training_data_dict['root_xyz_shift'].append([root_shift_x, root_shift_y, root_shift_z])
-            training_data_dict['images'].append(pmat.reshape(64 * 27))
-            if posture == "sit":
-                training_data_dict['bed_angle_deg'].append(60.)
-            elif posture == "lay":
-                training_data_dict['bed_angle_deg'].append(0.)
+                if resting_pose_data_ct == 0:
+                    print m.betas
+                    print m.pose
+                    print "J x trans", m.J_transformed[:, 0]
+
+                xyz_positions = np.transpose([x_positions, y_positions, z_positions])
+                xyz_positions_shape = np.shape(xyz_positions)
+                xyz_positions = xyz_positions.reshape(xyz_positions_shape[0] * xyz_positions_shape[1])
+                training_data_dict['markers_xyz_m'].append(xyz_positions)
+                training_data_dict['root_xyz_shift'].append([root_shift_x, root_shift_y, root_shift_z])
+                training_data_dict['images'].append(pmat.reshape(64 * 27))
+                if posture == "sit":
+                    training_data_dict['bed_angle_deg'].append(60.)
+                elif posture == "lay":
+                    training_data_dict['bed_angle_deg'].append(0.)
+
+                print set, resting_pose_data_ct, len(training_data_dict['images'])
+                #if resting_pose_data_ct == 249: break
+                if len(training_data_dict['images']) == 500: break
 
         print training_data_dict['markers_xyz_m'][0]
 
-        print "RECHECKING!"
-        for entry in range(len(training_data_dict['markers_xyz_m'])):
-            print entry, training_data_dict['markers_xyz_m'][entry][0:2], training_data_dict['body_shape'][entry][0:2], \
-            training_data_dict['joint_angles'][entry][0:2]
+        #print "RECHECKING!"
+        #for entry in range(len(training_data_dict['markers_xyz_m'])):
+            #print entry, training_data_dict['markers_xyz_m'][entry][0:2], training_data_dict['body_shape'][entry][0:2], \
+            #training_data_dict['joint_angles'][entry][0:2]
 
     #pickle.dump(training_data_dict, open(os.path.join(
     #    '/home/henry/data/synth/random/train_' + gender + '_' + posture + '_' + str(num_data_points) + '_' + stiffness + '_stiff.p'), 'wb'))
     pickle.dump(training_data_dict, open(os.path.join(
-        '/home/henry/data/synth/random2/'+dattype+'_roll' + roll + isplo + '_'
+        '/home/henry/data/synth/random3_all/'+dattype+'_roll' + roll + isplo + '_'
                                      + gender + '_' + posture + '_' + str(num_data_points)
                                      + '_' + stiffness + '_stiff.p'), 'wb'))
 
-    for item in training_data_dict:
-        print "item name: ", item
-        print np.shape(training_data_dict[item])
+    #for item in training_data_dict:
+    #    print "item name: ", item
+    #    print np.shape(training_data_dict[item])
 
-    test_database_file = load_pickle('/home/henry/data/real/trainval4_150rh1_sit120rh.p')
+    #test_database_file = load_pickle('/home/henry/data/real/trainval4_150rh1_sit120rh.p')
     # training_database_file.append(filepath_prefix_qt+'/trainval8_150rh1_sit120rh.p')
 
-    for item in test_database_file:
-        print "item name: ", item
-        print np.shape(test_database_file[item])
+    #for item in test_database_file:
+    #    print "item name: ", item
+    #    print np.shape(test_database_file[item])
 
     '''
     for i in range(len(training_data_dict['markers_xyz_m'])):
@@ -411,7 +424,7 @@ def get_direct_synth_marker_offsets():
 
 
 
-    all_data_names = [["f", "lay", "none", 1000, "0", "test", ""]]
+    all_data_names = [["f", "lay", "none", 8000, "0", "train", ""]]
 
     for gpsn in all_data_names:
         gender = gpsn[0]
@@ -573,8 +586,51 @@ def reprocess_real_data_height_wt():
         pickle.dump(current_data, open(os.path.join(filepath_prefix+filename), 'wb'))
 
 
+def reduce_dataset_size():
+    #all_data_names = [["m", "lay", "none", 10000, "pi", "train", "_plo"]]
+    all_data_names = [["f", "lay", "none", 10000, "0", "train", ""],
+                      ["m", "lay", "none", 10000, "0", "train", ""],
+                      ["f", "lay", "none", 10000, "0", "train", "_plo"],
+                      ["m", "lay", "none", 10000, "0", "train", "_plo"]]
+
+
+    for gpsn in all_data_names:
+        gender = gpsn[0]
+        posture = gpsn[1]
+        stiffness = gpsn[2]
+        num_data_points = gpsn[3]
+        roll = gpsn[4]
+        dattype = gpsn[5]
+        isplo = gpsn[6]
+
+        filename = '/home/henry/data/synth/random2/' + dattype + '_roll' + roll + isplo + '_' \
+                   + gender + '_' + posture + '_' + str(num_data_points) \
+                   + '_' + stiffness + '_stiff.p'
+
+        training_data_dict = load_pickle(filename)
+
+        for entry in training_data_dict:
+            print entry
+            print np.shape(training_data_dict[entry])
+            training_data_dict[entry] = training_data_dict[entry][:5000]
+        print "loaded ", filename
+
+        for entry in training_data_dict:
+            print entry
+            print np.shape(training_data_dict[entry])
+
+        filename =  '/home/henry/data/synth/random3_all/' + dattype + '_roll' + roll + isplo + '_' \
+                    + gender + '_' + posture + '_set5to7_' + str(5000) \
+                    + '_' + stiffness + '_stiff_new.p'
+
+        pickle.dump(training_data_dict, open(os.path.join(filename), 'wb'))
+
+
+
+
 def get_depth_cont_maps_from_synth():
-    all_data_names = [["m", "lay", "none", 10000, "pi", "train", "_plo"]]
+    # all_data_names = [["m", "lay", "none", 10000, "pi", "train", "_plo"]]
+    all_data_names = [["m", "lay", "none", 4000, "0", "train", "_phu"]]
 
     from visualization_lib import VisualizationLib
 
@@ -608,8 +664,8 @@ def get_depth_cont_maps_from_synth():
         model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_' + gender + '_lbs_10_207_0_v1.0.0.pkl'
         m = load_model(model_path)
 
-        filename =  '/home/henry/data/synth/random2/' + dattype + '_roll' + roll + isplo + '_' \
-                    + gender + '_' + posture + '_' + str(num_data_points) \
+        filename =  '/home/henry/data/synth/random3_all/' + dattype + '_roll' + roll + isplo + '_' \
+                    + gender + '_' + posture + '_set2to4_' + str(num_data_points) \
                     + '_' + stiffness + '_stiff.p'
 
 
@@ -633,7 +689,6 @@ def get_depth_cont_maps_from_synth():
 
             training_data_dict['images'][index] = images[index].astype(int8) #convert the original pmat to an int to save space
 
-            pmat = np.clip(images[index].reshape(64, 27)*5., 0, 100)
             curr_root_shift = np.array(root_xyz_shift[index])
 
             #print curr_root_shift,'currroot'
@@ -764,8 +819,8 @@ def get_depth_cont_maps_from_synth():
             #break
 
 
-        filename =  '/home/henry/data/synth/random2/' + dattype + '_roll' + roll + isplo + '_' \
-                    + gender + '_' + posture + '_' + str(num_data_points) \
+        filename =  '/home/henry/data/synth/random3_all/' + dattype + '_roll' + roll + isplo + '_' \
+                    + gender + '_' + posture + '_set2to4_' + str(num_data_points) \
                     + '_' + stiffness + '_stiff_new.p'
 
         pickle.dump(training_data_dict, open(os.path.join(filename), 'wb'))
@@ -918,7 +973,8 @@ def reprocess_small_bags():
 
 
 if __name__ == "__main__":
-    #get_depth_cont_maps_from_synth()
+    get_depth_cont_maps_from_synth()
+    #reduce_dataset_size()
     #reprocess_synth_data()
     #get_direct_synth_marker_offsets()
-    reprocess_small_bags()
+    #reprocess_small_bags()

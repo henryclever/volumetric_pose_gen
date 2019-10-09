@@ -110,6 +110,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['shuffle'] = True
         self.CTRL_PNL['incl_ht_wt_channels'] = True
         self.CTRL_PNL['incl_pmat_cntct_input'] = True
+        self.CTRL_PNL['dropout'] = False
         self.CTRL_PNL['lock_root'] = False
         self.CTRL_PNL['num_input_channels'] = 3
         self.CTRL_PNL['GPU'] = GPU
@@ -120,7 +121,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['depth_map_labels'] = True #can only be true if we have 100% synthetic data for training
         self.CTRL_PNL['depth_map_labels_test'] = True #can only be true is we have 100% synth for testing
         self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
-        self.CTRL_PNL['depth_map_input_est'] = True  #do this if we're working in a two-part regression
+        self.CTRL_PNL['depth_map_input_est'] = False  #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
@@ -130,7 +131,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['all_tanh_activ'] = True
         self.CTRL_PNL['L2_contact'] = True
         self.CTRL_PNL['pmat_mult'] = int(5)
-        self.CTRL_PNL['cal_noise'] = False
+        self.CTRL_PNL['cal_noise'] = True
 
         self.weight_joints = self.opt.j_d_ratio*2
         self.weight_depth_planes = (1-self.opt.j_d_ratio)*2
@@ -429,12 +430,8 @@ class PhysicalTrainer():
                                      verts_list = self.verts_list, filepath=self.CTRL_PNL['filepath_prefix'], in_channels=self.CTRL_PNL['num_input_channels'])
 
 
-            for i in range(0, 8):
-                try:
-                    self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_l2cnt_125e_00001lr.pt', map_location={'cuda:'+str(i):'cuda:'+str(DEVICE)})
-                    break
-                except:
-                    pass
+            #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_calnoise_100e_00001lr.pt', map_location={'cuda:1':'cuda:'+str(DEVICE)})
+
             #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_125e_00001lr.pt')
             #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_l2cnt_calnoise_150e_00001lr.pt')
             #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_alltanh_l2cnt_calnoise_125e_00001lr.pt')
@@ -878,8 +875,8 @@ if __name__ == "__main__":
         #filepath_prefix = '/media/henry/multimodal_data_2/data/'
         filepath_suffix = ''
 
-    filepath_suffix = '_output0p5_112k_100e_alltanh'
-    #filepath_suffix = ''
+   # filepath_suffix = '_output0p5_112k_100e_alltanh_calnoise'
+    filepath_suffix = ''
 
     training_database_file_f = []
     training_database_file_m = []
@@ -890,8 +887,10 @@ if __name__ == "__main__":
 
     if opt.quick_test == True:
         #training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_f_lay_4000_none_stiff_output0p5.p')
-        test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_f_lay_1000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random/test_roll0_f_lay_1000_none_stiff'+filepath_suffix+'.p')
+        #test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_m_lay_1000_none_stiff'+filepath_suffix+'.p')
+        #training_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_m_lay_1000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random3_all/train_rollpi_f_lay_set18to22_10000_none_stiff'+filepath_suffix+'.p')
+        test_database_file_f.append(filepath_prefix+'synth/random3_all/train_rollpi_f_lay_set18to22_10000_none_stiff'+filepath_suffix+'.p')
     else:
         training_database_file_f.append(filepath_prefix+'synth/random2/train_roll0_f_lay_10000_none_stiff'+filepath_suffix+'.p')
         training_database_file_f.append(filepath_prefix+'synth/random2/train_rollpi_f_lay_10000_none_stiff'+filepath_suffix+'.p')
