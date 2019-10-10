@@ -194,8 +194,7 @@ def reprocess_synth_data():
     #                  ["m", "lay", "none", 2000, 2423, "pi", "set15", "train", "_plo"],
     #                  ["m", "lay", "none", 2000, 2480, "pi", "set16", "train", "_plo"],
     #                  ["m", "lay", "none", 2000, 2382, "pi", "set17", "train", "_plo"]]
-    all_data_names = [["f", "lay", "none", 502, 700, "pi", "set23", "test", ""],
-                      ["f", "lay", "none", 436, 600, "pi", "set24", "test", ""]]
+    all_data_names = [["f", "lay", "none", 1650, 2601, "0", "set4", "test", "_plo_hbh"]]
                       #["m", "lay", "none", 2000, 2141, "0", "set12", "train", "_plo"],
                       #["m", "lay", "none", 2000, 2111, "0", "set13", "train", "_plo"]]
                       #["f", "lay", "none", 2000, 2511, "pi", "set22", "train", "_plo"]]
@@ -256,12 +255,12 @@ def reprocess_synth_data():
         # print m.pose
         # print "J x trans", m.J_transformed[:, 0]
 
-        resting_pose_data_list = np.load('/home/henry/data/resting_poses/random3/resting_pose_roll' + roll
+        resting_pose_data_list = np.load('/home/henry/data/resting_poses/random_hbh3/resting_pose_roll' + roll
                                          + isplo + '_'
                                          + gender + '_' + posture + '_' + set + '_' + str(num_resting_poses) + '_of_'
                                          + str(num_resting_poses_tried) + '_' + stiffness + '_stiff.npy', allow_pickle=True)
 
-        training_database_pmat_height_list = np.load('/home/henry/data/pmat_height/random3/pmat_height_roll' + roll
+        training_database_pmat_height_list = np.load('/home/henry/data/pmat_height/random_hbh3/pmat_height_roll' + roll
                                          + isplo + '_'
                                          + gender + '_' + posture + '_' + set + '_' + str(num_resting_poses)
                                          + '_' + stiffness + '_stiff.npy', allow_pickle=True)
@@ -388,7 +387,7 @@ def reprocess_synth_data():
     #pickle.dump(training_data_dict, open(os.path.join(
     #    '/home/henry/data/synth/random/train_' + gender + '_' + posture + '_' + str(num_data_points) + '_' + stiffness + '_stiff.p'), 'wb'))
     pickle.dump(training_data_dict, open(os.path.join(
-        '/home/henry/data/synth/random3_all/'+dattype+'_roll' + roll + isplo + '_'
+        '/home/henry/data/synth/random3/'+dattype+'_roll' + roll + isplo + '_'
                                      + gender + '_' + posture + '_' + str(num_data_points)
                                      + '_' + stiffness + '_stiff.p'), 'wb'))
 
@@ -630,7 +629,8 @@ def reduce_dataset_size():
 
 def get_depth_cont_maps_from_synth():
     # all_data_names = [["m", "lay", "none", 10000, "pi", "train", "_plo"]]
-    all_data_names = [["m", "lay", "none", 4000, "0", "train", "_phu"]]
+    all_data_names = [["m", "lay", "none", 1875, "0", "train", "_hbh"],
+                      ]
 
     from visualization_lib import VisualizationLib
 
@@ -664,8 +664,8 @@ def get_depth_cont_maps_from_synth():
         model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_' + gender + '_lbs_10_207_0_v1.0.0.pkl'
         m = load_model(model_path)
 
-        filename =  '/home/henry/data/synth/random3_all/' + dattype + '_roll' + roll + isplo + '_' \
-                    + gender + '_' + posture + '_set2to4_' + str(num_data_points) \
+        filename =  '/home/henry/data/synth/random3_supp/' + dattype + '_roll' + roll + isplo + '_' \
+                    + gender + '_' + posture + '_set2_' + str(num_data_points) \
                     + '_' + stiffness + '_stiff.p'
 
 
@@ -819,8 +819,8 @@ def get_depth_cont_maps_from_synth():
             #break
 
 
-        filename =  '/home/henry/data/synth/random3_all/' + dattype + '_roll' + roll + isplo + '_' \
-                    + gender + '_' + posture + '_set2to4_' + str(num_data_points) \
+        filename =  '/home/henry/data/synth/random3_supp/' + dattype + '_roll' + roll + isplo + '_' \
+                    + gender + '_' + posture + '_set2_' + str(num_data_points) \
                     + '_' + stiffness + '_stiff_new.p'
 
         pickle.dump(training_data_dict, open(os.path.join(filename), 'wb'))
