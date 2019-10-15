@@ -57,8 +57,11 @@ import matplotlib.pyplot as plt
 from hmr.src.tf_smpl.batch_smpl import SMPL
 
 WEIGHT_LBS = 190.
-HEIGHT_IN = 73.
+HEIGHT_IN = 72.
 GENDER = 'm'
+import rospy
+from hrl_msgs.msg import MeshAttr
+
 
 
 class GeneratePose():
@@ -99,7 +102,7 @@ class GeneratePose():
         self.CTRL_PNL['num_epochs'] = 101
         self.CTRL_PNL['incl_inter'] = True
         self.CTRL_PNL['shuffle'] = False
-        self.CTRL_PNL['incl_ht_wt_channels'] = True
+        self.CTRL_PNL['incl_ht_wt_channels'] = False
         self.CTRL_PNL['incl_pmat_cntct_input'] = True
         self.CTRL_PNL['num_input_channels'] = 3
         self.CTRL_PNL['lock_root'] = False
@@ -107,6 +110,7 @@ class GeneratePose():
         self.CTRL_PNL['dtype'] = torch.cuda.FloatTensor
         self.CTRL_PNL['repeat_real_data_ct'] = 1
         self.CTRL_PNL['regr_angles'] = 1
+        self.CTRL_PNL['dropout'] = False
         self.CTRL_PNL['depth_map_labels'] = False
         self.CTRL_PNL['depth_map_output'] = True
         self.CTRL_PNL['depth_map_input_est'] = False#rue #do this if we're working in a two-part regression
@@ -357,10 +361,13 @@ class GeneratePose():
             else:
                 model2 = None
 
+
+        pub = rospy.Publisher('meshTopic', MeshAttr)
+        #rospy.init_node('talker', anonymous=False)
         while not rospy.is_shutdown():
 
 
-            pmat = np.fliplr(np.flipud(np.clip(self.pressure.reshape(mat_size)*float(self.CTRL_PNL['pmat_mult'])*5., a_min=0, a_max=100)))
+            pmat = np.fliplr(np.flipud(np.clip(self.pressure.reshape(mat_size)*float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100)))
 
             if self.CTRL_PNL['cal_noise'] == False:
                 pmat = gaussian_filter(pmat, sigma= 0.5)
@@ -474,7 +481,7 @@ class GeneratePose():
             # self.m.pose[51] = selection_r
 
             print self.m.r
-            print OUTPUT_DICT['verts']
+            #print OUTPUT_DICT['verts']
 
             pyRender.mesh_render_pose_bed_orig(self.m, root_shift_est, self.point_cloud_array, self.pc_isnew, pmat*5./float(self.CTRL_PNL['pmat_mult']), self.markers, self.bedangle)
             self.point_cloud_array = None
@@ -483,7 +490,8 @@ class GeneratePose():
 
             #dss.run_simulation(10000)
             #generator.standard_render()
-
+            #rate = rospy.Rate(0.5)  # 10hz
+            #pub.publish(vertices=np.array(self.m.r), faces=np.array(self.m.f))
 
             #break
 
@@ -500,8 +508,12 @@ if __name__ ==  "__main__":
 
 
     #generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/DC_L2depth/convnet_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_alltanh_l2cnt_calnoise_300e_00001lr.pt")
-    generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/DC_L2depth/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_100e_00001lr.pt",
-                                 filepath_prefix+"/data/convnets/planesreg_correction/DC_L2depth/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_depthestin_angleadj_alltanh_l2cnt_50e_100e_00001lr.pt")
+    #generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/112K/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_calnoise_50e_00001lr.pt")
+
+
+    #generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/112K/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_100e_00001lr.pt",
+    #                             filepath_prefix+"/data/convnets/planesreg_correction/112K/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_depthestin_angleadj_alltanh_l2cnt_100e_200e_00001lr.pt")
+    generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/184K/convnet_anglesDC_synth_184K_128b_x5pmult_0.5rtojtdpth_tnh_calnoise_50e_00002lr.pt")
 
     #generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_l2cnt_calnoise_150e_00001lr.pt")
     #generator.estimate_real_time(filepath_prefix+"/data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_201e_0.5rtojtdpth_pmatcntin_100e_00001lr.pt",

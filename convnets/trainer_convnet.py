@@ -433,6 +433,7 @@ class PhysicalTrainer():
 
 
             #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_calnoise_100e_00001lr.pt', map_location={'cuda:1':'cuda:'+str(DEVICE)})
+            #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/184K/convnet_anglesDC_synth_184K_128b_x5pmult_0.5rtojtdpth_tnh_htwt_calnoise_50e_00002lr.pt', map_location={'cuda:0':'cuda:'+str(DEVICE)})
 
             #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_125e_00001lr.pt')
             #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_l2cnt_calnoise_150e_00001lr.pt')
@@ -563,8 +564,8 @@ class PhysicalTrainer():
 
 
 
-                loss.backward()
-                self.optimizer.step()
+                #loss.backward()
+                #self.optimizer.step()
                 loss *= 1000
 
 
@@ -863,7 +864,7 @@ if __name__ == "__main__":
     p.add_option('--verbose', '--v',  action='store_true', dest='verbose',
                  default=True, help='Printout everything (under construction).')
 
-    p.add_option('--log_interval', type=int, default=15, metavar='N',
+    p.add_option('--log_interval', type=int, default=2, metavar='N',
                  help='number of batches between logging train status')
 
     opt, args = p.parse_args()
@@ -891,8 +892,12 @@ if __name__ == "__main__":
         #training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_f_lay_4000_none_stiff_output0p5.p')
         #test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_m_lay_1000_none_stiff'+filepath_suffix+'.p')
         #training_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_m_lay_1000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random3/train_rollpi_f_lay_set18to22_10000_none_stiff'+filepath_suffix+'.p')
-        test_database_file_f.append(filepath_prefix+'synth/random3/train_rollpi_f_lay_set18to22_10000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random3_supp/train_roll0_hbh_f_lay_set1to2_2000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random3_supp/train_roll0_phu_f_lay_set2to4_4000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random3_supp/train_roll0_xl_f_lay_set2both_4000_none_stiff'+filepath_suffix+'.p')
+        #training_database_file_f.append(filepath_prefix+'synth/random3/train_rollpi_f_lay_set18to22_10000_none_stiff'+filepath_suffix+'.p')
+        #test_database_file_f.append(filepath_prefix+'synth/random3/train_rollpi_f_lay_set18to22_10000_none_stiff'+filepath_suffix+'.p')
+        test_database_file_f.append(filepath_prefix+'synth/random3/train_roll0_m_lay_set5to7_5000_none_stiff'+filepath_suffix+'.p')
     else:
         training_database_file_f.append(filepath_prefix+'synth/random3/train_roll0_f_lay_set5to7_5000_none_stiff'+filepath_suffix+'.p')
         training_database_file_f.append(filepath_prefix+'synth/random3/train_roll0_f_lay_set10to13_8000_none_stiff'+filepath_suffix+'.p')

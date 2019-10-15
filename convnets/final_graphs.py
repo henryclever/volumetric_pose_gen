@@ -354,6 +354,30 @@ class DataVisualizer():
 
         plt.subplot(3, 2, 6)
         plt.tight_layout()
+        plt.title('tanh, train size: 184K, lr: 2e-5')
+        plt.axis([0,100,1800,3000])
+        #plt.yticks([])
+        train_val_loss1 = load_pickle(self.dump_path + '/planesreg/184K/convnet_losses_anglesDC_synth_184K_128b_100e_x5pmult_0.5rtojtdpth_tnh_htwt_50e.p')
+        for key in train_val_loss1:
+            print key
+        #train_val_loss1_cor = load_pickle(self.dump_path + '/planesreg_correction/convnet_losses_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.p')
+        y1 = savgol_filter(train_val_loss1['train_anglesDC_synth_184K_128b_100e_x5pmult_0.5rtojtdpth_tnh_htwt'], 501, 3)
+        y1_val = savgol_filter(train_val_loss1['val_anglesDC_synth_184K_128b_100e_x5pmult_0.5rtojtdpth_tnh_htwt'], 501, 3)
+        #corrected_y1 = savgol_filter(train_val_loss1_cor['train_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'], 501, 3)
+
+        plt.plot(train_val_loss1['epoch_anglesDC_synth_184K_128b_100e_x5pmult_0.5rtojtdpth_tnh_htwt'], y1, color='#fd8d3c')
+        plt.plot(train_val_loss1['epoch_anglesDC_synth_184K_128b_100e_x5pmult_0.5rtojtdpth_tnh_htwt'], y1_val, color='#9e9ac8')
+        #plt.plot(np.array(train_val_loss1_cor['epoch_anglesEU_synth_s9_3xreal_128b_101e_1.0rtojtdpth_pmatcntin_depthestin_angleadj'])+100,
+        #                  corrected_y1, 'r')
+        plt.legend(['relu', 'relu val'])
+        plt.grid()
+        plt.xlabel('epochs')
+        plt.ylabel('loss')
+
+
+        '''
+        plt.subplot(3, 2, 6)
+        plt.tight_layout()
         plt.title('tanh cnx5, train size: 112K, lr: 5e-5')
         plt.axis([0,200,1800,3000])
         #plt.yticks([])
@@ -374,7 +398,7 @@ class DataVisualizer():
         plt.xlabel('epochs')
         plt.ylabel('loss')
 
-
+        '''
 
 
 
