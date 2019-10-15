@@ -651,14 +651,14 @@ class Viz3DPose():
 
         #file_dir = "/media/henry/multimodal_data_2/test_data/data_072019_0007"
         #file_dir = "/media/henry/multimodal_data_2/test_data/data_072019_0006"
-        #file_dir = "/home/henry/ivy_test_data/data_102019_sleepleft_0000"
-        file_dir = "/media/henry/multimodal_data_1/ivy_test_data/data_102019_kneeup_0000"
+        file_dir = "/home/henry/ivy_test_data/data_102019_kneeup_0000"
+        #file_dir = "/media/henry/multimodal_data_1/ivy_test_data/data_102019_kneeup_0000"
 
         V3D.load_next_file(file_dir)
 
         start_num = 1
         #for im_num in range(29, 100):
-        for im_num in range(start_num, 100):
+        for im_num in range(start_num, 2):
 
             self.overall_image_scale_amount = 0.85
 
@@ -805,8 +805,8 @@ class Viz3DPose():
 if __name__ ==  "__main__":
 
     filepath_prefix = "/home/henry"
-    model_prefix = "/media/henry/multimodal_data_1"
-    #model_prefix = "/home/henry"
+    #model_prefix = "/media/henry/multimodal_data_1"
+    model_prefix = "/home/henry"
 
 
     V3D = Viz3DPose(filepath_prefix)
@@ -905,8 +905,8 @@ if __name__ ==  "__main__":
 
 
     F_eval = V3D.evaluate_data(file_optimization_picks[calib_index], \
-                               model_prefix+"/data/convnets/planesreg/DC_L2depth/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_100e_00001lr.pt", \
-                               model_prefix+"/data/convnets/planesreg_correction/DC_L2depth/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_depthestin_angleadj_alltanh_l2cnt_50e_100e_00001lr.pt")
+                               model_prefix+"/data/convnets/planesreg/112K/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_100e_00001lr.pt", \
+                               model_prefix+"/data/convnets/planesreg_correction/112K/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_depthestin_angleadj_alltanh_l2cnt_100e_150e_00001lr.pt")
 
 
     #F_eval = V3D.evaluate_data(file_optimization_picks[calib_index], \
