@@ -235,14 +235,14 @@ class GeneratePose():
             elif smpl_verts[idx, 1] < float(self.m.J_transformed[2, 1]) and smpl_verts[idx, 1] > float(self.m.J_transformed[5, 1]) and smpl_verts[idx, 0] < 0:
                 r_upperleg_idx_list.append(idx)
 
-            elif smpl_verts[idx, 0] > float(self.m.J_transformed[18, 0]):
-                l_forearm_idx_list.append(idx)
-            elif smpl_verts[idx, 0] < float(self.m.J_transformed[19, 0]):
-                r_forearm_idx_list.append(idx)
+            #elif smpl_verts[idx, 0] > float(self.m.J_transformed[18, 0]):
+            #    l_forearm_idx_list.append(idx)
+            #elif smpl_verts[idx, 0] < float(self.m.J_transformed[19, 0]):
+            #    r_forearm_idx_list.append(idx)
 
-            elif smpl_verts[idx, 0] > float(self.m.J_transformed[16, 0]) and smpl_verts[idx, 0] < float(self.m.J_transformed[18, 0]):
+            elif smpl_verts[idx, 0] > float(self.m.J_transformed[16, 0]):
                 l_upperarm_idx_list.append(idx)
-            elif smpl_verts[idx, 0] < float(self.m.J_transformed[17, 0]) and smpl_verts[idx, 0] > float(self.m.J_transformed[19, 0]):
+            elif smpl_verts[idx, 0] < float(self.m.J_transformed[17, 0]):
                 r_upperarm_idx_list.append(idx)
 
             elif smpl_verts[idx, 1] > np.mean([float(self.m.J_transformed[12, 1]), float(self.m.J_transformed[15, 1])]):
@@ -315,28 +315,10 @@ class GeneratePose():
                                         torso_idx_list.index(smpl_faces[face_idx, 2])])
 
         segmented_dict = {}
-        segmented_dict['l_lowerleg_idx_list'] = l_lowerleg_idx_list
-        segmented_dict['r_lowerleg_idx_list'] = r_lowerleg_idx_list
-        segmented_dict['l_upperleg_idx_list'] = l_upperleg_idx_list
-        segmented_dict['r_upperleg_idx_list'] = r_upperleg_idx_list
-        segmented_dict['l_forearm_idx_list'] = l_forearm_idx_list
-        segmented_dict['r_forearm_idx_list'] = r_forearm_idx_list
-        segmented_dict['l_upperarm_idx_list'] = l_upperarm_idx_list
-        segmented_dict['r_upperarm_idx_list'] = r_upperarm_idx_list
-        segmented_dict['head_idx_list'] = head_idx_list
-        segmented_dict['torso_idx_list'] = torso_idx_list
-        segmented_dict['l_lowerleg_face_list'] = l_lowerleg_face_list
-        segmented_dict['r_lowerleg_face_list'] = r_lowerleg_face_list
-        segmented_dict['l_upperleg_face_list'] = l_upperleg_face_list
-        segmented_dict['r_upperleg_face_list'] = r_upperleg_face_list
-        segmented_dict['l_forearm_face_list'] = l_forearm_face_list
-        segmented_dict['r_forearm_face_list'] = r_forearm_face_list
-        segmented_dict['l_upperarm_face_list'] = l_upperarm_face_list
-        segmented_dict['r_upperarm_face_list'] = r_upperarm_face_list
-        segmented_dict['head_face_list'] = head_face_list
-        segmented_dict['torso_face_list'] = torso_face_list
+        segmented_dict['l_arm_idx_list'] = l_upperarm_idx_list
+        segmented_dict['l_arm_face_list'] = l_upperarm_face_list
 
-        pkl.dump(segmented_dict, open(os.path.join('./segmented_mesh_idx_faces.p'), 'wb'))
+        pkl.dump(segmented_dict, open(os.path.join('./segmented_mesh_idx_faces_larm.p'), 'wb'))
 
         return segmented_dict
 
@@ -348,7 +330,7 @@ class GeneratePose():
         smpl_verts = np.array(self.m.r)
         smpl_faces = np.array(self.m.f)
 
-        #self.segmented_dict = self.get_vtx_idx_and_faces()
+        self.segmented_dict = self.get_vtx_idx_and_faces()
         self.segmented_dict = load_pickle('segmented_mesh_idx_faces.p')
 
         human_mesh_vtx_parts = [smpl_verts[self.segmented_dict['l_lowerleg_idx_list'], :],
