@@ -129,7 +129,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['depth_map_labels'] = True #can only be true if we have 100% synthetic data for training
         self.CTRL_PNL['depth_map_labels_test'] = True #can only be true is we have 100% synth for testing
         self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
-        self.CTRL_PNL['depth_map_input_est'] = False  #do this if we're working in a two-part regression
+        self.CTRL_PNL['depth_map_input_est'] = True  #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
@@ -416,8 +416,8 @@ class PhysicalTrainer():
     def init_convnet_train(self):
 
         print self.train_x_tensor.size(), self.train_y_tensor.size()
-        #self.train_x_tensor = self.train_x_tensor[476:, :, :, :]
-        #self.train_y_tensor = self.train_y_tensor[476:, :]
+        self.train_x_tensor = self.train_x_tensor[476:, :, :, :]
+        self.train_y_tensor = self.train_y_tensor[476:, :]
         print self.train_x_tensor.size(), self.train_y_tensor.size()
 
         #self.train_x_tensor = self.train_x_tensor.unsqueeze(1)
@@ -445,10 +445,10 @@ class PhysicalTrainer():
             #                         verts_list = self.verts_list, filepath=self.CTRL_PNL['filepath_prefix'], in_channels=self.CTRL_PNL['num_input_channels'])
 
 
-            #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg_correction/112K'
-            #                        '/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_depthestin_angleadj_alltanh_l2cnt_100e_200e_00001lr.pt', map_location='cpu')
-            self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/112K'
-                                    '/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_100e_00001lr.pt', map_location='cpu')
+            self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg_correction/112K'
+                                    '/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_depthestin_angleadj_alltanh_l2cnt_100e_200e_00001lr.pt', map_location='cpu')
+            #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/112K'
+            #                        '/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_100e_00001lr.pt', map_location='cpu')
 
             #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_125e_00001lr.pt')
             #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_l2cnt_calnoise_150e_00001lr.pt')
@@ -504,7 +504,7 @@ class PhysicalTrainer():
 
 
     def train_convnet(self, epoch):
-        GENDER = "m"
+        GENDER = "f"
         if GENDER == "m":
             model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
         else:
@@ -546,83 +546,120 @@ class PhysicalTrainer():
                     #print torch.cuda.max_memory_allocated(), '1pre train'
                     betas_gt = torch.mean(batch[1][:, 72:82], dim = 0)
                     angles_gt = torch.mean(batch[1][:, 82:154], dim = 0)
+                    root_shift_est_gt = torch.mean(batch[1][:, 154:157], dim = 0)
 
-                    print batch[0].size()
+                    batch_cloned = []
+                    batch_cloned.append(batch[0].clone())
+                    batch_cloned.append(batch[1].clone())
 
                     self.optimizer.zero_grad()
-                    scores, INPUT_DICT, OUTPUT_DICT = \
-                        UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=True, model = self.model, CTRL_PNL=self.CTRL_PNL)
+
+                    self.CTRL_PNL['output_only_prev_est'] = True
+                    scoresp, INPUT_DICTp, OUTPUT_DICTp = \
+                        UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model = self.model, CTRL_PNL=self.CTRL_PNL)
                     #print torch.cuda.max_memory_allocated(), '1post train'
+
+
+                    self.CTRL_PNL['output_only_prev_est'] = False
+                    scores, INPUT_DICT, OUTPUT_DICT = \
+                        UnpackBatchLib().unpackage_batch_kin_pass(batch_cloned, is_training=False, model = self.model, CTRL_PNL=self.CTRL_PNL)
+                    #print torch.cuda.max_memory_allocated(), '1post train'
+
+                    betas_est_prev = OUTPUT_DICTp['batch_betas_est_post_clip'].cpu().numpy()
+                    angles_est_prev = OUTPUT_DICTp['batch_angles_est_post_clip']
+                    root_shift_est_prev = OUTPUT_DICTp['batch_root_xyz_est_post_clip'].cpu().numpy()
+
+                    angles_est_prev = torch.mean(angles_est_prev, dim=0).reshape(72)
+                    betas_est_prev = np.mean(betas_est_prev, axis=0)
+                    root_shift_est_prev = np.mean(root_shift_est_prev, axis=0)
 
                     betas_est = OUTPUT_DICT['batch_betas_est_post_clip'].cpu().numpy()
                     angles_est = OUTPUT_DICT['batch_angles_est_post_clip']
                     root_shift_est = OUTPUT_DICT['batch_root_xyz_est_post_clip'].cpu().numpy()
 
-                    # print betas_est.shape, root_shift_est.shape, angles_est.shape
-
-                    #print OUTPUT_DICT['verts'].shape
-
-                    print angles_est.shape
-
-                    print betas_est.shape
-
                     angles_est = torch.mean(angles_est, dim=0).reshape(72)
                     betas_est = np.mean(betas_est, axis=0)
                     root_shift_est = np.mean(root_shift_est, axis=0)
 
-                    print betas_est.shape
 
-                    for idx in range(10):
-                        #self.m.betas[idx] = betas_est[idx]
-                        self.m.betas[idx] = float(betas_gt[idx])
 
-                    for idx in range(72):
-                        #self.m.pose[idx] = angles_est[idx]
-                        self.m.pose[idx] = float(angles_gt[idx])
+                    #print betas_est.shape, betas_net1
+                    smpl_verts_both = []
+                    for smpl_model in ['ground_truth', 'network_output1', 'network_output2']:
+                        for idx in range(10):
+                            if smpl_model == 'ground_truth':
+                                self.m.betas[idx] = float(betas_gt[idx])
+                            elif smpl_model == 'network_output1':
+                                self.m.betas[idx] = betas_est_prev[idx]
+                            elif smpl_model == 'network_output2':
+                                self.m.betas[idx] = betas_est[idx]
 
-                    init_root = np.array(self.m.pose[0:3]) + 0.000001
-                    init_rootR = libKinematics.matrix_from_dir_cos_angles(init_root)
-                    root_rot = libKinematics.eulerAnglesToRotationMatrix([np.pi, 0.0, np.pi / 2])
-                    # print root_rot
-                    trans_root = libKinematics.dir_cos_angles_from_matrix(np.matmul(root_rot, init_rootR))
+                        for idx in range(72):
+                            if smpl_model == 'ground_truth':
+                                self.m.pose[idx] = float(angles_gt[idx])
+                            elif smpl_model == 'network_output1':
+                                self.m.pose[idx] = angles_est_prev[idx]
+                            elif smpl_model == 'network_output2':
+                                self.m.pose[idx] = angles_est[idx]
 
-                    self.m.pose[0] = trans_root[0]
-                    self.m.pose[1] = trans_root[1]
-                    self.m.pose[2] = trans_root[2]
+                        init_root = np.array(self.m.pose[0:3]) + 0.000001
+                        init_rootR = libKinematics.matrix_from_dir_cos_angles(init_root)
+                        root_rot = libKinematics.eulerAnglesToRotationMatrix([np.pi, 0.0, np.pi / 2])
+                        # print root_rot
+                        trans_root = libKinematics.dir_cos_angles_from_matrix(np.matmul(root_rot, init_rootR))
 
-                    # print self.m.J_transformed[1, :], self.m.J_transformed[4, :]
-                    # self.m.pose[51] = selection_r
+                        self.m.pose[0] = trans_root[0]
+                        self.m.pose[1] = trans_root[1]
+                        self.m.pose[2] = trans_root[2]
 
-                    # get SMPL mesh
-                    smpl_verts = (self.m.r - self.m.J_transformed[0, :]) + [root_shift_est[1] - 0.286 + 0.15,
-                                                                            root_shift_est[0] - 0.286,
-                                                                            0.12 - root_shift_est[2]]  # *228./214.
-                    smpl_faces = np.array(self.m.f)
+                        if smpl_model == 'ground_truth':
+                            root_shift = np.copy(root_shift_est_gt.numpy())
+                        elif smpl_model == 'network_output1':
+                            root_shift = root_shift_est_prev
+                        elif smpl_model == 'network_output2':
+                            root_shift = root_shift_est
+
+                        # get SMPL mesh
+                        smpl_verts = (self.m.r - self.m.J_transformed[0, :]) + [root_shift[1] - 0.286 + 0.15,
+                                                                                root_shift[0] - 0.286,
+                                                                                0.12 - root_shift[2]]  # *228./214.
+                        smpl_faces = np.array(self.m.f)
+
+                        smpl_verts_both.append(smpl_verts)
 
                     camera_point = [1.09898028, 0.46441343, -1.53]
 
                     bedangle=0
 
                     print INPUT_DICT['batch_images'].shape
-                    #pmat = INPUT_DICT['batch_images'][0, 4, :]*0.+ 75.
 
                     # render in 3D pyrender with pressure mat
-                    #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
-                    #                                          pc=None, pmat=pmat, smpl_render_points=False,
-                    #                                          facing_cam_only=False, viz_type=None,
-                    #                                          markers=None, segment_limbs=True)
+                    viz_type = "leg_correction"#"arm_penetration"
+
+                    ims_to_display = []
+                    if viz_type == "arm_penetration":
+                        ims_to_display.append(INPUT_DICT['batch_images'][0, 4, :]*0. + 75.) #uniform
+                        segment_limbs = True
+                    elif viz_type == "leg_correction":
+                        ims_to_display.append(INPUT_DICT['batch_images'][0, 4, :]*23.) #pmat
+                        ims_to_display.append(INPUT_DICT['batch_images'][0, 2, :]*45.) #Q-, 1
+                        ims_to_display.append(INPUT_DICT['batch_mdm'].data.numpy().reshape(64, 27)*-1) #Q-, GT
+                        ims_to_display.append(INPUT_DICT['batch_images'][0, 4, :]*23.) #pmat
+                        ims_to_display.append(INPUT_DICT['batch_images'][0, 2, :]*45.) #Q-, 1
+                        ims_to_display.append(OUTPUT_DICT['batch_mdm_est'].data.numpy().reshape(64, 27)*-1) #Q-, 2
+                        ims_to_display.append(INPUT_DICT['batch_mdm'].data.numpy().reshape(64, 27)*-1) #Q-, GT
+                        segment_limbs = True
 
 
-                    self.pyRender.render_only_human_gt(self.m)
+                    self.pyRender.render_mesh_bed_special(smpl_verts_both, smpl_faces, bedangle,
+                                                              pmats=ims_to_display, viz_type=viz_type,
+                                                              segment_limbs=segment_limbs)
 
 
-                    #time.sleep(300)
-                    # render in 3D pyrender with segmented limbs
-                    # self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
-                    #                                          pc = None, pmat = None, smpl_render_points = False,
-                    #                                          facing_cam_only=False, viz_type = None,
-                    #                                          markers = None, segment_limbs=True)
+                    #self.pyRender.render_only_human_gt(self.m)
 
+
+                    time.sleep(300)
 
 
 if __name__ == "__main__":
@@ -687,11 +724,11 @@ if __name__ == "__main__":
         filepath_suffix = ''
     else:
         filepath_prefix = '/home/henry/data/'
-        filepath_prefix = '/media/henry/multimodal_data_1/data/'
+        #filepath_prefix = '/media/henry/multimodal_data_1/data/'
         filepath_suffix = ''
 
-    #filepath_suffix = '_output0p5_112k_100e_alltanh'
-    filepath_suffix = ''
+    filepath_suffix = '_output0p5_112k_100e_alltanh'
+    #filepath_suffix = ''
 
     training_database_file_f = []
     training_database_file_m = []
@@ -701,11 +738,13 @@ if __name__ == "__main__":
 
 
     if opt.quick_test == True:
-        #training_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_f_lay_1000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_f_lay_1000_none_stiff'+filepath_suffix+'.p')
         #training_database_file_f.append(filepath_prefix+'synth/random_test/test_roll0_plo_f_lay_set14_1500_none_stiff'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random_test/test_roll0_phu_m_lay_set1pa3_500_none_stiff'+filepath_suffix+'.p')
-        test_database_file_m.append(filepath_prefix+'synth/random_test/test_roll0_m_lay_set14_1500_none_stiff'+filepath_suffix+'.p')
-        #test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_f_lay_1000_none_stiff'+filepath_suffix+'.p')
+        #training_database_file_m.append(filepath_prefix+'synth/random_test/test_roll0_xl_f_lay_set1both_500_none_stiff'+filepath_suffix+'.p')
+
+
+        #test_database_file_m.append(filepath_prefix+'synth/random_test/test_roll0_m_lay_set14_1500_none_stiff'+filepath_suffix+'.p')
+        test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_f_lay_1000_none_stiff'+filepath_suffix+'.p')
         #training_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_m_lay_1000_none_stiff'+filepath_suffix+'.p')
         #training_database_file_f.append(filepath_prefix+'synth/random3/train_rollpi_f_lay_set18to22_10000_none_stiff'+filepath_suffix+'.p')
         #test_database_file_f.append(filepath_prefix+'synth/random3/train_rollpi_f_lay_set18to22_10000_none_stiff'+filepath_suffix+'.p')
