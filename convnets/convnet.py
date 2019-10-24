@@ -70,6 +70,23 @@ class CNN(nn.Module):
             nn.Dropout(p=0.1, inplace=False),
         )
 
+        self.CNN_packtanh_double = nn.Sequential(
+
+            nn.Conv2d(in_channels, 384, kernel_size=7, stride=2, padding=3),
+            nn.Tanh(),
+            nn.Dropout(p=0.1, inplace=False),
+            nn.MaxPool2d(3, stride=2),
+            nn.Conv2d(384, 384, kernel_size=3, stride=1, padding=0),
+            nn.Tanh(),
+            nn.Dropout(p=0.1, inplace=False),
+            nn.Conv2d(384, 768, kernel_size=3, stride=1, padding=0),
+            nn.Tanh(),
+            nn.Dropout(p=0.1, inplace=False),
+            nn.Conv2d(768, 768, kernel_size=3, stride=1, padding=0),
+            nn.Tanh(),
+            nn.Dropout(p=0.1, inplace=False),
+        )
+
         self.CNN_pack2 = nn.Sequential(
 
             nn.Conv2d(in_channels, 32, kernel_size = 7, stride = 2, padding = 3),
@@ -91,6 +108,9 @@ class CNN(nn.Module):
 
         self.CNN_fc1 = nn.Sequential(
             nn.Linear(67200, out_size), #89600, out_size),
+        )
+        self.CNN_fc1_double = nn.Sequential(
+            nn.Linear(67200*2, out_size), #89600, out_size),
         )
         self.CNN_fc2 = nn.Sequential(
             nn.Linear(11200, out_size),
@@ -302,7 +322,11 @@ class CNN(nn.Module):
 
 
         if CTRL_PNL['all_tanh_activ'] == True:
-            scores_cnn = self.CNN_packtanh(images)
+            if CTRL_PNL['double_network_size'] == False:
+                scores_cnn = self.CNN_packtanh(images)
+            else:
+                scores_cnn = self.CNN_packtanh_double(images)
+
         else:
             scores_cnn = self.CNN_pack1(images)
 
@@ -313,7 +337,11 @@ class CNN(nn.Module):
         scores_cnn = scores_cnn.view(images.size(0),scores_size[1] *scores_size[2]*scores_size[3])
 
         # this output is N x 85: betas, root shift, angles
-        scores = self.CNN_fc1(scores_cnn)
+        if CTRL_PNL['double_network_size'] == False:
+            scores = self.CNN_fc1(scores_cnn)
+        else:
+            scores = self.CNN_fc1_double(scores_cnn)
+
 
         # weight the outputs, which are already centered around 0. First make them uniformly smaller than the direct output, which is too large.
         if CTRL_PNL['full_body_rot'] == True:

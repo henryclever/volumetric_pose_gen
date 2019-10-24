@@ -184,17 +184,24 @@ def reprocess_synth_data():
     # stiffness = "leftside"
     # num_resting_poses = 3722
 
-    all_data_names = [["m", "lay", "none", 1000, 1169, "pi", "TEST", "test", "_plo"]]
-    all_data_names = [["m", "lay", "none", 2000, 2043, "0", "set5", "train", ""]]
-    #all_data_names = [["m", "lay", "none", 2000, 2442, "pi", "set10", "train", "_plo"],
-    #                  ["m", "lay", "none", 2000, 2467, "pi", "set11", "train", "_plo"],
-    #                  ["m", "lay", "none", 2000, 2429, "pi", "set12", "train", "_plo"],
-    #                  ["m", "lay", "none", 2000, 2450, "pi", "set13", "train", "_plo"],
-    #                  ["m", "lay", "none", 2000, 2412, "pi", "set14", "train", "_plo"],
-    #                  ["m", "lay", "none", 2000, 2423, "pi", "set15", "train", "_plo"],
-    #                  ["m", "lay", "none", 2000, 2480, "pi", "set16", "train", "_plo"],
-    #                  ["m", "lay", "none", 2000, 2382, "pi", "set17", "train", "_plo"]]
-    all_data_names = [["f", "lay", "none", 1650, 2601, "0", "set4", "test", "_plo_hbh"]]
+    #all_data_names = [["m", "lay", "none", 560, 800, "0", "set3", "test", "_plo_hbh"]]
+    #all_data_names = [["f", "lay", "none", 2000, 2109, "0", "set14", "test", ""]]
+    #all_data_names = [["m", "lay", "none", 2000, 2043, "0", "set5", "train", ""]]
+    #all_data_names = [["f", "lay", "none", 1942, 2200, "0", "set2", "train", "_plo_sl"],
+    #                  ["f", "lay", "none", 83, 100, "0", "set3", "train", "_plo_sl"],
+    #                  ["f", "lay", "none", 2681, 2900, "0", "set1", "train", "_sl"]]
+    #all_data_names = [["f", "lay", "none", 2000, 2221, "pi", "set18", "train", ""],
+    #                  ["f", "lay", "none", 2000, 2214, "pi", "set19", "train", ""],
+    #                  ["f", "lay", "none", 2000, 2208, "pi", "set20", "train", ""],
+    #                  ["f", "lay", "none", 2000, 2217, "pi", "set21", "train", ""],
+    #                  ["f", "lay", "none", 2000, 2218, "pi", "set22", "train", ""]]
+    all_data_names = [["f", "lay", "none", 2000, 2117, "0", "set5", "train", ""],
+                      ["f", "lay", "none", 2000, 2092, "0", "set6", "train", ""],
+                      ["f", "lay", "none", 2000, 2119, "0", "set7", "train", ""]]
+    #                 ["m", "lay", "none", 2000, 2198, "pi", "set15", "train", ""],
+    #                  ["m", "lay", "none", 2000, 2184, "pi", "set16", "train", ""],
+    #                  ["m", "lay", "none", 2000, 2218, "pi", "set17", "train", ""]]
+    #all_data_names = [["f", "lay", "none", 1650, 2601, "0", "set4", "test", "_plo_hbh"]]
                       #["m", "lay", "none", 2000, 2141, "0", "set12", "train", "_plo"],
                       #["m", "lay", "none", 2000, 2111, "0", "set13", "train", "_plo"]]
                       #["f", "lay", "none", 2000, 2511, "pi", "set22", "train", "_plo"]]
@@ -255,15 +262,15 @@ def reprocess_synth_data():
         # print m.pose
         # print "J x trans", m.J_transformed[:, 0]
 
-        resting_pose_data_list = np.load('/home/henry/data/resting_poses/random_hbh3/resting_pose_roll' + roll
+        resting_pose_data_list = np.load('/home/henry/data/resting_poses/fix/random3/resting_pose_roll' + roll
                                          + isplo + '_'
                                          + gender + '_' + posture + '_' + set + '_' + str(num_resting_poses) + '_of_'
-                                         + str(num_resting_poses_tried) + '_' + stiffness + '_stiff.npy', allow_pickle=True)
+                                         + str(num_resting_poses_tried) + '_' + stiffness + '_stiff_fix.npy', allow_pickle=True)
 
-        training_database_pmat_height_list = np.load('/home/henry/data/pmat_height/random_hbh3/pmat_height_roll' + roll
+        training_database_pmat_height_list = np.load('/home/henry/data/pmat_height/fix/random3/pmat_height_roll' + roll
                                          + isplo + '_'
                                          + gender + '_' + posture + '_' + set + '_' + str(num_resting_poses)
-                                         + '_' + stiffness + '_stiff.npy', allow_pickle=True)
+                                         + '_' + stiffness + '_stiff_fix.npy', allow_pickle=True)
 
 
 
@@ -271,7 +278,15 @@ def reprocess_synth_data():
         print np.shape(training_database_pmat_height_list[0])
 
         for resting_pose_data_ct in range(len(resting_pose_data_list)):
-            if set ==  "set3" and resting_pose_data_ct < 160:
+            if set == "set3" and len(training_data_dict['images']) >= 2000: #set ==  "set3" and resting_pose_data_ct > 4499:
+                pass
+            if set == "set1" and len(training_data_dict['images']) >= 4000:#len(training_data_dict['images']) >= 4000: #set ==  "set3" and resting_pose_data_ct > 4499:
+                pass
+            #elif isplo == "_sl" and resting_pose_data_ct >= 2450:#len(training_data_dict['images']) >= 4000: #set ==  "set3" and resting_pose_data_ct > 4499:
+            #    pass
+            #elif isplo == "_plo_sl" and resting_pose_data_ct >= 250:
+            #    pass
+            elif len(training_data_dict['images']) >= 5000:
                 pass
             else:
 
@@ -375,7 +390,7 @@ def reprocess_synth_data():
 
                 print set, resting_pose_data_ct, len(training_data_dict['images'])
                 #if resting_pose_data_ct == 249: break
-                if len(training_data_dict['images']) == 500: break
+                #if len(training_data_dict['images']) == 1500: break
 
         print training_data_dict['markers_xyz_m'][0]
 
@@ -387,9 +402,9 @@ def reprocess_synth_data():
     #pickle.dump(training_data_dict, open(os.path.join(
     #    '/home/henry/data/synth/random/train_' + gender + '_' + posture + '_' + str(num_data_points) + '_' + stiffness + '_stiff.p'), 'wb'))
     pickle.dump(training_data_dict, open(os.path.join(
-        '/home/henry/data/synth/random3/'+dattype+'_roll' + roll + isplo + '_'
-                                     + gender + '_' + posture + '_' + str(num_data_points)
-                                     + '_' + stiffness + '_stiff.p'), 'wb'))
+        '/home/henry/data/synth/random3_fix/'+dattype+'_roll' + roll + isplo + '_'
+                                     + gender + '_' + posture + '_set18to22' + str(num_data_points)
+                                     + '_' + stiffness + '_stiff_fix.p'), 'wb'))
 
     #for item in training_data_dict:
     #    print "item name: ", item
@@ -628,9 +643,10 @@ def reduce_dataset_size():
 
 
 def get_depth_cont_maps_from_synth():
-    # all_data_names = [["m", "lay", "none", 10000, "pi", "train", "_plo"]]
-    all_data_names = [["m", "lay", "none", 1875, "0", "train", "_hbh"],
-                      ]
+    all_data_names = [["m", "lay", "none", 5000, "0", "train", "_plo"]]
+    #all_data_names = [["m", "lay", "none", 5000, "0", "train", ""]]
+
+    set_name = "set5to7"
 
     from visualization_lib import VisualizationLib
 
@@ -664,9 +680,9 @@ def get_depth_cont_maps_from_synth():
         model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_' + gender + '_lbs_10_207_0_v1.0.0.pkl'
         m = load_model(model_path)
 
-        filename =  '/home/henry/data/synth/random3_supp/' + dattype + '_roll' + roll + isplo + '_' \
-                    + gender + '_' + posture + '_set2_' + str(num_data_points) \
-                    + '_' + stiffness + '_stiff.p'
+        filename =  '/home/henry/data/synth/random3_fix/' + dattype + '_roll' + roll + isplo + '_' \
+                    + gender + '_' + posture + '_'+set_name+'_' + str(num_data_points) \
+                    + '_' + stiffness + '_stiff_fix.p'
 
 
         training_data_dict = load_pickle(filename)
@@ -679,7 +695,7 @@ def get_depth_cont_maps_from_synth():
         training_data_dict['mesh_contact'] = []
         root_xyz_shift = training_data_dict['root_xyz_shift']
 
-
+        ct = 0
         for index in range(len(betas)):
             #index += 4
             for beta_idx in range(10):
@@ -687,8 +703,11 @@ def get_depth_cont_maps_from_synth():
             for pose_idx in range(72):
                 m.pose[pose_idx] = pose[index][pose_idx]
 
+            #print images[index]
+            images[index][images[index] > 0] += 1
+            #print images[index]
             training_data_dict['images'][index] = images[index].astype(int8) #convert the original pmat to an int to save space
-
+            #print training_data_dict['images'][index]
             curr_root_shift = np.array(root_xyz_shift[index])
 
             #print curr_root_shift,'currroot'
@@ -798,7 +817,8 @@ def get_depth_cont_maps_from_synth():
             contact_matrix[contact_matrix < 0] = 1
             contact_matrix = contact_matrix.astype(bool)
 
-            print time.time() - time_orig
+            ct += 1
+            print time.time() - time_orig, ct
 
             training_data_dict['mesh_depth'].append(mesh_matrix)
             training_data_dict['mesh_contact'].append(contact_matrix)
@@ -819,16 +839,16 @@ def get_depth_cont_maps_from_synth():
             #break
 
 
-        filename =  '/home/henry/data/synth/random3_supp/' + dattype + '_roll' + roll + isplo + '_' \
-                    + gender + '_' + posture + '_set2_' + str(num_data_points) \
-                    + '_' + stiffness + '_stiff_new.p'
+        filename =  '/home/henry/data/synth/random3_fix/' + dattype + '_roll' + roll + isplo + '_' \
+                    + gender + '_' + posture + '_'+set_name+'_' + str(num_data_points) \
+                    + '_' + stiffness + '_stiff_fix_new.p'
 
         pickle.dump(training_data_dict, open(os.path.join(filename), 'wb'))
 
 def reprocess_small_bags():
     from smpl.smpl_webuser.serialization import load_model
 
-    for gender in ["f"]:#, "m"]:
+    for gender in ["m"]:#, "m"]:
 
 
         stiffness = "none"
@@ -871,12 +891,14 @@ def reprocess_small_bags():
                          [34, "250"],'''
 
 
-        set_num_pairs = [[35, "250"],
-                         [36, "250"],
-                         [37, "250"],
-                         [38, "250"],
-                         [39, "250"],
-                         [40, "250"]]
+        set_num_pairs = [[62, "100"],
+                         [63, "100"],
+                         [64, "100"],
+                         [65, "100"],
+                         [66, "100"],
+                         [67, "100"],
+                         [68, "100"],
+                         [69, "100"]]
 
 
         #set_num_pairs = [[2, "1400"],[2, "1400"]]
@@ -915,7 +937,7 @@ def reprocess_small_bags():
                 # flexbind.Init(scenes, param_dict, False)
                 # flexbind.EndGpuWork()
 
-                hbh_cutoff = 600
+                hbh_cutoff = 1000
 
                 if hbh == "_hbh" and len(prechecked_pose_list_new) <= hbh_cutoff:
                     for idx in range(len(shape_pose[0])):
@@ -969,12 +991,12 @@ def reprocess_small_bags():
 
             print "set:",set, "     num OK:", ct, len(prechecked_pose_list_new)
 
-        np.save("/home/henry/data/init_poses/all_rand_nom_endhtbicheck_roll" + rp + plo + hbh + sl + xl + phu + "_" + gender + "_" + posture + "_set" + str(2) + "_" + str(num_data_checked) + ".npy", np.array(prechecked_pose_list_new))
+        np.save("/home/henry/data/init_poses/all_rand_nom_endhtbicheck_roll" + rp + plo + hbh + sl + xl + phu + "_" + gender + "_" + posture + "_set" + str(3) + "_" + str(num_data_checked) + ".npy", np.array(prechecked_pose_list_new))
 
 
 if __name__ == "__main__":
-    get_depth_cont_maps_from_synth()
+    #reprocess_synth_data() #this converts resting_poses and pmat_height to a single file
+    get_depth_cont_maps_from_synth() #this takes the above result and puts additional stuff in it
     #reduce_dataset_size()
-    #reprocess_synth_data()
     #get_direct_synth_marker_offsets()
     #reprocess_small_bags()
