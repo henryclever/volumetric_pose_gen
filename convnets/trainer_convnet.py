@@ -132,11 +132,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['L2_contact'] = True
         self.CTRL_PNL['pmat_mult'] = int(5)
         self.CTRL_PNL['cal_noise'] = True
-
-        if self.CTRL_PNL['depth_map_input_est'] == True:
-            self.CTRL_PNL['double_network_size'] = True
-        else:
-            self.CTRL_PNL['double_network_size'] = True
+        self.CTRL_PNL['double_network_size'] = False
 
         self.weight_joints = 1.0#self.opt.j_d_ratio*2
         self.weight_depth_planes = (1-self.opt.j_d_ratio)#*2
@@ -213,6 +209,8 @@ class PhysicalTrainer():
         #    self.save_name += '_l2cnt'
         if self.CTRL_PNL['cal_noise'] == True:
             self.save_name += '_calnoise'
+        if self.CTRL_PNL['double_network_size'] == True:
+            self.save_name += '_dns'
 
 
         # self.save_name = '_' + opt.losstype+'_real_s9_alltest_' + str(self.CTRL_PNL['batch_size']) + 'b_'# + str(self.CTRL_PNL['num_epochs']) + 'e'
@@ -870,7 +868,7 @@ if __name__ == "__main__":
     p.add_option('--verbose', '--v',  action='store_true', dest='verbose',
                  default=True, help='Printout everything (under construction).')
 
-    p.add_option('--log_interval', type=int, default=2, metavar='N',
+    p.add_option('--log_interval', type=int, default=15, metavar='N',
                  help='number of batches between logging train status')
 
     opt, args = p.parse_args()
