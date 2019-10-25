@@ -129,7 +129,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['depth_map_labels'] = True #can only be true if we have 100% synthetic data for training
         self.CTRL_PNL['depth_map_labels_test'] = True #can only be true is we have 100% synth for testing
         self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
-        self.CTRL_PNL['depth_map_input_est'] = True  #do this if we're working in a two-part regression
+        self.CTRL_PNL['depth_map_input_est'] = False  #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
@@ -504,7 +504,7 @@ class PhysicalTrainer():
 
 
     def train_convnet(self, epoch):
-        GENDER = "f"
+        GENDER = "m"
         if GENDER == "m":
             model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
         else:
@@ -656,7 +656,7 @@ class PhysicalTrainer():
                                                               segment_limbs=segment_limbs)
 
 
-                    #self.pyRender.render_only_human_gt(self.m)
+                    self.pyRender.render_only_human_gt(self.m)
 
 
                     time.sleep(300)
@@ -728,7 +728,7 @@ if __name__ == "__main__":
         filepath_suffix = ''
 
     filepath_suffix = '_output0p5_112k_100e_alltanh'
-    #filepath_suffix = ''
+    filepath_suffix = ''
 
     training_database_file_f = []
     training_database_file_m = []
@@ -738,13 +738,15 @@ if __name__ == "__main__":
 
 
     if opt.quick_test == True:
-        training_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_f_lay_1000_none_stiff'+filepath_suffix+'.p')
+        #training_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_f_lay_1000_none_stiff'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/test_roll0_plo_hbh_m_lay_set3_500_none_stiff_fix_new'+filepath_suffix+'.p')
+        test_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/test_roll0_plo_hbh_m_lay_set3_500_none_stiff_fix_new'+filepath_suffix+'.p')
         #training_database_file_f.append(filepath_prefix+'synth/random_test/test_roll0_plo_f_lay_set14_1500_none_stiff'+filepath_suffix+'.p')
         #training_database_file_m.append(filepath_prefix+'synth/random_test/test_roll0_xl_f_lay_set1both_500_none_stiff'+filepath_suffix+'.p')
 
 
         #test_database_file_m.append(filepath_prefix+'synth/random_test/test_roll0_m_lay_set14_1500_none_stiff'+filepath_suffix+'.p')
-        test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_f_lay_1000_none_stiff'+filepath_suffix+'.p')
+        #test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_f_lay_1000_none_stiff'+filepath_suffix+'.p')
         #training_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_m_lay_1000_none_stiff'+filepath_suffix+'.p')
         #training_database_file_f.append(filepath_prefix+'synth/random3/train_rollpi_f_lay_set18to22_10000_none_stiff'+filepath_suffix+'.p')
         #test_database_file_f.append(filepath_prefix+'synth/random3/train_rollpi_f_lay_set18to22_10000_none_stiff'+filepath_suffix+'.p')

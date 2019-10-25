@@ -113,22 +113,21 @@ class pyRenderMesh():
         pmat_faces = []
         pmat_facecolors = []
 
-        if custom_cut == True:
-            j_max = 32
-
-        for j in range(32):
+        for j in range(64):
             for i in range(27):
 
-                pmat_xyz[j, i, 1] = i * 0.0286 * 1.06 - 0.04#1.0926 - 0.02
-                if j > 23:
-                    pmat_xyz[j, i, 0] = ((64 - j) * 0.0286 - 0.0286 * 3 * np.sin(np.deg2rad(angle)))*1.04 + 0.11#1.1406 + 0.05
-                    pmat_xyz[j, i, 2] = 0.12 + 0.075
-                    # print marker.pose.position.x, 'x'
-                else:
+                pmat_xyz[j, i, 1] = i * 0.0286 * 1.02 #1.0926 - 0.02
+                pmat_xyz[j, i, 0] = ((63 - j) * 0.0286) * 1.04#1.1406 + 0.05 #only adjusts pmat NOT the SMPL person
+                pmat_xyz[j, i, 2] = 0.12 + 0.075
+                #if j > 23:
+                #    pmat_xyz[j, i, 0] = ((64 - j) * 0.0286 - 0.0286 * 3 * np.sin(np.deg2rad(angle)))*1.04 + 0.15#1.1406 + 0.05
+                #    pmat_xyz[j, i, 2] = 0.12 + 0.075
+                #    # print marker.pose.position.x, 'x'
+                #else:
 
-                    pmat_xyz[j, i, 0] = ((41) * 0.0286 + (23 - j) * 0.0286 * np.cos(np.deg2rad(angle)) \
-                                        - (0.0286 * 3 * np.sin(np.deg2rad(angle))) * 0.85)*1.04 + 0.12#1.1406 + 0.05
-                    pmat_xyz[j, i, 2] = -((23 - j) * 0.0286 * np.sin(np.deg2rad(angle))) * 0.85 + 0.12 + 0.075
+                #    pmat_xyz[j, i, 0] = ((41) * 0.0286 + (23 - j) * 0.0286 * np.cos(np.deg2rad(angle)) \
+                #                        - (0.0286 * 3 * np.sin(np.deg2rad(angle))) * 0.85)*1.04 + 0.15#1.1406 + 0.05
+                #    pmat_xyz[j, i, 2] = -((23 - j) * 0.0286 * np.sin(np.deg2rad(angle))) * 0.85 + 0.12 + 0.075
                     # print j, marker.pose.position.z, marker.pose.position.y, 'head'
 
                 if j < 63 and i < 26:
@@ -160,7 +159,7 @@ class pyRenderMesh():
 
 
 
-    def get_custom_armonly_pmat(self, pmat, viz_type, angle = 60.0):
+    def get_custom_pmat(self, pmat, viz_type, angle = 60.0, coloring_type = 'jet'):
 
         pmat_reshaped = pmat.reshape(64, 27)
 
@@ -168,10 +167,21 @@ class pyRenderMesh():
         j_max = 64
         pmat_reshaped = pmat_reshaped[:j_max, :]
 
-
-        pmat_colors = cm.jet(pmat_reshaped/100)
-        print pmat_colors.shape
-        pmat_colors[:, :, 3] = 0.5 #translucency
+        if coloring_type == 'viridis':
+            pmat_colors = cm.viridis((pmat_reshaped)/100)
+            pmat_colors[:, :, 3] = 0.7 #translucency
+        elif coloring_type == 'plasma':
+            pmat_colors = cm.plasma((100-pmat_reshaped)/100)
+            pmat_colors[:, :, 3] = 0.7 #translucency
+        elif coloring_type == 'magma':
+            pmat_colors = cm.inferno((100-pmat_reshaped)/100)
+            pmat_colors[:, :, 3] = 0.5 #translucency
+        elif coloring_type == 'terrain':
+            pmat_colors = cm.terrain((100-pmat_reshaped)/100)
+            pmat_colors[:, :, 3] = 0.7 #translucency
+        else:
+            pmat_colors = cm.jet(pmat_reshaped/100)
+            pmat_colors[:, :, 3] = 0.6 #translucency
 
 
         pmat_colors = pmat_colors[:j_max, :, :]
@@ -477,7 +487,7 @@ class pyRenderMesh():
         o3d.visualization.draw_geometries([pcd])
 
 
-    def get_human_mesh_parts(self, smpl_verts, smpl_faces, viz_type, segment_limbs = False):
+    def get_human_mesh_parts(self, smpl_verts, smpl_faces, viz_type = None, segment_limbs = False):
 
         if segment_limbs == True:
             if viz_type == 'arm_penetration':
@@ -488,6 +498,28 @@ class pyRenderMesh():
                 segmented_dict = load_pickle('segmented_mesh_idx_faces_rleg.p')
                 human_mesh_vtx_parts = [smpl_verts[segmented_dict['r_leg_idx_list'], :]]
                 human_mesh_face_parts = [segmented_dict['r_leg_face_list']]
+            else:
+                segmented_dict = load_pickle('segmented_mesh_idx_faces.p')
+                human_mesh_vtx_parts = [smpl_verts[segmented_dict['l_lowerleg_idx_list'], :],
+                                        smpl_verts[segmented_dict['r_lowerleg_idx_list'], :],
+                                        smpl_verts[segmented_dict['l_upperleg_idx_list'], :],
+                                        smpl_verts[segmented_dict['r_upperleg_idx_list'], :],
+                                        smpl_verts[segmented_dict['l_forearm_idx_list'], :],
+                                        smpl_verts[segmented_dict['r_forearm_idx_list'], :],
+                                        smpl_verts[segmented_dict['l_upperarm_idx_list'], :],
+                                        smpl_verts[segmented_dict['r_upperarm_idx_list'], :],
+                                        smpl_verts[segmented_dict['head_idx_list'], :],
+                                        smpl_verts[segmented_dict['torso_idx_list'], :]]
+                human_mesh_face_parts = [segmented_dict['l_lowerleg_face_list'],
+                                         segmented_dict['r_lowerleg_face_list'],
+                                         segmented_dict['l_upperleg_face_list'],
+                                         segmented_dict['r_upperleg_face_list'],
+                                         segmented_dict['l_forearm_face_list'],
+                                         segmented_dict['r_forearm_face_list'],
+                                         segmented_dict['l_upperarm_face_list'],
+                                         segmented_dict['r_upperarm_face_list'],
+                                         segmented_dict['head_face_list'],
+                                         segmented_dict['torso_face_list']]
         else:
             human_mesh_vtx_parts = [smpl_verts]
             human_mesh_face_parts = [smpl_faces]
@@ -517,7 +549,9 @@ class pyRenderMesh():
 
         smpl_verts = (m.r - m.J_transformed[0, :])
 
-        smpl_verts = np.concatenate((smpl_verts[:, 1:2] - 1.5, smpl_verts[:, 0:1], -smpl_verts[:, 2:3]), axis = 1)
+
+        #smpl_verts = np.concatenate((smpl_verts[:, 1:2] - 1.5, smpl_verts[:, 0:1], -smpl_verts[:, 2:3]), axis = 1)
+        smpl_verts = np.concatenate((smpl_verts[:, 0:1] - 1.5, smpl_verts[:, 1:2], smpl_verts[:, 2:3]), axis = 1)
         #smpl_verts = np.concatenate((smpl_verts[:, 1:2], smpl_verts[:, 0:1], -smpl_verts[:, 2:3]), axis = 1)
 
         smpl_faces = np.array(m.f)
@@ -656,7 +690,7 @@ class pyRenderMesh():
 
         fig.set_size_inches(15., 15.)
         fig.tight_layout()
-        save_name = 'f_xl_'+'{:04}'.format(self.pic_num)
+        save_name = 'm_hbh_'+'{:04}'.format(self.pic_num)
         fig.savefig('/home/henry/Pictures/CVPR2020_study/'+save_name+'.png', dpi=300)
 
         #plt.savefig('test2png.png', dpi=100)
@@ -704,7 +738,7 @@ class pyRenderMesh():
             if viz_type == "leg_correction":
                 human_mesh_facecolor_parts = []
                 for i in range(np.shape(human_mesh_face_parts[idx])[0]):
-                    human_mesh_facecolor_parts.append([0.1, 0.1, 0.1, 0.8])
+                    human_mesh_facecolor_parts.append([0.0, 0.0, 0.0, 0.9])
                 tm_curr = trimesh.base.Trimesh(vertices=np.array(human_mesh_vtx_parts_n1[idx]),
                                                faces = np.array(human_mesh_face_parts[idx]),
                                                face_colors=np.array(human_mesh_facecolor_parts))
@@ -720,7 +754,7 @@ class pyRenderMesh():
             if viz_type == "leg_correction":
                 human_mesh_facecolor_parts = []
                 for i in range(np.shape(human_mesh_face_parts[idx])[0]):
-                    human_mesh_facecolor_parts.append([0.1, 0.1, 0.1, 0.8])
+                    human_mesh_facecolor_parts.append([0.0, 0.0, 0.0, 0.9])
                 tm_curr = trimesh.base.Trimesh(vertices=np.array(human_mesh_vtx_parts_n2[idx]),
                                                faces = np.array(human_mesh_face_parts[idx]),
                                                face_colors=np.array(human_mesh_facecolor_parts))
@@ -753,10 +787,17 @@ class pyRenderMesh():
 
         pmat_meshes = []
         pmat_mesh_grids = []
+        ct = 0
         if pmats is not None:
             for pmat in pmats:
+                if ct == 0 or ct == 3:
+                    coloring_type = 'jet'
+                else:
+                    coloring_type = 'viridis' #terrain and magma best so far
+                ct += 1
+
                 pmat_verts, pmat_faces, pmat_facecolors, \
-                pmat_verts_grid, pmat_faces_grid, pmat_facecolors_grid = self.get_custom_armonly_pmat(pmat, viz_type, bedangle)
+                pmat_verts_grid, pmat_faces_grid, pmat_facecolors_grid = self.get_custom_pmat(pmat, viz_type, bedangle, coloring_type)
 
 
                 pmat_tm = trimesh.base.Trimesh(vertices=pmat_verts, faces=pmat_faces, face_colors = pmat_facecolors)
@@ -790,11 +831,11 @@ class pyRenderMesh():
                 for item in pmat_mesh_grids:
                     self.scene.add(item)
 
-            lighting_intensity = 8.
+            lighting_intensity = 10.
 
 
             self.viewer = pyrender.Viewer(self.scene, use_raymond_lighting=True, lighting_intensity=lighting_intensity,
-                                          point_size=5, run_in_thread=True, viewport_size=(1600, 1600))
+                                          point_size=5, run_in_thread=True, viewport_size=(1400, 1400))
 
 
 
@@ -883,6 +924,13 @@ class pyRenderMesh():
                                     pc = None, pmat = None, smpl_render_points = False, markers = None,
                                     dropout_variance=None):
 
+        if pc is not None:
+            print np.shape(pc), 'shape pc'
+            pc[:, 0] = pc[:, 0] - 0.17 - 0.036608
+            pc[:, 1] = pc[:, 1] + 0.04
+
+        #adjust the point cloud
+
 
         #segment_limbs = True
 
@@ -899,7 +947,7 @@ class pyRenderMesh():
         transform_A = np.identity(4)
 
         transform_B = np.identity(4)
-        transform_B[1, 3] = 1.0 #move things over
+        transform_B[1, 3] = 4.0 #move things over
         smpl_verts_B = np.swapaxes(np.matmul(transform_B, smpl_verts_quad), 0, 1)[:, 0:3]
 
         transform_C = np.identity(4)
@@ -911,8 +959,11 @@ class pyRenderMesh():
         smpl_verts_D = np.swapaxes(np.matmul(transform_D, smpl_verts_quad), 0, 1)[:, 0:3]
 
         transform_E = np.identity(4)
-        transform_E[1, 3] = 4.0 #move things over
+        transform_E[1, 3] = 5.0 #move things over
         smpl_verts_E = np.swapaxes(np.matmul(transform_E, smpl_verts_quad), 0, 1)[:, 0:3]
+
+        transform_F = np.identity(4)
+        transform_F[1, 3] = 1.0 #move things over
 
 
 
@@ -930,12 +981,17 @@ class pyRenderMesh():
         camera_point_C = np.matmul(transform_C, np.array([camera_point[0], camera_point[1], camera_point[2], 1.0]))[0:3]
 
 
-
         pc_red_quad = np.swapaxes(np.concatenate((pc_red, np.ones((pc_red.shape[0], 1))), axis = 1), 0, 1)
         pc_red_D = np.swapaxes(np.matmul(transform_D, pc_red_quad), 0, 1)[:, 0:3]
         pc_red_norm_tri = np.swapaxes(pc_red_norm, 0, 1)
         pc_red_norm_D = np.swapaxes(np.matmul(transform_D[0:3, 0:3], pc_red_norm_tri), 0, 1)[:, 0:3]
         camera_point_D = np.matmul(transform_D, np.array([camera_point[0], camera_point[1], camera_point[2], 1.0]))[0:3]
+
+        pc_red_quad = np.swapaxes(np.concatenate((pc_red, np.ones((pc_red.shape[0], 1))), axis = 1), 0, 1)
+        pc_red_F = np.swapaxes(np.matmul(transform_F, pc_red_quad), 0, 1)[:, 0:3]
+        pc_red_norm_tri = np.swapaxes(pc_red_norm, 0, 1)
+        pc_red_norm_F = np.swapaxes(np.matmul(transform_F[0:3, 0:3], pc_red_norm_tri), 0, 1)[:, 0:3]
+        camera_point_F = np.matmul(transform_F, np.array([camera_point[0], camera_point[1], camera_point[2], 1.0]))[0:3]
 
 
 
@@ -999,6 +1055,9 @@ class pyRenderMesh():
         # normalize by the average area of triangles around each point. the verts are much less spatially distributed well
         # than the points in the point cloud.
         norm_area_avg = self.get_triangle_area_vert_weight(human_mesh_vtx_mesherr[0], human_mesh_face_mesherr_red[0], verts_idx_red)
+
+        print np.shape(norm_area_avg), np.shape(vert_to_nearest_point_error_list)
+        vert_to_nearest_point_error_list = vert_to_nearest_point_error_list[0:np.shape(norm_area_avg)[0]]
         norm_vert_to_nearest_point_error = np.array(vert_to_nearest_point_error_list) * norm_area_avg
         print "average vert to nearest pc point error, regardless of normal:", np.mean(norm_vert_to_nearest_point_error)
 
@@ -1055,15 +1114,15 @@ class pyRenderMesh():
 
 
 
-
-        #GET MONTE CARLO DROPOUT COLORED MESH
-        verts_mcd_color = (dropout_variance - np.min(dropout_variance)) / (np.max(dropout_variance) - np.min(dropout_variance))
-        verts_mcd_color_jet = cm.Reds(verts_mcd_color)[:, 0:3]
-        verts_mcd_color_jet = np.concatenate((verts_mcd_color_jet, np.ones((verts_mcd_color_jet.shape[0], 1))*0.9), axis = 1)
-        tm_curr = trimesh.base.Trimesh(vertices=human_mesh_vtx_mcd[0],
-                                       faces=human_mesh_face_mcd[0],
-                                       vertex_colors = verts_mcd_color_jet)
-        tm_list_mcd =[tm_curr]
+        if dropout_variance is not None:
+            #GET MONTE CARLO DROPOUT COLORED MESH
+            verts_mcd_color = (dropout_variance - np.min(dropout_variance)) / (np.max(dropout_variance) - np.min(dropout_variance))
+            verts_mcd_color_jet = cm.Reds(verts_mcd_color)[:, 0:3]
+            verts_mcd_color_jet = np.concatenate((verts_mcd_color_jet, np.ones((verts_mcd_color_jet.shape[0], 1))*0.9), axis = 1)
+            tm_curr = trimesh.base.Trimesh(vertices=human_mesh_vtx_mcd[0],
+                                           faces=human_mesh_face_mcd[0],
+                                           vertex_colors = verts_mcd_color_jet)
+            tm_list_mcd =[tm_curr]
 
 
         mesh_list = []
@@ -1080,8 +1139,9 @@ class pyRenderMesh():
         mesh_list_pcerr = []
         mesh_list_pcerr.append(pyrender.Mesh.from_trimesh(tm_list_pcerr[0], material = self.human_mat_D, smooth=False))
 
-        mesh_list_mcd = []
-        mesh_list_mcd.append(pyrender.Mesh.from_trimesh(tm_list_mcd[0], smooth=False))
+        if dropout_variance is not None:
+            mesh_list_mcd = []
+            mesh_list_mcd.append(pyrender.Mesh.from_trimesh(tm_list_mcd[0], smooth=False))
 
 
 
@@ -1093,6 +1153,9 @@ class pyRenderMesh():
 
         pc_greysc_color = 0.3 * (pc_red_C[:, 2:3] - np.max(pc_red_C[:, 2])) / (np.min(pc_red_C[:, 2]) - np.max(pc_red_C[:, 2]))
         pc_mesh_mesherr = pyrender.Mesh.from_points(pc_red_C, colors=np.concatenate((pc_greysc_color, pc_greysc_color, pc_greysc_color), axis=1))
+
+        pc_greysc_color2 = 0.0 * (pc_red_F[:, 2:3] - np.max(pc_red_F[:, 2])) / (np.min(pc_red_F[:, 2]) - np.max(pc_red_F[:, 2]))
+        pc_mesh_mesherr2 = pyrender.Mesh.from_points(pc_red_F, colors=np.concatenate((pc_greysc_color2, pc_greysc_color2, pc_greysc_color2), axis=1))
 
 
 
@@ -1156,8 +1219,19 @@ class pyRenderMesh():
             pmat_verts, pmat_faces, pmat_facecolors = self.get_3D_pmat_markers(pmat, bedangle)
             pmat_tm = trimesh.base.Trimesh(vertices=pmat_verts, faces=pmat_faces, face_colors = pmat_facecolors)
             pmat_mesh = pyrender.Mesh.from_trimesh(pmat_tm, smooth = False)
+
+            pmat_verts2, _, _ = self.get_3D_pmat_markers(pmat, bedangle)
+            pmat_verts2 = np.array(pmat_verts2)
+            pmat_verts2 = np.concatenate((np.swapaxes(pmat_verts2, 0, 1), np.ones((1, pmat_verts2.shape[0]))), axis = 0)
+            pmat_verts2 = np.swapaxes(np.matmul(transform_F, pmat_verts2), 0, 1)[:, 0:3]
+
+
+            pmat_tm2 = trimesh.base.Trimesh(vertices=pmat_verts2, faces=pmat_faces, face_colors = pmat_facecolors)
+            pmat_mesh2 = pyrender.Mesh.from_trimesh(pmat_tm2, smooth = False)
+
         else:
             pmat_mesh = None
+            pmat_mesh2 = None
 
 
         #print "Viewing"
@@ -1171,8 +1245,9 @@ class pyRenderMesh():
                 self.scene.add(mesh_part_mesherr)
             for mesh_part_pcerr in mesh_list_pcerr:
                 self.scene.add(mesh_part_pcerr)
-            for mesh_part_mcd in mesh_list_mcd:
-                self.scene.add(mesh_part_mcd)
+            if dropout_variance is not None:
+                for mesh_part_mcd in mesh_list_mcd:
+                    self.scene.add(mesh_part_mcd)
 
 
             if pc_mesh_mesherr is not None:
@@ -1181,8 +1256,15 @@ class pyRenderMesh():
                 self.scene.add(pc_mesh_pcerr)
 
 
+            if pc_mesh_mesherr2 is not None:
+                self.scene.add(pc_mesh_mesherr2)
+
             if pmat_mesh is not None:
                 self.scene.add(pmat_mesh)
+
+            if pmat_mesh2 is not None:
+                self.scene.add(pmat_mesh2)
+
             if smpl_pc_mesh is not None:
                 self.scene.add(smpl_pc_mesh)
 
@@ -1216,10 +1298,11 @@ class pyRenderMesh():
             for mesh_part_pcerr in mesh_list_pcerr:
                 for node in self.scene.get_nodes(obj=mesh_part_pcerr):
                     self.node_list_pcerr.append(node)
-            self.node_list_mcd = []
-            for mesh_part_mcd in mesh_list_mcd:
-                for node in self.scene.get_nodes(obj=mesh_part_mcd):
-                    self.node_list_mcd.append(node)
+            if dropout_variance is not None:
+                self.node_list_mcd = []
+                for mesh_part_mcd in mesh_list_mcd:
+                    for node in self.scene.get_nodes(obj=mesh_part_mcd):
+                        self.node_list_mcd.append(node)
 
 
 
@@ -1231,6 +1314,10 @@ class pyRenderMesh():
             if pc_mesh_pcerr is not None:
                 for node in self.scene.get_nodes(obj=pc_mesh_pcerr):
                     self.point_cloud_node_pcerr = node
+
+            if pc_mesh_mesherr2 is not None:
+                for node in self.scene.get_nodes(obj=pc_mesh_mesherr2):
+                    self.point_cloud_node_mesherr2 = node
 
             if smpl_pc_mesh is not None:
                 for node in self.scene.get_nodes(obj=smpl_pc_mesh):
@@ -1244,6 +1331,9 @@ class pyRenderMesh():
             if pmat_mesh is not None:
                 for node in self.scene.get_nodes(obj=pmat_mesh):
                     self.pmat_node = node
+            if pmat_mesh2 is not None:
+                for node in self.scene.get_nodes(obj=pmat_mesh2):
+                    self.pmat_node2 = node
 
 
         else:
@@ -1277,12 +1367,13 @@ class pyRenderMesh():
                 for node in self.scene.get_nodes(obj=mesh_list_pcerr[idx]):
                     self.node_list_pcerr[idx] = node
 
-            #reset the mcd human rendering
-            for idx in range(len(mesh_list_mcd)):
-                self.scene.remove_node(self.node_list_mcd[idx])
-                self.scene.add(mesh_list_mcd[idx])
-                for node in self.scene.get_nodes(obj=mesh_list_mcd[idx]):
-                    self.node_list_mcd[idx] = node
+            if dropout_variance is not None:
+                #reset the mcd human rendering
+                for idx in range(len(mesh_list_mcd)):
+                    self.scene.remove_node(self.node_list_mcd[idx])
+                    self.scene.add(mesh_list_mcd[idx])
+                    for node in self.scene.get_nodes(obj=mesh_list_mcd[idx]):
+                        self.node_list_mcd[idx] = node
 
 
 
@@ -1301,6 +1392,13 @@ class pyRenderMesh():
                 self.scene.add(pc_mesh_pcerr)
                 for node in self.scene.get_nodes(obj=pc_mesh_pcerr):
                     self.point_cloud_node_pcerr = node
+
+            #reset the point cloud mesh for mesherr
+            if pc_mesh_mesherr2 is not None:
+                self.scene.remove_node(self.point_cloud_node_mesherr2)
+                self.scene.add(pc_mesh_mesherr2)
+                for node in self.scene.get_nodes(obj=pc_mesh_mesherr2):
+                    self.point_cloud_node_mesherr2 = node
 
             #reset the vert pc mesh
             if smpl_pc_mesh is not None:
@@ -1329,6 +1427,14 @@ class pyRenderMesh():
                 self.scene.add(pmat_mesh)
                 for node in self.scene.get_nodes(obj=pmat_mesh):
                     self.pmat_node = node
+
+
+            #reset the pmat mesh
+            if pmat_mesh2 is not None:
+                self.scene.remove_node(self.pmat_node2)
+                self.scene.add(pmat_mesh2)
+                for node in self.scene.get_nodes(obj=pmat_mesh2):
+                    self.pmat_node2 = node
 
 
 

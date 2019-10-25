@@ -12,6 +12,10 @@ from cv_bridge import CvBridge, CvBridgeError
 from util import batch_global_rigid_transformation, batch_rodrigues, batch_lrotmin, reflect_pose
 
 
+def load_pickle(filename):
+    with open(filename, 'rb') as f:
+        return pickle.load(f)
+
 # some_file.py
 import sys
 # insert at 1, 0 is the script path (or '' in REPL)
@@ -69,10 +73,8 @@ import matplotlib.pyplot as plt
 #hmr
 from hmr.src.tf_smpl.batch_smpl import SMPL
 
-WEIGHT_LBS = 125.#190.
-HEIGHT_IN = 67.#72.
-GENDER = 'f'
-
+SHOW_SMPL_EST = True
+PARTICIPANT = "P136"
 MAT_SIZE = (64, 27)
 
 PC_WRT_ARTAG_ADJ = [0.11, -0.02, 0.07]
@@ -101,12 +103,26 @@ else:
 
 
 class Viz3DPose():
-    def __init__(self, filepath_prefix = '/home/henry'):
+    def __init__(self, filepath_prefix, participant_directory):
+
+        ##load participant info
+        participant_info = load_pickle(participant_directory+"/participant_info.p")
+        print "participant directory: ", participant_directory
+        for entry in participant_info:
+            print entry, participant_info[entry]
+
+        self.gender = participant_info['gender']
+        self.height_in = participant_info['height_in']
+        self.weight_lbs = participant_info['weight_lbs']
+        self.calibration_optim_values = participant_info['cal_func']
+        self.tf_corners = participant_info['corners']
+
+
         ## Load SMPL model
         self.filepath_prefix = filepath_prefix
 
         self.index_queue = []
-        if GENDER == "m":
+        if self.gender == "m":
             model_path = filepath_prefix+'/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
         else:
             model_path = filepath_prefix+'/git/SMPL_python_v.1.0.0/smpl/models/basicModel_f_lbs_10_207_0_v1.0.0.pkl'
@@ -151,6 +167,7 @@ class Viz3DPose():
         self.CTRL_PNL['L2_contact'] = True#False
         self.CTRL_PNL['pmat_mult'] = int(5)
         self.CTRL_PNL['cal_noise'] = False
+        self.CTRL_PNL['output_only_prev_est'] = False
 
 
 
@@ -249,6 +266,9 @@ class Viz3DPose():
         self.filler_taxels = np.array(self.filler_taxels).astype(int)
 
 
+
+
+
     def load_next_file(self, newpath):
 
         print "loading existing npy files in the new path...."
@@ -314,12 +334,11 @@ class Viz3DPose():
                          380-np.rint(u_p_bend_calib[1] - head_bend_loc - 3).astype(np.uint16) - pre_VERT_CUT + 4]  # np.copy([head_points1[3][0] - decrease_from_orig_len, head_points1[3][1] + increase_across_pmat])
         legs_points_pre = [pressure_im_size_required[0] * 64 / 64 - pressure_im_size_required[0] * (64 - LEGS_BEND2_TAXEL) / 64, low_vert]  # happens at legs bend2
 
-        p_mat_offset_leg_rest = p_mat_offset_leg_rest_list[calib_index]
 
         legs_points_L = [np.rint(v_p_bend[4]).astype(np.uint16) - 3 - HORIZ_CUT + 4,
-                         head_bend_loc - pressure_im_size_required[0] * HEAD_BEND_TAXEL / 64 + 560 + p_mat_offset_leg_rest]  # happens at legs bottom
+                         head_bend_loc - pressure_im_size_required[0] * HEAD_BEND_TAXEL / 64 + 560]  # happens at legs bottom
         legs_points_R = [np.rint(v_p_bend[5]).astype(np.uint16) + 4 - HORIZ_CUT - 4,
-                         head_bend_loc - pressure_im_size_required[0] * HEAD_BEND_TAXEL / 64 + 560 + p_mat_offset_leg_rest]  # happens at legs bottom
+                         head_bend_loc - pressure_im_size_required[0] * HEAD_BEND_TAXEL / 64 + 560]  # happens at legs bottom
 
 
         return [head_points_L, head_points_R, legs_points_L, legs_points_R]
@@ -417,13 +436,13 @@ class Viz3DPose():
             pmat_contact[pmat_contact > 0] = 100
             pmat_stack = np.concatenate((pmat_contact, pmat_stack), axis=1)
 
-        weight_input = WEIGHT_LBS / 2.20462
-        height_input = (HEIGHT_IN * 0.0254 - 1) * 100
+        weight_input = self.weight_lbs / 2.20462
+        height_input = (self.height_in * 0.0254 - 1) * 100
 
         batch1 = np.zeros((1, 162))
-        if GENDER == 'f':
+        if self.gender == 'f':
             batch1[:, 157] += 1
-        elif GENDER == 'm':
+        elif self.gender == 'm':
             batch1[:, 158] += 1
         batch1[:, 160] += weight_input
         batch1[:, 161] += height_input
@@ -487,55 +506,32 @@ class Viz3DPose():
             scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch_cor, False, model2,
                                                                                         self.CTRL_PNL)
 
-        betas_est = np.squeeze(OUTPUT_DICT['batch_betas_est_post_clip'].cpu().numpy())
-        angles_est = np.squeeze(OUTPUT_DICT['batch_angles_est_post_clip'])
-        root_shift_est = np.squeeze(OUTPUT_DICT['batch_root_xyz_est_post_clip'].cpu().numpy())
 
-        # print betas_est.shape, root_shift_est.shape, angles_est.shape
-
-        print OUTPUT_DICT['verts'].shape
 
         # print betas_est, root_shift_est, angles_est
         if self.CTRL_PNL['dropout'] == True:
+            print OUTPUT_DICT['verts'].shape
+            smpl_verts = np.mean(OUTPUT_DICT['verts'], axis = 0)
             dropout_variance = np.std(OUTPUT_DICT['verts'], axis=0)
             dropout_variance = np.linalg.norm(dropout_variance, axis = 1)
         else:
+            smpl_verts = OUTPUT_DICT['verts'][0, :, :]
             dropout_variance = None
 
-        angles_est = torch.mean(angles_est, dim=0).reshape(72)
-        betas_est = np.mean(betas_est, axis=0)
-        root_shift_est = np.mean(root_shift_est, axis=0)
 
-        for idx in range(10):
-            # print shape_pose_vol[0][idx]
-            self.m.betas[idx] = betas_est[idx]
+        smpl_verts = np.concatenate((smpl_verts[:, 1:2] - 0.286 + 0.0143, smpl_verts[:, 0:1] - 0.286 + 0.0143, 0.075 -smpl_verts[:, 2:3]), axis = 1)
 
-        for idx in range(72):
-            self.m.pose[idx] = angles_est[idx]
-
-        init_root = np.array(self.m.pose[0:3]) + 0.000001
-        init_rootR = libKinematics.matrix_from_dir_cos_angles(init_root)
-        root_rot = libKinematics.eulerAnglesToRotationMatrix([np.pi, 0.0, np.pi / 2])
-        # print root_rot
-        trans_root = libKinematics.dir_cos_angles_from_matrix(np.matmul(root_rot, init_rootR))
-
-        self.m.pose[0] = trans_root[0]
-        self.m.pose[1] = trans_root[1]
-        self.m.pose[2] = trans_root[2]
-
-
-        #print self.m.J_transformed[1, :], self.m.J_transformed[4, :]
-        # self.m.pose[51] = selection_r
-
-        #get SMPL mesh
-        smpl_verts = (self.m.r - self.m.J_transformed[0, :])+[root_shift_est[1]-0.286+0.15, root_shift_est[0]-0.286, 0.12-root_shift_est[2]]#*228./214.
         smpl_faces = np.array(self.m.f)
 
         pc_autofil_red = self.trim_pc_sides() #this is the point cloud
 
-
+        q = OUTPUT_DICT['batch_mdm_est'].data.numpy().reshape(OUTPUT_DICT['batch_mdm_est'].size()[0], 64, 27) * -1
+        q = np.mean(q, axis = 0)
 
         camera_point = [1.09898028, 0.46441343, -1.53]
+
+        if SHOW_SMPL_EST == False:
+            smpl_verts *= 0.001
 
         #render everything
         self.pyRender.render_mesh_pc_bed_pyrender_everything(smpl_verts, smpl_faces, camera_point, bedangle,
@@ -584,7 +580,7 @@ class Viz3DPose():
 
 
 
-    def evaluate_data(self, function_input, filename1, filename2):
+    def evaluate_data(self, filename1, filename2=None):
 
 
         self.Render = libRender.pyRenderMesh()
@@ -627,38 +623,40 @@ class Viz3DPose():
                     model2 = model2.train()
                 else:
                     model2 = model2.eval()
+            else:
+                model2 = None
+
+        #function_input = np.array(function_input)*np.array([10, 10, 10, 10, 10, 10, 0.1, 0.1, 0.1, 0.1, 1])
+        #function_input += np.array([2.2, 32, -1, 1.2, 32, -5, 1.0, 1.0, 0.96, 0.95, 0.8])
+        function_input = np.array(self.calibration_optim_values)*np.array([10, 10, 10, 0.1, 0.1, 0.1, 0.1])
+        function_input += np.array([1.2, 32, -5, 1.0, 1.0, 0.96, 0.95])
 
 
-        function_input = np.array(function_input)*np.array([10, 10, 10, 10, 10, 10, 0.1, 0.1, 0.1, 0.1, 1])
-        function_input += np.array([2.2, 32, -1, 1.2, 32, -5, 1.0, 1.0, 0.96, 0.95, 0.8])
+        kinect_rotate_angle = function_input[3-3]
+        kinect_shift_up = int(function_input[4-3])
+        kinect_shift_right = int(function_input[5-3])
+        camera_alpha_vert = function_input[6-3]
+        camera_alpha_horiz = function_input[7-3]
+        pressure_horiz_scale = function_input[8-3]
+        pressure_vert_scale = function_input[9-3]
+        #head_angle_multiplier = function_input[10-3]
 
 
-        kinect_rotate_angle = function_input[3]
-        kinect_shift_up = int(function_input[4])
-        kinect_shift_right = int(function_input[5])
-        camera_alpha_vert = function_input[6]
-        camera_alpha_horiz = function_input[7]
-        pressure_horiz_scale = function_input[8]
-        pressure_vert_scale = function_input[9]
-        head_angle_multiplier = function_input[10]
-
-        self.posture = posture
-
-        tf_corners = {}
         #file_dir = "/media/henry/multimodal_data_1/all_hevans_data/0905_2_Evening/0255"
         #file_dir_list = ["/media/henry/multimodal_data_2/test_data/data_072019_0001/"]
         blah = True
 
         #file_dir = "/media/henry/multimodal_data_2/test_data/data_072019_0007"
         #file_dir = "/media/henry/multimodal_data_2/test_data/data_072019_0006"
-        file_dir = "/home/henry/ivy_test_data/data_102019_kneeup_0000"
-        #file_dir = "/media/henry/multimodal_data_1/ivy_test_data/data_102019_kneeup_0000"
+        #file_dir = "/home/henry/ivy_test_data/data_102019_kneeup_0000"
+        #file_dir = "/media/henry/multimodal_data_1/CVPR2020_study/P000/data_102019_kneeup_0000"
+        file_dir = "/media/henry/multimodal_data_1/CVPR2020_study/"+PARTICIPANT+"/data_"+PARTICIPANT+"-2_0003"
 
         V3D.load_next_file(file_dir)
 
-        start_num = 1
+        start_num = 0
         #for im_num in range(29, 100):
-        for im_num in range(start_num, 2):
+        for im_num in range(start_num, 10):
 
             self.overall_image_scale_amount = 0.85
 
@@ -676,7 +674,7 @@ class Viz3DPose():
             self.point_cloud_autofil = self.point_cloud_autofil_all[im_num] + [0.0, 0.0, 0.1]
             print self.point_cloud_autofil.shape
 
-            self.bed_state[0] = self.bed_state[0]*head_angle_multiplier
+            self.bed_state[0] = self.bed_state[0]#*head_angle_multiplier
             self.bed_state *= 0
             #self.bed_state += 60.
             print self.bed_state, np.shape(self.pressure)
@@ -706,8 +704,8 @@ class Viz3DPose():
             self.pressure_im_size_required, u_c_pmat, v_c_pmat, u_p_bend, v_p_bend, half_w_half_l = \
                 pmat_ArTagLib.p_mat_geom(markers_c_drop, self.new_K_kin, self.pressure_im_size_required, self.bed_state, half_w_half_l)
 
-            tf_corners[posture] = np.zeros((12, 2))
-            tf_corners[posture][0:8,:] = np.copy(calib_corners_selection[calib_index][posture])
+            tf_corners = np.zeros((8, 2))
+            tf_corners[0:8,:] = np.copy(self.tf_corners)
 
 
             #COLOR
@@ -716,14 +714,14 @@ class Viz3DPose():
                                                               u_c, v_c, u_c_drop, v_c_drop, u_c_pmat, v_c_pmat, camera_alpha_vert, camera_alpha_horiz)
             color_reshaped = imutils.rotate(color_reshaped, kinect_rotate_angle)
             color_reshaped = color_reshaped[pre_VERT_CUT+kinect_shift_up:-pre_VERT_CUT+kinect_shift_up,  HORIZ_CUT+kinect_shift_right : 540 - HORIZ_CUT+kinect_shift_right, :]
-            tf_corners[posture][0:4, :], color_reshaped = self.transform_selected_points(color_reshaped,
+            tf_corners[0:4, :], color_reshaped = self.transform_selected_points(color_reshaped,
                                                                                          camera_alpha_vert,
                                                                                          camera_alpha_horiz,
                                                                                          kinect_rotate_angle,
                                                                                          kinect_shift_right,
                                                                                          kinect_shift_up, [1.0, 0],
                                                                                          [1.0, 0],
-                                                                                         np.copy(calib_corners_selection[calib_index][posture][0:4][:]))
+                                                                                         np.copy(self.tf_corners[0:4][:]))
 
             all_image_list.append(color_reshaped)
 
@@ -740,7 +738,7 @@ class Viz3DPose():
             all_image_list.append(depth_r_reshaped)
 
 
-            self.get_pc_from_depthmap(self.bed_state[0], tf_corners[posture][2, :])
+            self.get_pc_from_depthmap(self.bed_state[0], tf_corners[2, :])
 
             #PRESSURE
             self.pressure = np.clip(self.pressure*4, 0, 100)
@@ -807,108 +805,18 @@ if __name__ ==  "__main__":
     filepath_prefix = "/home/henry"
     #model_prefix = "/media/henry/multimodal_data_1"
     model_prefix = "/home/henry"
+    participant_directory = "/media/henry/multimodal_data_1/CVPR2020_study/"+PARTICIPANT
 
-
-    V3D = Viz3DPose(filepath_prefix)
+    V3D = Viz3DPose(filepath_prefix, participant_directory)
     #V3D.estimate_real_time(filepath_prefix+"/data/synth/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_100e_000005lr.pt",
     #                             filepath_prefix+"/data/synth/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.pt")
 
-    file_optimization_picks = [[-0.10380950868835398, -0.24954999664283403, -0.19082899491276584, #05 to 06
-                                -0.08444541039339573, 0.016119578206939777, -0.3216531438714622,
-                                0.1394849993002632, -0.2842603728947779, 0.13685526544739327,
-                                0.03574465742073685, 0.04634027846367891],
-                               [0.05001938745147258, 0.15123731597285675, 0.0866959183560595,
-                                0.05910474787693074, 0.3861988024865718, -0.17826400482747298,
-                                0.09487984735370396, 0.17963550843844123, -0.07599611870098816,
-                                -0.034540931786485825, -0.04390890429482567],
-                               [-0.13162189596458163, -0.13417259496587142, 0.26466890673798366,
-                                -0.1270856703698008, -0.11680215525856938, 0.07887195356115867,
-                                0.30269562740592326, 0.59059074808585, -0.24382594982402644,
-                                0.13349612802154237, 0.0329615160283741],
-                               [-0.017941161914079823, -0.5319409757913965, -0.1475376924455061,
-                                -0.029145428963456153, -0.3602627899643398, -0.3772389925744474,
-                                0.4807884578370175, 0.2707353595745977, -0.29252052658027033,
-                                -0.09886303402191773, -0.004106658497690778],
-                               [-0.07327427816490228, -1.2399041363573815, 0.308719334121065,
-                                -0.0585650256965522, -1.0359134550133717, 0.012588536106676429,
-                                0.31464529310245837, 0.2729018569120285, -0.3683596171492809,
-                                0.0016488972973007776, 0.018401395618589333],
-                               [-0.10041624345192472, -0.35433669709825616, -0.04952849138799903, #10 to 11
-                                -0.10214471176768623, -0.31154356246657955, -0.27799933679718264,
-                                0.1081511690729292, 0.3181850307846851, 0.022649443479678604,
-                                0.017340699560127338, 0.04380688163789306],
-                               [-0.10478270054644222, -0.28345417095232933, -0.07807829083158871,
-                                -0.11153260474732456, 0.05599584968235911, -0.05463914177827217,
-                                0.19729283572173112, 0.540660476138503, -0.08226193308574829, #11 to 12
-                                -0.005466117946628913, -0.008427016596327028]]
 
 
-    calib_corners_selection = [{'lay': [[44.60093896713615, 186.61971830985917], [360.3286384976526, 196.0093896713615],
-                                        [82.15962441314554, 744.131455399061], [332.15962441314554, 741.7840375586854],
-                                        [56.33802816901409, 180.7511737089202], [373.23943661971833, 193.66197183098592],
-                                        [85.68075117370893, 740.6103286384977], [332.15962441314554, 741.7840375586854]],
-                                'sit': [[76.29107981220658, 140.8450704225352], [339.2018779342723, 149.06103286384976],
-                                        [84.50704225352113, 741.7840375586854], [334.50704225352115, 737.0892018779343],
-                                        [84.50704225352113, 133.80281690140845], [348.59154929577466, 146.71361502347418],
-                                        [86.85446009389672, 738.2629107981221], [334.50704225352115, 737.0892018779343]]}, #this is for 05-06
-                               {'lay': [[84.50704225352113, 134.97652582159625], [338.02816901408454, 134.97652582159625],
-                                        [64.55399061032864, 724.1784037558685], [320.4225352112676, 724.1784037558685],
-                                        [95.07042253521126, 130.2816901408451], [348.59154929577466, 133.80281690140845],
-                                        [69.24882629107981, 719.4835680751174], [318.07511737089203, 725.3521126760563]],
-                                'sit': [[52.816901408450704, 144.3661971830986], [369.71830985915494, 156.10328638497654],
-                                        [66.90140845070422, 725.3521126760563], [320.4225352112676, 726.5258215962441],
-                                        [64.55399061032864, 138.49765258215962], [380.28169014084506, 157.27699530516432],
-                                        [69.24882629107981, 721.830985915493], [321.5962441314554, 728.8732394366198]]}, #this is for 07-08
-                               {'lay': [[72.7699530516432, 144.3661971830986], [347.4178403755869, 136.15023474178403],
-                                        [73.94366197183099, 717.1361502347418], [327.46478873239437, 707.7464788732394],
-                                        [82.15962441314554, 139.67136150234742], [357.981220657277, 134.97652582159625],
-                                        [76.29107981220658, 717.1361502347418], [327.46478873239437, 706.5727699530516]],
-                                'sit': [[45.774647887323944, 150.23474178403757], [377.9342723004695, 157.27699530516432],
-                                        [73.94366197183099, 721.830985915493], [326.2910798122066, 710.0938967136151],
-                                        [58.68544600938967, 147.88732394366198], [390.84507042253523, 157.27699530516432],
-                                        [77.46478873239437, 717.1361502347418], [327.46478873239437, 708.9201877934272]]}, #this is for 09-10
-                               {'lay': [[86.85446009389672, 169.01408450704227], [332.15962441314554, 173.70892018779344],
-                                        [79.81220657276995, 714.7887323943662], [329.81220657277, 705.3990610328639],
-                                        [93.89671361502347, 164.31924882629107], [339.2018779342723, 173.70892018779344],
-                                        [80.98591549295774, 708.9201877934272], [327.46478873239437, 707.7464788732394]],
-                                'sit': [[49.29577464788733, 138.49765258215962], [363.849765258216, 144.3661971830986],
-                                        [75.11737089201878, 713.6150234741784], [329.81220657277, 711.2676056338029],
-                                        [59.859154929577464, 131.45539906103286], [375.5868544600939, 140.8450704225352],
-                                        [77.46478873239437, 708.9201877934272], [326.2910798122066, 708.9201877934272]]}] #this is for 11-12
-
-    pmat_head_corner_shift_list = [[0.0, 0.0],
-                                  [0.0, 0.0],
-                                  [0.0, 3.5],
-                                  [0.0, 2.0],
-                                  [0.0, 3.0],
-                                  [0.0, 5.0]]
-
-    p_mat_offset_leg_rest_list = [0, 4, -2, 4, -10, -5]
-
-    calib_index = 0
+    #F_eval = V3D.evaluate_data(model_prefix+"/data/convnets/planesreg/112K/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_100e_00001lr.pt", \
+    #                           model_prefix+"/data/convnets/planesreg_correction/112K/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_depthestin_angleadj_alltanh_l2cnt_100e_200e_00001lr.pt")
+    F_eval = V3D.evaluate_data("/media/henry/multimodal_data_1/data/convnets/planesreg/convnet_anglesDC_synth_184K_128b_x5pmult_1.0rtojtdpth_tnh_htwt_calnoise_100e_00002lr.pt")
 
 
-    #file_dir = "/home/henry/test/calib_data_082018_0096"
-
-    # file_dir = "/media/henry/multimodal_data_1/all_hevans_data/Calibration_0907_Evening_0908_Morning/data_082018_0096"
-    # 96 - 85 is a good pick for seated
-    # 98 - 40 is a good pick for flat
-
-
-    posture = "lay"
-    if posture == "lay":
-        folder_idx = 1
-        image_idx = 2
-    elif posture == "sit":
-        folder_idx = 3
-        image_idx = 4
-
-
-    F_eval = V3D.evaluate_data(file_optimization_picks[calib_index], \
-                               model_prefix+"/data/convnets/planesreg/112K/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_100e_00001lr.pt", \
-                               model_prefix+"/data/convnets/planesreg_correction/112K/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_depthestin_angleadj_alltanh_l2cnt_100e_150e_00001lr.pt")
-
-
-    #F_eval = V3D.evaluate_data(file_optimization_picks[calib_index], \
-    #                           model_prefix+"/data/convnets/planesreg/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_100e_000005lr.pt", \
+    #F_eval = V3D.evaluate_data(model_prefix+"/data/convnets/planesreg/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_100e_000005lr.pt", \
     #                           model_prefix+"/data/convnets/planesreg_correction/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.pt")
