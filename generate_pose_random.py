@@ -987,55 +987,58 @@ class GeneratePose():
 
     def fix_height_weight(self):
 
+        for gender in ['f']:
+            #gender = "m"
+            posture = "lay"
+            num_data = "2700"
+            #set = "1"
 
-        gender = "f"
-        posture = "lay"
-        num_data = "2700"
-        #set = "1"
-
-        model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_' + gender + '_lbs_10_207_0_v1.0.0.pkl'
-        self.m = load_smpl_model(model_path)
-
-
-        for set_num in ["10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24"]:
-
-            prechecked_pose_list = np.load("/home/henry/data/init_poses/random3/all_rand_nom_endhtbicheck_rollpi_plo_" + gender + "_" + posture + "_set" + set_num + "_" + num_data + ".npy", allow_pickle=True).tolist()
-            prechecked_pose_list_fixed = []
-
-            for shape_pose in prechecked_pose_list:
-                #generator.sample_body_shape(sampling="UNIFORM", sigma=0, one_side_range=3)
-
-                for shape in range(len(shape_pose[0])):
-                    self.m.betas[shape] = float(shape_pose[0][shape])
-
-                # m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles()
-                # m, capsules, joint2name, rots0, is_valid_pose = generator.map_yifeng_random_selection_to_smpl_angles(get_new = True)
-                # m = generator.map_random_cartesian_ik_to_smpl_angles([shift_side, shift_ud, 0.0], get_new = True)
-
-                self.m.pose[:] = np.random.rand(self.m.pose.size) * 0.
-
-                dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None,
-                                                check_only_distal=True, filepath_prefix=self.filepath_prefix,
-                                                add_floor=False)
-
-                # print "dataset create type", DATASET_CREATE_TYPE
-                # print self.m.pose
-                volumes = dss.getCapsuleVolumes(mm_resolution=2.)
-
-                # libRender.standard_render(self.m)
-                # print volumes
-                print np.shape(shape_pose[6])
-                print shape_pose[6][2], np.sum(shape_pose[6][2])
-
-                shape_pose[6] = np.copy(volumes)
-                print shape_pose[6][2], np.sum(shape_pose[6][2])
-                dss.world.reset()
-                dss.world.destroy()
-                time.sleep(1)
-                prechecked_pose_list_fixed.append(shape_pose)
+            model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_' + gender + '_lbs_10_207_0_v1.0.0.pkl'
+            self.m = load_smpl_model(model_path)
 
 
-            np.save("/home/henry/data/init_poses/random3/all_rand_nom_endhtbicheck_rollpi_plo_" + gender + "_" + posture + "_set" + set_num + "_" + num_data + "_fix.npy", np.array(prechecked_pose_list_fixed))
+            for set_num in [["3", "100"]]:#[["5", "2200"],["6", "2200"],["7", "2200"]]:#, ["2", "2200"]]:#, ["3", "700"], ["4", "2800"]]:#["10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24"]:
+
+                num_data = set_num[1]
+                set_num = set_num[0]
+
+                prechecked_pose_list = np.load("/home/henry/data/init_poses/random_sl3/all_rand_nom_endhtbicheck_roll0_plo_sl_" + gender + "_" + posture + "_set" + set_num + "_" + num_data + ".npy", allow_pickle=True).tolist()
+                prechecked_pose_list_fixed = []
+
+                for shape_pose in prechecked_pose_list:
+                    #generator.sample_body_shape(sampling="UNIFORM", sigma=0, one_side_range=3)
+
+                    for shape in range(len(shape_pose[0])):
+                        self.m.betas[shape] = float(shape_pose[0][shape])
+
+                    # m, capsules, joint2name, rots0 = generator.map_nom_limited_random_selection_to_smpl_angles()
+                    # m, capsules, joint2name, rots0, is_valid_pose = generator.map_yifeng_random_selection_to_smpl_angles(get_new = True)
+                    # m = generator.map_random_cartesian_ik_to_smpl_angles([shift_side, shift_ud, 0.0], get_new = True)
+
+                    self.m.pose[:] = np.random.rand(self.m.pose.size) * 0.
+
+                    dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender=gender, posture=posture, stiffness=None,
+                                                    check_only_distal=True, filepath_prefix=self.filepath_prefix,
+                                                    add_floor=False)
+
+                    # print "dataset create type", DATASET_CREATE_TYPE
+                    # print self.m.pose
+                    volumes = dss.getCapsuleVolumes(mm_resolution=2.)
+
+                    # libRender.standard_render(self.m)
+                    # print volumes
+                    print np.shape(shape_pose[6])
+                    print shape_pose[6][2], np.sum(shape_pose[6][2])
+
+                    shape_pose[6] = np.copy(volumes)
+                    print shape_pose[6][2], np.sum(shape_pose[6][2])
+                    dss.world.reset()
+                    dss.world.destroy()
+                    time.sleep(1)
+                    prechecked_pose_list_fixed.append(shape_pose)
+
+
+                np.save("/home/henry/data/init_poses/fix/random_sl3/all_rand_nom_endhtbicheck_roll0_plo_sl_" + gender + "_" + posture + "_set" + set_num + "_" + num_data + "_fix.npy", np.array(prechecked_pose_list_fixed))
 
 
 
@@ -1047,7 +1050,7 @@ class GeneratePose():
 
 
 if __name__ == "__main__":
-    gender = 'm'
+    gender = 'f'
 
 
     generator = GeneratePose(sampling = "UNIFORM", sigma = 0, one_side_range = 0, gender=gender)
@@ -1058,12 +1061,12 @@ if __name__ == "__main__":
     #generator.read_precomp_set(gender=gender)
     #generator.generate_rand_dir_cos(gender=gender,
     #                                posture='lay',
-    #                                num_data=200,
+    #                                num_data=100,
     #                                roll_person = False,
-    #                                set = 87,
+    #                                set = 3,
     #                                prevent_limb_overhang = True,
-    #                                hands_behind_head=True,
-    #                                straight_limbs = False,
+    #                                hands_behind_head=False,
+    #                                straight_limbs = True,
     #                                ensure_crossed_legs=False,
     #                                prone_hands_up=False)
 
