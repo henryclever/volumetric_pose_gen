@@ -942,17 +942,17 @@ if __name__ == "__main__":
         test_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/test_roll0_plo_phu_m_lay_set1pa3_500'+filepath_suffix+'.p')
         test_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/test_roll0_sl_m_lay_set1both_500'+filepath_suffix+'.p')
         test_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/test_roll0_xl_m_lay_set1both_500'+filepath_suffix+'.p')
+    
+        if opt.aws == True:
+            training_database_file_f.append(filepath_prefix+'synth/random3_fix/train_roll0_f_lay_set5to7_5000'+filepath_suffix+'.p')
+            training_database_file_f.append(filepath_prefix+'synth/random3_fix/train_roll0_plo_f_lay_set5to7_5000'+filepath_suffix+'.p')
+            training_database_file_f.append(filepath_prefix+'synth/random3_fix/train_rollpi_f_lay_set18to22_10000'+filepath_suffix+'.p')
+            training_database_file_f.append(filepath_prefix+'synth/random3_fix/train_rollpi_plo_f_lay_set18to22_10000'+filepath_suffix+'.p')
 
-    if opt.aws == True:
-        training_database_file_f.append(filepath_prefix+'synth/random3_fix/train_roll0_f_lay_set5to7_5000'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random3_fix/train_roll0_plo_f_lay_set5to7_5000'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random3_fix/train_rollpi_f_lay_set18to22_10000'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random3_fix/train_rollpi_plo_f_lay_set18to22_10000'+filepath_suffix+'.p')
-
-        training_database_file_m.append(filepath_prefix+'synth/random3_fix/train_roll0_m_lay_set5to7_5000'+filepath_suffix+'.p')
-        training_database_file_m.append(filepath_prefix+'synth/random3_fix/train_roll0_plo_m_lay_set5to7_5000'+filepath_suffix+'.p')
-        training_database_file_m.append(filepath_prefix+'synth/random3_fix/train_rollpi_m_lay_set18to22_10000'+filepath_suffix+'.p')
-        training_database_file_m.append(filepath_prefix+'synth/random3_fix/train_rollpi_plo_m_lay_set18to22_10000'+filepath_suffix+'.p')
+            training_database_file_m.append(filepath_prefix+'synth/random3_fix/train_roll0_m_lay_set5to7_5000'+filepath_suffix+'.p')
+            training_database_file_m.append(filepath_prefix+'synth/random3_fix/train_roll0_plo_m_lay_set5to7_5000'+filepath_suffix+'.p')
+            training_database_file_m.append(filepath_prefix+'synth/random3_fix/train_rollpi_m_lay_set18to22_10000'+filepath_suffix+'.p')
+            training_database_file_m.append(filepath_prefix+'synth/random3_fix/train_rollpi_plo_m_lay_set18to22_10000'+filepath_suffix+'.p')
 
 
 
