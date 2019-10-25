@@ -228,11 +228,15 @@ class GeneratePose():
         for idx in range(6890):
             if smpl_verts[idx, 1] < float(self.m.J_transformed[4, 1]) and smpl_verts[idx, 0] > 0:
                 l_lowerleg_idx_list.append(idx)
-            elif smpl_verts[idx, 1] < float(self.m.J_transformed[5, 1]) and smpl_verts[idx, 0] < 0:
-                r_lowerleg_idx_list.append(idx)
-            elif smpl_verts[idx, 1] < float(self.m.J_transformed[1, 1]) and smpl_verts[idx, 1] > float(self.m.J_transformed[4, 1]) and smpl_verts[idx, 0] > 0:
+            #elif smpl_verts[idx, 1] < float(self.m.J_transformed[5, 1]) and smpl_verts[idx, 0] < 0:
+            #    r_lowerleg_idx_list.append(idx)
+            #elif smpl_verts[idx, 1] < float(self.m.J_transformed[1, 1]) and smpl_verts[idx, 1] > float(self.m.J_transformed[4, 1]) and smpl_verts[idx, 0] > 0:
+            #    l_upperleg_idx_list.append(idx)
+            #elif smpl_verts[idx, 1] < float(self.m.J_transformed[2, 1]) and smpl_verts[idx, 1] > float(self.m.J_transformed[5, 1]) and smpl_verts[idx, 0] < 0:
+            #    r_upperleg_idx_list.append(idx)
+            elif smpl_verts[idx, 1] < float(self.m.J_transformed[1, 1]) and smpl_verts[idx, 0] > 0:
                 l_upperleg_idx_list.append(idx)
-            elif smpl_verts[idx, 1] < float(self.m.J_transformed[2, 1]) and smpl_verts[idx, 1] > float(self.m.J_transformed[5, 1]) and smpl_verts[idx, 0] < 0:
+            elif smpl_verts[idx, 1] < float(self.m.J_transformed[2, 1]) and smpl_verts[idx, 0] < 0:
                 r_upperleg_idx_list.append(idx)
 
             #elif smpl_verts[idx, 0] > float(self.m.J_transformed[18, 0]):
@@ -315,10 +319,12 @@ class GeneratePose():
                                         torso_idx_list.index(smpl_faces[face_idx, 2])])
 
         segmented_dict = {}
-        segmented_dict['l_arm_idx_list'] = l_upperarm_idx_list
-        segmented_dict['l_arm_face_list'] = l_upperarm_face_list
+        #segmented_dict['l_arm_idx_list'] = l_upperarm_idx_list
+        #segmented_dict['l_arm_face_list'] = l_upperarm_face_list
+        segmented_dict['r_leg_idx_list'] = r_upperleg_idx_list
+        segmented_dict['r_leg_face_list'] = r_upperleg_face_list
 
-        pkl.dump(segmented_dict, open(os.path.join('./segmented_mesh_idx_faces_larm.p'), 'wb'))
+        pkl.dump(segmented_dict, open(os.path.join('./segmented_mesh_idx_faces_rleg.p'), 'wb'))
 
         return segmented_dict
 
