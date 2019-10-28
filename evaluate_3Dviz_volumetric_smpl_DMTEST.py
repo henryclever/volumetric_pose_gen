@@ -80,7 +80,7 @@ MAT_SIZE = (64, 27)
 PC_WRT_ARTAG_ADJ = [0.11, -0.02, 0.07]
 ARTAG_WRT_PMAT = [0.08, 0.05, 0.0]
 
-DROPOUT = True
+DROPOUT = False
 
 
 import sys
@@ -141,7 +141,7 @@ class Viz3DPose():
 
         self.CTRL_PNL = {}
         self.CTRL_PNL['batch_size'] = 1
-        self.CTRL_PNL['loss_vector_type'] = 'anglesEU'
+        self.CTRL_PNL['loss_vector_type'] = 'anglesDC'
         self.CTRL_PNL['verbose'] = False
         self.CTRL_PNL['num_epochs'] = 101
         self.CTRL_PNL['incl_inter'] = True
@@ -168,6 +168,7 @@ class Viz3DPose():
         self.CTRL_PNL['pmat_mult'] = int(5)
         self.CTRL_PNL['cal_noise'] = False
         self.CTRL_PNL['output_only_prev_est'] = False
+        self.CTRL_PNL['double_network_size'] = False
 
 
 
@@ -423,7 +424,7 @@ class Viz3DPose():
         pmat = np.fliplr(np.flipud(np.clip(pmat.reshape(MAT_SIZE)*float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100)))
 
         if self.CTRL_PNL['cal_noise'] == False:
-            pmat = gaussian_filter(pmat, sigma=0.5)
+            pmat = gaussian_filter(pmat, sigma=0.75)
 
         pmat_stack = PreprocessingLib().preprocessing_create_pressure_angle_stack_realtime(pmat, 0.0, mat_size)
 
@@ -519,7 +520,7 @@ class Viz3DPose():
             dropout_variance = None
 
 
-        smpl_verts = np.concatenate((smpl_verts[:, 1:2] - 0.286 + 0.0143, smpl_verts[:, 0:1] - 0.286 + 0.0143, 0.075 -smpl_verts[:, 2:3]), axis = 1)
+        smpl_verts = np.concatenate((smpl_verts[:, 1:2] - 0.286 + 0.0143, smpl_verts[:, 0:1] - 0.286 + 0.0143, 2*0.075 -smpl_verts[:, 2:3]), axis = 1)
 
         smpl_faces = np.array(self.m.f)
 
@@ -533,49 +534,94 @@ class Viz3DPose():
         if SHOW_SMPL_EST == False:
             smpl_verts *= 0.001
 
-        #render everything
-        self.pyRender.render_mesh_pc_bed_pyrender_everything(smpl_verts, smpl_faces, camera_point, bedangle,
-                                                              pc = pc_autofil_red, pmat = pmat, smpl_render_points = False,
-                                                              markers = None, dropout_variance = dropout_variance)
+        #print smpl_verts
 
+        viz_type = "3D"
 
-        #render in 3D pyrender with pressure mat
-        #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
-        #                                          pc = None, pmat = pmat, smpl_render_points = False,
-        #                                          facing_cam_only=False, viz_type = None,
-        #                                          markers = None, segment_limbs=False)
+        if viz_type == "2D":
+            from visualization_lib import VisualizationLib
+            im_display_idx = 0
+            print INPUT_DICT['batch_images'].size()
+            if model2 is not None:
+                self.im_sample = INPUT_DICT['batch_images'][im_display_idx, 4:,:].squeeze() * 20.  # normalizing_std_constants[4]*5.  #pmat
+            else:
+                self.im_sample = INPUT_DICT['batch_images'][im_display_idx, 1:,:].squeeze() * 20.  # normalizing_std_constants[4]*5.  #pmat
+            self.im_sample_ext = INPUT_DICT['batch_images'][im_display_idx, 0:, :].squeeze() * 20.  # normalizing_std_constants[0]  #pmat contact
+            # self.im_sample_ext2 = INPUT_DICT['batch_images'][im_display_idx, 2:, :].squeeze()*20.#normalizing_std_constants[4]  #sobel
+            self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][im_display_idx, :, :].squeeze().unsqueeze(0) * -1  # est depth output
 
-        #render in 3D pyrender with segmented limbs
-        #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
-        #                                          pc = None, pmat = None, smpl_render_points = False,
-        #                                          facing_cam_only=False, viz_type = None,
-        #                                          markers = None, segment_limbs=True)
+            # print scores[0, 10:16], 'scores of body rot'
 
-        #render the error of point cloud points relative to verts
-        #self.Render.eval_dist_render_open3d(smpl_verts, smpl_faces, pc_autofil_red, viz_type = 'pc_error',
-        #                                      camera_point = camera_point, segment_limbs=False)
-        #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
-        #                                          pc = pc_autofil_red, pmat = None, smpl_render_points = False,
-        #                                          facing_cam_only=True, viz_type = 'pc_error',
-        #                                          markers = None, segment_limbs=False)
+            # print self.im_sample.size(), self.im_sample_ext.size(), self.im_sample_ext2.size(), self.im_sample_ext3.size()
 
-        #render the error of verts relative to point cloud points
-        #self.Render.eval_dist_render_open3d(smpl_verts, smpl_faces, pc_autofil_red, viz_type = 'mesh_error',
-        #                                      camera_point = camera_point, segment_limbs=False)
-        #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
-        #                                          pc = pc_autofil_red, pmat = None, smpl_render_points = False,
-        #                                          facing_cam_only=True, viz_type = 'mesh_error',
-        #                                          markers = None, segment_limbs=False)
-
-        time.sleep(1)
-        self.point_cloud_array = None
+            # self.publish_depth_marker_array(self.im_sample_ext3)
 
 
 
-        #dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix, add_floor = False)
+            self.tar_sample = INPUT_DICT['batch_targets']
+            self.tar_sample = self.tar_sample[im_display_idx, :].squeeze() / 1000
+            self.sc_sample = OUTPUT_DICT['batch_targets_est'].clone()
+            self.sc_sample = self.sc_sample[im_display_idx, :].squeeze() / 1000
 
-        #dss.run_simulation(10000)
-        #generator.standard_render()
+            NUMOFOUTPUTDIMS = 3
+            NUMOFOUTPUTNODES_TRAIN = 24
+            self.output_size_train = (NUMOFOUTPUTNODES_TRAIN, NUMOFOUTPUTDIMS)
+
+            self.sc_sample = self.sc_sample.view(self.output_size_train)
+
+            VisualizationLib().visualize_pressure_map(self.im_sample, self.tar_sample, self.sc_sample,
+                                                         # self.im_sample_ext, None, None,
+                                                          self.im_sample_ext3, None, None, #, self.tar_sample_val, self.sc_sample_val,
+                                                          block=False)
+
+            time.sleep(4)
+
+        elif viz_type == "3D":
+
+
+            #render everything
+            self.pyRender.render_mesh_pc_bed_pyrender_everything(smpl_verts, smpl_faces, camera_point, bedangle,
+                                                                  pc = pc_autofil_red, pmat = pmat, smpl_render_points = False,
+                                                                  markers = None, dropout_variance = dropout_variance)
+
+
+            #render in 3D pyrender with pressure mat
+            #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
+            #                                          pc = None, pmat = pmat, smpl_render_points = False,
+            #                                          facing_cam_only=False, viz_type = None,
+            #                                          markers = None, segment_limbs=False)
+
+            #render in 3D pyrender with segmented limbs
+            #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
+            #                                          pc = None, pmat = None, smpl_render_points = False,
+            #                                          facing_cam_only=False, viz_type = None,
+            #                                          markers = None, segment_limbs=True)
+
+            #render the error of point cloud points relative to verts
+            #self.Render.eval_dist_render_open3d(smpl_verts, smpl_faces, pc_autofil_red, viz_type = 'pc_error',
+            #                                      camera_point = camera_point, segment_limbs=False)
+            #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
+            #                                          pc = pc_autofil_red, pmat = None, smpl_render_points = False,
+            #                                          facing_cam_only=True, viz_type = 'pc_error',
+            #                                          markers = None, segment_limbs=False)
+
+            #render the error of verts relative to point cloud points
+            #self.Render.eval_dist_render_open3d(smpl_verts, smpl_faces, pc_autofil_red, viz_type = 'mesh_error',
+            #                                      camera_point = camera_point, segment_limbs=False)
+            #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
+            #                                          pc = pc_autofil_red, pmat = None, smpl_render_points = False,
+            #                                          facing_cam_only=True, viz_type = 'mesh_error',
+            #                                          markers = None, segment_limbs=False)
+
+            time.sleep(1)
+            self.point_cloud_array = None
+
+
+
+            #dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix, add_floor = False)
+
+            #dss.run_simulation(10000)
+            #generator.standard_render()
 
 
 
@@ -650,154 +696,168 @@ class Viz3DPose():
         #file_dir = "/media/henry/multimodal_data_2/test_data/data_072019_0006"
         #file_dir = "/home/henry/ivy_test_data/data_102019_kneeup_0000"
         #file_dir = "/media/henry/multimodal_data_1/CVPR2020_study/P000/data_102019_kneeup_0000"
-        file_dir = "/media/henry/multimodal_data_1/CVPR2020_study/"+PARTICIPANT+"/data_"+PARTICIPANT+"-2_0003"
 
-        V3D.load_next_file(file_dir)
+        if PARTICIPANT == "P106":
+            file_dir = "/media/henry/multimodal_data_1/CVPR2020_study/"+PARTICIPANT+"/data_"+PARTICIPANT+"_000"
+        else:
+            file_dir = "/media/henry/multimodal_data_1/CVPR2020_study/"+PARTICIPANT+"/data_"+PARTICIPANT+"-2_000"
+        file_dirs = [file_dir+str(0),
+                     file_dir+str(1),
+                     file_dir+str(2),
+                     file_dir+str(3),
+                     file_dir+str(4),
+                     file_dir+str(5)]
 
-        start_num = 0
-        #for im_num in range(29, 100):
-        for im_num in range(start_num, 10):
+        for file_dir in file_dirs:
+            V3D.load_next_file(file_dir)
 
-            self.overall_image_scale_amount = 0.85
+            start_num = 0
+            print self.color_all.shape
 
-            half_w_half_l = [0.4, 0.4, 1.1, 1.1]
+            #for im_num in range(29, 100):
+            for im_num in range(start_num, self.color_all.shape[0]):
+                print "NEXT IM!"
 
-            all_image_list = []
-            self.label_single_image = []
+                self.overall_image_scale_amount = 0.85
 
-            self.label_index = 0
+                half_w_half_l = [0.4, 0.4, 1.1, 1.1]
 
-            self.color = self.color_all[im_num]
-            self.depth_r = self.depth_r_all[im_num]
-            self.pressure = self.pressure_all[im_num]
-            self.bed_state = self.bedstate_all[im_num]
-            self.point_cloud_autofil = self.point_cloud_autofil_all[im_num] + [0.0, 0.0, 0.1]
-            print self.point_cloud_autofil.shape
+                all_image_list = []
+                self.label_single_image = []
 
-            self.bed_state[0] = self.bed_state[0]#*head_angle_multiplier
-            self.bed_state *= 0
-            #self.bed_state += 60.
-            print self.bed_state, np.shape(self.pressure)
+                self.label_index = 0
 
-            if im_num == start_num and blah == True:
-                markers_c = []
-                markers_c.append(self.markers_all[im_num][0])
-                markers_c.append(self.markers_all[im_num][1])
-                markers_c.append(self.markers_all[im_num][2])
-                markers_c.append(self.markers_all[im_num][3])
-                for idx in range(4):
-                    if markers_c[idx] is not None:
-                        markers_c[idx] = np.array(markers_c[idx])*213./228.
-            blah = False
+                self.color = self.color_all[im_num]
+                self.depth_r = self.depth_r_all[im_num]
+                self.pressure = self.pressure_all[im_num]
+                self.bed_state = self.bedstate_all[im_num]
+                self.point_cloud_autofil = self.point_cloud_autofil_all[im_num] + [0.0, 0.0, 0.1]
+                print self.point_cloud_autofil.shape
 
+                self.bed_state[0] = self.bed_state[0]#*head_angle_multiplier
+                self.bed_state *= 0
+                #self.bed_state += 60.
+                print self.bed_state, np.shape(self.pressure)
 
-
-            # Get the marker points in 2D on the color image
-            u_c, v_c = ArTagLib().color_2D_markers(markers_c, self.new_K_kin)
-
-            # Get the marker points dropped to the height of the pressure mat
-            u_c_drop, v_c_drop, markers_c_drop = ArTagLib().color_2D_markers_drop(markers_c, self.new_K_kin)
-
-
-            # Get the geometry for sizing the pressure mat
-            pmat_ArTagLib = ArTagLib()
-            self.pressure_im_size_required, u_c_pmat, v_c_pmat, u_p_bend, v_p_bend, half_w_half_l = \
-                pmat_ArTagLib.p_mat_geom(markers_c_drop, self.new_K_kin, self.pressure_im_size_required, self.bed_state, half_w_half_l)
-
-            tf_corners = np.zeros((8, 2))
-            tf_corners[0:8,:] = np.copy(self.tf_corners)
-
-
-            #COLOR
-            #if self.color is not 0:
-            color_reshaped, color_size = VizLib().color_image(self.color, self.kcam, self.new_K_kin,
-                                                              u_c, v_c, u_c_drop, v_c_drop, u_c_pmat, v_c_pmat, camera_alpha_vert, camera_alpha_horiz)
-            color_reshaped = imutils.rotate(color_reshaped, kinect_rotate_angle)
-            color_reshaped = color_reshaped[pre_VERT_CUT+kinect_shift_up:-pre_VERT_CUT+kinect_shift_up,  HORIZ_CUT+kinect_shift_right : 540 - HORIZ_CUT+kinect_shift_right, :]
-            tf_corners[0:4, :], color_reshaped = self.transform_selected_points(color_reshaped,
-                                                                                         camera_alpha_vert,
-                                                                                         camera_alpha_horiz,
-                                                                                         kinect_rotate_angle,
-                                                                                         kinect_shift_right,
-                                                                                         kinect_shift_up, [1.0, 0],
-                                                                                         [1.0, 0],
-                                                                                         np.copy(self.tf_corners[0:4][:]))
-
-            all_image_list.append(color_reshaped)
-
-
-            #DEPTH
-            h = VizLib().get_new_K_kin_homography(camera_alpha_vert, camera_alpha_horiz, self.new_K_kin)
-            depth_r_orig = cv2.warpPerspective(self.depth_r, h, (self.depth_r.shape[1], self.depth_r.shape[0]))
-            depth_r_orig = imutils.rotate(depth_r_orig, kinect_rotate_angle)
-            depth_r_orig = depth_r_orig[HORIZ_CUT + kinect_shift_right: 540 - HORIZ_CUT + kinect_shift_right, pre_VERT_CUT - kinect_shift_up:-pre_VERT_CUT - kinect_shift_up]
-            depth_r_reshaped, depth_r_size, depth_r_orig = VizLib().depth_image(depth_r_orig, u_c, v_c)
-            self.depth_r_orig = depth_r_orig
-            self.depthcam_midpixel = [self.new_K_kin[1, 2] - HORIZ_CUT - kinect_shift_right, (960-self.new_K_kin[0, 2]) - pre_VERT_CUT - kinect_shift_up]
-
-            all_image_list.append(depth_r_reshaped)
-
-
-            self.get_pc_from_depthmap(self.bed_state[0], tf_corners[2, :])
-
-            #PRESSURE
-            self.pressure = np.clip(self.pressure*4, 0, 100)
-            pressure_reshaped, pressure_size, coords_from_top_left = VizLib().pressure_image(self.pressure, self.pressure_im_size,
-                                                                       self.pressure_im_size_required, color_size,
-                                                                       u_c_drop, v_c_drop, u_c_pmat, v_c_pmat,
-                                                                       u_p_bend, v_p_bend)
-            pressure_shape = pressure_reshaped.shape
-            pressure_reshaped = cv2.resize(pressure_reshaped, None, fx=pressure_horiz_scale,
-                                          fy=pressure_vert_scale)[0:pressure_shape[0],
-                                          0:pressure_shape[1], :]
-
-            if pressure_horiz_scale < 1.0 or pressure_vert_scale < 1.0:
-                pressure_reshaped_padded = np.zeros(pressure_shape).astype(np.uint8)
-                pressure_reshaped_padded[0:pressure_reshaped.shape[0], 0:pressure_reshaped.shape[1], :] += pressure_reshaped
-                pressure_reshaped = np.copy(pressure_reshaped_padded)
-
-            coords_from_top_left[0] -= coords_from_top_left[0]*(1-pressure_horiz_scale)
-            coords_from_top_left[1] += (960 - coords_from_top_left[1])*(1-pressure_vert_scale)
-
-            pressure_reshaped = pressure_reshaped[pre_VERT_CUT:-pre_VERT_CUT,  HORIZ_CUT : 540 - HORIZ_CUT, :]
-
-
-            all_image_list.append(pressure_reshaped)
+                if im_num == start_num and blah == True:
+                    markers_c = []
+                    markers_c.append(self.markers_all[im_num][0])
+                    markers_c.append(self.markers_all[im_num][1])
+                    markers_c.append(self.markers_all[im_num][2])
+                    markers_c.append(self.markers_all[im_num][3])
+                    for idx in range(4):
+                        if markers_c[idx] is not None:
+                            markers_c[idx] = np.array(markers_c[idx])*213./228.
+                blah = False
 
 
 
-            self.all_images = np.zeros((960-np.abs(pre_VERT_CUT)*2, 1, 3)).astype(np.uint8)
-            for image in all_image_list:
-                print image.shape
-                self.all_images = np.concatenate((self.all_images, image), axis = 1)
+                # Get the marker points in 2D on the color image
+                u_c, v_c = ArTagLib().color_2D_markers(markers_c, self.new_K_kin)
 
-            self.all_images = self.all_images[VERT_CUT : 960 - VERT_CUT, :, :]
-
+                # Get the marker points dropped to the height of the pressure mat
+                u_c_drop, v_c_drop, markers_c_drop = ArTagLib().color_2D_markers_drop(markers_c, self.new_K_kin)
 
 
-            is_not_mult_4 = True
-            while is_not_mult_4 == True:
-                is_not_mult_4 = cv2.resize(self.all_images, (0, 0), fx=self.overall_image_scale_amount, fy=self.overall_image_scale_amount).shape[1]%4
-                self.overall_image_scale_amount+= 0.001
+                # Get the geometry for sizing the pressure mat
+                pmat_ArTagLib = ArTagLib()
+                self.pressure_im_size_required, u_c_pmat, v_c_pmat, u_p_bend, v_p_bend, half_w_half_l = \
+                    pmat_ArTagLib.p_mat_geom(markers_c_drop, self.new_K_kin, self.pressure_im_size_required, self.bed_state, half_w_half_l)
 
-            coords_from_top_left[0] -= (HORIZ_CUT)
-            coords_from_top_left[1] = 960 - pre_VERT_CUT - coords_from_top_left[1]
-            self.coords_from_top_left = (np.array(coords_from_top_left) * self.overall_image_scale_amount)
-            #print self.coords_from_top_left
-
-            self.all_images = cv2.resize(self.all_images, (0, 0), fx=self.overall_image_scale_amount, fy=self.overall_image_scale_amount)
-            self.cursor_shift = self.all_images.shape[1]/4
+                tf_corners = np.zeros((8, 2))
+                tf_corners[0:8,:] = np.copy(self.tf_corners)
 
 
-            self.all_images_clone = self.all_images.copy()
+                #COLOR
+                #if self.color is not 0:
+                color_reshaped, color_size = VizLib().color_image(self.color, self.kcam, self.new_K_kin,
+                                                                  u_c, v_c, u_c_drop, v_c_drop, u_c_pmat, v_c_pmat, camera_alpha_vert, camera_alpha_horiz)
+                color_reshaped = imutils.rotate(color_reshaped, kinect_rotate_angle)
+                color_reshaped = color_reshaped[pre_VERT_CUT+kinect_shift_up:-pre_VERT_CUT+kinect_shift_up,  HORIZ_CUT+kinect_shift_right : 540 - HORIZ_CUT+kinect_shift_right, :]
+                tf_corners[0:4, :], color_reshaped = self.transform_selected_points(color_reshaped,
+                                                                                             camera_alpha_vert,
+                                                                                             camera_alpha_horiz,
+                                                                                             kinect_rotate_angle,
+                                                                                             kinect_shift_right,
+                                                                                             kinect_shift_up, [1.0, 0],
+                                                                                             [1.0, 0],
+                                                                                             np.copy(self.tf_corners[0:4][:]))
+
+                all_image_list.append(color_reshaped)
 
 
-            #cv2.imshow('all_images', self.all_images)
-            #k = cv2.waitKey(1)
-            #cv2.waitKey(0)
+                #DEPTH
+                h = VizLib().get_new_K_kin_homography(camera_alpha_vert, camera_alpha_horiz, self.new_K_kin)
+                depth_r_orig = cv2.warpPerspective(self.depth_r, h, (self.depth_r.shape[1], self.depth_r.shape[0]))
+                depth_r_orig = imutils.rotate(depth_r_orig, kinect_rotate_angle)
+                depth_r_orig = depth_r_orig[HORIZ_CUT + kinect_shift_right: 540 - HORIZ_CUT + kinect_shift_right, pre_VERT_CUT - kinect_shift_up:-pre_VERT_CUT - kinect_shift_up]
+                depth_r_reshaped, depth_r_size, depth_r_orig = VizLib().depth_image(depth_r_orig, u_c, v_c)
+                self.depth_r_orig = depth_r_orig
+                self.depthcam_midpixel = [self.new_K_kin[1, 2] - HORIZ_CUT - kinect_shift_right, (960-self.new_K_kin[0, 2]) - pre_VERT_CUT - kinect_shift_up]
+
+                all_image_list.append(depth_r_reshaped)
 
 
-            self.estimate_pose(self.pressure, self.bed_state[0], markers_c, model, model2)
+                self.get_pc_from_depthmap(self.bed_state[0], tf_corners[2, :])
+
+                #PRESSURE
+                self.pressure = np.clip(self.pressure*4, 0, 100)
+                pressure_reshaped, pressure_size, coords_from_top_left = VizLib().pressure_image(self.pressure, self.pressure_im_size,
+                                                                           self.pressure_im_size_required, color_size,
+                                                                           u_c_drop, v_c_drop, u_c_pmat, v_c_pmat,
+                                                                           u_p_bend, v_p_bend)
+                pressure_shape = pressure_reshaped.shape
+                pressure_reshaped = cv2.resize(pressure_reshaped, None, fx=pressure_horiz_scale,
+                                              fy=pressure_vert_scale)[0:pressure_shape[0],
+                                              0:pressure_shape[1], :]
+
+                if pressure_horiz_scale < 1.0 or pressure_vert_scale < 1.0:
+                    pressure_reshaped_padded = np.zeros(pressure_shape).astype(np.uint8)
+                    pressure_reshaped_padded[0:pressure_reshaped.shape[0], 0:pressure_reshaped.shape[1], :] += pressure_reshaped
+                    pressure_reshaped = np.copy(pressure_reshaped_padded)
+
+                coords_from_top_left[0] -= coords_from_top_left[0]*(1-pressure_horiz_scale)
+                coords_from_top_left[1] += (960 - coords_from_top_left[1])*(1-pressure_vert_scale)
+
+                pressure_reshaped = pressure_reshaped[pre_VERT_CUT:-pre_VERT_CUT,  HORIZ_CUT : 540 - HORIZ_CUT, :]
+
+
+                all_image_list.append(pressure_reshaped)
+
+
+
+                self.all_images = np.zeros((960-np.abs(pre_VERT_CUT)*2, 1, 3)).astype(np.uint8)
+                for image in all_image_list:
+                    print image.shape
+                    self.all_images = np.concatenate((self.all_images, image), axis = 1)
+
+                self.all_images = self.all_images[VERT_CUT : 960 - VERT_CUT, :, :]
+
+
+
+                is_not_mult_4 = True
+                while is_not_mult_4 == True:
+                    is_not_mult_4 = cv2.resize(self.all_images, (0, 0), fx=self.overall_image_scale_amount, fy=self.overall_image_scale_amount).shape[1]%4
+                    self.overall_image_scale_amount+= 0.001
+
+                coords_from_top_left[0] -= (HORIZ_CUT)
+                coords_from_top_left[1] = 960 - pre_VERT_CUT - coords_from_top_left[1]
+                self.coords_from_top_left = (np.array(coords_from_top_left) * self.overall_image_scale_amount)
+                #print self.coords_from_top_left
+
+                self.all_images = cv2.resize(self.all_images, (0, 0), fx=self.overall_image_scale_amount, fy=self.overall_image_scale_amount)
+                self.cursor_shift = self.all_images.shape[1]/4
+
+
+                self.all_images_clone = self.all_images.copy()
+
+
+                #cv2.imshow('all_images', self.all_images)
+                #k = cv2.waitKey(1)
+                #cv2.waitKey(0)
+
+
+                self.estimate_pose(self.pressure, self.bed_state[0], markers_c, model, model2)
 
 
 if __name__ ==  "__main__":

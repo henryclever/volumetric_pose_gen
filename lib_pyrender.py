@@ -690,14 +690,14 @@ class pyRenderMesh():
 
         fig.set_size_inches(15., 15.)
         fig.tight_layout()
-        save_name = 'm_hbh_'+'{:04}'.format(self.pic_num)
+        save_name = 'f_hbh_'+'{:04}'.format(self.pic_num)
         fig.savefig('/home/henry/Pictures/CVPR2020_study/'+save_name+'.png', dpi=300)
 
         #plt.savefig('test2png.png', dpi=100)
 
         self.pic_num += 1
         #plt.show()
-        if self.pic_num == 60:
+        if self.pic_num == 20:
             print "DONE"
             time.sleep(1000000)
         print "got here"

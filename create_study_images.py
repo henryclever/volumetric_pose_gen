@@ -63,12 +63,12 @@ if __name__ == '__main__':
     import lib_pyrender as libPyRender
     pyRender = libPyRender.pyRenderMesh()
 
-    gender = "m"
+    gender = "f"
     posture = "lay"
     num_data = 2000
     stiffness = "none"
 
-    resting_pose_data_list = np.load("/home/henry/data/resting_poses/resting_pose_roll0_plo_hbh_m_lay_set3_560_of_800_none_stiff_fix.npy", allow_pickle = True)
+    resting_pose_data_list = np.load("/home/henry/data/resting_poses/resting_pose_roll0_plo_hbh_f_lay_set2_1769_of_2601_none_stiff_fix.npy", allow_pickle = True)
     model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_'+gender+'_lbs_10_207_0_v1.0.0.pkl'
     m = load_model(model_path)
 
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     #resting_pose_data_list = np.load("/home/henry/data/resting_poses/resting_pose_" + gender +"_"+posture+"_" + str(num_data) + "_"+stiffness+"_stiff.npy")
     p_mat_list = []
 
-    for resting_pose_data in resting_pose_data_list:
+    for resting_pose_data in resting_pose_data_list[200:]:
 
         pF = pyFlex()
 
