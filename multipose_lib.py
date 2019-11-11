@@ -257,7 +257,8 @@ class VizLib():
             return np.concatenate((current, addition), axis = 0)
 
     def get_new_K_kin_homography(self, alpha_vert, alpha_horiz, new_K_kin, flip_vert = 1):
-
+        #alpha_vert = 0.8
+        #print alpha_vert, alpha_horiz, 'ALPHAs'
 
         p00 = [0, 0]
         p10 = [960, 0]
@@ -272,6 +273,8 @@ class VizLib():
         p10n = [960-(alpha_vert - 1) * 480, 270*(1 - alpha_horiz)*flip_vert]
         p01n = [(1 - alpha_vert) * 480, 540 - 270*(alpha_horiz - 1)*flip_vert]
         p11n = [(1 + alpha_vert) * 480, 540 + 270*(alpha_horiz - 1)*flip_vert]
+
+        #print p00n, p10n, p01n, p11n, 'homography points new'
 
         new_horiz_cam_center = new_K_kin[1, 2] + p00n[1]
         #print new_K_kin, new_horiz_cam_center, p00n
@@ -319,6 +322,7 @@ class VizLib():
         x_horiz, _, _, _  = np.linalg.lstsq(A_2nx9, np.array([0., 0., 0., 0., 0., 0., 0., 0., 1.]))
 
         #x = np.matmul(x_vert.reshape(3,3), x_horiz.reshape(3,3))
+        #print x_vert.reshape(3,3), "HOMOGRAPHY"
 
         return x_vert.reshape(3,3)
 
@@ -589,7 +593,7 @@ class VizLib():
             pressure_reshaped[int(low_vert) + pressure_im_size_required[1]-10:int(low_vert) + pressure_im_size_required[1]+1, head_bend_loc-pressure_im_size_required[0]*HEAD_BEND_TAXEL/64-1:head_bend_loc-pressure_im_size_required[0]*HEAD_BEND_TAXEL/64+1, :] = 255
 
             coords_from_top_left = [low_vert, head_bend_loc-pressure_im_size_required[0]*HEAD_BEND_TAXEL/64]
-
+            print "CORNER VERTS", int(low_vert), 960 - (head_bend_loc - pressure_im_size_required[0] * HEAD_BEND_TAXEL / 64)
 
 
             #Add in some markings for where the flat bed would be: primary bend of the legs

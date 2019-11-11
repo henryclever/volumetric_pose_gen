@@ -284,13 +284,13 @@ class CNN(nn.Module):
         self.dtype = CTRL_PNL['dtype']
 
         #print(torch.cuda.max_memory_allocated(), 'conv0', images.size())
-        try:
+        if CTRL_PNL['first_pass'] == False:
             x = self.meshDepthLib.bounds
             #print blah
             #self.GPU = False
             #self.dtype = torch.FloatTensor
 
-        except:
+        else:
             if CTRL_PNL['aws'] == True:
                 self.GPU = True
                 self.dtype = torch.cuda.FloatTensor
@@ -344,7 +344,7 @@ class CNN(nn.Module):
 
 
         # weight the outputs, which are already centered around 0. First make them uniformly smaller than the direct output, which is too large.
-        if CTRL_PNL['full_body_rot'] == True:
+        if CTRL_PNL['adjust_ang_from_est'] == True:
             scores = torch.mul(scores.clone(), 0.01)
         else:
             scores = torch.mul(scores.clone(), 0.01)
@@ -354,7 +354,7 @@ class CNN(nn.Module):
         if self.GPU == True:
             output_norm = 10*[6.0] + [0.91, 1.98, 0.15] + list(torch.abs(self.meshDepthLib.bounds.view(72,2)[:, 1] - self.meshDepthLib.bounds.view(72,2)[:, 0]).cpu().numpy())
         else:
-            output_norm = 10 * [6.0] + [0.91, 1.98, 0.15] + list(torch.abs(self.meshDepthLib.bounds.view(72, 2)[:, 1] - self.meshDepthLib.bounds.view(72, 2)[:, 0]).numpy())
+            output_norm = 10*[6.0] + [0.91, 1.98, 0.15] + list(torch.abs(self.meshDepthLib.bounds.view(72, 2)[:, 1] - self.meshDepthLib.bounds.view(72, 2)[:, 0]).numpy())
         for i in range(85):
             scores[:, i] = torch.mul(scores[:, i].clone(), output_norm[i])
 
@@ -365,10 +365,14 @@ class CNN(nn.Module):
             scores[:, 10] = torch.add(scores[:, 10].clone(), 0.6).detach()
             scores[:, 11] = torch.add(scores[:, 11].clone(), 1.2).detach()
             scores[:, 12] = torch.add(scores[:, 12].clone(), 0.1).detach()
+        elif CTRL_PNL['adjust_ang_from_est'] == True:
+            pass
         else:
             scores[:, 10] = torch.add(scores[:, 10].clone(), 0.6)
             scores[:, 11] = torch.add(scores[:, 11].clone(), 1.2)
             scores[:, 12] = torch.add(scores[:, 12].clone(), 0.1)
+
+        #scores[:, 12] = torch.add(scores[:, 12].clone(), 0.06)
 
         if CTRL_PNL['full_body_rot'] == True:
 
@@ -393,16 +397,18 @@ class CNN(nn.Module):
         else:
             OSA = 0
 
+
+
+
         #print scores[0, 0:10]
         if CTRL_PNL['adjust_ang_from_est'] == True:
             scores[:, 0:10] =  OUTPUT_EST_DICT['betas'] + scores[:, 0:10].clone()
-            scores[:, 10:13] = OUTPUT_EST_DICT['root_shift']
+            scores[:, 10:13] = OUTPUT_EST_DICT['root_shift'] + scores[:, 10:13].clone()
             if CTRL_PNL['full_body_rot'] == True:
                 scores[:, 22:91] = scores[:, 22:91].clone() + OUTPUT_EST_DICT['angles'][:, 3:72]
             else:
                 scores[:, 13:85] = scores[:, 13:85].clone() + OUTPUT_EST_DICT['angles']
             #scores[:, 13:85] = OUTPUT_EST_DICT['angles']
-
 
 
         OUTPUT_DICT['batch_betas_est'] = scores[:, 0:10].clone().data
@@ -423,7 +429,10 @@ class CNN(nn.Module):
             scores[:, 0:10] = scores[:, 0:10].tanh()
             scores[:, 0:10] *= 3.
 
+        #print self.meshDepthLib.bounds
+
         test_ground_truth = False #can only use True when the dataset is entirely synthetic AND when we use anglesDC
+        #is_training = True
 
         if test_ground_truth == False or is_training == False:
             # make sure the estimated betas are reasonable.
@@ -431,10 +440,10 @@ class CNN(nn.Module):
             betas_est = scores[:, 0:10].clone()#.detach() #make sure to detach so the gradient flow of joints doesn't corrupt the betas
             root_shift_est = scores[:, 10:13].clone()
 
-            if CTRL_PNL['full_body_rot'] == True:
-                if CTRL_PNL['loss_vector_type'] == 'anglesEU':
-                    self.meshDepthLib.bounds[0:3, 0] = torch.Tensor(np.array(-2*np.pi))
-                    self.meshDepthLib.bounds[0:3, 1] = torch.Tensor(np.array(2*np.pi))
+            #if CTRL_PNL['full_body_rot'] == True:
+            #    if CTRL_PNL['loss_vector_type'] == 'anglesEU':
+            #        self.meshDepthLib.bounds[0:3, 0] = torch.Tensor(np.array(-2*np.pi))
+            #        self.meshDepthLib.bounds[0:3, 1] = torch.Tensor(np.array(2*np.pi))
 
 
 
@@ -444,6 +453,9 @@ class CNN(nn.Module):
             scores[:, 13+OSA:85+OSA] = scores[:, 13+OSA:85+OSA].tanh()
             scores[:, 13+OSA:85+OSA] /= (2. / torch.abs(self.meshDepthLib.bounds[0:72, 0] - self.meshDepthLib.bounds[0:72, 1]))
             scores[:, 13+OSA:85+OSA] += torch.mean(self.meshDepthLib.bounds[0:72, 0:2], dim=1)
+
+
+            #print scores[:, 13+OSA:85+OSA]
 
 
             if self.loss_vector_type == 'anglesDC':
@@ -461,30 +473,18 @@ class CNN(nn.Module):
             scores[:, 13+OSA:85+OSA] = angles_gt.clone()
             root_shift_est = root_shift
 
+
             if self.loss_vector_type == 'anglesDC':
 
                 #normalize for tan activation function
-                scores[:, 13+OSA:85+OSA] -= torch.mean(self.meshDepthLib.bounds[0:72,0:2], dim = 1)
-                scores[:, 13+OSA:85+OSA] *= (2. / torch.abs(self.meshDepthLib.bounds[0:72, 0] - self.meshDepthLib.bounds[0:72, 1]))
-                scores[:, 13+OSA:85+OSA] = scores[:, 13+OSA:85+OSA].tanh()
-                scores[:, 13+OSA:85+OSA] /= (2. / torch.abs(self.meshDepthLib.bounds[0:72, 0] - self.meshDepthLib.bounds[0:72, 1]))
-                scores[:, 13+OSA:85+OSA] += torch.mean(self.meshDepthLib.bounds[0:72,0:2], dim = 1)
+                #scores[:, 13+OSA:85+OSA] -= torch.mean(self.meshDepthLib.bounds[0:72,0:2], dim = 1)
+                #scores[:, 13+OSA:85+OSA] *= (2. / torch.abs(self.meshDepthLib.bounds[0:72, 0] - self.meshDepthLib.bounds[0:72, 1]))
+                #scores[:, 13+OSA:85+OSA] = scores[:, 13+OSA:85+OSA].tanh()
+                #scores[:, 13+OSA:85+OSA] /= (2. / torch.abs(self.meshDepthLib.bounds[0:72, 0] - self.meshDepthLib.bounds[0:72, 1]))
+                #scores[:, 13+OSA:85+OSA] += torch.mean(self.meshDepthLib.bounds[0:72,0:2], dim = 1)
 
 
                 Rs_est = KinematicsLib().batch_rodrigues(scores[:, 13+OSA:85+OSA].view(-1, 24, 3).clone()).view(-1, 24, 3, 3)
-            elif self.loss_vector_type == 'anglesEU':
-
-                #convert angles DC to EU
-                scores[:, 13+OSA:85+OSA] = KinematicsLib().batch_euler_angles_from_dir_cos_angles(scores[:, 13+OSA:85+OSA].view(-1, 24, 3).clone()).contiguous().view(-1, 72)
-
-                #normalize for tan activation function
-                scores[:, 13+OSA:85+OSA] -= torch.mean(self.meshDepthLib.bounds[0:72,0:2], dim = 1)
-                scores[:, 13+OSA:85+OSA] *= (2. / torch.abs(self.meshDepthLib.bounds[0:72, 0] - self.meshDepthLib.bounds[0:72, 1]))
-                scores[:, 13+OSA:85+OSA] = scores[:, 13+OSA:85+OSA].tanh()
-                scores[:, 13+OSA:85+OSA] /= (2. / torch.abs(self.meshDepthLib.bounds[0:72, 0] - self.meshDepthLib.bounds[0:72, 1]))
-                scores[:, 13+OSA:85+OSA] += torch.mean(self.meshDepthLib.bounds[0:72,0:2], dim = 1)
-
-                Rs_est = KinematicsLib().batch_euler_to_R(scores[:, 13+OSA:85+OSA].view(-1, 24, 3).clone(), self.meshDepthLib.zeros_cartesian, self.meshDepthLib.ones_cartesian).view(-1, 24, 3, 3)
 
         #print Rs_est[0, :]
 
@@ -609,15 +609,13 @@ class CNN(nn.Module):
 
             verts = v_homo[:, :, :3, 0] - J_est[:, 0:1, :] + root_shift_est.unsqueeze(1)
 
-
-            verts_offset = torch.Tensor(verts.clone().detach().cpu().numpy()).type(self.dtype)
-
             OUTPUT_DICT['batch_mdm_est'] = None
             OUTPUT_DICT['batch_cm_est'] = None
 
 
-        if CTRL_PNL['dropout'] == True:
-            OUTPUT_DICT['verts'] = verts.clone().detach().cpu().numpy()
+        #print verts[0:10], 'VERTS EST INIT'
+        #if CTRL_PNL['dropout'] == True:
+        OUTPUT_DICT['verts'] = verts.clone().detach().cpu().numpy()
 
         targets_est_detached = torch.Tensor(targets_est.clone().detach().cpu().numpy()).type(self.dtype)
         synth_joint_addressed = [3, 15, 4, 5, 7, 8, 18, 19, 20, 21]

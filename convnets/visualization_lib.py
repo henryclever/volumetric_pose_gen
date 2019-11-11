@@ -361,18 +361,18 @@ class VisualizationLib():
             ax3 = fig.add_subplot(1, num_subplots, 3)
             ax3.set_xlim([-10.0*p_map_ext_mult, 37.0*p_map_ext_mult])
             ax3.set_ylim([74.0*p_map_ext_mult, -10.0*p_map_ext_mult])
-            ax3.set_facecolor('cyan')
+            #ax3.set_facecolor('cyan')
             ax3.imshow(p_map_ext, interpolation='nearest', cmap=
-            plt.cm.jet, origin='upper', vmin=0, vmax=100)
+            plt.cm.viridis, origin='upper', vmin=0, vmax=100)
             ax3.set_title('Training Sample \n Ground Truth \n Mesh Penetration')
 
         if p_map_ext2 is not None:
             ax4 = fig.add_subplot(1, num_subplots, 4)
             ax4.set_xlim([-10.0*p_map_ext2_mult, 37.0*p_map_ext2_mult])
             ax4.set_ylim([74.0*p_map_ext2_mult, -10.0*p_map_ext2_mult])
-            ax4.set_facecolor('cyan')
+            #ax4.set_facecolor('cyan')
             ax4.imshow(p_map_ext2, interpolation='nearest', cmap=
-            plt.cm.jet, origin='upper', vmin=0, vmax=100)
+            plt.cm.viridis, origin='upper', vmin=0, vmax=100)
             ax4.set_title('Training Sample \n Est. Current \n Mesh Penetration')
             #ax4.set_title('Validation Sample \n Pressure Mat, \n Targets and Estimates')
 

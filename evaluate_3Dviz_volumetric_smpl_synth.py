@@ -79,6 +79,7 @@ LOW_TAXEL_THRESH_Y = 0
 HIGH_TAXEL_THRESH_X = (NUMOFTAXELS_X - 1)
 HIGH_TAXEL_THRESH_Y = (NUMOFTAXELS_Y - 1)
 TEST_SUBJECT = 9
+CAM_BED_DIST = 1.66
 DEVICE = 0
 
 torch.set_num_threads(1)
@@ -94,6 +95,13 @@ else:
     dtype = torch.FloatTensor
     print '############################## USING CPU #################################'
 
+
+TESTING_FILENAME = "test_roll0_sl_f_lay_set1both_500"
+GENDER = "f"
+#NETWORK_1 = "1.0rtojtdpth_tnh_htwt_calnoise"
+NETWORK_1 = "1.0rtojtdpth_tnhFIXN_htwt_calnoise"
+#NETWORK_2 = "0.5rtojtdpth_depthestin_angleadj_tnh_htwt_calnoise"
+NETWORK_2 = "1.0rtojtdpth_depthestin_angleadj_tnhFIXN_htwt_calnoise"
 
 class PhysicalTrainer():
     '''Gets the dictionary of pressure maps from the training database,
@@ -140,6 +148,9 @@ class PhysicalTrainer():
         self.CTRL_PNL['L2_contact'] = True
         self.CTRL_PNL['pmat_mult'] = int(5)
         self.CTRL_PNL['cal_noise'] = False
+        self.CTRL_PNL['double_network_size'] = False
+        self.CTRL_PNL['first_pass'] = True
+
 
         self.weight_joints = 1.0#self.opt.j_d_ratio*2
         self.weight_depth_planes = (1-self.opt.j_d_ratio)#*2
@@ -412,12 +423,11 @@ class PhysicalTrainer():
 
 
 
-
     def init_convnet_train(self):
 
         print self.train_x_tensor.size(), self.train_y_tensor.size()
-        self.train_x_tensor = self.train_x_tensor[476:, :, :, :]
-        self.train_y_tensor = self.train_y_tensor[476:, :]
+        #self.train_x_tensor = self.train_x_tensor[476:, :, :, :]
+        #self.train_y_tensor = self.train_y_tensor[476:, :]
         print self.train_x_tensor.size(), self.train_y_tensor.size()
 
         #self.train_x_tensor = self.train_x_tensor.unsqueeze(1)
@@ -444,24 +454,13 @@ class PhysicalTrainer():
             #self.model = convnet.CNN(fc_output_size, self.CTRL_PNL['loss_vector_type'], self.CTRL_PNL['batch_size'],
             #                         verts_list = self.verts_list, filepath=self.CTRL_PNL['filepath_prefix'], in_channels=self.CTRL_PNL['num_input_channels'])
 
+            #self.model = torch.load("/media/henry/multimodal_data_2/data/convnets/planesreg/184K/convnet_anglesDC_synth_184000_128b_x5pmult_1.0rtojtdpth_tnhFIX_htwt_calnoise_100e_00002lr.pt", map_location='cpu')
 
-            self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg_correction/112K'
-                                    '/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_depthestin_angleadj_alltanh_l2cnt_100e_200e_00001lr.pt', map_location='cpu')
-            #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/112K'
-            #                        '/convnet_anglesDC_synth_112000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_100e_00001lr.pt', map_location='cpu')
-
-            #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_alltanh_l2cnt_125e_00001lr.pt')
-            #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_l2cnt_calnoise_150e_00001lr.pt')
-            #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg/convnet_anglesDC_synth_32000_128b_x1pmult_0.5rtojtdpth_alltanh_l2cnt_calnoise_125e_00001lr.pt')
-
-            #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+"/data/convnets/planesreg_correction/DC_L2depth/convnet_anglesDC_synth_32000_128b_x5pmult_0.5rtojtdpth_depthestin_angleadj_alltanh_l2cnt_125e_200e_00001lr.pt", map_location={'cuda:7':'cuda:'+str(DEVICE)})
-            #self.model = torch.load(self.CTRL_PNL['filepath_prefix']+'data/convnets/planesreg_correction/'
-            #                            'convnet_anglesEU_synth_s9_3xreal_128b_1.0rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr_betasreg.pt')
-
-            #self.model = convnet.CNN(self.mat_size, fc_output_size, hidden_dim, kernel_size, self.CTRL_PNL['loss_vector_type'], self.CTRL_PNL['batch_size'], filepath=filepath_prefix)
-            #self.model = torch.load('/home/ubuntu/Autobed_OFFICIAL_Trials' + '/subject_' + str(self.opt.leave_out) + '/convnets/convnet_9to18_'+str(self.CTRL_PNL['loss_vector_type'])+'_sTrue_128b_200e_' + str(self.opt.leave_out) + '.pt', map_location=lambda storage, loc: storage)
-
-
+            #self.model = torch.load("/media/henry/multimodal_data_2/data/convnets/planesreg/184K/convnet_anglesDC_synth_184K_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt", map_location='cpu')
+            #self.model2 = torch.load("/media/henry/multimodal_data_2/data/convnets/planesreg_correction/184K/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt", map_location='cpu')
+            self.model = torch.load("/media/henry/multimodal_data_2/data/convnets/planesreg/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt", map_location='cpu')
+            self.model2 = torch.load("/media/henry/multimodal_data_2/data/convnets/planesreg_correction/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt", map_location='cpu')
+            #self.model2 = None
         pp = 0
         for p in list(self.model.parameters()):
             nn = 1
@@ -479,33 +478,14 @@ class PhysicalTrainer():
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.00002, weight_decay=0.0005) #start with .00005
 
         # train the model one epoch at a time
-        for epoch in range(1, self.CTRL_PNL['num_epochs'] + 1):
+        for epoch in range(1):#, self.CTRL_PNL['num_epochs'] + 1):
             self.t1 = time.time()
-            self.train_convnet(epoch)
-
-            try:
-                self.t2 = time.time() - self.t1
-            except:
-                self.t2 = 0
-            print 'Time taken by epoch',epoch,':',self.t2,' seconds'
-
-            if epoch == 25 or epoch == 50 or epoch == 75 or epoch == 100 or epoch == 125 or epoch == 150 or epoch == 175 or epoch == 200:
-                torch.save(self.model, filepath_prefix+'synth/convnet'+self.save_name+'.pt')#+'_'+str(epoch)+'e.pt')
-                pkl.dump(self.train_val_losses,open(filepath_prefix+'synth/convnet_losses'+self.save_name+'_'+str(epoch)+'e.p', 'wb'))
+            #self.val_convnet_special(epoch)
+            self.val_convnet_general(epoch)
 
 
-        print 'done with epochs, now evaluating'
-        #self.validate_convnet('test')
-
-        print self.train_val_losses, 'trainval'
-        # Save the model (architecture and weights)
-
-
-
-
-    def train_convnet(self, epoch):
-        GENDER = "m"
-        if GENDER == "m":
+    def val_convnet_special(self, epoch):
+        if GENDER == "f":
             model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
         else:
             model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_f_lbs_10_207_0_v1.0.0.pkl'
@@ -559,6 +539,7 @@ class PhysicalTrainer():
                         UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model = self.model, CTRL_PNL=self.CTRL_PNL)
                     #print torch.cuda.max_memory_allocated(), '1post train'
 
+                    self.CTRL_PNL['first_pass'] = False
 
                     self.CTRL_PNL['output_only_prev_est'] = False
                     scores, INPUT_DICT, OUTPUT_DICT = \
@@ -619,6 +600,7 @@ class PhysicalTrainer():
                         elif smpl_model == 'network_output2':
                             root_shift = root_shift_est
 
+                        print root_shift, 'root shift'
                         # get SMPL mesh
                         smpl_verts = (self.m.r - self.m.J_transformed[0, :]) + [root_shift[1] - 0.286 + 0.15,
                                                                                 root_shift[0] - 0.286,
@@ -627,14 +609,16 @@ class PhysicalTrainer():
 
                         smpl_verts_both.append(smpl_verts)
 
-                    camera_point = [1.09898028, 0.46441343, -1.53]
+                    camera_point = [1.09898028, 0.46441343, -CAM_BED_DIST]
 
                     bedangle=0
 
                     print INPUT_DICT['batch_images'].shape
 
                     # render in 3D pyrender with pressure mat
-                    viz_type = "leg_correction"#"arm_penetration"
+                    viz_type = "leg_correction"
+                    #viz_type = "arm_penetration"
+
 
                     ims_to_display = []
                     if viz_type == "arm_penetration":
@@ -650,17 +634,232 @@ class PhysicalTrainer():
                         ims_to_display.append(INPUT_DICT['batch_mdm'].data.numpy().reshape(64, 27)*-1) #Q-, GT
                         segment_limbs = True
 
+                    print np.shape(ims_to_display[-1])
 
                     self.pyRender.render_mesh_bed_special(smpl_verts_both, smpl_faces, bedangle,
                                                               pmats=ims_to_display, viz_type=viz_type,
                                                               segment_limbs=segment_limbs)
 
 
-                    self.pyRender.render_only_human_gt(self.m)
-
+                    #self.pyRender.render_only_human_gt(self.m)
 
                     time.sleep(300)
 
+    def val_convnet_general(self, epoch):
+
+        self.gender = "f"
+        if self.gender == "m":
+            model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
+        else:
+            model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_f_lbs_10_207_0_v1.0.0.pkl'
+
+        self.m = load_model(model_path)
+
+
+        self.pyRender = libPyRender.pyRenderMesh(render = False)
+
+        '''
+        Train the model for one epoch.
+        '''
+        # Some models use slightly different forward passes and train and test
+        # time (e.g., any model with Dropout). This puts the model in train mode
+        # (as opposed to eval mode) so it knows which one to use.
+        self.model.eval()#train()
+        self.criterion = nn.L1Loss()
+        self.criterion2 = nn.MSELoss()
+
+        RESULTS_DICT = {}
+        RESULTS_DICT['j_err'] = []
+        RESULTS_DICT['betas'] = []
+        RESULTS_DICT['dir_v_err'] = []
+        RESULTS_DICT['dir_v_limb_err'] = []
+        RESULTS_DICT['v_to_gt_err'] = []
+        RESULTS_DICT['v_limb_to_gt_err'] = []
+        RESULTS_DICT['gt_to_v_err'] = []
+        RESULTS_DICT['precision'] = []
+        RESULTS_DICT['recall'] = []
+        RESULTS_DICT['overlap_d_err'] = []
+        RESULTS_DICT['all_d_err'] = []
+        init_time = time.time()
+
+        with torch.autograd.set_detect_anomaly(True):
+
+            # This will loop a total = training_images/batch_size times
+            for batch_idx, batch in enumerate(self.train_loader):
+
+                batch1 = batch[1].clone()
+
+                betas_gt = torch.mean(batch[1][:, 72:82], dim = 0).numpy()
+                angles_gt = torch.mean(batch[1][:, 82:154], dim = 0).numpy()
+                root_shift_est_gt = torch.mean(batch[1][:, 154:157], dim = 0).numpy()
+
+                NUMOFOUTPUTDIMS = 3
+                NUMOFOUTPUTNODES_TRAIN = 24
+                self.output_size_train = (NUMOFOUTPUTNODES_TRAIN, NUMOFOUTPUTDIMS)
+
+                self.CTRL_PNL['adjust_ang_from_est'] = False
+                self.CTRL_PNL['depth_map_labels'] = True
+                print batch[0].size(), "batch 0 shape"
+                scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch, False, self.model,
+                                                                                            self.CTRL_PNL)
+
+                mdm_est_pos = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1) / 16.69545796387731
+                mdm_est_neg = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1) / 45.08513083167194
+                mdm_est_pos[mdm_est_pos < 0] = 0
+                mdm_est_neg[mdm_est_neg > 0] = 0
+                mdm_est_neg *= -1
+                cm_est = OUTPUT_DICT['batch_cm_est'].clone().unsqueeze(1) * 100 / 43.55800622930469
+
+                # 1. / 16.69545796387731,  # pos est depth
+                # 1. / 45.08513083167194,  # neg est depth
+                # 1. / 43.55800622930469,  # cm est
+
+                sc_sample1 = OUTPUT_DICT['batch_targets_est'].clone()
+                sc_sample1 = sc_sample1[0, :].squeeze() / 1000
+                sc_sample1 = sc_sample1.view(self.output_size_train)
+                # print sc_sample1
+
+                if self.model2 is not None:
+                    print "Using model 2"
+                    batch_cor = []
+                    batch_cor.append(torch.cat((batch[0][:, 0:1, :, :],
+                                                mdm_est_pos.type(torch.FloatTensor),
+                                                mdm_est_neg.type(torch.FloatTensor),
+                                                cm_est.type(torch.FloatTensor),
+                                                batch[0][:, 1:, :, :]), dim=1))
+
+
+                    if self.CTRL_PNL['full_body_rot'] == False:
+                        batch_cor.append(torch.cat((batch1,
+                                                    OUTPUT_DICT['batch_betas_est'].cpu(),
+                                                    OUTPUT_DICT['batch_angles_est'].cpu(),
+                                                    OUTPUT_DICT['batch_root_xyz_est'].cpu()), dim=1))
+                    elif self.CTRL_PNL['full_body_rot'] == True:
+                        batch_cor.append(torch.cat((batch1,
+                                                    OUTPUT_DICT['batch_betas_est'].cpu(),
+                                                    OUTPUT_DICT['batch_angles_est'].cpu(),
+                                                    OUTPUT_DICT['batch_root_xyz_est'].cpu(),
+                                                    OUTPUT_DICT['batch_root_atan2_est'].cpu()), dim=1))
+
+                    self.CTRL_PNL['adjust_ang_from_est'] = True
+                    self.CTRL_PNL['depth_map_labels'] = False
+                    scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch_cor, False,
+                                                                                                self.model2,
+                                                                                                self.CTRL_PNL)
+
+                # print betas_est, root_shift_est, angles_est
+                if self.CTRL_PNL['dropout'] == True:
+                    #print OUTPUT_DICT['verts'].shape
+                    smpl_verts = np.mean(OUTPUT_DICT['verts'], axis=0)
+                    dropout_variance = np.std(OUTPUT_DICT['verts'], axis=0)
+                    dropout_variance = np.linalg.norm(dropout_variance, axis=1)
+                else:
+                    smpl_verts = OUTPUT_DICT['verts'][0, :, :]
+                    dropout_variance = None
+
+                smpl_verts = np.concatenate((smpl_verts[:, 1:2] - 0.286 + 0.0143, smpl_verts[:, 0:1] - 0.286 + 0.0143,
+                                             - smpl_verts[:, 2:3]), axis=1)
+
+                smpl_faces = np.array(self.m.f)
+
+
+                q = OUTPUT_DICT['batch_mdm_est'].data.numpy().reshape(OUTPUT_DICT['batch_mdm_est'].size()[0], 64, 27) * -1
+                q = np.mean(q, axis=0)
+
+                camera_point = [1.09898028, 0.46441343, -CAM_BED_DIST]
+
+                bedangle = 0.0
+                # print smpl_verts
+
+                RESULTS_DICT['betas'].append(OUTPUT_DICT['batch_betas_est_post_clip'].cpu().numpy()[0])
+
+                viz_type = "3D"
+
+                if viz_type == "2D":
+                    from visualization_lib import VisualizationLib
+                    if self.model2 is not None:
+                        self.im_sample = INPUT_DICT['batch_images'][0, 4:,:].squeeze() * 20.  # normalizing_std_constants[4]*5.  #pmat
+                    else:
+                        self.im_sample = INPUT_DICT['batch_images'][0, 1:,:].squeeze() * 20.  # normalizing_std_constants[4]*5.  #pmat
+                    self.im_sample_ext = INPUT_DICT['batch_images'][0, 0:,:].squeeze() * 20.  # normalizing_std_constants[0]  #pmat contact
+                    # self.im_sample_ext2 = INPUT_DICT['batch_images'][im_display_idx, 2:, :].squeeze()*20.#normalizing_std_constants[4]  #sobel
+                    self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().unsqueeze(0) * -1  # est depth output
+
+                    # print scores[0, 10:16], 'scores of body rot'
+
+                    # print self.im_sample.size(), self.im_sample_ext.size(), self.im_sample_ext2.size(), self.im_sample_ext3.size()
+
+                    # self.publish_depth_marker_array(self.im_sample_ext3)
+
+                    self.tar_sample = INPUT_DICT['batch_targets']
+                    self.tar_sample = self.tar_sample[0, :].squeeze() / 1000
+                    sc_sample = OUTPUT_DICT['batch_targets_est'].clone()
+                    sc_sample = sc_sample[0, :].squeeze() / 1000
+
+                    sc_sample = sc_sample.view(self.output_size_train)
+
+                    VisualizationLib().visualize_pressure_map(self.im_sample, sc_sample1, sc_sample,
+                                                              # self.im_sample_ext, None, None,
+                                                              self.im_sample_ext3, None, None,
+                                                              # , self.tar_sample_val, self.sc_sample_val,
+                                                              block=False)
+
+
+                elif viz_type == "3D":
+                    pmat = batch[0][0, 1, :, :].clone().numpy()*25.50538629767412
+                    #print pmat.shape
+
+                    for beta in range(betas_gt.shape[0]):
+                        self.m.betas[beta] = betas_gt[beta]
+                    for angle in range(angles_gt.shape[0]):
+                        self.m.pose[angle] = angles_gt[angle]
+
+                    smpl_verts_gt = np.array(self.m.r)
+                    for s in range(root_shift_est_gt.shape[0]):
+                        smpl_verts_gt[:, s] += (root_shift_est_gt[s] - float(self.m.J_transformed[0, s]))
+
+                    smpl_verts_gt = np.concatenate(
+                        (smpl_verts_gt[:, 1:2] - 0.286 + 0.0143, smpl_verts_gt[:, 0:1] - 0.286 + 0.0143,
+                          - smpl_verts_gt[:, 2:3]), axis=1)
+
+
+
+                    joint_cart_gt = np.array(self.m.J_transformed).reshape(24, 3)
+                    for s in range(root_shift_est_gt.shape[0]):
+                        joint_cart_gt[:, s] += (root_shift_est_gt[s] - float(self.m.J_transformed[0, s]))
+
+                    #print joint_cart_gt, 'gt'
+
+                    sc_sample = OUTPUT_DICT['batch_targets_est'].clone()
+                    sc_sample = (sc_sample[0, :].squeeze().numpy() / 1000).reshape(24, 3)
+
+                    #print sc_sample, 'estimate'
+                    joint_error = np.linalg.norm(joint_cart_gt-sc_sample, axis = 1)
+                    #print joint_error
+                    RESULTS_DICT['j_err'].append(joint_error)
+
+
+                    camera_point = [1.09898028, 0.46441343, -CAM_BED_DIST]
+
+                    # render everything
+                    RESULTS_DICT = self.pyRender.render_mesh_pc_bed_pyrender_everything_synth(smpl_verts, smpl_faces,
+                                                                            camera_point, bedangle, RESULTS_DICT,
+                                                                            smpl_verts_gt=smpl_verts_gt, pmat=pmat,
+                                                                            markers=None,
+                                                                            dropout_variance=dropout_variance)
+
+                #time.sleep(300)
+
+                #print RESULTS_DICT['j_err']
+                print np.mean(np.array(RESULTS_DICT['j_err']), axis = 0)
+                #print RESULTS_DICT['precision']
+                print np.mean(RESULTS_DICT['precision'])
+                print time.time() - init_time
+               # break
+
+        #save here
+
+        pkl.dump(RESULTS_DICT, open('/media/henry/multimodal_data_2/data/final_results/results_synth_'+TESTING_FILENAME+'_'+NETWORK_2+'.p', 'wb'))
 
 if __name__ == "__main__":
     #Initialize trainer with a training database file
@@ -723,12 +922,10 @@ if __name__ == "__main__":
         filepath_prefix = '/home/ubuntu/data/'
         filepath_suffix = ''
     else:
-        filepath_prefix = '/home/henry/data/'
-        #filepath_prefix = '/media/henry/multimodal_data_1/data/'
-        filepath_suffix = ''
+        #filepath_prefix =
+        filepath_prefix = '/media/henry/multimodal_data_2/data/'
+        #filepath_suffix = ''
 
-    filepath_suffix = '_output0p5_112k_100e_alltanh'
-    filepath_suffix = ''
 
     training_database_file_f = []
     training_database_file_m = []
@@ -736,61 +933,15 @@ if __name__ == "__main__":
     test_database_file_m = [] #141 total training loss at epoch 9
 
 
-
-    if opt.quick_test == True:
-        #training_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_f_lay_1000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/test_roll0_plo_hbh_m_lay_set3_500_none_stiff_fix_new'+filepath_suffix+'.p')
-        test_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/test_roll0_plo_hbh_m_lay_set3_500_none_stiff_fix_new'+filepath_suffix+'.p')
-        #training_database_file_f.append(filepath_prefix+'synth/random_test/test_roll0_plo_f_lay_set14_1500_none_stiff'+filepath_suffix+'.p')
-        #training_database_file_m.append(filepath_prefix+'synth/random_test/test_roll0_xl_f_lay_set1both_500_none_stiff'+filepath_suffix+'.p')
+    test_database_file_f.append('/home/henry/data/synth/random/test_roll0_plo_f_lay_1000_none_stiff_output0p5_112k_100e_alltanh.p')
 
 
-        #test_database_file_m.append(filepath_prefix+'synth/random_test/test_roll0_m_lay_set14_1500_none_stiff'+filepath_suffix+'.p')
-        #test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_f_lay_1000_none_stiff'+filepath_suffix+'.p')
-        #training_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_m_lay_1000_none_stiff'+filepath_suffix+'.p')
-        #training_database_file_f.append(filepath_prefix+'synth/random3/train_rollpi_f_lay_set18to22_10000_none_stiff'+filepath_suffix+'.p')
-        #test_database_file_f.append(filepath_prefix+'synth/random3/train_rollpi_f_lay_set18to22_10000_none_stiff'+filepath_suffix+'.p')
+    #training_database_file_f.append(filepath_prefix+'synth/random3_fix/test_roll0_f_lay_set14_1500.p') #were actually testing this one
+
+    if GENDER == "f":
+        training_database_file_f.append(filepath_prefix+'synth/random3_supp_fix/'+TESTING_FILENAME+'.p') #were actually testing this one
     else:
-        training_database_file_f.append(filepath_prefix+'synth/random3/train_roll0_f_lay_set5to7_5000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random3/train_roll0_f_lay_set10to13_8000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_m.append(filepath_prefix+'synth/random3/train_roll0_m_lay_set5to7_5000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_m.append(filepath_prefix+'synth/random3/train_roll0_m_lay_set10to13_8000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random3/train_roll0_plo_f_lay_set5to7_5000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random3/train_roll0_plo_f_lay_set10to13_8000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_m.append(filepath_prefix+'synth/random3/train_roll0_plo_m_lay_set5to7_5000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_m.append(filepath_prefix+'synth/random3/train_roll0_plo_m_lay_set10to13_8000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random3/train_rollpi_f_lay_set10to17_16000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random3/train_rollpi_f_lay_set18to22_10000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_m.append(filepath_prefix+'synth/random3/train_rollpi_m_lay_set10to17_16000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_m.append(filepath_prefix+'synth/random3/train_rollpi_m_lay_set18to22_10000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random3/train_rollpi_plo_f_lay_set10to17_16000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random3/train_rollpi_plo_f_lay_set18to22_10000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_m.append(filepath_prefix+'synth/random3/train_rollpi_plo_m_lay_set10to17_16000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_m.append(filepath_prefix+'synth/random3/train_rollpi_plo_m_lay_set18to22_10000_none_stiff'+filepath_suffix+'.p')
-        test_database_file_f.append(filepath_prefix+'synth/random3/test_roll0_f_lay_set14_1500_none_stiff'+filepath_suffix+'.p')
-        test_database_file_m.append(filepath_prefix+'synth/random3/test_roll0_m_lay_set14_1500_none_stiff'+filepath_suffix+'.p')
-        test_database_file_f.append(filepath_prefix+'synth/random3/test_roll0_plo_f_lay_set14_1500_none_stiff'+filepath_suffix+'.p')
-        test_database_file_m.append(filepath_prefix+'synth/random3/test_roll0_plo_m_lay_set14_1500_none_stiff'+filepath_suffix+'.p')
-        test_database_file_f.append(filepath_prefix+'synth/random3/test_rollpi_f_lay_set23to24_3000_none_stiff'+filepath_suffix+'.p')
-        test_database_file_m.append(filepath_prefix+'synth/random3/test_rollpi_m_lay_set23to24_3000_none_stiff'+filepath_suffix+'.p')
-        test_database_file_f.append(filepath_prefix+'synth/random3/test_rollpi_plo_f_lay_set23to24_3000_none_stiff'+filepath_suffix+'.p')
-        test_database_file_m.append(filepath_prefix+'synth/random3/test_rollpi_plo_m_lay_set23to24_3000_none_stiff'+filepath_suffix+'.p')
-
-        training_database_file_f.append(filepath_prefix+'synth/random3_supp/train_roll0_hbh_f_lay_set1to2_2000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_m.append(filepath_prefix+'synth/random3_supp/train_roll0_hbh_m_lay_set2_1875_none_stiff'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random3_supp/train_roll0_phu_f_lay_set2to4_4000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_m.append(filepath_prefix+'synth/random3_supp/train_roll0_phu_m_lay_set2to4_4000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random3_supp/train_roll0_sl_f_lay_set2both_4000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_m.append(filepath_prefix+'synth/random3_supp/train_roll0_sl_m_lay_set2both_4000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random3_supp/train_roll0_xl_f_lay_set2both_4000_none_stiff'+filepath_suffix+'.p')
-        training_database_file_m.append(filepath_prefix+'synth/random3_supp/train_roll0_xl_m_lay_set2both_4000_none_stiff'+filepath_suffix+'.p')
-        test_database_file_f.append(filepath_prefix+'synth/random3_supp/test_roll0_hbh_f_lay_set4_500_none_stiff'+filepath_suffix+'.p')
-        test_database_file_f.append(filepath_prefix+'synth/random3_supp/test_roll0_phu_f_lay_set1pa3_500_none_stiff'+filepath_suffix+'.p')
-        test_database_file_m.append(filepath_prefix+'synth/random3_supp/test_roll0_phu_m_lay_set1pa3_500_none_stiff'+filepath_suffix+'.p')
-        test_database_file_f.append(filepath_prefix+'synth/random3_supp/test_roll0_sl_f_lay_set1both_500_none_stiff'+filepath_suffix+'.p')
-        test_database_file_m.append(filepath_prefix+'synth/random3_supp/test_roll0_sl_m_lay_set1both_500_none_stiff'+filepath_suffix+'.p')
-        test_database_file_f.append(filepath_prefix+'synth/random3_supp/test_roll0_xl_f_lay_set1both_500_none_stiff'+filepath_suffix+'.p')
-        test_database_file_m.append(filepath_prefix+'synth/random3_supp/test_roll0_xl_m_lay_set1both_500_none_stiff'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/'+TESTING_FILENAME+'.p') #were actually testing this one
 
 
     p = PhysicalTrainer(training_database_file_f, training_database_file_m, test_database_file_f, test_database_file_m, opt)

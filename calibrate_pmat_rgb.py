@@ -406,7 +406,7 @@ class RealTimeViz():
 
 
     def optim_calib_criteria(self, function_input):
-
+        print function_input
 
         # file_dir = "/media/henry/multimodal_data_1/all_hevans_data/Calibration_0907_Evening_0908_Morning/data_082018_0096"
         # 96 - 85 is a good pick for seated
@@ -416,9 +416,6 @@ class RealTimeViz():
         self.labels = ["Up L Color", "Up R Color", "Low L Color", "Low R Color",
                        "Up L Pressure", "Up R Pressure", "Low L Pressure", "Low R Pressure"]
 
-
-        print function_input, 'calib factors'
-
         function_input = np.array(function_input)*np.array([10, 10, 10, 0.1, 0.1, 0.1, 0.1])
         function_input += np.array([1.2, 32, -5, 1.0, 1.0, 0.96, 0.95])
 
@@ -426,6 +423,7 @@ class RealTimeViz():
             function_input *= 0
             function_input[3:7] += 1
 
+        #function_input[5] = float(function_input[6])*0 + 0.5
 
         kinect_rotate_angle = function_input[0]
         kinect_shift_up = int(function_input[1])
@@ -519,6 +517,7 @@ class RealTimeViz():
 
         #print self.time_stamp_all[im_num], self.config_code_all[im_num]
 
+
         #COLOR
         #if self.color is not 0:
         color_reshaped, color_size = VizLib().color_image(self.color, self.kcam, self.new_K_kin,
@@ -531,7 +530,6 @@ class RealTimeViz():
                                                                            np.copy(self.calib_corners[0:4][:]))
 
         all_image_list.append(color_reshaped)
-
 
         #DEPTH
         if self.depth_r is not 0 and DEPTH is True:
@@ -549,7 +547,6 @@ class RealTimeViz():
             #depth_r_reshaped = cv2.resize(depth_r_reshaped, None, fx=camera_scale, fy=camera_scale*camera_vertical_scale)[0:depth_r_shape[0], 0:depth_r_shape[1], :]
             #depth_r_reshaped = depth_r_reshaped[pre_VERT_CUT+kinect_shift_up:-pre_VERT_CUT+kinect_shift_up,  HORIZ_CUT+kinect_shift_right : 540 - HORIZ_CUT+kinect_shift_right, :]
             all_image_list.append(depth_r_reshaped)
-
 
         #PRESSURE
         if self.pressure is not 0:
@@ -615,6 +612,7 @@ class RealTimeViz():
             self.all_images_clone = self.all_images.copy()
 
 
+            #self.select_new_calib_corners = True
             if self.select_new_calib_corners == True:
                 while self.label_index < 0:
                     print "got here", self.all_images.shape
@@ -641,6 +639,10 @@ class RealTimeViz():
                 F_eval += 1000
 
             else:
+                print np.linalg.norm(tf_corners[0, :]-tf_corners[4, :])
+                print np.linalg.norm(tf_corners[1, :]-tf_corners[5, :])
+                print np.linalg.norm(tf_corners[2, :]-tf_corners[6, :])
+                print np.linalg.norm(tf_corners[3, :]-tf_corners[7, :])
                 print self.calib_corners
                 #print tf_corners, 'tf2'
                 f_eval1 = np.linalg.norm(tf_corners[0, :]-tf_corners[4, :]) + \
@@ -679,11 +681,12 @@ class RealTimeViz():
         pressure_vert_scale = function_input[6]
 
         #file_dir = "/media/henry/multimodal_data_1/all_hevans_data/0905_2_Evening/0255"
-        file_dir = "/media/henry/multimodal_data_1/CVPR2020_study/"+PARTICIPANT+"/data_"+PARTICIPANT+"-C_0000"
+        #file_dir = "/media/henry/multimodal_data_2/CVPR2020_study/"+PARTICIPANT+"/data_"+PARTICIPANT+"-C_0000"
+        file_dir = "/media/henry/multimodal_data_2/CVPR2020_study/"+PARTICIPANT+"/data_checked_"+PARTICIPANT+"-2"
 
         rtv.load_next_file(file_dir)
 
-        for im_num in range(1):
+        for im_num in range(20, 21):
 
             self.overall_image_scale_amount = 0.85
 
@@ -710,6 +713,8 @@ class RealTimeViz():
             markers_c.append(self.markers_all[im_num][2])
             markers_c.append(self.markers_all[im_num][3])
 
+
+
             # Get the marker points in 2D on the color image
             u_c, v_c = ArTagLib().color_2D_markers(markers_c, self.new_K_kin)
 
@@ -717,6 +722,7 @@ class RealTimeViz():
             u_c_drop, v_c_drop, markers_c_drop = ArTagLib().color_2D_markers_drop(markers_c, self.new_K_kin)
 
             # Get the geometry for sizing the pressure mat
+            print markers_c_drop, self.new_K_kin, self.pressure_im_size_required, self.bed_state, half_w_half_l
             pmat_ArTagLib = ArTagLib()
             self.pressure_im_size_required, u_c_pmat, v_c_pmat, u_p_bend, v_p_bend, half_w_half_l = \
                 pmat_ArTagLib.p_mat_geom(markers_c_drop, self.new_K_kin, self.pressure_im_size_required, self.bed_state, half_w_half_l)
@@ -822,20 +828,27 @@ if __name__ == '__main__':
 
     rtv = RealTimeViz()
 
-    PARTICIPANT = "S104"
+    PARTICIPANT = "S151"
 
-    file_dir_list = [["/media/henry/multimodal_data_1/CVPR2020_study/"+PARTICIPANT,
+    file_dir_list = [["/media/henry/multimodal_data_2/CVPR2020_study/"+PARTICIPANT,
                       "/data_"+PARTICIPANT+"-C_0000", 0]]
+    #file_dir_list = [["/media/henry/multimodal_data_2/CVPR2020_study/"+PARTICIPANT,
+    #                  "/data_checked_"+PARTICIPANT+"-2", 0]]
 
-    file_optimization_picks = [[-0.08444541039339573, 0.016119578206939777, -0.3216531438714622,
-                                0.1394849993002632, -0.2842603728947779, 0.13685526544739327,
-                                0.03574465742073685]]
+    #file_optimization_picks = [[-0.08444541039339573, 0.016119578206939777, -0.3216531438714622,
+    #                            0.1394849993002632, -0.2842603728947779, 0.13685526544739327,
+    #                            0.03574465742073685]]
+    #file_optimization_picks = [[-0.0734413,  -6.34291415, -0.13737343,  0.08815166, -0.23490408,  0.36510975, 0.90384743]]
+    #file_optimization_picks = [[-0.20560566, -4.29998152, -1.33375077,  0.19550086, -0.01974559, 0.47828653,  0.74054469]]
+    #file_optimization_picks = [[ 0.04137659, -5.39991712, -1.82485526,  0.13043731,  0.12628347,  0.82542503, 0.91061574]]
+    file_optimization_picks = [[ 0, 0, 0, 0, 0, 0, 0]]
 
 
-    calib_corners_selection = [[[84.6063454759107, 129.2596944770858], [332.5499412455934, 132.43478260869566],
-                                [85.1316098707403, 735.2549941245594], [331.37485311398353, 730.9048178613397],
-                                [92.8319623971798, 139.83548766157463], [339.60047003525267, 139.83548766157463],
-                                [92.8319623971798, 729.7297297297298], [339.60047003525267, 730.9048178613397]]]
+    calib_corners_selection = [[[75.20564042303172, 131.60987074030552], [324.3243243243243, 131.60987074030552],
+                                [85.78143360752057, 740.3055229142186], [330.19976498237367, 730.9048178613397],
+                                [92.8319623971798, 137.48531139835487], [338.4253819036428, 137.48531139835487],
+                                [94.00705052878966, 726.2044653349002], [338.4253819036428, 728.5546415981199]]]
+
 
     pmat_head_corner_shift_list = [[0.0, 0.0],
                                   [0.0, 0.0],
@@ -886,7 +899,8 @@ if __name__ == '__main__':
         opts['tolx'] = 5e-4
         opts['maxstd'] = 4.0
         opts['tolstagnation'] = 100
-        es = cma.CMAEvolutionStrategy(7 * [0.0], 0.1)
+        #es = cma.CMAEvolutionStrategy(7 * [0.0], 0.0000001)
+        es = cma.CMAEvolutionStrategy(file_optimization_picks, 0.2)
         # optim_param_list = 19 * [0]
         es.optimize(rtv.optim_calib_criteria)
 

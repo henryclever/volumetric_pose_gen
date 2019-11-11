@@ -92,6 +92,9 @@ class UnpackBatchLib():
 
                 #cut off batch 0 so we don't have depth or contact on the input
                 batch[0] = batch[0][:, 0:CTRL_PNL['num_input_channels_batch0'], :, :]
+                print "CLIPPING BATCH 0"
+
+        print batch[0].size(), 'batch 0 shape'
 
         # cut it off so batch[2] is only the xyz marker targets
         batch[1] = batch[1][:, 0:72]
@@ -110,6 +113,9 @@ class UnpackBatchLib():
 
         images_up_non_tensor = np.array(batch[0].numpy())
 
+
+        INPUT_DICT['batch_images'] = np.copy(images_up_non_tensor)
+
         #here perform synthetic calibration noise over pmat and sobel filtered pmat.
         if CTRL_PNL['cal_noise'] == True:
             images_up_non_tensor = PreprocessingLib().preprocessing_add_calibration_noise(images_up_non_tensor,
@@ -118,7 +124,7 @@ class UnpackBatchLib():
                                                                                           is_training = is_training)
 
 
-
+        #print np.shape(images_up_non_tensor)
 
         images_up_non_tensor = PreprocessingLib().preprocessing_pressure_map_upsample(images_up_non_tensor, multiple=2)
 
@@ -170,7 +176,7 @@ class UnpackBatchLib():
             INPUT_DICT['batch_cm'] = None
 
 
-
+        print images_up.size()
 
         scores, OUTPUT_DICT = model.forward_kinematic_angles(images=images_up,
                                                              gender_switch=gender_switch,
@@ -199,7 +205,7 @@ class UnpackBatchLib():
         #OUTPUT_DICT['batch_betas_est'] = betas_est_np
 
 
-        INPUT_DICT['batch_images'] = images_up.data
+        #INPUT_DICT['batch_images'] = images_up.data
         INPUT_DICT['batch_targets'] = targets.data
 
         return scores, INPUT_DICT, OUTPUT_DICT
