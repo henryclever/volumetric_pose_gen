@@ -458,8 +458,8 @@ class PhysicalTrainer():
 
             #self.model = torch.load("/media/henry/multimodal_data_2/data/convnets/planesreg/184K/convnet_anglesDC_synth_184K_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt", map_location='cpu')
             #self.model2 = torch.load("/media/henry/multimodal_data_2/data/convnets/planesreg_correction/184K/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt", map_location='cpu')
-            self.model = torch.load("/media/henry/multimodal_data_2/data/convnets/planesreg/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt", map_location='cpu')
-            self.model2 = torch.load("/media/henry/multimodal_data_2/data/convnets/planesreg_correction/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt", map_location='cpu')
+            self.model = torch.load("/home/henry/data/convnets/planesreg/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt")
+            self.model2 = torch.load("/home/henry/data/convnets/planesreg_correction/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt")
             #self.model2 = None
         pp = 0
         for p in list(self.model.parameters()):
@@ -665,6 +665,7 @@ class PhysicalTrainer():
         # time (e.g., any model with Dropout). This puts the model in train mode
         # (as opposed to eval mode) so it knows which one to use.
         self.model.eval()#train()
+        self.model2.eval()#train()
         self.criterion = nn.L1Loss()
         self.criterion2 = nn.MSELoss()
 
@@ -763,7 +764,7 @@ class PhysicalTrainer():
                 smpl_faces = np.array(self.m.f)
 
 
-                q = OUTPUT_DICT['batch_mdm_est'].data.numpy().reshape(OUTPUT_DICT['batch_mdm_est'].size()[0], 64, 27) * -1
+                q = OUTPUT_DICT['batch_mdm_est'].data.cpu().numpy().reshape(OUTPUT_DICT['batch_mdm_est'].size()[0], 64, 27) * -1
                 q = np.mean(q, axis=0)
 
                 camera_point = [1.09898028, 0.46441343, -CAM_BED_DIST]
@@ -831,7 +832,7 @@ class PhysicalTrainer():
                     #print joint_cart_gt, 'gt'
 
                     sc_sample = OUTPUT_DICT['batch_targets_est'].clone()
-                    sc_sample = (sc_sample[0, :].squeeze().numpy() / 1000).reshape(24, 3)
+                    sc_sample = (sc_sample[0, :].squeeze().cpu().numpy() / 1000).reshape(24, 3)
 
                     #print sc_sample, 'estimate'
                     joint_error = np.linalg.norm(joint_cart_gt-sc_sample, axis = 1)
@@ -854,12 +855,12 @@ class PhysicalTrainer():
                 print np.mean(np.array(RESULTS_DICT['j_err']), axis = 0)
                 #print RESULTS_DICT['precision']
                 print np.mean(RESULTS_DICT['precision'])
-                print time.time() - init_time
-               # break
+                print time.time() - init_time, "  Batch idx:", batch_idx
+                #break
 
         #save here
 
-        pkl.dump(RESULTS_DICT, open('/media/henry/multimodal_data_2/data/final_results/results_synth_'+TESTING_FILENAME+'_'+NETWORK_2+'.p', 'wb'))
+        pkl.dump(RESULTS_DICT, open('/home/henry/data/final_results/results_synth_'+TESTING_FILENAME+'_'+NETWORK_2+'.p', 'wb'))
 
 if __name__ == "__main__":
     #Initialize trainer with a training database file
@@ -923,7 +924,7 @@ if __name__ == "__main__":
         filepath_suffix = ''
     else:
         #filepath_prefix =
-        filepath_prefix = '/media/henry/multimodal_data_2/data/'
+        filepath_prefix = '/home/henry/data/'
         #filepath_suffix = ''
 
 
@@ -933,13 +934,13 @@ if __name__ == "__main__":
     test_database_file_m = [] #141 total training loss at epoch 9
 
 
-    test_database_file_f.append('/home/henry/data/synth/random/test_roll0_plo_f_lay_1000_none_stiff_output0p5_112k_100e_alltanh.p')
 
 
     #training_database_file_f.append(filepath_prefix+'synth/random3_fix/test_roll0_f_lay_set14_1500.p') #were actually testing this one
 
     if GENDER == "f":
         training_database_file_f.append(filepath_prefix+'synth/random3_supp_fix/'+TESTING_FILENAME+'.p') #were actually testing this one
+        test_database_file_f.append(filepath_prefix+'synth/random3_supp_fix/'+TESTING_FILENAME+'.p')
     else:
         training_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/'+TESTING_FILENAME+'.p') #were actually testing this one
 

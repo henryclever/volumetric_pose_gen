@@ -280,7 +280,7 @@ class CNN(nn.Module):
         filepath_prefix = CTRL_PNL['filepath_prefix']
         OUTPUT_DICT = {}
 
-        self.GPU = CTRL_PNL['GPU']
+        self.GPU = True# CTRL_PNL['GPU']
         self.dtype = CTRL_PNL['dtype']
 
         #print(torch.cuda.max_memory_allocated(), 'conv0', images.size())
@@ -291,7 +291,7 @@ class CNN(nn.Module):
             #self.dtype = torch.FloatTensor
 
         else:
-            if CTRL_PNL['aws'] == True:
+            if True:#CTRL_PNL['aws'] == True:
                 self.GPU = True
                 self.dtype = torch.cuda.FloatTensor
             else:
@@ -348,7 +348,6 @@ class CNN(nn.Module):
             scores = torch.mul(scores.clone(), 0.01)
         else:
             scores = torch.mul(scores.clone(), 0.01)
-
 
         #normalize the output of the network based on the range of the parameters
         if self.GPU == True:
