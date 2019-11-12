@@ -5,8 +5,8 @@ try:
 except:
     print "COULD NOT IMPORT 03D"
 import trimesh
-#import pyrender
-#import pyglet
+import pyrender
+import pyglet
 from scipy import ndimage
 
 import numpy as np
@@ -583,6 +583,7 @@ class pyRenderMesh():
 
     def compare_pc_to_voxelmesh(self, smpl_verts, smpl_faces, gt_points, pmat, RESULTS_DICT, synth = False):
 
+        #gt_points[:, 2] -= 1.0
         #cut off things that aren't overlaying the bed
 
         #smpl_verts[smpl_verts[:, 0] < 0, 0] = 0
@@ -602,9 +603,9 @@ class pyRenderMesh():
         #    print np.min(smpl_verts[:, i]), np.max(smpl_verts[:, i]), np.max(smpl_verts[:, i]) - np.min(smpl_verts[:, i]), "voxel smpl min max range"
         #    print np.min(smpl_verts[:, i])/resolution, np.max(smpl_verts[:, i])/resolution, (np.max(smpl_verts[:, i]) - np.min(smpl_verts[:, i]))/resolution, "voxel smpl min max range"
 
-
         smpl_verts[:, 2] *= (1.1*2.54) #this is for 5 mm orthographic resolution. spatial is still 1/2 inch
         gt_points[:, 2] *= (1.1*2.54)
+
 
         tm_curr = trimesh.base.Trimesh(vertices=smpl_verts, faces = smpl_faces)
 
@@ -635,20 +636,15 @@ class pyRenderMesh():
                                    [0, 0, 0],
                                    [128*resolution, 54*resolution, 0]])
 
-        #print pc_smpl_minmax
 
         pc_smpl_minmax /= resolution
         pc_smpl_minmax[pc_smpl_minmax < 0] -= 0.5
         pc_smpl_minmax[pc_smpl_minmax > 0] += 0.5
         pc_smpl_minmax = pc_smpl_minmax.astype(int)
 
-        #print pc_smpl_minmax
-
         pc_smpl_minmax_new_ids = np.copy(pc_smpl_minmax)
         pc_smpl_minmax_new_ids[:, 0] -= np.min(pc_smpl_minmax_new_ids[:, 0])
         pc_smpl_minmax_new_ids[:, 1] -= np.min(pc_smpl_minmax_new_ids[:, 1])
-
-        #print pc_smpl_minmax_new_ids
 
 
         viz_maps = np.zeros((np.max([pc_smpl_minmax[1,0], pc_smpl_minmax[3,0], pc_smpl_minmax[5,0]])\
@@ -694,24 +690,53 @@ class pyRenderMesh():
             pc_int_array = np.flip(-pc_int_array[:, 3].reshape(y_range+1, x_range+1), axis = 0)
 
         mesh_height_arr = np.zeros((voxelgrid.shape[0], voxelgrid.shape[1])).astype(int)
+
+
+        #gt min: pc_smpl_minmax_new_ids[0, 2]
+        #mesh min: pc_smpl_minmax_new_ids[2, 2]
+        # #if the ground truth is lower then we need to add some to the mesh
+        if pc_smpl_minmax_new_ids[0, 2] < pc_smpl_minmax_new_ids[2, 2]:
+            add_mesh = pc_smpl_minmax_new_ids[2,2] - pc_smpl_minmax_new_ids[0,2]
+        else:
+            add_mesh = 0
+
+        #if the mesh is lower we need to add some to the ground truth
+        if pc_smpl_minmax_new_ids[2, 2] < pc_smpl_minmax_new_ids[0, 2]:
+            add_gt = pc_smpl_minmax_new_ids[0,2] - pc_smpl_minmax_new_ids[2,2]
+        else:
+            add_gt = 0
+        print "adding to mesh", add_mesh
+        print "adding to gt", add_gt
+
         for i in range(voxelgrid.shape[2]):
             #print mesh_height_arr.shape, voxelgrid[:, :, i].shape
             mesh_height_arr[voxelgrid[:, :, i] == True] = i
+        mesh_height_arr[mesh_height_arr != 0] += add_mesh
 
         if synth == True:
             mesh_height_arr_gt = np.zeros((voxelgrid_gt.shape[0], voxelgrid_gt.shape[1])).astype(int)
             for i in range(voxelgrid_gt.shape[2]):
                 # print mesh_height_arr.shape, voxelgrid[:, :, i].shape
                 mesh_height_arr_gt[voxelgrid_gt[:, :, i] == True] = i
+            mesh_height_arr_gt[mesh_height_arr_gt != 0] += add_gt
 
         total_L = viz_maps.shape[0]
 
+
+
+        #print np.min(mesh_height_arr), np.max(mesh_height_arr)
+        #print np.min(mesh_height_arr_gt), np.max(mesh_height_arr_gt)
+        #print np.min(pc_int_array), np.max(pc_int_array)
+
+
         if synth == False:
             viz_maps[total_L - pc_smpl_minmax_new_ids[1, 0] - 1:total_L - pc_smpl_minmax_new_ids[0, 0],
-            pc_smpl_minmax_new_ids[0, 1]:pc_smpl_minmax_new_ids[1, 1] + 1, 0] = pc_int_array
+                     pc_smpl_minmax_new_ids[0, 1]:pc_smpl_minmax_new_ids[1, 1] + 1, 0] = pc_int_array
         else:
             viz_maps[total_L - pc_smpl_minmax_new_ids[1, 0] - 1:total_L - pc_smpl_minmax_new_ids[0, 0],
-            pc_smpl_minmax_new_ids[0, 1]:pc_smpl_minmax_new_ids[1, 1] + 1, 0] = mesh_height_arr_gt
+                     pc_smpl_minmax_new_ids[0, 1]:pc_smpl_minmax_new_ids[1, 1] + 1, 0] = mesh_height_arr_gt
+
+
 
         viz_maps[total_L - pc_smpl_minmax_new_ids[3,0]-1:total_L - pc_smpl_minmax_new_ids[2,0], pc_smpl_minmax_new_ids[2,1]:pc_smpl_minmax_new_ids[3,1]+1, 1] = mesh_height_arr
         viz_maps[total_L - pc_smpl_minmax_new_ids[5,0]:total_L - pc_smpl_minmax_new_ids[4,0], pc_smpl_minmax_new_ids[4,1]:pc_smpl_minmax_new_ids[5,1], 2] = pmat
@@ -799,8 +824,10 @@ class pyRenderMesh():
         viz_maps[:, :, 4][viz_maps[:, :, 4] < 3] = 0
         viz_maps[:, :, 4] = np.clip(viz_maps[:, :, 4], 0, 1)
         overlapping = np.copy(viz_maps[:, :, 4])
+
         overlapping_numer = np.sum(overlapping)
-        viz_maps[:, :, 4] = np.abs(viz_maps[:, :, 5] - viz_maps[:, :, 1])*viz_maps[:, :, 4]
+        viz_maps[:, :, 4] = np.abs(viz_maps[:, :, 5] - viz_maps[:, :, 1])*overlapping
+
 
 
 
@@ -1872,7 +1899,7 @@ class pyRenderMesh():
                 self.viewer.render_lock.release()
             #time.sleep(100)
 
-        RESULTS_DICT = self.compare_pc_to_voxelmesh(smpl_verts, smpl_faces, pc, pmat, RESULTS_DICT, synth=False, render = render)
+        RESULTS_DICT = self.compare_pc_to_voxelmesh(smpl_verts, smpl_faces, pc, pmat, RESULTS_DICT, synth=False)
         return RESULTS_DICT
 
 
@@ -2307,7 +2334,7 @@ class pyRenderMesh():
         else:
             norm_area_avg = self.get_triangle_area_vert_weight(human_mesh_vtx_gtesterr[0], human_mesh_face_gtesterr[0], verts_idx_red_GT)
 
-        norm_gtvert_to_nearest_estvert_error = np.array(gtvert_to_nearest_estvert_error_list[0:np.shape(norm_area_avg)[0]]) * norm_area_avg[0:np.shape(gtvert_to_nearest_estvert_error_list)[0]]
+        norm_gtvert_to_nearest_estvert_error = np.array(gtvert_to_nearest_estvert_error_list) * norm_area_avg
         print "average gt vert to nearest est vert error, regardless of normal:", np.mean(norm_gtvert_to_nearest_estvert_error)
         RESULTS_DICT['gt_to_v_err'].append(np.mean(norm_gtvert_to_nearest_estvert_error))
 
