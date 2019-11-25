@@ -22,11 +22,13 @@ SHORT = False
 
 import rospy
 
+def sortSecond(val):
+    return val[0:2]
 
 if __name__ == '__main__':
 
-    participant_list = ["P106",
-                        "P136",
+    participant_list = [#"P106",
+                        #"P136",
 
                         "S103",
                         "S104",
@@ -51,6 +53,44 @@ if __name__ == '__main__':
                         "S196",]
 
     all_participant_info = {}
+    #all_participant_info["P106_"]
+
+    import os
+    import re
+
+    for participant_number in participant_list[0:]:
+        prescribed_pose_full_list = os.listdir("/media/henry/multimodal_data_2/CVPR2020_study/"+participant_number+"/nominal_poses")
+        prescribed_pose_full_list = sorted(prescribed_pose_full_list, key=lambda prescribed_pose_full_list: int(prescribed_pose_full_list[0:2]))
+        type_only = []
+        for prescribed_pose_full in prescribed_pose_full_list:
+            prescribed_pose_full = prescribed_pose_full[5:]
+            m = re.search(r"\d", prescribed_pose_full)
+            end_str = m.start()
+
+
+            type_only.append(prescribed_pose_full[0:end_str-1])
+
+        #print type_only
+        list_ct = [0, 0, 0, 0, 0, 0, 0, 0]
+        for item in type_only:
+            if item == 'rollpi': list_ct[0] += 1
+            elif item == 'rollpi_plo': list_ct[1] += 1
+            elif item == 'supine': list_ct[2] += 1
+            elif item == 'supine_plo': list_ct[3] += 1
+            elif item == 'hbh': list_ct[4] += 1
+            elif item == 'phu': list_ct[5] += 1
+            elif item == 'sl': list_ct[6] += 1
+            elif item == 'xl': list_ct[7] += 1
+        #print list_ct, participant_number
+
+        #if participant_number == "S163": print type_only
+
+        entry = participant_number+"_pose_type"
+        print entry
+        all_participant_info[entry] = type_only
+
+        #break
+
     all_participant_info["P106_cal_func"] = [-0.2651102, -4.88367133, -1.06805906, 0.01747648, -0.33419488, 0.57763764, 0.49226572]
     all_participant_info["P136_cal_func"] = [-0.06452759, -3.77696914, -0.32980742, -0.06308034, -0.16521433, 0.26381002, 0.50454449]
 
@@ -283,6 +323,7 @@ if __name__ == '__main__':
         participant_info["weight_lbs"] = all_participant_info[participant + "_weight_lbs"]
         participant_info["height_in"] = all_participant_info[participant + "_height_in"]
         participant_info["gender"] = all_participant_info[participant + "_gender"]
+        participant_info["pose_type"] = all_participant_info[participant + "_pose_type"]
 
         pkl.dump(participant_info, open(file_dir+'/participant_info.p', 'wb'))
 

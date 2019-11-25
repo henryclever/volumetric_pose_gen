@@ -2,7 +2,7 @@ import numpy as np
 import random
 import copy
 import lib_pyrender as libRender
-import lib_pyrender as libPyRender
+import lib_pyrender_fig1 as libPyRender
 from opendr.renderer import ColoredRenderer
 from opendr.renderer import DepthRenderer
 from opendr.lighting import LambertianPointLight
@@ -11,6 +11,8 @@ from smpl.smpl_webuser.serialization import load_model
 from cv_bridge import CvBridge, CvBridgeError
 from util import batch_global_rigid_transformation, batch_rodrigues, batch_lrotmin, reflect_pose
 
+
+from smpl.smpl_webuser.serialization import load_model as load_smpl_model
 import cPickle as pkl
 
 def load_pickle(filename):
@@ -76,8 +78,13 @@ from hmr.src.tf_smpl.batch_smpl import SMPL
 
 SHOW_SMPL_EST = True
 #PARTICIPANT = "S196"#"S151"
-POSE_TYPE = "2"
+POSE_TYPE = "1"
 MAT_SIZE = (64, 27)
+
+#NETWORK_1 = "1.0rtojtdpth_tnhFIXN_htwt_calnoise"
+NETWORK_1 = "1.0rtojtdpth_tnhFIXN_htwt_calnoise"
+NETWORK_2 = "0.5rtojtdpth_depthestin_angleadj_tnhFIXN_htwt_calnoise"
+#NETWORK_2 = "1.0rtojtdpth_depthestin_angleadj_tnhFIXN_htwt_calnoise"
 
 
 PC_WRT_ARTAG_ADJ = [0.11, -0.02, 0.07]
@@ -107,7 +114,7 @@ else:
 
 
 class Viz3DPose():
-    def __init__(self, filepath_prefix, participant_directory, htwt):
+    def __init__(self, filepath_prefix, participant_directory):
 
         ##load participant info
         participant_info = load_pickle(participant_directory+"/participant_info.p")
@@ -119,6 +126,7 @@ class Viz3DPose():
         self.height_in = participant_info['height_in']
         self.weight_lbs = participant_info['weight_lbs']
         self.adj_2 = participant_info['adj_2']
+        self.pose_type_list = participant_info['pose_type']
 
         #participant_directory2 = "/media/henry/multimodal_data_2/CVPR2020_study/S187"
         #participant_info2 = load_pickle(participant_directory2+"/participant_info.p")
@@ -156,7 +164,7 @@ class Viz3DPose():
         self.CTRL_PNL['num_epochs'] = 101
         self.CTRL_PNL['incl_inter'] = True
         self.CTRL_PNL['shuffle'] = False
-        self.CTRL_PNL['incl_ht_wt_channels'] = htwt
+        self.CTRL_PNL['incl_ht_wt_channels'] = True
         self.CTRL_PNL['incl_pmat_cntct_input'] = True
         self.CTRL_PNL['num_input_channels'] = 3
         self.CTRL_PNL['GPU'] = GPU
@@ -329,6 +337,7 @@ class Viz3DPose():
             image[int(tf_coords_subset[i][1] + 0.5) - 2:int(tf_coords_subset[i][1] + 0.5) + 2,
             int(tf_coords_subset[i][0] + 0.5) - 2:int(tf_coords_subset[i][0] + 0.5) + 2, :] = 255
 
+
         return tf_coords_subset, image
 
     def rotate_selected_head_points(self, pressure_im_size_required, u_c_pmat, v_c_pmat, u_p_bend, v_p_bend, u_p_bend_calib, v_p_bend_calib):
@@ -454,7 +463,7 @@ class Viz3DPose():
         X_single1 = h[0, 2] * CAM_BED_DIST / f_y
         Y_single1 = h[1, 2] * CAM_BED_DIST / f_x
 
-        print X_single1, Y_single1
+        #print X_single1, Y_single1
         pc_autofil_red += [-Y_single1/2, -X_single1/2, 0.0]
 
 
@@ -503,10 +512,11 @@ class Viz3DPose():
 
 
 
-    def estimate_pose(self, pmat, bedangle, markers_c, model, model2, tf_corners, camera_alpha_vert, camera_alpha_horiz, h, kinect_rot_cw):
+    def estimate_pose(self, pmat, bedangle, markers_c, model, model2, tf_corners, camera_alpha_vert, camera_alpha_horiz, h, kinect_rot_cw, color_im):
         mat_size = (64, 27)
 
 
+        pmat_orig = np.fliplr(np.flipud(np.clip(pmat.reshape(MAT_SIZE)*float(1), a_min=0, a_max=100)))
         pmat = np.fliplr(np.flipud(np.clip(pmat.reshape(MAT_SIZE)*float(5), a_min=0, a_max=100)))
 
         if self.CTRL_PNL['cal_noise'] == False:
@@ -619,9 +629,7 @@ class Viz3DPose():
 
 
 
-
         smpl_verts = np.concatenate((smpl_verts[:, 1:2] - 0.286 + 0.0143, smpl_verts[:, 0:1] - 0.286 + 0.0143, 0.0 -smpl_verts[:, 2:3]), axis = 1)
-
         smpl_faces = np.array(self.m.f)
 
         pc_autofil_red = self.trim_pc_sides(tf_corners, camera_alpha_vert, camera_alpha_horiz, h, kinect_rot_cw) #this is the point cloud
@@ -675,68 +683,28 @@ class Viz3DPose():
             time.sleep(4)
 
         elif viz_type == "3D":
-
-            print np.min(smpl_verts[:, 0]), np.max(smpl_verts[:, 0])
-            print np.min(smpl_verts[:, 1]), np.max(smpl_verts[:, 1])
-            print np.min(smpl_verts[:, 2]), np.max(smpl_verts[:, 2])
-
             #render everything
             self.RESULTS_DICT = self.pyRender.render_mesh_pc_bed_pyrender_everything(smpl_verts, smpl_faces, camera_point,
                                                                   bedangle, self.RESULTS_DICT,
-                                                                  pc = pc_autofil_red, pmat = pmat, smpl_render_points = False,
+                                                                  pc = pc_autofil_red, pmat = pmat_orig, smpl_render_points = False,
                                                                   markers = [[0.0, 0.0, 0.0],[0.0, 1.5, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0]],
-                                                                                     dropout_variance = dropout_variance)
+                                                                                     dropout_variance = dropout_variance, color_im = color_im,
+                                                                                     tf_corners=tf_corners, current_pose_type_ct=self.current_pose_type_ct,
+                                                                                     participant = PARTICIPANT)
 
 
-            #render in 3D pyrender with pressure mat
-            #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
-            #                                          pc = None, pmat = pmat, smpl_render_points = False,
-            #                                          facing_cam_only=False, viz_type = None,
-            #                                          markers = None, segment_limbs=False)
 
-            #render in 3D pyrender with segmented limbs
-            #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
-            #                                          pc = None, pmat = None, smpl_render_points = False,
-            #                                          facing_cam_only=False, viz_type = None,
-            #                                          markers = None, segment_limbs=True)
 
-            #render the error of point cloud points relative to verts
-            #self.Render.eval_dist_render_open3d(smpl_verts, smpl_faces, pc_autofil_red, viz_type = 'pc_error',
-            #                                      camera_point = camera_point, segment_limbs=False)
-            #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
-            #                                          pc = pc_autofil_red, pmat = None, smpl_render_points = False,
-            #                                          facing_cam_only=True, viz_type = 'pc_error',
-            #                                          markers = None, segment_limbs=False)
 
-            #render the error of verts relative to point cloud points
-            #self.Render.eval_dist_render_open3d(smpl_verts, smpl_faces, pc_autofil_red, viz_type = 'mesh_error',
-            #                                      camera_point = camera_point, segment_limbs=False)
-            #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
-            #                                          pc = pc_autofil_red, pmat = None, smpl_render_points = False,
-            #                                          facing_cam_only=True, viz_type = 'mesh_error',
-            #                                          markers = None, segment_limbs=False)
 
             time.sleep(1)
             self.point_cloud_array = None
 
 
 
-            #dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix, add_floor = False)
-
-            #dss.run_simulation(10000)
-            #generator.standard_render()
-
-            #print self.RESULTS_DICT['v_limb_to_gt_err']
-            #print self.RESULTS_DICT['precision']
-            #print np.mean(self.RESULTS_DICT['precision'])
-
-
-
     def evaluate_data(self, filename1, filename2=None):
 
-
-        #self.Render = libRender.pyRenderMesh(render = False)
-        self.pyRender = libPyRender.pyRenderMesh(render = False)
+        self.pyRender = libPyRender.pyRenderMesh(render = True)
 
         #model = torch.load(filename1, map_location={'cuda:5': 'cuda:0'})
         if GPU == True:
@@ -854,6 +822,18 @@ class Viz3DPose():
                 if PARTICIPANT == "S114" and POSE_TYPE == "2"  and im_num in [26, 29]: continue #these don't have point clouds
                 if PARTICIPANT == "S165" and POSE_TYPE == "2" and im_num in [1, 3, 15]: continue #these don't have point clouds
                 if PARTICIPANT == "S188" and POSE_TYPE == "2"  and im_num in [5, 17, 21]: continue
+
+                if POSE_TYPE == "2":
+                    im_num_ct = im_num + 1
+                else:
+                    im_num_ct = float(im_num)
+
+                if POSE_TYPE == "1":
+                    self.current_pose_type_ct = '{:02}'.format(im_num_ct)+'_natural_'+NETWORK_2
+
+                elif POSE_TYPE == "2":
+                    self.current_pose_type_ct = '{:02}'.format(im_num_ct)+'_'+self.pose_type_list[im_num]+'_'+NETWORK_2
+
 
                 #good picks: 103 - 6 good for what info is there
                             #151 11 is  good
@@ -1024,78 +1004,59 @@ class Viz3DPose():
                 self.pc_all= [Y,X,-Z]
                 #print np.shape(self.pc_all), "PC ALL SHAPE"
 
-                self.estimate_pose(self.pressure, self.bed_state[0], markers_c, model, model2, tf_corners, camera_alpha_vert, camera_alpha_horiz, h, kinect_rotate_angle)
+                #print self.tf_corners
+                #print kinect_shift_up
+                self.estimate_pose(self.pressure, self.bed_state[0], markers_c, model, model2, tf_corners, camera_alpha_vert,
+                                   camera_alpha_horiz, h, kinect_rotate_angle, color_reshaped)
 
 
-        pkl.dump(self.RESULTS_DICT, open('/media/henry/multimodal_data_2/data/final_results/results_real_46K_'+PARTICIPANT+'_'+POSE_TYPE+'_'+NETWORK_2+'.p', 'wb'))
+        #pkl.dump(self.RESULTS_DICT, open('/media/henry/multimodal_data_2/data/final_results/results_real_46K_'+PARTICIPANT+'_'+POSE_TYPE+'_'+NETWORK_2+'.p', 'wb'))
 
 if __name__ ==  "__main__":
+    participant_list = ["S103",
+                        "S104",
+                        "S107",
+                        "S114",
+                        "S118",
+                        "S121",
+                        "S130",
+                        "S134",
+                        "S140",
+                        "S141",
 
-    #NETWORK_1_LIST = ["1.0rtojtdpth_tnhFIXN_htwt_calnoise",
-    #             "1.0rtojtdpth_tnhFIXN_htwt_calnoise",
-    #             "1.0rtojtdpth_tnhFIXN_calnoise",
-    #             "1.0rtojtdpth_tnhFIXN_htwt",]
+                        "S145",
+                        "S151",
+                        "S163",
+                        "S165",  # at least 3 pc corrupted
+                        "S170",
+                        "S179",
+                        "S184",
+                        "S187",
+                        "S188",  # 1 bad prone posture classified as supine, 2 pc corrupted
+                        "S196", ]
 
-    NETWORK_1_LIST = ["1.0rtojtdpth_tnhFIXN_htwt_calnoise"]
-
-    #NETWORK_2_LIST = ["NONE-200e",
-    #             "0.5rtojtdpth_depthestin_angleadj_tnhFIXN_htwt_calnoise",
-    #             "0.5rtojtdpth_depthestin_angleadj_tnhFIXN_calnoise",
-    #             "0.5rtojtdpth_depthestin_angleadj_tnhFIXN_htwt"]
-
-    NETWORK_2_LIST = ["0.5rtojtdpth_depthestin_angleadj_tnhFIXN_htwt_calnoise"]
-
-    HTWT_LIST = [True, True, False, True]
-
-
-    # NETWORK_2 = "1.0rtojtdpth_depthestin_angleadj_tnhFIXN_htwt_calnoise"
-    for idt in range(1):
-        NETWORK_1 = NETWORK_1_LIST[idt]
-        NETWORK_2 = NETWORK_2_LIST[idt]
-        HTWT = HTWT_LIST[idt]
-
-        participant_list = ["S103",
-                            "S104",
-                            "S107",
-                            "S114",
-                            "S118",
-                            "S121",
-                            "S130",
-                            "S134",
-                            "S140",
-                            "S141",
-
-                            "S145",
-                            "S151",
-                            "S163",
-                            "S165",  # at least 3 pc corrupted
-                            "S170",
-                            "S179",
-                            "S184",
-                            "S187",
-                            "S188",  # 1 bad prone posture classified as supine, 2 pc corrupted
-                            "S196", ]
-
-        for PARTICIPANT in participant_list:
+    for PARTICIPANT in participant_list:
 
 
-            filepath_prefix = "/home/henry"
-            #model_prefix = "/media/henry/multimodal_data_1"
-            model_prefix = "/home/henry"
-            participant_directory = "/media/henry/multimodal_data_2/CVPR2020_study/"+PARTICIPANT
-            #participant_directory = "/home/henry/Desktop/CVPR2020_study/"+PARTICIPANT
+        filepath_prefix = "/home/henry"
+        #model_prefix = "/media/henry/multimodal_data_1"
+        model_prefix = "/home/henry"
+        participant_directory = "/media/henry/multimodal_data_2/CVPR2020_study/"+PARTICIPANT
+        #participant_directory = "/home/henry/Desktop/CVPR2020_study/"+PARTICIPANT
 
-            V3D = Viz3DPose(filepath_prefix, participant_directory, HTWT)
-
-
-            #if idt == 0:
-            #    F_eval = V3D.evaluate_data("/media/henry/multimodal_data_2/data/convnets/planesreg/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_1+"_200e_00002lr.pt")#,\
-                                            #"/media/henry/multimodal_data_2/data/convnets/planesreg_correction/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt")
-            #else:
-            #    F_eval = V3D.evaluate_data("/media/henry/multimodal_data_2/data/convnets/planesreg/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt",\
-            #                                "/media/henry/multimodal_data_2/data/convnets/planesreg_correction/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt")
-            F_eval = V3D.evaluate_data("/media/henry/multimodal_data_2/data/convnets/planesreg/FINAL/convnet_anglesDC_synth_46000_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt",\
-                                        "/media/henry/multimodal_data_2/data/convnets/planesreg_correction/FINAL/convnet_anglesDC_synth_46000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt")
+        V3D = Viz3DPose(filepath_prefix, participant_directory)
+        #V3D.estimate_real_time(filepath_prefix+"/data/synth/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_100e_000005lr.pt",
+        #                             filepath_prefix+"/data/synth/convnet_anglesEU_synth_s9_3xreal_128b_0.7rtojtdpth_pmatcntin_depthestin_angleadj_100e_000005lr.pt")
 
 
+
+        #F_eval = V3D.evaluate_data("/media/henry/multimodal_data_2/data/convnets/planesreg/184K/convnet_anglesDC_synth_184K_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt", \
+        #                            "/media/henry/multimodal_data_2/data/convnets/planesreg_correction/184K/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt")
+
+        F_eval = V3D.evaluate_data("/media/henry/multimodal_data_2/data/convnets/planesreg/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt", \
+                                    "/media/henry/multimodal_data_2/data/convnets/planesreg_correction/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt")
+
+
+
+        #F_eval = V3D.evaluate_data("/media/henry/multimodal_data_2/data/convnets/planesreg/184K/convnet_anglesDC_synth_184000_128b_x5pmult_1.0rtojtdpth_tnhFIX_htwt_calnoise_75e_00002lr.pt")
 

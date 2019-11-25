@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.pylab import *
 
-import lib_pyrender as libPyRender
+import lib_pyrender_ZEROBOD as libPyRender
 
 # PyTorch libraries
 import argparse
@@ -83,7 +83,7 @@ CAM_BED_DIST = 1.66
 DEVICE = 0
 
 torch.set_num_threads(1)
-if torch.cuda.is_available():
+if False:#torch.cuda.is_available():
     # Use for GPU
     GPU = True
     dtype = torch.cuda.FloatTensor
@@ -96,12 +96,13 @@ else:
     print '############################## USING CPU #################################'
 
 
-TESTING_FILENAME = "test_roll0_plo_phu_f_lay_set1pa3_500"
-GENDER = "f"
+TESTING_FILENAME = "test_roll0_xl_m_lay_set1both_500"
+#TESTING_FILENAME = "test_roll0_plo_f_lay_set14_1500"
+GENDER = "m"
 #NETWORK_1 = "1.0rtojtdpth_tnh_htwt_calnoise"
 NETWORK_1 = "1.0rtojtdpth_tnhFIXN_htwt_calnoise"
 #NETWORK_2 = "0.5rtojtdpth_depthestin_angleadj_tnh_htwt_calnoise"
-NETWORK_2 = "1.0rtojtdpth_depthestin_angleadj_tnhFIXN_htwt_calnoise"
+NETWORK_2 = "NONE-200e"
 
 class PhysicalTrainer():
     '''Gets the dictionary of pressure maps from the training database,
@@ -254,7 +255,7 @@ class PhysicalTrainer():
 
         self.train_x_flat = []  # Initialize the testing pressure mat list
         self.train_x_flat = TensorPrepLib().prep_images(self.train_x_flat, dat_f_synth, dat_m_synth, num_repeats = 1)
-        self.train_x_flat = list(np.clip(np.array(self.train_x_flat) * float(self.CTRL_PNL['pmat_mult']) * 0.2, a_min=0, a_max=100))
+        self.train_x_flat = list(np.clip(np.array(self.train_x_flat) * float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100))
         self.train_x_flat = TensorPrepLib().prep_images(self.train_x_flat, dat_f_real, dat_m_real, num_repeats = repeat_real_data_ct)
 
         if self.CTRL_PNL['cal_noise'] == False:
@@ -343,7 +344,7 @@ class PhysicalTrainer():
 
         self.test_x_flat = []  # Initialize the testing pressure mat list
         self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, test_dat_f_synth, test_dat_m_synth, num_repeats = 1)
-        self.test_x_flat = list(np.clip(np.array(self.test_x_flat) * 0.2*float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100))
+        self.test_x_flat = list(np.clip(np.array(self.test_x_flat) * float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100))
         self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, test_dat_f_real, test_dat_m_real, num_repeats = 1)
 
         if self.CTRL_PNL['cal_noise'] == False:
@@ -454,13 +455,11 @@ class PhysicalTrainer():
             #self.model = convnet.CNN(fc_output_size, self.CTRL_PNL['loss_vector_type'], self.CTRL_PNL['batch_size'],
             #                         verts_list = self.verts_list, filepath=self.CTRL_PNL['filepath_prefix'], in_channels=self.CTRL_PNL['num_input_channels'])
 
-            #self.model = torch.load("/media/henry/multimodal_data_2/data/convnets/planesreg/184K/convnet_anglesDC_synth_184000_128b_x5pmult_1.0rtojtdpth_tnhFIX_htwt_calnoise_100e_00002lr.pt", map_location='cpu')
 
-            #self.model = torch.load("/media/henry/multimodal_data_2/data/convnets/planesreg/184K/convnet_anglesDC_synth_184K_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt", map_location='cpu')
-            #self.model2 = torch.load("/media/henry/multimodal_data_2/data/convnets/planesreg_correction/184K/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt", map_location='cpu')
-            self.model = torch.load("/media/henry/multimodal_data_2/data/convnets/planesreg/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt", map_location='cpu')
-            self.model2 = torch.load("/media/henry/multimodal_data_2/data/convnets/planesreg_correction/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt", map_location='cpu')
-            #self.model2 = None
+            #self.model = torch.load("/home/henry/data/convnets/planesreg/FINAL/convnet_anglesDC_synth_46000_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt", map_location='cpu')
+            self.model = torch.load("/media/henry/multimodal_data_2/data/convnets/planesreg/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_1+"_200e_00002lr.pt", map_location='cpu')
+            #self.model2 = torch.load("/home/henry/data/convnets/planesreg_correction/FINAL/convnet_anglesDC_synth_46000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt", map_location='cpu')
+            self.model2 = None
         pp = 0
         for p in list(self.model.parameters()):
             nn = 1
@@ -501,7 +500,8 @@ class PhysicalTrainer():
         # time (e.g., any model with Dropout). This puts the model in train mode
         # (as opposed to eval mode) so it knows which one to use.
         self.model.eval()#train()
-        self.model2.eval()#train()
+        self.criterion = nn.L1Loss()
+        self.criterion2 = nn.MSELoss()
         with torch.autograd.set_detect_anomaly(True):
 
             # This will loop a total = training_images/batch_size times
@@ -531,6 +531,7 @@ class PhysicalTrainer():
                     batch_cloned.append(batch[0].clone())
                     batch_cloned.append(batch[1].clone())
 
+                    self.optimizer.zero_grad()
 
                     self.CTRL_PNL['output_only_prev_est'] = True
                     scoresp, INPUT_DICTp, OUTPUT_DICTp = \
@@ -645,13 +646,16 @@ class PhysicalTrainer():
 
     def val_convnet_general(self, epoch):
 
-        self.gender = "f"
-        if self.gender == "m":
+        if GENDER == "m":
             model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
         else:
             model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_f_lbs_10_207_0_v1.0.0.pkl'
 
         self.m = load_model(model_path)
+        self.m.pose[41] = -np.pi/6
+        self.m.pose[44] = np.pi/6
+
+        ALL_VERTS = np.array(self.m.r)
 
 
         self.pyRender = libPyRender.pyRenderMesh(render = True)
@@ -663,7 +667,12 @@ class PhysicalTrainer():
         # time (e.g., any model with Dropout). This puts the model in train mode
         # (as opposed to eval mode) so it knows which one to use.
         self.model.eval()#train()
-        self.model2.eval()#train()
+        try:
+            self.model2.eval()#train()
+        except:
+            pass
+        self.criterion = nn.L1Loss()
+        self.criterion2 = nn.MSELoss()
 
         RESULTS_DICT = {}
         RESULTS_DICT['j_err'] = []
@@ -677,6 +686,7 @@ class PhysicalTrainer():
         RESULTS_DICT['recall'] = []
         RESULTS_DICT['overlap_d_err'] = []
         RESULTS_DICT['all_d_err'] = []
+        RESULTS_DICT['overlapping_pix'] = []
         init_time = time.time()
 
         with torch.autograd.set_detect_anomaly(True):
@@ -694,175 +704,68 @@ class PhysicalTrainer():
                 NUMOFOUTPUTNODES_TRAIN = 24
                 self.output_size_train = (NUMOFOUTPUTNODES_TRAIN, NUMOFOUTPUTDIMS)
 
-                self.CTRL_PNL['adjust_ang_from_est'] = False
-                self.CTRL_PNL['depth_map_labels'] = True
-                print batch[0].size(), "batch 0 shape"
-                scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch, False, self.model,
-                                                                                            self.CTRL_PNL)
-                print OUTPUT_DICT['batch_betas_est_post_clip'].cpu().numpy()[0], 'betas init'
-                mdm_est_pos = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1) / 16.69545796387731
-                mdm_est_neg = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1) / 45.08513083167194
-                mdm_est_pos[mdm_est_pos < 0] = 0
-                mdm_est_neg[mdm_est_neg > 0] = 0
-                mdm_est_neg *= -1
-                cm_est = OUTPUT_DICT['batch_cm_est'].clone().unsqueeze(1) * 100 / 43.55800622930469
-
-                # 1. / 16.69545796387731,  # pos est depth
-                # 1. / 45.08513083167194,  # neg est depth
-                # 1. / 43.55800622930469,  # cm est
-
-                sc_sample1 = OUTPUT_DICT['batch_targets_est'].clone()
-                sc_sample1 = sc_sample1[0, :].squeeze() / 1000
-                sc_sample1 = sc_sample1.view(self.output_size_train)
-                # print sc_sample1
-
-                if self.model2 is not None:
-                    print "Using model 2"
-                    batch_cor = []
-                    batch_cor.append(torch.cat((batch[0][:, 0:1, :, :],
-                                                mdm_est_pos.type(torch.FloatTensor),
-                                                mdm_est_neg.type(torch.FloatTensor),
-                                                cm_est.type(torch.FloatTensor),
-                                                batch[0][:, 1:, :, :]), dim=1))
 
 
-                    if self.CTRL_PNL['full_body_rot'] == False:
-                        batch_cor.append(torch.cat((batch1,
-                                                    OUTPUT_DICT['batch_betas_est'].cpu(),
-                                                    OUTPUT_DICT['batch_angles_est'].cpu(),
-                                                    OUTPUT_DICT['batch_root_xyz_est'].cpu()), dim=1))
-                    elif self.CTRL_PNL['full_body_rot'] == True:
-                        batch_cor.append(torch.cat((batch1,
-                                                    OUTPUT_DICT['batch_betas_est'].cpu(),
-                                                    OUTPUT_DICT['batch_angles_est'].cpu(),
-                                                    OUTPUT_DICT['batch_root_xyz_est'].cpu(),
-                                                    OUTPUT_DICT['batch_root_atan2_est'].cpu()), dim=1))
+                dropout_variance = None
 
+                smpl_verts = np.concatenate((ALL_VERTS[:, 1:2] + 0.0143 + 32*0.0286 + .286, ALL_VERTS[:, 0:1] + 0.0143 + 13.5*0.0286,
+                                             - ALL_VERTS[:, 2:3]), axis=1)
 
-
-                    self.CTRL_PNL['adjust_ang_from_est'] = True
-                    self.CTRL_PNL['depth_map_labels'] = False
-                    scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch_cor, False,
-                                                                                                self.model2,
-                                                                                                self.CTRL_PNL)
-
-                # print betas_est, root_shift_est, angles_est
-                if self.CTRL_PNL['dropout'] == True:
-                    #print OUTPUT_DICT['verts'].shape
-                    smpl_verts = np.mean(OUTPUT_DICT['verts'], axis=0)
-                    dropout_variance = np.std(OUTPUT_DICT['verts'], axis=0)
-                    dropout_variance = np.linalg.norm(dropout_variance, axis=1)
-                else:
-                    smpl_verts = OUTPUT_DICT['verts'][0, :, :]
-                    dropout_variance = None
-
-
-
-
-                smpl_verts = np.concatenate((smpl_verts[:, 1:2] - 0.286 + 0.0143, smpl_verts[:, 0:1] - 0.286 + 0.0143,
-                                             - smpl_verts[:, 2:3]), axis=1)
 
                 smpl_faces = np.array(self.m.f)
 
-
-                q = OUTPUT_DICT['batch_mdm_est'].data.numpy().reshape(OUTPUT_DICT['batch_mdm_est'].size()[0], 64, 27) * -1
-                q = np.mean(q, axis=0)
 
                 camera_point = [1.09898028, 0.46441343, -CAM_BED_DIST]
 
                 bedangle = 0.0
                 # print smpl_verts
 
-                RESULTS_DICT['betas'].append(OUTPUT_DICT['batch_betas_est_post_clip'].cpu().numpy()[0])
-                print RESULTS_DICT['betas'][-1], "BETAS"
-
-                viz_type = "3D"
-
-                if viz_type == "2D":
-                    from visualization_lib import VisualizationLib
-                    if self.model2 is not None:
-                        self.im_sample = INPUT_DICT['batch_images'][0, 4:,:].squeeze() * 20.  # normalizing_std_constants[4]*5.  #pmat
-                    else:
-                        self.im_sample = INPUT_DICT['batch_images'][0, 1:,:].squeeze() * 20.  # normalizing_std_constants[4]*5.  #pmat
-                    self.im_sample_ext = INPUT_DICT['batch_images'][0, 0:,:].squeeze() * 20.  # normalizing_std_constants[0]  #pmat contact
-                    # self.im_sample_ext2 = INPUT_DICT['batch_images'][im_display_idx, 2:, :].squeeze()*20.#normalizing_std_constants[4]  #sobel
-                    self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().unsqueeze(0) * -1  # est depth output
-
-                    # print scores[0, 10:16], 'scores of body rot'
-
-                    # print self.im_sample.size(), self.im_sample_ext.size(), self.im_sample_ext2.size(), self.im_sample_ext3.size()
-
-                    # self.publish_depth_marker_array(self.im_sample_ext3)
-
-                    self.tar_sample = INPUT_DICT['batch_targets']
-                    self.tar_sample = self.tar_sample[0, :].squeeze() / 1000
-                    sc_sample = OUTPUT_DICT['batch_targets_est'].clone()
-                    sc_sample = sc_sample[0, :].squeeze() / 1000
-
-                    sc_sample = sc_sample.view(self.output_size_train)
-
-                    VisualizationLib().visualize_pressure_map(self.im_sample, sc_sample1, sc_sample,
-                                                              # self.im_sample_ext, None, None,
-                                                              self.im_sample_ext3, None, None,
-                                                              # , self.tar_sample_val, self.sc_sample_val,
-                                                              block=False)
-
-
-                elif viz_type == "3D":
-                    pmat = batch[0][0, 1, :, :].clone().numpy()*25.50538629767412
-                    #print pmat.shape
-
-                    for beta in range(betas_gt.shape[0]):
-                        self.m.betas[beta] = betas_gt[beta]
-                    for angle in range(angles_gt.shape[0]):
-                        self.m.pose[angle] = angles_gt[angle]
-
-                    smpl_verts_gt = np.array(self.m.r)
-                    for s in range(root_shift_est_gt.shape[0]):
-                        smpl_verts_gt[:, s] += (root_shift_est_gt[s] - float(self.m.J_transformed[0, s]))
-
-                    smpl_verts_gt = np.concatenate(
-                        (smpl_verts_gt[:, 1:2] - 0.286 + 0.0143, smpl_verts_gt[:, 0:1] - 0.286 + 0.0143,
-                          0.0 - smpl_verts_gt[:, 2:3]), axis=1)
 
 
 
-                    joint_cart_gt = np.array(self.m.J_transformed).reshape(24, 3)
-                    for s in range(root_shift_est_gt.shape[0]):
-                        joint_cart_gt[:, s] += (root_shift_est_gt[s] - float(self.m.J_transformed[0, s]))
+                pmat = batch[0][0, 1, :, :].clone().numpy()*25.50538629767412
+                #print pmat.shape
 
-                    #print joint_cart_gt, 'gt'
+                for beta in range(betas_gt.shape[0]):
+                    self.m.betas[beta] = betas_gt[beta]
+                for angle in range(angles_gt.shape[0]):
+                    self.m.pose[angle] = angles_gt[angle]
 
-                    sc_sample = OUTPUT_DICT['batch_targets_est'].clone()
-                    sc_sample = (sc_sample[0, :].squeeze().numpy() / 1000).reshape(24, 3)
+                smpl_verts_gt = np.array(self.m.r)
+                for s in range(root_shift_est_gt.shape[0]):
+                    smpl_verts_gt[:, s] += (root_shift_est_gt[s] - float(self.m.J_transformed[0, s]))
 
-                    #print sc_sample, 'estimate'
-                    joint_error = np.linalg.norm(joint_cart_gt-sc_sample, axis = 1)
-                    #print joint_error
-                    RESULTS_DICT['j_err'].append(joint_error)
+                smpl_verts_gt = np.concatenate(
+                    (smpl_verts_gt[:, 1:2] - 0.286 + 0.0143, smpl_verts_gt[:, 0:1] - 0.286 + 0.0143,
+                      - smpl_verts_gt[:, 2:3]), axis=1)
 
 
-                    camera_point = [1.09898028, 0.46441343, -CAM_BED_DIST]
 
-                    # render everything
-                    RESULTS_DICT = self.pyRender.render_mesh_pc_bed_pyrender_everything_synth(smpl_verts, smpl_faces,
-                                                                            camera_point, bedangle, RESULTS_DICT,
-                                                                            smpl_verts_gt=smpl_verts_gt, pmat=pmat,
-                                                                            markers=None,
-                                                                            dropout_variance=dropout_variance)
+                joint_cart_gt = np.array(self.m.J_transformed).reshape(24, 3)
+                for s in range(root_shift_est_gt.shape[0]):
+                    joint_cart_gt[:, s] += (root_shift_est_gt[s] - float(self.m.J_transformed[0, s]))
+
+                #print joint_cart_gt, 'gt'
+
+
+                camera_point = [1.09898028, 0.46441343, -CAM_BED_DIST]
+
+                # render everything
+                RESULTS_DICT = self.pyRender.render_mesh_pc_bed_pyrender_everything_synth(smpl_verts, smpl_faces,
+                                                                        camera_point, bedangle, RESULTS_DICT,
+                                                                        smpl_verts_gt=smpl_verts_gt, pmat=pmat,
+                                                                        markers=None,
+                                                                        dropout_variance=dropout_variance)
 
                 #time.sleep(300)
 
-                #print RESULTS_DICT['j_err']
-                print np.mean(np.array(RESULTS_DICT['j_err']), axis = 0)
-                #print RESULTS_DICT['precision']
                 print np.mean(RESULTS_DICT['precision'])
-                print time.time() - init_time
+                print time.time() - init_time, "  Batch idx:", batch_idx
                 #break
 
         #save here
 
-        pkl.dump(RESULTS_DICT, open('/media/henry/multimodal_data_2/data/final_results/results_synth_'+TESTING_FILENAME+'_'+NETWORK_2+'.p', 'wb'))
+        pkl.dump(RESULTS_DICT, open('/home/henry/data/final_results/results_synth_'+TESTING_FILENAME+'_'+NETWORK_2+'.p', 'wb'))
 
 if __name__ == "__main__":
     #Initialize trainer with a training database file
@@ -927,6 +830,7 @@ if __name__ == "__main__":
     else:
         #filepath_prefix =
         filepath_prefix = '/media/henry/multimodal_data_2/data/'
+        #filepath_prefix = '/home/henry/data/'
         #filepath_suffix = ''
 
 
@@ -936,7 +840,6 @@ if __name__ == "__main__":
     test_database_file_m = [] #141 total training loss at epoch 9
 
 
-    #test_database_file_f.append('/home/henry/data/synth/random/test_roll0_plo_f_lay_1000_none_stiff_output0p5_112k_100e_alltanh.p')
 
 
     #training_database_file_f.append(filepath_prefix+'synth/random3_fix/test_roll0_f_lay_set14_1500.p') #were actually testing this one
@@ -946,6 +849,7 @@ if __name__ == "__main__":
         test_database_file_f.append(filepath_prefix+'synth/random3_supp_fix/'+TESTING_FILENAME+'.p')
     else:
         training_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/'+TESTING_FILENAME+'.p') #were actually testing this one
+        test_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/'+TESTING_FILENAME+'.p')
 
 
     p = PhysicalTrainer(training_database_file_f, training_database_file_m, test_database_file_f, test_database_file_m, opt)

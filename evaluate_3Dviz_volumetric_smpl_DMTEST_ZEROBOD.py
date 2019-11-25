@@ -76,7 +76,7 @@ from hmr.src.tf_smpl.batch_smpl import SMPL
 
 SHOW_SMPL_EST = True
 #PARTICIPANT = "S196"#"S151"
-POSE_TYPE = "2"
+POSE_TYPE = "1"
 MAT_SIZE = (64, 27)
 
 
@@ -119,6 +119,21 @@ class Viz3DPose():
         self.height_in = participant_info['height_in']
         self.weight_lbs = participant_info['weight_lbs']
         self.adj_2 = participant_info['adj_2']
+
+
+        if self.gender == "m":
+            model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
+        else:
+            model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_f_lbs_10_207_0_v1.0.0.pkl'
+
+        self.m = load_model(model_path)
+        self.m.pose[41] = -np.pi/6*0.9
+        self.m.pose[44] = np.pi/6*0.9
+        self.m.pose[50] = -np.pi/3*0.9
+        self.m.pose[53] = np.pi/3*0.9
+        self.ALL_VERTS = np.array(self.m.r)
+
+
 
         #participant_directory2 = "/media/henry/multimodal_data_2/CVPR2020_study/S187"
         #participant_info2 = load_pickle(participant_directory2+"/participant_info.p")
@@ -503,7 +518,7 @@ class Viz3DPose():
 
 
 
-    def estimate_pose(self, pmat, bedangle, markers_c, model, model2, tf_corners, camera_alpha_vert, camera_alpha_horiz, h, kinect_rot_cw):
+    def estimate_pose(self, pmat, bedangle, markers_c, tf_corners, camera_alpha_vert, camera_alpha_horiz, h, kinect_rot_cw):
         mat_size = (64, 27)
 
 
@@ -557,78 +572,17 @@ class Viz3DPose():
         self.output_size_train = (NUMOFOUTPUTNODES_TRAIN, NUMOFOUTPUTDIMS)
 
 
-        self.CTRL_PNL['adjust_ang_from_est'] = False
-        scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch, False, model, self.CTRL_PNL)
 
-        mdm_est_pos = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1) / 16.69545796387731
-        mdm_est_neg = OUTPUT_DICT['batch_mdm_est'].clone().unsqueeze(1) / 45.08513083167194
-        mdm_est_pos[mdm_est_pos < 0] = 0
-        mdm_est_neg[mdm_est_neg > 0] = 0
-        mdm_est_neg *= -1
-        cm_est = OUTPUT_DICT['batch_cm_est'].clone().unsqueeze(1) * 100 / 43.55800622930469
+        dropout_variance = None
 
-        # 1. / 16.69545796387731,  # pos est depth
-        # 1. / 45.08513083167194,  # neg est depth
-        # 1. / 43.55800622930469,  # cm est
-
-        sc_sample1 = OUTPUT_DICT['batch_targets_est'].clone()
-        sc_sample1 = sc_sample1[0, :].squeeze() / 1000
-        sc_sample1 = sc_sample1.view(self.output_size_train)
-        #print sc_sample1
-
-        if model2 is not None:
-            print "Using model 2"
-            batch_cor = []
-            batch_cor.append(torch.cat((pmat_stack[:, 0:1, :, :],
-                                        mdm_est_pos.type(torch.FloatTensor),
-                                        mdm_est_neg.type(torch.FloatTensor),
-                                        cm_est.type(torch.FloatTensor),
-                                        pmat_stack[:, 1:, :, :]), dim=1))
-
-            if self.CTRL_PNL['full_body_rot'] == False:
-                batch_cor.append(torch.cat((batch1,
-                                            OUTPUT_DICT['batch_betas_est'].cpu(),
-                                            OUTPUT_DICT['batch_angles_est'].cpu(),
-                                            OUTPUT_DICT['batch_root_xyz_est'].cpu()), dim=1))
-            elif self.CTRL_PNL['full_body_rot'] == True:
-                batch_cor.append(torch.cat((batch1,
-                                            OUTPUT_DICT['batch_betas_est'].cpu(),
-                                            OUTPUT_DICT['batch_angles_est'].cpu(),
-                                            OUTPUT_DICT['batch_root_xyz_est'].cpu(),
-                                            OUTPUT_DICT['batch_root_atan2_est'].cpu()), dim=1))
-
-            self.CTRL_PNL['adjust_ang_from_est'] = True
-            scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch_cor, False, model2,
-                                                                                        self.CTRL_PNL)
-
-
-
-        self.CTRL_PNL['first_pass'] = False
-
-        # print betas_est, root_shift_est, angles_est
-        if self.CTRL_PNL['dropout'] == True:
-            #print OUTPUT_DICT['verts'].shape
-            smpl_verts = np.mean(OUTPUT_DICT['verts'], axis = 0)
-            dropout_variance = np.std(OUTPUT_DICT['verts'], axis=0)
-            dropout_variance = np.linalg.norm(dropout_variance, axis = 1)
-        else:
-            smpl_verts = OUTPUT_DICT['verts'][0, :, :]
-            dropout_variance = None
-
-        self.RESULTS_DICT['betas'].append(OUTPUT_DICT['batch_betas_est_post_clip'].cpu().numpy()[0])
-
-
-
-
-        smpl_verts = np.concatenate((smpl_verts[:, 1:2] - 0.286 + 0.0143, smpl_verts[:, 0:1] - 0.286 + 0.0143, 0.0 -smpl_verts[:, 2:3]), axis = 1)
+        smpl_verts = np.concatenate((self.ALL_VERTS[:, 1:2] + 0.0143 + 32 * 0.0286 + .286, self.ALL_VERTS[:, 0:1] + 0.0143 + 13.5 * 0.0286,
+             - self.ALL_VERTS[:, 2:3]), axis=1)
 
         smpl_faces = np.array(self.m.f)
 
         pc_autofil_red = self.trim_pc_sides(tf_corners, camera_alpha_vert, camera_alpha_horiz, h, kinect_rot_cw) #this is the point cloud
 
 
-        q = OUTPUT_DICT['batch_mdm_est'].data.numpy().reshape(OUTPUT_DICT['batch_mdm_est'].size()[0], 64, 27) * -1
-        q = np.mean(q, axis = 0)
 
         camera_point = [1.09898028, 0.46441343, -CAM_BED_DIST]
 
@@ -637,146 +591,68 @@ class Viz3DPose():
 
         #print smpl_verts
 
-        viz_type = "3D"
+        print np.min(smpl_verts[:, 0]), np.max(smpl_verts[:, 0])
+        print np.min(smpl_verts[:, 1]), np.max(smpl_verts[:, 1])
+        print np.min(smpl_verts[:, 2]), np.max(smpl_verts[:, 2])
 
-        self.RESULTS_DICT['body_roll_rad'].append(float(OUTPUT_DICT['batch_angles_est'][0, 1]))
-
-        if viz_type == "2D":
-            from visualization_lib import VisualizationLib
-            if model2 is not None:
-                self.im_sample = INPUT_DICT['batch_images'][0, 4:,:].squeeze() * 20.  # normalizing_std_constants[4]*5.  #pmat
-            else:
-                self.im_sample = INPUT_DICT['batch_images'][0, 1:,:].squeeze() * 20.  # normalizing_std_constants[4]*5.  #pmat
-            self.im_sample_ext = INPUT_DICT['batch_images'][0, 0:, :].squeeze() * 20.  # normalizing_std_constants[0]  #pmat contact
-            # self.im_sample_ext2 = INPUT_DICT['batch_images'][im_display_idx, 2:, :].squeeze()*20.#normalizing_std_constants[4]  #sobel
-            self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][0, :, :].squeeze().unsqueeze(0) * -1  # est depth output
-
-            # print scores[0, 10:16], 'scores of body rot'
-
-            # print self.im_sample.size(), self.im_sample_ext.size(), self.im_sample_ext2.size(), self.im_sample_ext3.size()
-
-            # self.publish_depth_marker_array(self.im_sample_ext3)
+        #render everything
+        self.RESULTS_DICT = self.pyRender.render_mesh_pc_bed_pyrender_everything(smpl_verts, smpl_faces, camera_point,
+                                                              bedangle, self.RESULTS_DICT,
+                                                              pc = pc_autofil_red, pmat = pmat, smpl_render_points = False,
+                                                              markers = [[0.0, 0.0, 0.0],[0.0, 1.5, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0]],
+                                                                                 dropout_variance = dropout_variance)
 
 
+        #render in 3D pyrender with pressure mat
+        #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
+        #                                          pc = None, pmat = pmat, smpl_render_points = False,
+        #                                          facing_cam_only=False, viz_type = None,
+        #                                          markers = None, segment_limbs=False)
 
-            self.tar_sample = INPUT_DICT['batch_targets']
-            self.tar_sample = self.tar_sample[0, :].squeeze() / 1000
-            sc_sample = OUTPUT_DICT['batch_targets_est'].clone()
-            sc_sample = sc_sample[0, :].squeeze() / 1000
+        #render in 3D pyrender with segmented limbs
+        #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
+        #                                          pc = None, pmat = None, smpl_render_points = False,
+        #                                          facing_cam_only=False, viz_type = None,
+        #                                          markers = None, segment_limbs=True)
 
+        #render the error of point cloud points relative to verts
+        #self.Render.eval_dist_render_open3d(smpl_verts, smpl_faces, pc_autofil_red, viz_type = 'pc_error',
+        #                                      camera_point = camera_point, segment_limbs=False)
+        #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
+        #                                          pc = pc_autofil_red, pmat = None, smpl_render_points = False,
+        #                                          facing_cam_only=True, viz_type = 'pc_error',
+        #                                          markers = None, segment_limbs=False)
 
-            sc_sample = sc_sample.view(self.output_size_train)
+        #render the error of verts relative to point cloud points
+        #self.Render.eval_dist_render_open3d(smpl_verts, smpl_faces, pc_autofil_red, viz_type = 'mesh_error',
+        #                                      camera_point = camera_point, segment_limbs=False)
+        #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
+        #                                          pc = pc_autofil_red, pmat = None, smpl_render_points = False,
+        #                                          facing_cam_only=True, viz_type = 'mesh_error',
+        #                                          markers = None, segment_limbs=False)
 
-            VisualizationLib().visualize_pressure_map(self.im_sample, sc_sample1, sc_sample,
-                                                         # self.im_sample_ext, None, None,
-                                                          self.im_sample_ext3, None, None, #, self.tar_sample_val, self.sc_sample_val,
-                                                          block=False)
-
-            time.sleep(4)
-
-        elif viz_type == "3D":
-
-            print np.min(smpl_verts[:, 0]), np.max(smpl_verts[:, 0])
-            print np.min(smpl_verts[:, 1]), np.max(smpl_verts[:, 1])
-            print np.min(smpl_verts[:, 2]), np.max(smpl_verts[:, 2])
-
-            #render everything
-            self.RESULTS_DICT = self.pyRender.render_mesh_pc_bed_pyrender_everything(smpl_verts, smpl_faces, camera_point,
-                                                                  bedangle, self.RESULTS_DICT,
-                                                                  pc = pc_autofil_red, pmat = pmat, smpl_render_points = False,
-                                                                  markers = [[0.0, 0.0, 0.0],[0.0, 1.5, 0.0],[0.0, 0.0, 0.0],[0.0, 0.0, 0.0]],
-                                                                                     dropout_variance = dropout_variance)
-
-
-            #render in 3D pyrender with pressure mat
-            #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
-            #                                          pc = None, pmat = pmat, smpl_render_points = False,
-            #                                          facing_cam_only=False, viz_type = None,
-            #                                          markers = None, segment_limbs=False)
-
-            #render in 3D pyrender with segmented limbs
-            #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
-            #                                          pc = None, pmat = None, smpl_render_points = False,
-            #                                          facing_cam_only=False, viz_type = None,
-            #                                          markers = None, segment_limbs=True)
-
-            #render the error of point cloud points relative to verts
-            #self.Render.eval_dist_render_open3d(smpl_verts, smpl_faces, pc_autofil_red, viz_type = 'pc_error',
-            #                                      camera_point = camera_point, segment_limbs=False)
-            #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
-            #                                          pc = pc_autofil_red, pmat = None, smpl_render_points = False,
-            #                                          facing_cam_only=True, viz_type = 'pc_error',
-            #                                          markers = None, segment_limbs=False)
-
-            #render the error of verts relative to point cloud points
-            #self.Render.eval_dist_render_open3d(smpl_verts, smpl_faces, pc_autofil_red, viz_type = 'mesh_error',
-            #                                      camera_point = camera_point, segment_limbs=False)
-            #self.pyRender.render_mesh_pc_bed_pyrender(smpl_verts, smpl_faces, camera_point, bedangle,
-            #                                          pc = pc_autofil_red, pmat = None, smpl_render_points = False,
-            #                                          facing_cam_only=True, viz_type = 'mesh_error',
-            #                                          markers = None, segment_limbs=False)
-
-            time.sleep(1)
-            self.point_cloud_array = None
+        time.sleep(1)
+        self.point_cloud_array = None
 
 
 
-            #dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix, add_floor = False)
+        #dss = dart_skel_sim.DartSkelSim(render=True, m=self.m, gender = gender, posture = posture, stiffness = stiffness, shiftSIDE = shape_pose_vol[4], shiftUD = shape_pose_vol[5], filepath_prefix=self.filepath_prefix, add_floor = False)
 
-            #dss.run_simulation(10000)
-            #generator.standard_render()
+        #dss.run_simulation(10000)
+        #generator.standard_render()
 
-            #print self.RESULTS_DICT['v_limb_to_gt_err']
-            #print self.RESULTS_DICT['precision']
-            #print np.mean(self.RESULTS_DICT['precision'])
+        #print self.RESULTS_DICT['v_limb_to_gt_err']
+        #print self.RESULTS_DICT['precision']
+        #print np.mean(self.RESULTS_DICT['precision'])
 
 
 
-    def evaluate_data(self, filename1, filename2=None):
+    def evaluate_data(self, filename1):
 
 
         #self.Render = libRender.pyRenderMesh(render = False)
         self.pyRender = libPyRender.pyRenderMesh(render = False)
 
-        #model = torch.load(filename1, map_location={'cuda:5': 'cuda:0'})
-        if GPU == True:
-            for i in range(0, 8):
-                try:
-                    model = torch.load(filename1, map_location={'cuda:'+str(i):'cuda:0'})
-                    if self.CTRL_PNL['dropout'] == True:
-                        model = model.cuda().train()
-                    else:
-                        model = model.cuda().eval()
-                    break
-                except:
-                    pass
-            if filename2 is not None:
-                for i in range(0, 8):
-                    try:
-                        model2 = torch.load(filename2, map_location={'cuda:'+str(i):'cuda:0'})
-                        if self.CTRL_PNL['dropout'] == True:
-                            model2 = model2.cuda().train()
-                        else:
-                            model2 = model2.cuda().eval()
-                        break
-                    except:
-                        pass
-            else:
-                model2 = None
-        else:
-            model = torch.load(filename1, map_location='cpu')
-            if self.CTRL_PNL['dropout'] == True:
-                model = model.train()
-            else:
-                model = model.eval()
-            if filename2 is not None:
-                model2 = torch.load(filename2, map_location='cpu')
-                if self.CTRL_PNL['dropout'] == True:
-                    model2 = model2.train()
-                else:
-                    model2 = model2.eval()
-            else:
-                model2 = None
 
         #function_input = np.array(function_input)*np.array([10, 10, 10, 10, 10, 10, 0.1, 0.1, 0.1, 0.1, 1])
         #function_input += np.array([2.2, 32, -1, 1.2, 32, -5, 1.0, 1.0, 0.96, 0.95, 0.8])
@@ -1024,10 +900,10 @@ class Viz3DPose():
                 self.pc_all= [Y,X,-Z]
                 #print np.shape(self.pc_all), "PC ALL SHAPE"
 
-                self.estimate_pose(self.pressure, self.bed_state[0], markers_c, model, model2, tf_corners, camera_alpha_vert, camera_alpha_horiz, h, kinect_rotate_angle)
+                self.estimate_pose(self.pressure, self.bed_state[0], markers_c, tf_corners, camera_alpha_vert, camera_alpha_horiz, h, kinect_rotate_angle)
 
 
-        pkl.dump(self.RESULTS_DICT, open('/media/henry/multimodal_data_2/data/final_results/results_real_46K_'+PARTICIPANT+'_'+POSE_TYPE+'_'+NETWORK_2+'.p', 'wb'))
+        pkl.dump(self.RESULTS_DICT, open('/media/henry/multimodal_data_2/data/final_results/results_real_'+PARTICIPANT+'_'+POSE_TYPE+'_'+NETWORK_2+'.p', 'wb'))
 
 if __name__ ==  "__main__":
 
@@ -1043,7 +919,7 @@ if __name__ ==  "__main__":
     #             "0.5rtojtdpth_depthestin_angleadj_tnhFIXN_calnoise",
     #             "0.5rtojtdpth_depthestin_angleadj_tnhFIXN_htwt"]
 
-    NETWORK_2_LIST = ["0.5rtojtdpth_depthestin_angleadj_tnhFIXN_htwt_calnoise"]
+    NETWORK_2_LIST = ["BASELINE"]
 
     HTWT_LIST = [True, True, False, True]
 
@@ -1094,8 +970,7 @@ if __name__ ==  "__main__":
             #else:
             #    F_eval = V3D.evaluate_data("/media/henry/multimodal_data_2/data/convnets/planesreg/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt",\
             #                                "/media/henry/multimodal_data_2/data/convnets/planesreg_correction/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt")
-            F_eval = V3D.evaluate_data("/media/henry/multimodal_data_2/data/convnets/planesreg/FINAL/convnet_anglesDC_synth_46000_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt",\
-                                        "/media/henry/multimodal_data_2/data/convnets/planesreg_correction/FINAL/convnet_anglesDC_synth_46000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt")
+            F_eval = V3D.evaluate_data("BASELINE")
 
 
 
