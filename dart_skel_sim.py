@@ -314,28 +314,36 @@ class DartSkelSim(object):
 
         volume_torso = volume[0] + volume[3] + volume[6] + volume[9] + volume[11] + volume[12]
         volume_head = volume[10] + volume[13]
+        volume_torso_median = volume_median[0] + volume_median[3] + volume_median[6] + volume_median[9] + volume_median[11] + volume_median[12]
+        volume_head_median = volume_median[10] + volume_median[13]
 
 
         #Human Body Dynamics: Classical Mechanics and Human Movement by Aydin Tozeren, the average percentage of weight for each body part is as follows:
         #Trunk(Chest, back and abdomen)- 50.80,  Head - 7.30, Thigh - 9.88 x 2, Lower leg - 4.65 x 2, Foot - 1.45 x 2, Upper arm - 2.7 x 2, Forearm - 1.60 x 2, Hand - 0.66 x 2,
         #Trunk(Chest, back and abdomen) Women- 50.80,  Head - 9.40, Thigh - 8.30 x 2, Lower leg - 5.50 x 2, Foot - 1.20 x 2, Upper arm - 2.7 x 2, Forearm - 1.60 x 2, Hand - 0.50 x 2,
         #Trunk(Chest, back and abdomen) Men - 48.30,  Head - 7.10, Thigh - 10.50 x 2, Lower leg - 4.50 x 2, Foot - 1.50 x 2, Upper arm - 3.3 x 2, Forearm - 1.90 x 2, Hand - 0.60 x 2,
+
+
+        #print "DART SKEL SIM! "
+        #print volume_torso, volume_head
+        #print volume_median[0] + volume_median[3] + volume_median[6] + volume_median[9] + volume_median[11] + volume_median[12], volume_median[10] + volume_median[13]
+
         if gender == "f":
             BODY_MASS = 62.5 #kg median height: -1.658 or about 5 foot 5.3 in
-            skel.bodynodes[0].set_mass(BODY_MASS * 0.5080 * (volume[0]/volume_torso) * (volume[0]/volume_median[0]) + 0.00001)
+            skel.bodynodes[0].set_mass(BODY_MASS * 0.5080 * (volume_median[0]/volume_torso_median) * (volume[0]/volume_median[0]) + 0.00001)
             skel.bodynodes[1].set_mass(BODY_MASS * 0.0830 * (volume[1]/volume_median[1]) + 0.00001)
             skel.bodynodes[2].set_mass(BODY_MASS * 0.0830 * (volume[2]/volume_median[2]) + 0.00001)
-            skel.bodynodes[3].set_mass(BODY_MASS * 0.5080 * (volume[3]/volume_torso) * (volume[3]/volume_median[3]) + 0.00001)
+            skel.bodynodes[3].set_mass(BODY_MASS * 0.5080 * (volume_median[3]/volume_torso_median) * (volume[3]/volume_median[3]) + 0.00001)
             skel.bodynodes[4].set_mass(BODY_MASS * 0.0550 * (volume[4]/volume_median[4]) + 0.00001)
             skel.bodynodes[5].set_mass(BODY_MASS * 0.0550 * (volume[5]/volume_median[5]) + 0.00001)
-            skel.bodynodes[6].set_mass(BODY_MASS * 0.5080 * (volume[6]/volume_torso) * (volume[6]/volume_median[6])+ 0.00001)
+            skel.bodynodes[6].set_mass(BODY_MASS * 0.5080 * (volume_median[6]/volume_torso_median) * (volume[6]/volume_median[6])+ 0.00001)
             skel.bodynodes[7].set_mass(BODY_MASS * 0.0120 * (volume[7]/volume_median[7]) + 0.00001)
             skel.bodynodes[8].set_mass(BODY_MASS * 0.0120 * (volume[8]/volume_median[8]) + 0.00001)
-            skel.bodynodes[9].set_mass(BODY_MASS * 0.5080 * (volume[9]/volume_torso) * (volume[9]/volume_median[9]) + 0.00001)
-            skel.bodynodes[10].set_mass(BODY_MASS * 0.0940 * (volume[10]/volume_head) * (volume[10]/volume_median[10]) + 0.00001)
-            skel.bodynodes[11].set_mass(BODY_MASS * 0.5080 * (volume[11]/volume_torso) * (volume[11]/volume_median[11]) + 0.00001)
-            skel.bodynodes[12].set_mass(BODY_MASS * 0.5080 * (volume[12]/volume_torso) * (volume[12]/volume_median[12]) + 0.00001)
-            skel.bodynodes[13].set_mass(BODY_MASS * 0.0940 * (volume[13]/volume_head) * (volume[13]/volume_median[13]) + 0.00001)
+            skel.bodynodes[9].set_mass(BODY_MASS * 0.5080 * (volume_median[9]/volume_torso_median) * (volume[9]/volume_median[9]) + 0.00001)
+            skel.bodynodes[10].set_mass(BODY_MASS * 0.0940 * (volume_median[10]/volume_head_median) * (volume[10]/volume_median[10]) + 0.00001)
+            skel.bodynodes[11].set_mass(BODY_MASS * 0.5080 * (volume_median[11]/volume_torso_median) * (volume[11]/volume_median[11]) + 0.00001)
+            skel.bodynodes[12].set_mass(BODY_MASS * 0.5080 * (volume_median[12]/volume_torso_median) * (volume[12]/volume_median[12]) + 0.00001)
+            skel.bodynodes[13].set_mass(BODY_MASS * 0.0940 * (volume_median[13]/volume_head_median) * (volume[13]/volume_median[13]) + 0.00001)
             skel.bodynodes[14].set_mass(BODY_MASS * 0.0270 * (volume[14]/volume_median[14]) + 0.00001)
             skel.bodynodes[15].set_mass(BODY_MASS * 0.0270 * (volume[15]/volume_median[15]) + 0.00001)
             skel.bodynodes[16].set_mass(BODY_MASS * 0.0160 * (volume[16]/volume_median[16]) + 0.00001)
@@ -344,20 +352,20 @@ class DartSkelSim(object):
             skel.bodynodes[19].set_mass(BODY_MASS * 0.0050 * (volume[19]/volume_median[19]) + 0.00001)
         else:
             BODY_MASS = 78.4 #kg . median height: 1.791 or about 5 foot 10.5 in
-            skel.bodynodes[0].set_mass(BODY_MASS * 0.4830 * (volume[0]/volume_torso) * (volume[0]/volume_median[0]) + 0.00001)
+            skel.bodynodes[0].set_mass(BODY_MASS * 0.4830 * (volume_median[0]/volume_torso_median) * (volume[0]/volume_median[0]) + 0.00001)
             skel.bodynodes[1].set_mass(BODY_MASS * 0.1050 * (volume[1]/volume_median[1]) + 0.00001)
             skel.bodynodes[2].set_mass(BODY_MASS * 0.1050 * (volume[2]/volume_median[2]) + 0.00001)
-            skel.bodynodes[3].set_mass(BODY_MASS * 0.4830 * (volume[3]/volume_torso) * (volume[3]/volume_median[3]) + 0.00001)
+            skel.bodynodes[3].set_mass(BODY_MASS * 0.4830 * (volume_median[3]/volume_torso_median) * (volume[3]/volume_median[3]) + 0.00001)
             skel.bodynodes[4].set_mass(BODY_MASS * 0.0450 * (volume[4]/volume_median[4]) + 0.00001)
             skel.bodynodes[5].set_mass(BODY_MASS * 0.0450 * (volume[5]/volume_median[5]) + 0.00001)
-            skel.bodynodes[6].set_mass(BODY_MASS * 0.4830 * (volume[6]/volume_torso) * (volume[6]/volume_median[6]) + 0.00001)
+            skel.bodynodes[6].set_mass(BODY_MASS * 0.4830 * (volume_median[6]/volume_torso_median) * (volume[6]/volume_median[6]) + 0.00001)
             skel.bodynodes[7].set_mass(BODY_MASS * 0.0150 * (volume[7]/volume_median[7]) + 0.00001)
             skel.bodynodes[8].set_mass(BODY_MASS * 0.0150 * (volume[8]/volume_median[8]) + 0.00001)
-            skel.bodynodes[9].set_mass(BODY_MASS * 0.4830 * (volume[9]/volume_torso) * (volume[9]/volume_median[9]) + 0.00001)
-            skel.bodynodes[10].set_mass(BODY_MASS * 0.0710 * (volume[10]/volume_head) * (volume[10]/volume_median[10]) + 0.00001)
-            skel.bodynodes[11].set_mass(BODY_MASS * 0.4830 * (volume[11]/volume_torso) * (volume[11]/volume_median[11]) + 0.00001)
-            skel.bodynodes[12].set_mass(BODY_MASS * 0.4830 * (volume[12]/volume_torso * (volume[12]/volume_median[12])) + 0.00001)
-            skel.bodynodes[13].set_mass(BODY_MASS * 0.0710 * (volume[13]/volume_head) * (volume[13]/volume_median[13]) + 0.00001)
+            skel.bodynodes[9].set_mass(BODY_MASS * 0.4830 * (volume_median[9]/volume_torso_median) * (volume[9]/volume_median[9]) + 0.00001)
+            skel.bodynodes[10].set_mass(BODY_MASS * 0.0710 * (volume_median[10]/volume_head_median) * (volume[10]/volume_median[10]) + 0.00001)
+            skel.bodynodes[11].set_mass(BODY_MASS * 0.4830 * (volume_median[11]/volume_torso_median) * (volume[11]/volume_median[11]) + 0.00001)
+            skel.bodynodes[12].set_mass(BODY_MASS * 0.4830 * (volume_median[12]/volume_torso_median) * (volume[12]/volume_median[12]) + 0.00001)
+            skel.bodynodes[13].set_mass(BODY_MASS * 0.0710 * (volume_median[13]/volume_head_median) * (volume[13]/volume_median[13]) + 0.00001)
             skel.bodynodes[14].set_mass(BODY_MASS * 0.0330 * (volume[14]/volume_median[14]) + 0.00001)
             skel.bodynodes[15].set_mass(BODY_MASS * 0.0330 * (volume[15]/volume_median[15]) + 0.00001)
             skel.bodynodes[16].set_mass(BODY_MASS * 0.0190 * (volume[16]/volume_median[16]) + 0.00001)
