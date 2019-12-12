@@ -91,7 +91,7 @@ import sys
 
 sys.path.insert(0, '/home/henry/git/volumetric_pose_gen/convnets')
 from unpack_batch_lib import UnpackBatchLib
-import convnet as convnet
+import convnet_resub as convnet
 from torch.autograd import Variable
 
 if False:#torch.cuda.is_available():
@@ -507,7 +507,7 @@ class Viz3DPose():
         mat_size = (64, 27)
 
 
-        pmat = np.fliplr(np.flipud(np.clip(pmat.reshape(MAT_SIZE)*float(5), a_min=0, a_max=100)))
+        pmat = np.fliplr(np.flipud(np.clip(pmat.reshape(MAT_SIZE)*float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100)))
 
         if self.CTRL_PNL['cal_noise'] == False:
             pmat = gaussian_filter(pmat, sigma=0.5)
@@ -644,7 +644,9 @@ class Viz3DPose():
         if viz_type == "2D":
             from visualization_lib import VisualizationLib
             if model2 is not None:
-                self.im_sample = INPUT_DICT['batch_images'][0, 4:,:].squeeze() * 20.  # normalizing_std_constants[4]*5.  #pmat
+                self.im_sample = INPUT_DICT['batch_images'][0, 4:5,:].squeeze() * 11.70153502792190#25.50538629767412#  # normalizing_std_constants[4]*5.  #pmat
+                self.im_sample2 = np.clip(INPUT_DICT['batch_images'][0, 4:5,:].squeeze() * 25.50538629767412*5, 0, 100)  # normalizing_std_constants[4]*5.  #pmat
+                self.im_sample3 = np.clip(INPUT_DICT['batch_images'][0, 4:5,:].squeeze() * 25.50538629767412*20, 0, 100)  # normalizing_std_constants[4]*5.  #pmat
             else:
                 self.im_sample = INPUT_DICT['batch_images'][0, 1:,:].squeeze() * 20.  # normalizing_std_constants[4]*5.  #pmat
             self.im_sample_ext = INPUT_DICT['batch_images'][0, 0:, :].squeeze() * 20.  # normalizing_std_constants[0]  #pmat contact
@@ -667,9 +669,13 @@ class Viz3DPose():
 
             sc_sample = sc_sample.view(self.output_size_train)
 
-            VisualizationLib().visualize_pressure_map(self.im_sample, sc_sample1, sc_sample,
-                                                         # self.im_sample_ext, None, None,
-                                                          self.im_sample_ext3, None, None, #, self.tar_sample_val, self.sc_sample_val,
+            print np.max(self.im_sample), np.max(self.im_sample2), np.max(self.im_sample3), 'max'
+            print np.sum(self.im_sample), np.sum(self.im_sample2), np.sum(self.im_sample3), 'sums'
+            #print np.shape(self.im_sample3)
+
+            VisualizationLib().visualize_pressure_map(self.im_sample, None, None, #sc_sample1, sc_sample,
+                                                          self.im_sample2, None, None,
+                                                          self.im_sample3, None, None, #, self.tar_sample_val, self.sc_sample_val,
                                                           block=False)
 
             time.sleep(4)
@@ -764,6 +770,7 @@ class Viz3DPose():
             else:
                 model2 = None
         else:
+            print filename1
             model = torch.load(filename1, map_location='cpu')
             if self.CTRL_PNL['dropout'] == True:
                 model = model.train()
@@ -1045,7 +1052,7 @@ if __name__ ==  "__main__":
 
     NETWORK_2_LIST = ["0.5rtojtdpth_depthestin_angleadj_tnhFIXN_htwt_calnoise"]
 
-    HTWT_LIST = [True, True, False, True]
+    HTWT_LIST = [True]
 
 
     # NETWORK_2 = "1.0rtojtdpth_depthestin_angleadj_tnhFIXN_htwt_calnoise"
@@ -1074,7 +1081,8 @@ if __name__ ==  "__main__":
                             "S184",
                             "S187",
                             "S188",  # 1 bad prone posture classified as supine, 2 pc corrupted
-                            "S196", ]
+                            "S196",
+                            ]
 
         for PARTICIPANT in participant_list:
 

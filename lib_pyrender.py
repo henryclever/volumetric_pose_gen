@@ -69,7 +69,7 @@ class pyRenderMesh():
         # dterms = 'vc', 'camera', 'bgcolor'
         self.first_pass = True
         self.render = render
-        if render == True:
+        if True:# render == True:
             self.scene = pyrender.Scene()
 
             #self.human_mat = pyrender.MetallicRoughnessMaterial(baseColorFactor=[0.0, 0.0, 1.0 ,0.0])
@@ -1056,17 +1056,19 @@ class pyRenderMesh():
         r = pyrender.OffscreenRenderer(2000, 2000)
         # r.render(self.scene)
         color, depth = r.render(self.scene)
-        # plt.subplot(1, 2, 1)
+        plt.subplot(1, 2, 1)
         plt.axis('off')
         plt.imshow(color)
-        # plt.subplot(1, 2, 2)
-        # plt.axis('off')
-        # plt.imshow(depth, cmap=plt.cm.gray_r) >> > plt.show()
+        plt.subplot(1, 2, 2)
+        plt.axis('off')
+        plt.imshow(depth, cmap=plt.cm.gray_r)
+        plt.show()
 
-        fig.set_size_inches(15., 15.)
-        fig.tight_layout()
-        save_name = 'f_hbh_'+'{:04}'.format(self.pic_num)
-        fig.savefig('/home/henry/Pictures/CVPR2020_study/'+save_name+'.png', dpi=300)
+        #do this to save images
+        #fig.set_size_inches(15., 15.)
+        #fig.tight_layout()
+        #save_name = 'f_hbh_'+'{:04}'.format(self.pic_num)
+        #fig.savefig('/home/henry/Pictures/CVPR2020_study/'+save_name+'.png', dpi=300)
 
         #plt.savefig('test2png.png', dpi=100)
 

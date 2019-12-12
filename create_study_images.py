@@ -29,7 +29,24 @@ class pyFlex():
 
         #print human_shiftUD, capsule_angles[3:6]
 
-        m.pose[0:3] = capsule_angles[0:3]
+        #m.pose[0:3] = capsule_angles[0:3]
+
+
+
+        import lib_kinematics as LibKinematics
+
+
+        euler_angles = [0.0, np.pi/2, -np.pi/6]
+        rot_mat = LibKinematics.ZXYeulerAnglesToRotationMatrix(euler_angles)
+        dir_cos_root = LibKinematics.dir_cos_angles_from_matrix(rot_mat)
+
+
+        m.pose[0] = dir_cos_root[0]
+        m.pose[1] = dir_cos_root[1]
+        m.pose[2] = dir_cos_root[2]#np.pi/2 #[2] is yaw for roll of 0
+
+
+
         m.pose[3:6] = capsule_angles[6:9]
         m.pose[6:9] = capsule_angles[9:12]
         m.pose[9:12] = capsule_angles[12:15]
@@ -61,7 +78,7 @@ if __name__ == '__main__':
     from smpl.smpl_webuser.serialization import load_model
     import time
     import lib_pyrender as libPyRender
-    pyRender = libPyRender.pyRenderMesh()
+    pyRender = libPyRender.pyRenderMesh(render = True)
 
     gender = "f"
     posture = "lay"
@@ -91,4 +108,4 @@ if __name__ == '__main__':
         m = pF.assign_human_meshing(m, mTrans, resting_pose_data)
 
         pyRender.render_only_human_gt(m)
-        #time.sleep(100000)
+        time.sleep(100000)

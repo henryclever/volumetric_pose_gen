@@ -75,13 +75,13 @@ if __name__ == '__main__':
         straight_limbs = [[]]
 
 
-        NETWORK_2 = "0.5rtojtdpth_depthestin_angleadj_tnhFIXN_htwt_calnoise"
+        #NETWORK_2 = "1.0rtojtdpth_angleadj_tnhFIXN_htwt_calnoise"
+        NETWORK_2 = "0.5rtojtdpth_depthestin_angleadj_tnhFIXN"
         #NETWORK_2 = "NONE-200e"
         #NETWORK_2 = "BASELINE"
 
         POSE_TYPE = "2"
-        DATA_QUANT = "46K"
-
+        DATA_QUANT = "184K"
 
         recall_list = []
         precision_list = []
@@ -90,21 +90,23 @@ if __name__ == '__main__':
         v_to_gt_err_list = []
         gt_to_v_err_list = []
 
+
         for participant in participant_list:
             participant_directory = "/media/henry/multimodal_data_2/CVPR2020_study/"+participant
             participant_info = load_pickle(participant_directory + "/participant_info.p")
 
             pose_type_list = participant_info['pose_type']
-            if participant_info['gender'] == 'f': continue
+            #if participant_info['gender'] == 'f': continue
 
             print "participant directory: ", participant_directory
 
-
-            #current_results_dict = load_pickle("/media/henry/multimodal_data_2/data/final_results/"+DATA_QUANT+"_"
-            #                                   +NETWORK_2+"/results_real_"+DATA_QUANT+"_"
-            #                                   +participant+"_"+POSE_TYPE+"_"+NETWORK_2+".p")
-            current_results_dict = load_pickle("/media/henry/multimodal_data_2/data/final_results/"+NETWORK_2+"/results_real_"
-                                               +participant+"_"+POSE_TYPE+"_"+NETWORK_2+".p")
+            if True:#DATA_QUANT == "46K":
+                current_results_dict = load_pickle("/media/henry/multimodal_data_2/data/final_results/"+DATA_QUANT+"_"
+                                                   +NETWORK_2+"/results_real_"+DATA_QUANT+"_"
+                                                   +participant+"_"+POSE_TYPE+"_"+NETWORK_2+".p")
+            else:
+                current_results_dict = load_pickle("/media/henry/multimodal_data_2/data/final_results/"+NETWORK_2+"/results_real_"
+                                                   +participant+"_"+POSE_TYPE+"_"+NETWORK_2+".p")
 
             print "/media/henry/multimodal_data_2/data/final_results/"+NETWORK_2+"/results_real_"+participant+"_"+POSE_TYPE+"_"+NETWORK_2+".p"
             #for entry in current_results_dict:
@@ -123,6 +125,13 @@ if __name__ == '__main__':
                 num_ims = 5
             elif POSE_TYPE == "2":
                 num_ims = 48
+
+            recall_list_curr = []
+            precision_list_curr = []
+            overlap_d_err_list_curr = []
+            v_limb_to_gt_err_list_curr = []
+            v_to_gt_err_list_curr = []
+            gt_to_v_err_list_curr = []
 
             for i in range(num_ims):
 
@@ -148,12 +157,12 @@ if __name__ == '__main__':
                 #body_roll_rad = current_results_dict['body_roll_rad'][idx_num]
 
                 #if partition_type in ['phu']:
-                recall_list.append(current_results_dict['recall'][idx_num])
-                precision_list.append(current_results_dict['precision'][idx_num])
-                overlap_d_err_list.append( current_results_dict['overlap_d_err'][idx_num])
-                v_limb_to_gt_err_list.append(current_results_dict['v_limb_to_gt_err'][idx_num])
-                v_to_gt_err_list.append(current_results_dict['v_to_gt_err'][idx_num])
-                gt_to_v_err_list.append(current_results_dict['gt_to_v_err'][idx_num])
+                recall_list_curr.append(current_results_dict['recall'][idx_num])
+                precision_list_curr.append(current_results_dict['precision'][idx_num])
+                overlap_d_err_list_curr.append( current_results_dict['overlap_d_err'][idx_num])
+                v_limb_to_gt_err_list_curr.append(current_results_dict['v_limb_to_gt_err'][idx_num])
+                v_to_gt_err_list_curr.append(current_results_dict['v_to_gt_err'][idx_num])
+                gt_to_v_err_list_curr.append(current_results_dict['gt_to_v_err'][idx_num])
                 '''
                 if idx_num in [3] and participant not in ["S145", "S188", "S140"]:
                     #if partition_type in ['supine_plo', 'rollpi_plo']:
@@ -186,6 +195,12 @@ if __name__ == '__main__':
                     gt_to_v_err_list.append(current_results_dict['gt_to_v_err'][idx_num]) #for 140 get supine from last'''
 
 
+            recall_list.append(np.mean(recall_list_curr))
+            precision_list.append(np.mean(precision_list_curr))
+            overlap_d_err_list.append(np.mean(overlap_d_err_list_curr))
+            v_limb_to_gt_err_list.append(np.mean(v_limb_to_gt_err_list_curr))
+            v_to_gt_err_list.append(np.mean(v_to_gt_err_list_curr))
+            gt_to_v_err_list.append(np.mean(gt_to_v_err_list_curr))
 
 
 
@@ -200,8 +215,8 @@ if __name__ == '__main__':
         #print "average precision: ", np.mean(precision_list)
        # print "average recall: ", np.mean(recall_list)
         #print "average overlap depth err: ", np.mean(overlap_d_err_list)
-        print "average v to gt err: ", np.mean(v_to_gt_err_list)
-        print "average gt to v err: ", np.mean(gt_to_v_err_list)
+        print "average v to gt err: ", np.mean(v_to_gt_err_list)*100
+        print "average gt to v err: ", np.mean(gt_to_v_err_list)*100
         print "mean 3D err: ", np.mean([np.mean(v_to_gt_err_list), np.mean(gt_to_v_err_list)])
 
 
@@ -209,11 +224,12 @@ if __name__ == '__main__':
     elif RESULT_TYPE == "synth":
 
 
-        NETWORK_1 = "1.0rtojtdpth_depthestin_angleadj_tnhFIXN_htwt"
-        #NETWORK_2 = "0.5rtojtdpth_depthestin_angleadj_tnhFIXN_htwt"
+        #NETWORK_1 = "1.0rtojtdpth_depthestin_angleadj_tnhFIXN_htwt_calnoise"
+        #NETWORK_2 = "0.5rtojtdpth_depthestin_angleadj_tnhFIXN_calnoise"
+        NETWORK_2 = "1.0rtojtdpth_angleadj_tnhFIXN_calnoise"
         #NETWORK_2 = "NONE-200e"
-        NETWORK_2 = "BASELINE"
-        DATA_QUANT = "46K"
+        #NETWORK_2 = "BASELINE"
+        DATA_QUANT = "184K"
 
         filename_list = ["test_rollpi_f_lay_set23to24_1500_",
                          "test_rollpi_m_lay_set23to24_1500_",
@@ -244,10 +260,10 @@ if __name__ == '__main__':
             #current_results_dict = load_pickle("/media/henry/multimodal_data_1/data/final_results/"+DATA_QUANT+"_"
             #                                   +NETWORK_2+"/results_synth_"+DATA_QUANT+"_"+filename+NETWORK_2+".p")
             #current_results_dict = load_pickle("/media/henry/multimodal_data_2/data/final_results/"+NETWORK_2+"/results_synth_"+filename+NETWORK_2+".p")
-            current_results_dict = load_pickle("/home/henry/data/final_results/"+NETWORK_2+"/results_synth_"+filename+NETWORK_2+".p")
+            #current_results_dict = load_pickle("/home/henry/data/final_results/"+NETWORK_2+"/results_synth_"+filename+NETWORK_2+".p")
+            current_results_dict = load_pickle("/media/henry/multimodal_data_2/data/final_results/"+DATA_QUANT+"_"+NETWORK_2+"/results_synth_"+DATA_QUANT+"_"+filename+NETWORK_2+".p")
             for entry in current_results_dict:
                 print entry
-
             #print current_results_dict['j_err'], 'j err'
             #precision =
 

@@ -240,7 +240,7 @@ if __name__ == '__main__':
     all_participant_info["S104_weight_lbs"] = 93.
     all_participant_info["S107_weight_lbs"] = 164.
     all_participant_info["S114_weight_lbs"] = 140.
-    all_participant_info["S118_weight_lbs"] = 135.
+    all_participant_info["S118_weight_lbs"] = 135. #61 kgs
     all_participant_info["S121_weight_lbs"] = 185.
     all_participant_info["S130_weight_lbs"] = 120.
     all_participant_info["S134_weight_lbs"] = 121.
@@ -251,7 +251,7 @@ if __name__ == '__main__':
     all_participant_info["S151_weight_lbs"] = 140.
     all_participant_info["S163_weight_lbs"] = 120.
     all_participant_info["S165_weight_lbs"] = 205.
-    all_participant_info["S170_weight_lbs"] = 159.
+    all_participant_info["S170_weight_lbs"] = 159. #72 kgs
     all_participant_info["S179_weight_lbs"] = 143.
     all_participant_info["S184_weight_lbs"] = 147.
     all_participant_info["S187_weight_lbs"] = 120.
@@ -266,7 +266,7 @@ if __name__ == '__main__':
     all_participant_info["S104_height_in"] = 60.
     all_participant_info["S107_height_in"] = 66.
     all_participant_info["S114_height_in"] = 68.5
-    all_participant_info["S118_height_in"] = 64.
+    all_participant_info["S118_height_in"] = 64. #
     all_participant_info["S121_height_in"] = 73.
     all_participant_info["S130_height_in"] = 65.
     all_participant_info["S134_height_in"] = 64.5
@@ -277,7 +277,7 @@ if __name__ == '__main__':
     all_participant_info["S151_height_in"] = 67.
     all_participant_info["S163_height_in"] = 70.
     all_participant_info["S165_height_in"] = 78.
-    all_participant_info["S170_height_in"] = 70.
+    all_participant_info["S170_height_in"] = 70. #
     all_participant_info["S179_height_in"] = 68.
     all_participant_info["S184_height_in"] = 72.
     all_participant_info["S187_height_in"] = 63.
@@ -317,13 +317,13 @@ if __name__ == '__main__':
         file_dir = "/media/henry/multimodal_data_2/CVPR2020_study/"+participant
 
         participant_info = {}
-        participant_info["cal_func"] = all_participant_info[participant + "_cal_func"]
-        participant_info["adj_2"] = all_participant_info[participant + "_adj_2"]
-        participant_info["corners"] = all_participant_info[participant + "_corners"]
+        #participant_info["cal_func"] = all_participant_info[participant + "_cal_func"]
+        #participant_info["adj_2"] = all_participant_info[participant + "_adj_2"]
+        #participant_info["corners"] = all_participant_info[participant + "_corners"]
         participant_info["weight_lbs"] = all_participant_info[participant + "_weight_lbs"]
         participant_info["height_in"] = all_participant_info[participant + "_height_in"]
         participant_info["gender"] = all_participant_info[participant + "_gender"]
-        participant_info["pose_type"] = all_participant_info[participant + "_pose_type"]
+        #participant_info["pose_type"] = all_participant_info[participant + "_pose_type"]
 
-        pkl.dump(participant_info, open(file_dir+'/participant_info.p', 'wb'))
+        pkl.dump(participant_info, open(file_dir+'/participant_info_red.p', 'wb'))
 
