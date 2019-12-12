@@ -102,7 +102,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['num_epochs'] = 101
         self.CTRL_PNL['incl_inter'] = True
         self.CTRL_PNL['shuffle'] = False
-        self.CTRL_PNL['incl_ht_wt_channels'] = False
+        self.CTRL_PNL['incl_ht_wt_channels'] = True
         self.CTRL_PNL['incl_pmat_cntct_input'] = True
         self.CTRL_PNL['lock_root'] = False
         self.CTRL_PNL['num_input_channels'] = 3
@@ -124,8 +124,9 @@ class PhysicalTrainer():
         self.CTRL_PNL['normalize_input'] = True
         self.CTRL_PNL['L2_contact'] = True
         self.CTRL_PNL['pmat_mult'] = int(5)
-        self.CTRL_PNL['cal_noise'] = False
+        self.CTRL_PNL['cal_noise'] = True
         self.CTRL_PNL['double_network_size'] = False
+        self.CTRL_PNL['first_pass'] = True
 
         self.filename = filename
 
@@ -338,7 +339,7 @@ class PhysicalTrainer():
             #self.model = torch.load('/home/henry/data/synth/convnet_anglesEU_synth_planesreg_128b_100e.pt')
             #self.model = torch.load('/home/henry/data/convnets/epochs_set_3/convnet_anglesEU_synthreal_s12_3xreal_128b_101e_300e.pt')
             #self.model = torch.load('/home/henry/data/convnets/planesreg/convnet_anglesEU_synth_s9_3xreal_128b_0.1rtojtdpth_pmatcntin_100e_00001lr.pt')
-            self.model = torch.load('/home/henry/data/convnets/planesreg/184K/convnet_anglesDC_synth_184K_128b_x5pmult_1.0rtojtdpth_tnh_100e_00002lr.pt', map_location={'cuda:7':'cuda:0'})
+            self.model = torch.load('/home/henry/data/convnets/planesreg/FINAL/convnet_anglesDC_synth_46000_128b_x5pmult_1.0rtojtdpth_tnhFIXN_htwt_calnoise_100e_00002lr_V2.pt', map_location={'cuda:7':'cuda:0'})
 
             #self.model = torch.load('/media/henry/multimodal_data_2/data/convnets/1.5xsize/convnet_anglesEU_synthreal_tanh_s4ang_sig0p5_5xreal_voloff_128b_300e.pt')
             self.model = self.model.cuda()
@@ -402,6 +403,8 @@ class PhysicalTrainer():
                 scores, INPUT_DICT, OUTPUT_DICT = \
                     UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=True, model=self.model,
                                                               CTRL_PNL=self.CTRL_PNL)
+
+                self.CTRL_PNL['first_pass'] = False
 
                 self.criterion = nn.L1Loss()
                 scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].shape[0], scores.size()[1]))).type(dtype),
@@ -488,7 +491,7 @@ class PhysicalTrainer():
 
 
         #pkl.dump(self.dat,open('/media/henry/multimodal_data_2/'+self.filename+'_output0p7.p', 'wb'))
-        pkl.dump(self.dat,open('/home/henry/'+self.filename+'_output_184k_100e.p', 'wb'))
+        pkl.dump(self.dat,open('/home/henry/'+self.filename+'_output_46k_FIX_100e_htwt_clns0p1_V2.p', 'wb'))
 
 
         #if GPU == True:
@@ -540,49 +543,52 @@ if __name__ == "__main__":
 
     network_design = True
 
-    #filename_list_f = [ 'data/synth/random3_supp_fix/test_roll0_plo_hbh_f_lay_set4_500',
-    #                    'data/synth/random3_supp_fix/test_roll0_plo_phu_f_lay_set1pa3_500',
-    #                    'data/synth/random3_supp_fix/test_roll0_sl_f_lay_set1both_500',
-    #                    'data/synth/random3_supp_fix/test_roll0_xl_f_lay_set1both_500',
-    #                   'data/synth/random3_supp_fix/train_roll0_plo_phu_f_lay_set2pl4_4000',
-    #                    'data/synth/random3_supp_fix/train_roll0_sl_f_lay_set2pl3pa1_4000',
-    #                   'data/synth/random3_supp_fix/train_roll0_xl_f_lay_set2both_4000',
-    #                    'data/synth/random3_supp_fix/train_roll0_plo_hbh_f_lay_set1to2_2000']
+    filename_list_f = [ 'data/synth/random3_supp/test_roll0_plo_hbh_f_lay_set4_500',
+                        'data/synth/random3_supp/test_roll0_plo_phu_f_lay_set1pa3_500',
+                        'data/synth/random3_supp/test_roll0_sl_f_lay_set1both_500',
+                        'data/synth/random3_supp/test_roll0_xl_f_lay_set1both_500',
+                       'data/synth/random3_supp/train_roll0_plo_phu_f_lay_set2pl4_4000',
+                        'data/synth/random3_supp/train_roll0_sl_f_lay_set2pl3pa1_4000',
+                       'data/synth/random3_supp/train_roll0_xl_f_lay_set2both_4000',
+                        'data/synth/random3_supp/train_roll0_plo_hbh_f_lay_set1to2_2000']
 
-    filename_list_f = ['data/synth/random3_fix/test_roll0_f_lay_set14_1500',
-                       'data/synth/random3_fix/test_roll0_plo_f_lay_set14_1500',
-                       'data/synth/random3_fix/test_rollpi_plo_f_lay_set23to24_3000',
-                       'data/synth/random3_fix/train_roll0_f_lay_set5to7_5000',
-                       'data/synth/random3_fix/train_roll0_f_lay_set10to13_8000',
-                       'data/synth/random3_fix/train_roll0_plo_f_lay_set5to7_5000',
-                       'data/synth/random3_fix/train_roll0_plo_f_lay_set10to13_8000',
-                       'data/synth/random3_fix/train_rollpi_f_lay_set10to17_16000',
-                       'data/synth/random3_fix/train_rollpi_f_lay_set18to22_10000',
-                       'data/synth/random3_fix/train_rollpi_plo_f_lay_set10to17_16000',
-                       'data/synth/random3_fix/train_rollpi_plo_f_lay_set18to22_10000',]
+    #filename_list_f = ['data/synth/random3/test_roll0_f_lay_set14_1500',
+    #                   'data/synth/random3/test_roll0_plo_f_lay_set14_1500',
+    #                   'data/synth/random3/test_rollpi_plo_f_lay_set23to24_3000',
+    #                   'data/synth/random3/test_rollpi_f_lay_set23to24_3000',
+    #                   'data/synth/random3/train_roll0_f_lay_set5to7_5000',
+    #                   'data/synth/random3/train_roll0_f_lay_set10to13_8000',
+    #                   'data/synth/random3/train_roll0_plo_f_lay_set5to7_5000',
+    #                   'data/synth/random3/train_roll0_plo_f_lay_set10to13_8000',
+    #                   'data/synth/random3/train_rollpi_f_lay_set10to17_16000',
+    #                   'data/synth/random3/train_rollpi_f_lay_set18to22_10000',
+    #                   'data/synth/random3/train_rollpi_plo_f_lay_set10to17_16000',
+    #                   'data/synth/random3/train_rollpi_plo_f_lay_set18to22_10000',
+    #                    ]
 
-    filename_list_m = ['data/synth/random3_fix/test_roll0_m_lay_set14_1500',
-                       'data/synth/random3_fix/test_roll0_plo_m_lay_set14_1500',
-                       'data/synth/random3_fix/test_rollpi_plo_m_lay_set23to24_3000',
-                       'data/synth/random3_fix/train_roll0_m_lay_set5to7_5000',
-                       'data/synth/random3_fix/train_roll0_m_lay_set10to13_8000',
-                       'data/synth/random3_fix/train_roll0_plo_m_lay_set5to7_5000',
-                       'data/synth/random3_fix/train_roll0_plo_m_lay_set10to13_8000',
-                       'data/synth/random3_fix/train_rollpi_m_lay_set10to17_16000',
-                       'data/synth/random3_fix/train_rollpi_m_lay_set18to22_10000',
-                       'data/synth/random3_fix/train_rollpi_plo_m_lay_set10to17_16000',
-                       'data/synth/random3_fix/train_rollpi_plo_m_lay_set18to22_10000',]
+    #filename_list_m = ['data/synth/random3/test_roll0_m_lay_set14_1500',
+    #                   'data/synth/random3/test_roll0_plo_m_lay_set14_1500',
+    #                   'data/synth/random3/test_rollpi_m_lay_set23to24_3000',
+    #                   'data/synth/random3/test_rollpi_plo_m_lay_set23to24_3000',
+    #                   'data/synth/random3/train_roll0_m_lay_set5to7_5000',
+    #                   'data/synth/random3/train_roll0_m_lay_set10to13_8000',
+    #                   'data/synth/random3/train_roll0_plo_m_lay_set5to7_5000',
+    #                   'data/synth/random3/train_roll0_plo_m_lay_set10to13_8000',
+    #                   'data/synth/random3/train_rollpi_m_lay_set10to17_16000',
+    #                   'data/synth/random3/train_rollpi_m_lay_set18to22_10000',
+    #                   'data/synth/random3/train_rollpi_plo_m_lay_set10to17_16000',
+    #                   'data/synth/random3/train_rollpi_plo_m_lay_set18to22_10000'
+    #                   ]
 
 
-    #filename_list_m = [ 'data/synth/random3_supp_fix/test_roll0_plo_hbh_m_lay_set1_500',
-    #                    'data/synth/random3_supp_fix/test_roll0_plo_phu_m_lay_set1pa3_500',
-    #                    'data/synth/random3_supp_fix/test_roll0_sl_m_lay_set1both_500',
-    #                    'data/synth/random3_supp_fix/test_roll0_xl_m_lay_set1both_500',
-    #                    'data/synth/random3_supp_fix/train_roll0_plo_phu_m_lay_set2pl4_4000',
-    #                    'data/synth/random3_supp_fix/train_roll0_sl_m_lay_set2pa1_4000',
-    #                    'data/synth/random3_supp_fix/train_roll0_xl_m_lay_set2both_4000',
-    #                    'data/synth/random3_supp_fix/train_roll0_plo_hbh_m_lay_set2pa1_2000']
-
+    filename_list_m = [ 'data/synth/random3_supp/test_roll0_plo_hbh_m_lay_set1_500',
+                        'data/synth/random3_supp/test_roll0_plo_phu_m_lay_set1pa3_500',
+                        'data/synth/random3_supp/test_roll0_sl_m_lay_set1both_500',
+                        'data/synth/random3_supp/test_roll0_xl_m_lay_set1both_500',
+                        'data/synth/random3_supp/train_roll0_plo_phu_m_lay_set2pl4_4000',
+                        'data/synth/random3_supp/train_roll0_sl_m_lay_set2pa1_4000',
+                        'data/synth/random3_supp/train_roll0_xl_m_lay_set2both_4000',
+                        'data/synth/random3_supp/train_roll0_plo_hbh_m_lay_set2pa1_2000']
 
 
     #filename_list_f = ['data/synth/random/test_roll0_f_lay_1000_none_stiff']
