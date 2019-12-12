@@ -83,7 +83,7 @@ CAM_BED_DIST = 1.66
 DEVICE = 0
 
 torch.set_num_threads(1)
-if torch.cuda.is_available():
+if False:#torch.cuda.is_available():
     # Use for GPU
     GPU = True
     dtype = torch.cuda.FloatTensor
@@ -96,12 +96,14 @@ else:
     print '############################## USING CPU #################################'
 
 
-TESTING_FILENAME = "test_roll0_plo_phu_f_lay_set1pa3_500"
-GENDER = "f"
+#TESTING_FILENAME = "test_roll0_xl_m_lay_set1both_500"
+TESTING_FILENAME = "test_roll0_plo_m_lay_set14_1500"
+GENDER = "m"
 #NETWORK_1 = "1.0rtojtdpth_tnh_htwt_calnoise"
 NETWORK_1 = "1.0rtojtdpth_tnhFIXN_htwt_calnoise"
-#NETWORK_2 = "0.5rtojtdpth_depthestin_angleadj_tnh_htwt_calnoise"
-NETWORK_2 = "1.0rtojtdpth_depthestin_angleadj_tnhFIXN_htwt_calnoise"
+#NETWORK_2 = "1.0rtojtdpth_angleadj_tnhFIXN_htwt_calnoise"
+DATA_QUANT = "184K"
+NETWORK_2 = "0.5rtojtdpth_depthestin_angleadj_tnhFIXN_htwt_calnoise"
 
 class PhysicalTrainer():
     '''Gets the dictionary of pressure maps from the training database,
@@ -254,7 +256,7 @@ class PhysicalTrainer():
 
         self.train_x_flat = []  # Initialize the testing pressure mat list
         self.train_x_flat = TensorPrepLib().prep_images(self.train_x_flat, dat_f_synth, dat_m_synth, num_repeats = 1)
-        self.train_x_flat = list(np.clip(np.array(self.train_x_flat) * float(self.CTRL_PNL['pmat_mult']) * 0.2, a_min=0, a_max=100))
+        self.train_x_flat = list(np.clip(np.array(self.train_x_flat) * float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100))
         self.train_x_flat = TensorPrepLib().prep_images(self.train_x_flat, dat_f_real, dat_m_real, num_repeats = repeat_real_data_ct)
 
         if self.CTRL_PNL['cal_noise'] == False:
@@ -343,7 +345,7 @@ class PhysicalTrainer():
 
         self.test_x_flat = []  # Initialize the testing pressure mat list
         self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, test_dat_f_synth, test_dat_m_synth, num_repeats = 1)
-        self.test_x_flat = list(np.clip(np.array(self.test_x_flat) * 0.2*float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100))
+        self.test_x_flat = list(np.clip(np.array(self.test_x_flat) * float(self.CTRL_PNL['pmat_mult']), a_min=0, a_max=100))
         self.test_x_flat = TensorPrepLib().prep_images(self.test_x_flat, test_dat_f_real, test_dat_m_real, num_repeats = 1)
 
         if self.CTRL_PNL['cal_noise'] == False:
@@ -458,8 +460,8 @@ class PhysicalTrainer():
 
             #self.model = torch.load("/media/henry/multimodal_data_2/data/convnets/planesreg/184K/convnet_anglesDC_synth_184K_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt", map_location='cpu')
             #self.model2 = torch.load("/media/henry/multimodal_data_2/data/convnets/planesreg_correction/184K/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt", map_location='cpu')
-            self.model = torch.load("/media/henry/multimodal_data_2/data/convnets/planesreg/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt", map_location='cpu')
-            self.model2 = torch.load("/media/henry/multimodal_data_2/data/convnets/planesreg_correction/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt", map_location='cpu')
+            self.model = torch.load("/home/henry/data/convnets/planesreg/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt", map_location='cpu')
+            self.model2 = torch.load("/home/henry/data/convnets/planesreg_correction/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt", map_location='cpu')
             #self.model2 = None
         pp = 0
         for p in list(self.model.parameters()):
@@ -486,9 +488,9 @@ class PhysicalTrainer():
 
     def val_convnet_special(self, epoch):
         if GENDER == "f":
-            model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
-        else:
             model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_f_lbs_10_207_0_v1.0.0.pkl'
+        else:
+            model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
 
         self.m = load_model(model_path)
 
@@ -645,8 +647,7 @@ class PhysicalTrainer():
 
     def val_convnet_general(self, epoch):
 
-        self.gender = "f"
-        if self.gender == "m":
+        if GENDER == "m":
             model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
         else:
             model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_f_lbs_10_207_0_v1.0.0.pkl'
@@ -697,6 +698,11 @@ class PhysicalTrainer():
                 self.CTRL_PNL['adjust_ang_from_est'] = False
                 self.CTRL_PNL['depth_map_labels'] = True
                 print batch[0].size(), "batch 0 shape"
+
+
+                print torch.max(batch[0][0, 0, : ,:]), torch.max(batch[0][0, 1, : ,:]), torch.max(batch[0][0, 2, : ,:]), torch.max(batch[0][0, 3, : ,:]), torch.max(batch[0][0, 4, : ,:]), torch.max(batch[0][0, 5, : ,:]),
+
+
                 scores, INPUT_DICT, OUTPUT_DICT = UnpackBatchLib().unpackage_batch_kin_pass(batch, False, self.model,
                                                                                             self.CTRL_PNL)
                 print OUTPUT_DICT['batch_betas_est_post_clip'].cpu().numpy()[0], 'betas init'
@@ -862,7 +868,7 @@ class PhysicalTrainer():
 
         #save here
 
-        pkl.dump(RESULTS_DICT, open('/media/henry/multimodal_data_2/data/final_results/results_synth_'+TESTING_FILENAME+'_'+NETWORK_2+'.p', 'wb'))
+        pkl.dump(RESULTS_DICT, open('/home/henry/data/final_results/results_synth_'+DATA_QUANT+'_'+TESTING_FILENAME+'_'+NETWORK_2+'.p', 'wb'))
 
 if __name__ == "__main__":
     #Initialize trainer with a training database file
@@ -926,7 +932,7 @@ if __name__ == "__main__":
         filepath_suffix = ''
     else:
         #filepath_prefix =
-        filepath_prefix = '/media/henry/multimodal_data_2/data/'
+        filepath_prefix = '/home/henry/data/'
         #filepath_suffix = ''
 
 
@@ -942,10 +948,11 @@ if __name__ == "__main__":
     #training_database_file_f.append(filepath_prefix+'synth/random3_fix/test_roll0_f_lay_set14_1500.p') #were actually testing this one
 
     if GENDER == "f":
-        training_database_file_f.append(filepath_prefix+'synth/random3_supp_fix/'+TESTING_FILENAME+'.p') #were actually testing this one
-        test_database_file_f.append(filepath_prefix+'synth/random3_supp_fix/'+TESTING_FILENAME+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random3/'+TESTING_FILENAME+'.p') #were actually testing this one
+        test_database_file_f.append(filepath_prefix+'synth/random3/'+TESTING_FILENAME+'.p')
     else:
-        training_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/'+TESTING_FILENAME+'.p') #were actually testing this one
+        training_database_file_m.append(filepath_prefix+'synth/random3/'+TESTING_FILENAME+'.p') #were actually testing this one
+        test_database_file_m.append(filepath_prefix+'synth/random3/'+TESTING_FILENAME+'.p')
 
 
     p = PhysicalTrainer(training_database_file_f, training_database_file_m, test_database_file_f, test_database_file_m, opt)
