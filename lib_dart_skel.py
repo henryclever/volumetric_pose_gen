@@ -453,13 +453,13 @@ class LibDartSkel():
                 joint.set_damping_coefficient(1, r_arm_damping)
                 joint.set_damping_coefficient(2, r_arm_damping)
             elif joint.name == "leftForeArm":
-                joint.set_position_lower_limit(0, np.deg2rad(-147.3) * 1 / 3)  #-2.463868908637374)
-                joint.set_position_upper_limit(0, np.deg2rad(2.8) * 1 / 3)  #0.0)
+                joint.set_position_lower_limit(0, np.deg2rad(-147.3))  #-2.463868908637374)
+                joint.set_position_upper_limit(0, np.deg2rad(2.8))  #0.0)
                 joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, l_elbow_damping)
             elif joint.name == "rightForeArm":
-                joint.set_position_lower_limit(0, np.deg2rad(-2.8) * 1 / 3)  #0.0)
-                joint.set_position_upper_limit(0, np.deg2rad(147.3) * 1 / 3)  #2.463868908637374)
+                joint.set_position_lower_limit(0, np.deg2rad(-2.8))  #0.0)
+                joint.set_position_upper_limit(0, np.deg2rad(147.3))  #2.463868908637374)
                 joint.set_position_limit_enforced(True)
                 joint.set_damping_coefficient(0, r_elbow_damping)
             elif joint.name == "leftHand":
