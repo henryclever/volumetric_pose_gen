@@ -409,21 +409,33 @@ class Viz3DPose():
                 print x, y
 
 
-                blur_size = 8
+                blur_size = 6
+                x_sq_list = [x-blur_size*2, x-blur_size, x, x+blur_size, x+blur_size*2]
+                y_sq_list = [y-blur_size*2, y-blur_size, y, y+blur_size, y+blur_size*2]
 
-                for x_sq in [x-blur_size*2, x-blur_size, x, x+blur_size, x+blur_size*2]:
-                    for y_sq in [y-blur_size*2, y-blur_size, y, y+blur_size, y+blur_size*2]:
-                        b_x = int(x_sq/blur_size) * blur_size
-                        b_y = int(y_sq/blur_size) * blur_size
+                for x_sq_idx in range(len(x_sq_list)):
+                    for y_sq_idx in range(len(y_sq_list)):
+                        x_sq = x_sq_list[x_sq_idx]
+                        y_sq = y_sq_list[y_sq_idx]
 
-                        blur_block = self.blurred_color[b_y-blur_size/2:b_y+blur_size/2, b_x-blur_size/2:b_x+blur_size/2, :]
-                        blur_mean = np.mean(np.mean(blur_block, axis = 0), axis = 0).astype(np.uint8)
+                        b_x_read = int(x_sq/blur_size) * blur_size
+                        b_y_read = int(y_sq/blur_size) * blur_size
+
+                        b_x_write = int(x_sq/blur_size) * blur_size
+                        b_y_write = int(y_sq/blur_size) * blur_size
+
+                        blur_block = self.blurred_color[b_y_read-blur_size/2:b_y_read+blur_size/2, b_x_read-blur_size/2:b_x_read+blur_size/2, :]
+                        blur_mean = np.mean(np.mean(blur_block, axis = 0), axis = 0).astype(np.int16)
                         #print blur_block, blur_mean
+
+                        blur_mean += np.random.randint(-50, 50)
+                        blur_mean = np.clip(blur_mean, 0, 255).astype(np.uint8)
 
                         blur_block = blur_block*0 + blur_mean
                         #print blur_block
 
-                        self.blurred_color[b_y - blur_size / 2:b_y + blur_size / 2, b_x - blur_size / 2:b_x + blur_size / 2, :] = blur_block
+                        self.blurred_color[b_y_write - blur_size / 2:b_y_write + blur_size / 2, \
+                                           b_x_write - blur_size / 2:b_x_write + blur_size / 2, :] = blur_block
 
 
 
@@ -616,7 +628,7 @@ class Viz3DPose():
                                                                      np.copy(self.tf_corners[0:4][:]))
 
                 #should blur face here
-                color_reshaped = self.blur_face(color_reshaped)
+                #color_reshaped = self.blur_face(color_reshaped)
                 RESAVE_DICT['RGB'].append(color_reshaped)
                 RESAVE_DICT['pmat_corners'].append(tf_corners[0:4, :])
 
@@ -697,12 +709,12 @@ class Viz3DPose():
                 self.point_cloud_array = None
 
                 if POSE_TYPE == "2":
-                    save_name = '/prescribed_blurred'
+                    save_name = '/prescribed'
                 elif POSE_TYPE == "1":
-                    save_name = '/p_select_blurred'
+                    save_name = '/p_select'
 
             pkl.dump(RESAVE_DICT,open(participant_directory+save_name+'.p', 'wb'))
-
+            print "SAVED."
                 #sleep(3)
 
 
@@ -729,7 +741,8 @@ if __name__ ==  "__main__":
                         #"S184",
                         #"S187",
                         #"S188",
-                        "S196", ]
+                        "S196",
+                        ]
 
     for PARTICIPANT in participant_list:
 

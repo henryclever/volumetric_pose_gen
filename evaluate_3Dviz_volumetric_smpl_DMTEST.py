@@ -76,7 +76,7 @@ from hmr.src.tf_smpl.batch_smpl import SMPL
 
 SHOW_SMPL_EST = True
 #PARTICIPANT = "S196"#"S151"
-POSE_TYPE = "2"
+POSE_TYPE = "1"
 MAT_SIZE = (64, 27)
 
 
@@ -272,11 +272,6 @@ class Viz3DPose():
 
         self.final_dataset = {}
 
-        self.filler_taxels = []
-        for i in range(28):
-            for j in range(65):
-                self.filler_taxels.append([i - 1, j - 1, 20000])
-        self.filler_taxels = np.array(self.filler_taxels).astype(int)
 
 
 
@@ -1034,7 +1029,7 @@ class Viz3DPose():
                 self.estimate_pose(self.pressure, self.bed_state[0], markers_c, model, model2, tf_corners, camera_alpha_vert, camera_alpha_horiz, h, kinect_rotate_angle)
 
 
-        pkl.dump(self.RESULTS_DICT, open('/media/henry/multimodal_data_2/data/final_results/results_real_46K_'+PARTICIPANT+'_'+POSE_TYPE+'_'+NETWORK_2+'.p', 'wb'))
+        #pkl.dump(self.RESULTS_DICT, open('/media/henry/multimodal_data_2/data/final_results/results_real_46K_'+PARTICIPANT+'_'+POSE_TYPE+'_'+NETWORK_2+'.p', 'wb'))
 
 if __name__ ==  "__main__":
 
@@ -1043,16 +1038,16 @@ if __name__ ==  "__main__":
     #             "1.0rtojtdpth_tnhFIXN_calnoise",
     #             "1.0rtojtdpth_tnhFIXN_htwt",]
 
-    NETWORK_1_LIST = ["1.0rtojtdpth_tnhFIXN_htwt_calnoise"]
+    NETWORK_1_LIST = ["1.0rtojtdpth_tnhFIXN_calnoise"]
 
     #NETWORK_2_LIST = ["NONE-200e",
     #             "0.5rtojtdpth_depthestin_angleadj_tnhFIXN_htwt_calnoise",
     #             "0.5rtojtdpth_depthestin_angleadj_tnhFIXN_calnoise",
     #             "0.5rtojtdpth_depthestin_angleadj_tnhFIXN_htwt"]
 
-    NETWORK_2_LIST = ["0.5rtojtdpth_depthestin_angleadj_tnhFIXN_htwt_calnoise"]
+    NETWORK_2_LIST = ["0.5rtojtdpth_depthestin_angleadj_tnhFIXN_calnoise"]
 
-    HTWT_LIST = [True]
+    HTWT_LIST = [False]
 
 
     # NETWORK_2 = "1.0rtojtdpth_depthestin_angleadj_tnhFIXN_htwt_calnoise"
@@ -1102,8 +1097,8 @@ if __name__ ==  "__main__":
             #else:
             #    F_eval = V3D.evaluate_data("/media/henry/multimodal_data_2/data/convnets/planesreg/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt",\
             #                                "/media/henry/multimodal_data_2/data/convnets/planesreg_correction/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt")
-            F_eval = V3D.evaluate_data("/media/henry/multimodal_data_2/data/convnets/planesreg/FINAL/convnet_anglesDC_synth_46000_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt",\
-                                        "/media/henry/multimodal_data_2/data/convnets/planesreg_correction/FINAL/convnet_anglesDC_synth_46000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt")
+            F_eval = V3D.evaluate_data("/media/henry/multimodal_data_2/data/convnets/planesreg/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt",\
+                                        "/media/henry/multimodal_data_2/data/convnets/planesreg_correction/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt")
 
 
 

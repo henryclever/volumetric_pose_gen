@@ -38,7 +38,7 @@ def get_heightweight_from_betas(betas):
     return height, weight
 
 if __name__ == '__main__':
-    RESULT_TYPE = "real"
+    RESULT_TYPE = "synth"
 
     if RESULT_TYPE == "real":
 
@@ -76,12 +76,12 @@ if __name__ == '__main__':
 
 
         #NETWORK_2 = "1.0rtojtdpth_angleadj_tnhFIXN_htwt_calnoise"
-        NETWORK_2 = "0.5rtojtdpth_depthestin_angleadj_tnhFIXN"
+        NETWORK_2 = "0.5rtojtdpth_depthestin_angleadj_tnhFIXN_htwt_calnoise"
         #NETWORK_2 = "NONE-200e"
         #NETWORK_2 = "BASELINE"
 
         POSE_TYPE = "2"
-        DATA_QUANT = "184K"
+        DATA_QUANT = "46K"
 
         recall_list = []
         precision_list = []
@@ -102,10 +102,10 @@ if __name__ == '__main__':
 
             if True:#DATA_QUANT == "46K":
                 current_results_dict = load_pickle("/media/henry/multimodal_data_2/data/final_results/"+DATA_QUANT+"_"
-                                                   +NETWORK_2+"/results_real_"+DATA_QUANT+"_"
+                                                   +NETWORK_2+"_V2/results_real_"+DATA_QUANT+"_"
                                                    +participant+"_"+POSE_TYPE+"_"+NETWORK_2+".p")
             else:
-                current_results_dict = load_pickle("/media/henry/multimodal_data_2/data/final_results/"+NETWORK_2+"/results_real_"
+                current_results_dict = load_pickle("/media/henry/multimodal_data_2/data/final_results/"+NETWORK_2+"_V2/results_real_"
                                                    +participant+"_"+POSE_TYPE+"_"+NETWORK_2+".p")
 
             print "/media/henry/multimodal_data_2/data/final_results/"+NETWORK_2+"/results_real_"+participant+"_"+POSE_TYPE+"_"+NETWORK_2+".p"
@@ -225,8 +225,8 @@ if __name__ == '__main__':
 
 
         #NETWORK_1 = "1.0rtojtdpth_depthestin_angleadj_tnhFIXN_htwt_calnoise"
-        #NETWORK_2 = "0.5rtojtdpth_depthestin_angleadj_tnhFIXN_calnoise"
-        NETWORK_2 = "1.0rtojtdpth_angleadj_tnhFIXN_calnoise"
+        NETWORK_2 = "0.5rtojtdpth_depthestin_angleadj_tnhFIXN"
+        #NETWORK_2 = "1.0rtojtdpth_angleadj_tnhFIXN_calnoise"
         #NETWORK_2 = "NONE-200e"
         #NETWORK_2 = "BASELINE"
         DATA_QUANT = "184K"

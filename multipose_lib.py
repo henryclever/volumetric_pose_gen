@@ -340,13 +340,14 @@ class VizLib():
 
         for marker in range(0, 4):
             try:
+                pass
                 #color in green squares where the AR tags are
-                color_reshaped[int(v_c[marker]) - 8:int(v_c[marker]) + 8, int(u_c[marker]) - 8:int(u_c[marker]) + 8, :] = 0
-                color_reshaped[int(v_c[marker]) - 5:int(v_c[marker]) + 5, int(u_c[marker]) - 5:int(u_c[marker]) + 5, 1] = 255
+                #color_reshaped[int(v_c[marker]) - 8:int(v_c[marker]) + 8, int(u_c[marker]) - 8:int(u_c[marker]) + 8, :] = 0
+                #color_reshaped[int(v_c[marker]) - 5:int(v_c[marker]) + 5, int(u_c[marker]) - 5:int(u_c[marker]) + 5, 1] = 255
 
                 #color in red markers where that are 10 cm below the AR tags at the level of a flat pressure mat
-                color_reshaped[int(v_c_drop[marker]) - 8:int(v_c_drop[marker]) + 8, int(u_c_drop[marker]) - 8:int(u_c_drop[marker]) + 8, :] = 0
-                color_reshaped[int(v_c_drop[marker]) - 5:int(v_c_drop[marker]) + 5, int(u_c_drop[marker]) - 5:int(u_c_drop[marker]) + 5, 2] = 255
+                #color_reshaped[int(v_c_drop[marker]) - 8:int(v_c_drop[marker]) + 8, int(u_c_drop[marker]) - 8:int(u_c_drop[marker]) + 8, :] = 0
+                #color_reshaped[int(v_c_drop[marker]) - 5:int(v_c_drop[marker]) + 5, int(u_c_drop[marker]) - 5:int(u_c_drop[marker]) + 5, 2] = 255
             except:
                 pass
         '''
@@ -381,8 +382,9 @@ class VizLib():
 
         for marker in range(0, 4):
             try:
-                depth_r_reshaped[int(v_c[marker]) - 8:int(v_c[marker]) + 8, int(u_c[marker]) - 8:int(u_c[marker]) + 8, :] = 0
-                depth_r_reshaped[int(v_c[marker]) - 5:int(v_c[marker]) + 5, int(u_c[marker]) - 5:int(u_c[marker]) + 5, 1] = 255
+                pass
+                #depth_r_reshaped[int(v_c[marker]) - 8:int(v_c[marker]) + 8, int(u_c[marker]) - 8:int(u_c[marker]) + 8, :] = 0
+                #depth_r_reshaped[int(v_c[marker]) - 5:int(v_c[marker]) + 5, int(u_c[marker]) - 5:int(u_c[marker]) + 5, 1] = 255
             except:
                 pass
 

@@ -94,7 +94,7 @@ class UnpackBatchLib():
                 batch[0] = batch[0][:, 0:CTRL_PNL['num_input_channels_batch0'], :, :]
                 print "CLIPPING BATCH 0"
 
-        print batch[0].size(), 'batch 0 shape'
+        #print batch[0].size(), 'batch 0 shape'
 
         # cut it off so batch[2] is only the xyz marker targets
         batch[1] = batch[1][:, 0:72]
@@ -205,8 +205,22 @@ class UnpackBatchLib():
         #OUTPUT_DICT['batch_betas_est'] = betas_est_np
 
 
+        #print INPUT_DICT['batch_images'].size(), "SHAPE INPUT"
+
+        INPUT_DICT['batch_images'] = images_up.data
+
+        for i in range(INPUT_DICT['batch_images'].size()[1]):
+            print torch.max(INPUT_DICT['batch_images'][0, i, :, :]).cpu().data.numpy(),
+        print
+
+        for i in range(INPUT_DICT['batch_images'].size()[1]):
+            print torch.sum(INPUT_DICT['batch_images'][0, i, :, :]).cpu().data.numpy(),
+        print
+
+
         #INPUT_DICT['batch_images'] = images_up.data
         INPUT_DICT['batch_targets'] = targets.data
+
 
         return scores, INPUT_DICT, OUTPUT_DICT
 
@@ -250,5 +264,6 @@ class UnpackBatchLib():
         INPUT_DICT = {}
         INPUT_DICT['batch_images'] = images.data
         INPUT_DICT['batch_targets'] = targets.data
+
 
         return scores, INPUT_DICT, OUTPUT_DICT

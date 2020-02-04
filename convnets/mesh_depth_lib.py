@@ -57,7 +57,7 @@ class MeshDepthLib():
 
     def __init__(self, loss_vector_type, filepath_prefix, batch_size, verts_list):
 
-        if torch.cuda.is_available():
+        if False:#torch.cuda.is_available():
             self.GPU = True
             # Use for self.GPU
             dtype = torch.cuda.FloatTensor

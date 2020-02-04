@@ -118,7 +118,7 @@ class CNN(nn.Module):
 
         print 'Out size:', out_size
 
-        if torch.cuda.is_available():
+        if False:#torch.cuda.is_available():
             self.GPU = True
             # Use for self.GPU
             dtype = torch.cuda.FloatTensor
@@ -280,7 +280,7 @@ class CNN(nn.Module):
         filepath_prefix = CTRL_PNL['filepath_prefix']
         OUTPUT_DICT = {}
 
-        self.GPU = True# CTRL_PNL['GPU']
+        self.GPU =  CTRL_PNL['GPU']
         self.dtype = CTRL_PNL['dtype']
 
         #print(torch.cuda.max_memory_allocated(), 'conv0', images.size())
@@ -291,7 +291,7 @@ class CNN(nn.Module):
             #self.dtype = torch.FloatTensor
 
         else:
-            if True:#CTRL_PNL['aws'] == True:
+            if False:#rue:#CTRL_PNL['aws'] == True:
                 self.GPU = True
                 self.dtype = torch.cuda.FloatTensor
             else:
@@ -564,7 +564,7 @@ class CNN(nn.Module):
 
             v_shaped = betas_shapedirs_mult + v_template
 
-            J_regressor_repeat = torch.bmm(gender_switch, self.meshDepthLib.J_regressor_repeat[0:current_batch_size, :, :])\
+            J_regressor_repeat = torch.bmm(gender_swiFtch, self.meshDepthLib.J_regressor_repeat[0:current_batch_size, :, :])\
                                       .view(current_batch_size, self.meshDepthLib.R, 24)
 
             Jx = torch.bmm(v_shaped[:, :, 0].unsqueeze(1), J_regressor_repeat).squeeze(1)

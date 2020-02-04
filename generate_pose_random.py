@@ -1070,7 +1070,7 @@ if __name__ == "__main__":
     #                                ensure_crossed_legs=False,
     #                                prone_hands_up=False)
 
-    generator.fix_height_weight()
+    #generator.fix_height_weight()
 
     #generator.save_yash_data_with_angles(posture)
     #generator.map_euler_angles_to_axis_angle()

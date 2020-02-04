@@ -12,7 +12,8 @@ from util import batch_global_rigid_transformation, batch_rodrigues, batch_lrotm
 #volumetric pose gen libraries
 import lib_visualization as libVisualization
 import lib_kinematics as libKinematics
-import lib_render as libRender
+#import lib_render as libRender
+import lib_pyrender as libRender
 from process_yash_data import ProcessYashData
 from preprocessing_lib import PreprocessingLib
 from tensorprep_lib import TensorPrepLib
