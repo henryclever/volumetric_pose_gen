@@ -2071,6 +2071,9 @@ class pyRenderMesh():
         print "average direct vertex-to-vertex error, correcting for triangle size:", np.mean(norm_dir_cart_error)
         RESULTS_DICT['dir_v_err'].append(np.mean(norm_dir_cart_error))
 
+        print "average direct vertex-to-vertex error:", np.mean(cart_err)
+        RESULTS_DICT['v2v_err'].append(np.mean(cart_err))
+
         verts_dir_color_error = np.array(cart_err) / np.max(cart_err)
         verts_dir_color_jet = cm.jet(verts_dir_color_error)[:, 0:3]# * 5.
 

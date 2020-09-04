@@ -96,14 +96,15 @@ else:
     print '############################## USING CPU #################################'
 
 
-#TESTING_FILENAME = "test_roll0_xl_m_lay_set1both_500"
-TESTING_FILENAME = "test_roll0_plo_m_lay_set14_1500"
+TESTING_FILENAME = "test_roll0_xl_m_lay_set1both_500"
+#TESTING_FILENAME = "test_roll0_plo_m_lay_set14_1500"
 GENDER = "m"
 #NETWORK_1 = "1.0rtojtdpth_tnh_htwt_calnoise"
-NETWORK_1 = "1.0rtojtdpth_tnhFIXN_htwt_calnoise"
-#NETWORK_2 = "1.0rtojtdpth_angleadj_tnhFIXN_htwt_calnoise"
+NETWORK_1 = "1.0rtojtdpth_tnhFIXN"
+#NETWORK_2 = "1.0rtojtdpth_angleadj_tnhFIXN_calnoise"
 DATA_QUANT = "184K"
-NETWORK_2 = "0.5rtojtdpth_depthestin_angleadj_tnhFIXN_htwt_calnoise"
+NETWORK_2 = "0.5rtojtdpth_depthestin_angleadj_tnhFIXN"
+DATASET_BLOCK = "random3_supp"
 
 class PhysicalTrainer():
     '''Gets the dictionary of pressure maps from the training database,
@@ -126,7 +127,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['num_epochs'] = 100
         self.CTRL_PNL['incl_inter'] = True
         self.CTRL_PNL['shuffle'] = False
-        self.CTRL_PNL['incl_ht_wt_channels'] = True
+        self.CTRL_PNL['incl_ht_wt_channels'] = False
         self.CTRL_PNL['incl_pmat_cntct_input'] = True
         self.CTRL_PNL['dropout'] = False
         self.CTRL_PNL['lock_root'] = False
@@ -655,7 +656,7 @@ class PhysicalTrainer():
         self.m = load_model(model_path)
 
 
-        self.pyRender = libPyRender.pyRenderMesh(render = True)
+        self.pyRender = libPyRender.pyRenderMesh(render = False)
 
         '''
         Train the model for one epoch.
@@ -948,11 +949,11 @@ if __name__ == "__main__":
     #training_database_file_f.append(filepath_prefix+'synth/random3_fix/test_roll0_f_lay_set14_1500.p') #were actually testing this one
 
     if GENDER == "f":
-        training_database_file_f.append(filepath_prefix+'synth/random3/'+TESTING_FILENAME+'.p') #were actually testing this one
-        test_database_file_f.append(filepath_prefix+'synth/random3/'+TESTING_FILENAME+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/'+DATASET_BLOCK+'/'+TESTING_FILENAME+'.p') #were actually testing this one
+        test_database_file_f.append(filepath_prefix+'synth/'+DATASET_BLOCK+'/'+TESTING_FILENAME+'.p')
     else:
-        training_database_file_m.append(filepath_prefix+'synth/random3/'+TESTING_FILENAME+'.p') #were actually testing this one
-        test_database_file_m.append(filepath_prefix+'synth/random3/'+TESTING_FILENAME+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/'+DATASET_BLOCK+'/'+TESTING_FILENAME+'.p') #were actually testing this one
+        test_database_file_m.append(filepath_prefix+'synth/'+DATASET_BLOCK+'/'+TESTING_FILENAME+'.p')
 
 
     p = PhysicalTrainer(training_database_file_f, training_database_file_m, test_database_file_f, test_database_file_m, opt)

@@ -95,14 +95,15 @@ else:
     dtype = torch.FloatTensor
     print '############################## USING CPU #################################'
 
-
-TESTING_FILENAME = "test_roll0_xl_m_lay_set1both_500"
+PARTITION = 'prone_hands_up'
+#TESTING_FILENAME = "test_roll0_plo_m_lay_set14_1500"
 #TESTING_FILENAME = "test_roll0_plo_f_lay_set14_1500"
+#TESTING_FILENAME = "test_roll0_plo_hbh_m_lay_set1_500"
+TESTING_FILENAME = "test_roll0_plo_phu_m_lay_set1pa3_500"
 GENDER = "m"
-#NETWORK_1 = "1.0rtojtdpth_tnh_htwt_calnoise"
-NETWORK_1 = "1.0rtojtdpth_tnhFIXN_htwt_calnoise"
+
 #NETWORK_2 = "0.5rtojtdpth_depthestin_angleadj_tnh_htwt_calnoise"
-NETWORK_2 = "NONE-200e"
+NETWORK_2 = "BASELINE"
 
 class PhysicalTrainer():
     '''Gets the dictionary of pressure maps from the training database,
@@ -442,9 +443,6 @@ class PhysicalTrainer():
         print "Loading convnet model................................"
         if self.CTRL_PNL['loss_vector_type'] == 'direct':
             fc_output_size = 30
-            self.model = convnet.CNN(fc_output_size, self.CTRL_PNL['loss_vector_type'], self.CTRL_PNL['batch_size'],
-                                     verts_list = self.verts_list, filepath=self.CTRL_PNL['filepath_prefix'],
-                                     in_channels=self.CTRL_PNL['num_input_channels'])
 
         elif self.CTRL_PNL['loss_vector_type'] == 'anglesDC' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU':
             fc_output_size = 85## 10 + 3 + 24*3 --- betas, root shift, rotations
@@ -452,29 +450,8 @@ class PhysicalTrainer():
             if self.CTRL_PNL['full_body_rot'] == True:
                 fc_output_size += 3
 
-            #self.model = convnet.CNN(fc_output_size, self.CTRL_PNL['loss_vector_type'], self.CTRL_PNL['batch_size'],
-            #                         verts_list = self.verts_list, filepath=self.CTRL_PNL['filepath_prefix'], in_channels=self.CTRL_PNL['num_input_channels'])
-
-
-            #self.model = torch.load("/home/henry/data/convnets/planesreg/FINAL/convnet_anglesDC_synth_46000_128b_x5pmult_"+NETWORK_1+"_100e_00002lr.pt", map_location='cpu')
-            self.model = torch.load("/media/henry/multimodal_data_2/data/convnets/planesreg/FINAL/convnet_anglesDC_synth_184000_128b_x5pmult_"+NETWORK_1+"_200e_00002lr.pt", map_location='cpu')
-            #self.model2 = torch.load("/home/henry/data/convnets/planesreg_correction/FINAL/convnet_anglesDC_synth_46000_128b_x5pmult_"+NETWORK_2+"_100e_00002lr.pt", map_location='cpu')
-            self.model2 = None
         pp = 0
-        for p in list(self.model.parameters()):
-            nn = 1
-            for s in list(p.size()):
-                nn = nn * s
-            pp += nn
-        print 'LOADED. num params: ', pp
 
-
-        # Run model on GPU if available
-        #if torch.cuda.is_available():
-        if GPU == True:
-            self.model = self.model.cuda()
-
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.00002, weight_decay=0.0005) #start with .00005
 
         # train the model one epoch at a time
         for epoch in range(1):#, self.CTRL_PNL['num_epochs'] + 1):
@@ -482,167 +459,6 @@ class PhysicalTrainer():
             #self.val_convnet_special(epoch)
             self.val_convnet_general(epoch)
 
-
-    def val_convnet_special(self, epoch):
-        if GENDER == "f":
-            model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_m_lbs_10_207_0_v1.0.0.pkl'
-        else:
-            model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_f_lbs_10_207_0_v1.0.0.pkl'
-
-        self.m = load_model(model_path)
-
-        self.pyRender = libPyRender.pyRenderMesh()
-
-        '''
-        Train the model for one epoch.
-        '''
-        # Some models use slightly different forward passes and train and test
-        # time (e.g., any model with Dropout). This puts the model in train mode
-        # (as opposed to eval mode) so it knows which one to use.
-        self.model.eval()#train()
-        self.criterion = nn.L1Loss()
-        self.criterion2 = nn.MSELoss()
-        with torch.autograd.set_detect_anomaly(True):
-
-            # This will loop a total = training_images/batch_size times
-            for batch_idx, batch in enumerate(self.train_loader):
-                if GPU == True:
-                    print "GPU memory:", torch.cuda.max_memory_allocated()
-                if self.CTRL_PNL['loss_vector_type'] == 'direct':
-
-                    self.optimizer.zero_grad()
-                    scores, INPUT_DICT, OUTPUT_DICT = \
-                        UnpackBatchLib().unpackage_batch_dir_pass(batch, is_training=True, model=self.model, CTRL_PNL = self.CTRL_PNL)
-
-                    scores_zeros = np.zeros((batch[0].numpy().shape[0], 10))  # 24 is joint euclidean errors
-                    scores_zeros = Variable(torch.Tensor(scores_zeros).type(dtype))
-
-                    loss = self.criterion(scores, scores_zeros)
-
-
-
-                elif self.CTRL_PNL['loss_vector_type'] == 'anglesR' or self.CTRL_PNL['loss_vector_type'] == 'anglesDC' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU':
-                    #print torch.cuda.max_memory_allocated(), '1pre train'
-                    betas_gt = torch.mean(batch[1][:, 72:82], dim = 0)
-                    angles_gt = torch.mean(batch[1][:, 82:154], dim = 0)
-                    root_shift_est_gt = torch.mean(batch[1][:, 154:157], dim = 0)
-
-                    batch_cloned = []
-                    batch_cloned.append(batch[0].clone())
-                    batch_cloned.append(batch[1].clone())
-
-                    self.optimizer.zero_grad()
-
-                    self.CTRL_PNL['output_only_prev_est'] = True
-                    scoresp, INPUT_DICTp, OUTPUT_DICTp = \
-                        UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=False, model = self.model, CTRL_PNL=self.CTRL_PNL)
-                    #print torch.cuda.max_memory_allocated(), '1post train'
-
-                    self.CTRL_PNL['first_pass'] = False
-
-                    self.CTRL_PNL['output_only_prev_est'] = False
-                    scores, INPUT_DICT, OUTPUT_DICT = \
-                        UnpackBatchLib().unpackage_batch_kin_pass(batch_cloned, is_training=False, model = self.model, CTRL_PNL=self.CTRL_PNL)
-                    #print torch.cuda.max_memory_allocated(), '1post train'
-
-                    betas_est_prev = OUTPUT_DICTp['batch_betas_est_post_clip'].cpu().numpy()
-                    angles_est_prev = OUTPUT_DICTp['batch_angles_est_post_clip']
-                    root_shift_est_prev = OUTPUT_DICTp['batch_root_xyz_est_post_clip'].cpu().numpy()
-
-                    angles_est_prev = torch.mean(angles_est_prev, dim=0).reshape(72)
-                    betas_est_prev = np.mean(betas_est_prev, axis=0)
-                    root_shift_est_prev = np.mean(root_shift_est_prev, axis=0)
-
-                    betas_est = OUTPUT_DICT['batch_betas_est_post_clip'].cpu().numpy()
-                    angles_est = OUTPUT_DICT['batch_angles_est_post_clip']
-                    root_shift_est = OUTPUT_DICT['batch_root_xyz_est_post_clip'].cpu().numpy()
-
-                    angles_est = torch.mean(angles_est, dim=0).reshape(72)
-                    betas_est = np.mean(betas_est, axis=0)
-                    root_shift_est = np.mean(root_shift_est, axis=0)
-
-
-
-                    #print betas_est.shape, betas_net1
-                    smpl_verts_both = []
-                    for smpl_model in ['ground_truth', 'network_output1', 'network_output2']:
-                        for idx in range(10):
-                            if smpl_model == 'ground_truth':
-                                self.m.betas[idx] = float(betas_gt[idx])
-                            elif smpl_model == 'network_output1':
-                                self.m.betas[idx] = betas_est_prev[idx]
-                            elif smpl_model == 'network_output2':
-                                self.m.betas[idx] = betas_est[idx]
-
-                        for idx in range(72):
-                            if smpl_model == 'ground_truth':
-                                self.m.pose[idx] = float(angles_gt[idx])
-                            elif smpl_model == 'network_output1':
-                                self.m.pose[idx] = angles_est_prev[idx]
-                            elif smpl_model == 'network_output2':
-                                self.m.pose[idx] = angles_est[idx]
-
-                        init_root = np.array(self.m.pose[0:3]) + 0.000001
-                        init_rootR = libKinematics.matrix_from_dir_cos_angles(init_root)
-                        root_rot = libKinematics.eulerAnglesToRotationMatrix([np.pi, 0.0, np.pi / 2])
-                        # print root_rot
-                        trans_root = libKinematics.dir_cos_angles_from_matrix(np.matmul(root_rot, init_rootR))
-
-                        self.m.pose[0] = trans_root[0]
-                        self.m.pose[1] = trans_root[1]
-                        self.m.pose[2] = trans_root[2]
-
-                        if smpl_model == 'ground_truth':
-                            root_shift = np.copy(root_shift_est_gt.numpy())
-                        elif smpl_model == 'network_output1':
-                            root_shift = root_shift_est_prev
-                        elif smpl_model == 'network_output2':
-                            root_shift = root_shift_est
-
-                        print root_shift, 'root shift'
-                        # get SMPL mesh
-                        smpl_verts = (self.m.r - self.m.J_transformed[0, :]) + [root_shift[1] - 0.286 + 0.15,
-                                                                                root_shift[0] - 0.286,
-                                                                                0.12 - root_shift[2]]  # *228./214.
-                        smpl_faces = np.array(self.m.f)
-
-                        smpl_verts_both.append(smpl_verts)
-
-                    camera_point = [1.09898028, 0.46441343, -CAM_BED_DIST]
-
-                    bedangle=0
-
-                    print INPUT_DICT['batch_images'].shape
-
-                    # render in 3D pyrender with pressure mat
-                    viz_type = "leg_correction"
-                    #viz_type = "arm_penetration"
-
-
-                    ims_to_display = []
-                    if viz_type == "arm_penetration":
-                        ims_to_display.append(INPUT_DICT['batch_images'][0, 4, :]*0. + 75.) #uniform
-                        segment_limbs = True
-                    elif viz_type == "leg_correction":
-                        ims_to_display.append(INPUT_DICT['batch_images'][0, 4, :]*23.) #pmat
-                        ims_to_display.append(INPUT_DICT['batch_images'][0, 2, :]*45.) #Q-, 1
-                        ims_to_display.append(INPUT_DICT['batch_mdm'].data.numpy().reshape(64, 27)*-1) #Q-, GT
-                        ims_to_display.append(INPUT_DICT['batch_images'][0, 4, :]*23.) #pmat
-                        ims_to_display.append(INPUT_DICT['batch_images'][0, 2, :]*45.) #Q-, 1
-                        ims_to_display.append(OUTPUT_DICT['batch_mdm_est'].data.numpy().reshape(64, 27)*-1) #Q-, 2
-                        ims_to_display.append(INPUT_DICT['batch_mdm'].data.numpy().reshape(64, 27)*-1) #Q-, GT
-                        segment_limbs = True
-
-                    print np.shape(ims_to_display[-1])
-
-                    self.pyRender.render_mesh_bed_special(smpl_verts_both, smpl_faces, bedangle,
-                                                              pmats=ims_to_display, viz_type=viz_type,
-                                                              segment_limbs=segment_limbs)
-
-
-                    #self.pyRender.render_only_human_gt(self.m)
-
-                    time.sleep(300)
 
     def val_convnet_general(self, epoch):
 
@@ -652,13 +468,15 @@ class PhysicalTrainer():
             model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_f_lbs_10_207_0_v1.0.0.pkl'
 
         self.m = load_model(model_path)
-        self.m.pose[41] = -np.pi/6
-        self.m.pose[44] = np.pi/6
 
+        self.m.pose[41] = -np.pi/6*0.9
+        self.m.pose[44] = np.pi/6*0.9
+        self.m.pose[50] = -np.pi/3*0.9
+        self.m.pose[53] = np.pi/3*0.9
         ALL_VERTS = np.array(self.m.r)
 
 
-        self.pyRender = libPyRender.pyRenderMesh(render = True)
+        self.pyRender = libPyRender.pyRenderMesh(render = False)
 
         '''
         Train the model for one epoch.
@@ -666,11 +484,6 @@ class PhysicalTrainer():
         # Some models use slightly different forward passes and train and test
         # time (e.g., any model with Dropout). This puts the model in train mode
         # (as opposed to eval mode) so it knows which one to use.
-        self.model.eval()#train()
-        try:
-            self.model2.eval()#train()
-        except:
-            pass
         self.criterion = nn.L1Loss()
         self.criterion2 = nn.MSELoss()
 
@@ -678,6 +491,7 @@ class PhysicalTrainer():
         RESULTS_DICT['j_err'] = []
         RESULTS_DICT['betas'] = []
         RESULTS_DICT['dir_v_err'] = []
+        RESULTS_DICT['v2v_err'] = []
         RESULTS_DICT['dir_v_limb_err'] = []
         RESULTS_DICT['v_to_gt_err'] = []
         RESULTS_DICT['v_limb_to_gt_err'] = []
@@ -765,7 +579,7 @@ class PhysicalTrainer():
 
         #save here
 
-        pkl.dump(RESULTS_DICT, open('/home/henry/data/final_results/results_synth_'+TESTING_FILENAME+'_'+NETWORK_2+'.p', 'wb'))
+        pkl.dump(RESULTS_DICT, open('/home/henry/git/bodies-at-rest/data_BR/final_results/results_synth_'+TESTING_FILENAME+'_'+NETWORK_2+'.p', 'wb'))
 
 if __name__ == "__main__":
     #Initialize trainer with a training database file
@@ -829,8 +643,8 @@ if __name__ == "__main__":
         filepath_suffix = ''
     else:
         #filepath_prefix =
-        filepath_prefix = '/media/henry/multimodal_data_2/data/'
-        #filepath_prefix = '/home/henry/data/'
+        #filepath_prefix = '/media/henry/multimodal_data_2/data/'
+        filepath_prefix = '/home/henry/git/bodies-at-rest/data_BR/'
         #filepath_suffix = ''
 
 
@@ -845,11 +659,11 @@ if __name__ == "__main__":
     #training_database_file_f.append(filepath_prefix+'synth/random3_fix/test_roll0_f_lay_set14_1500.p') #were actually testing this one
 
     if GENDER == "f":
-        training_database_file_f.append(filepath_prefix+'synth/random3_supp_fix/'+TESTING_FILENAME+'.p') #were actually testing this one
-        test_database_file_f.append(filepath_prefix+'synth/random3_supp_fix/'+TESTING_FILENAME+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/'+PARTITION+'/'+TESTING_FILENAME+'.p') #were actually testing this one
+        test_database_file_f.append(filepath_prefix+'synth/'+PARTITION+'/'+TESTING_FILENAME+'.p')
     else:
-        training_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/'+TESTING_FILENAME+'.p') #were actually testing this one
-        test_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/'+TESTING_FILENAME+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/'+PARTITION+'/'+TESTING_FILENAME+'.p') #were actually testing this one
+        test_database_file_m.append(filepath_prefix+'synth/'+PARTITION+'/'+TESTING_FILENAME+'.p')
 
 
     p = PhysicalTrainer(training_database_file_f, training_database_file_m, test_database_file_f, test_database_file_m, opt)

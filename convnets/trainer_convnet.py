@@ -119,9 +119,9 @@ class PhysicalTrainer():
         self.CTRL_PNL['regr_angles'] = opt.reg_angles
         self.CTRL_PNL['aws'] = self.opt.aws
         self.CTRL_PNL['depth_map_labels'] = True #can only be true if we have 100% synthetic data for training
-        self.CTRL_PNL['depth_map_labels_test'] = True #can only be true is we have 100% synth for testing
+        self.CTRL_PNL['depth_map_labels_test'] = True #False #can only be true is we have 100% synth for testing
         self.CTRL_PNL['depth_map_output'] = self.CTRL_PNL['depth_map_labels']
-        self.CTRL_PNL['depth_map_input_est'] = True  #do this if we're working in a two-part regression
+        self.CTRL_PNL['depth_map_input_est'] = True #do this if we're working in a two-part regression
         self.CTRL_PNL['adjust_ang_from_est'] = self.CTRL_PNL['depth_map_input_est'] #holds betas and root same as prior estimate
         self.CTRL_PNL['clip_sobel'] = True
         self.CTRL_PNL['clip_betas'] = True
@@ -133,6 +133,7 @@ class PhysicalTrainer():
         self.CTRL_PNL['pmat_mult'] = int(5)
         self.CTRL_PNL['cal_noise'] = True
         self.CTRL_PNL['double_network_size'] = False
+        self.CTRL_PNL['first_pass'] = True
 
         self.weight_joints = 1.0#self.opt.j_d_ratio*2
         self.weight_depth_planes = (1-self.opt.j_d_ratio)#*2
@@ -189,7 +190,7 @@ class PhysicalTrainer():
         # Entire pressure dataset with coordinates in world frame
 
         self.save_name = '_' + opt.losstype + \
-                         '_synth_32000' + \
+                         '_synth_46000' + \
                          '_' + str(self.CTRL_PNL['batch_size']) + 'b' + \
                          '_' + str(self.CTRL_PNL['num_epochs']) + 'e' + \
                          '_x' + str(self.CTRL_PNL['pmat_mult']) + 'pmult'
@@ -202,7 +203,7 @@ class PhysicalTrainer():
         if self.CTRL_PNL['adjust_ang_from_est'] == True:
             self.save_name += '_angleadj'
         if self.CTRL_PNL['all_tanh_activ'] == True:
-            self.save_name += '_tnh'
+            self.save_name += '_tnhFIXN'
         if self.CTRL_PNL['incl_ht_wt_channels'] == True:
             self.save_name += '_htwt'
         #if self.CTRL_PNL['L2_contact'] == True:
@@ -465,7 +466,7 @@ class PhysicalTrainer():
         if GPU == True:
             self.model = self.model.cuda()
 
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.0000002, weight_decay=0.0005) #start with .00005
+        self.optimizer = optim.Adam(self.model.parameters(), lr=0.00002, weight_decay=0.0005) #start with .00005
 
         # train the model one epoch at a time
         for epoch in range(1, self.CTRL_PNL['num_epochs'] + 1):
@@ -523,11 +524,11 @@ class PhysicalTrainer():
 
                 elif self.CTRL_PNL['loss_vector_type'] == 'anglesR' or self.CTRL_PNL['loss_vector_type'] == 'anglesDC' or self.CTRL_PNL['loss_vector_type'] == 'anglesEU':
                     #print torch.cuda.max_memory_allocated(), '1pre train'
-
                     self.optimizer.zero_grad()
                     scores, INPUT_DICT, OUTPUT_DICT = \
                         UnpackBatchLib().unpackage_batch_kin_pass(batch, is_training=True, model = self.model, CTRL_PNL=self.CTRL_PNL)
                     #print torch.cuda.max_memory_allocated(), '1post train'
+                    self.CTRL_PNL['first_pass'] = False
 
                     scores_zeros = Variable(torch.Tensor(np.zeros((batch[0].shape[0], scores.size()[1]))).type(dtype),
                                             requires_grad=True)
@@ -589,18 +590,21 @@ class PhysicalTrainer():
                                                              self.output_size_train, self.CTRL_PNL['loss_vector_type'],
                                                              data='train')
 
+                   # print INPUT_DICT['batch_images'][im_display_idx, 4:, :].type()
 
                     if self.CTRL_PNL['depth_map_input_est'] == True: #two part reg
                         self.im_sample = INPUT_DICT['batch_images'][im_display_idx, 4:, :].squeeze()*20. #pmat
                         self.im_sample_ext = INPUT_DICT['batch_images'][im_display_idx, 2:, :].squeeze()*20. #estimated input
-                        self.im_sample_ext2 = INPUT_DICT['batch_mdm'][im_display_idx, :, :].squeeze().unsqueeze(0)*-1 #ground truth depth
-                        self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][im_display_idx, :, :].squeeze().unsqueeze(0)*-1 #est depth output
+                        self.im_sample_ext2 = (INPUT_DICT['batch_mdm'][im_display_idx, :, :].squeeze().unsqueeze(0)*-1).cpu() #ground truth depth
+                        self.im_sample_ext3 = (OUTPUT_DICT['batch_mdm_est'][im_display_idx, :, :].squeeze().unsqueeze(0)*-1).cpu() #est depth output
                     else:
-                        self.im_sample = INPUT_DICT['batch_images'][im_display_idx, 1:, :].squeeze()*20.#normalizing_std_constants[4]*5.  #pmat
-                        self.im_sample_ext = INPUT_DICT['batch_images'][im_display_idx, 0:, :].squeeze()*20.#normalizing_std_constants[0]  #pmat contact
-                        #self.im_sample_ext2 = INPUT_DICT['batch_images'][im_display_idx, 2:, :].squeeze()*20.#normalizing_std_constants[4]  #sobel
-                        self.im_sample_ext2 = INPUT_DICT['batch_mdm'][im_display_idx, :, :].squeeze().unsqueeze(0)*-1 #ground truth depth
-                        self.im_sample_ext3 = OUTPUT_DICT['batch_mdm_est'][im_display_idx, :, :].squeeze().unsqueeze(0)*-1 #est depth output
+                        self.im_sample = INPUT_DICT['batch_images'][im_display_idx, 1:2, :].squeeze()*11.70153502792190#normalizing_std_constants[4]*5.  #pmat
+                        print np.sum(self.im_sample), 'sum samp'
+                        self.im_sample_ext = INPUT_DICT['batch_images'][im_display_idx, 1:2, :].squeeze()*11.70153502792190*5#normalizing_std_constants[0]  #pmat contact
+                        print np.sum(np.clip(self.im_sample_ext, 0, 100)), 'sum samp'
+                        self.im_sample_ext2 = INPUT_DICT['batch_images'][im_display_idx, 2:, :].squeeze()*20.#normalizing_std_constants[4]  #sobel
+                        #self.im_sample_ext2 = (INPUT_DICT['batch_mdm'][im_display_idx, :, :].squeeze().unsqueeze(0)*-1).cpu() #ground truth depth
+                        #self.im_sample_ext3 = (OUTPUT_DICT['batch_mdm_est'][im_display_idx, :, :].squeeze().unsqueeze(0)*-1).cpu() #est depth output
 
                     #print scores[0, 10:16], 'scores of body rot'
 
@@ -722,7 +726,7 @@ class PhysicalTrainer():
         n_examples = 0
         batch_ct = 1
 
-        if self.CTRL_PNL['aws'] == True:
+        if True: #self.CTRL_PNL['aws'] == True:
             for batch_i, batch in enumerate(self.test_loader):
 
                 print('GPU memory val:', torch.cuda.max_memory_allocated())
@@ -800,19 +804,24 @@ class PhysicalTrainer():
 
         if self.opt.visualize == True:
             if GPU == True:
-                VisualizationLib().visualize_pressure_map(self.im_sample.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(),
-                                                          self.im_sample_ext.cpu(), self.tar_sample.cpu(), self.sc_sample.cpu(), #self.tar_sample.cpu(), self.sc_sample.cpu(),
-                                                          self.im_sample_ext2.cpu(),None, None, # self.tar_sample.cpu(), self.sc_sample.cpu(),
-                                                          self.im_sample_ext3.cpu(),None, None, # self.tar_sample.cpu(), self.sc_sample.cpu(),
+                #print self.im_sample.type()
+                #print self.im_sample_ext.type()
+                #print self.im_sample_ext2.type()
+                #print self.im_sample_ext3.type()
+
+                VisualizationLib().visualize_pressure_map(self.im_sample, self.tar_sample.cpu(), self.sc_sample.cpu(),
+                                                          self.im_sample_ext, self.tar_sample.cpu(), self.sc_sample.cpu(), #self.tar_sample.cpu(), self.sc_sample.cpu(),
+                                                          self.im_sample_ext2,None, None, # self.tar_sample.cpu(), self.sc_sample.cpu(),
+                                                          #self.im_sample_ext3 ,None, None, # self.tar_sample.cpu(), self.sc_sample.cpu(),
                                                           #self.im_sample_val.cpu(), self.tar_sample_val.cpu(), self.sc_sample_val.cpu(),
                                                           block=False)
             else:
                 VisualizationLib().visualize_pressure_map(self.im_sample, self.tar_sample, self.sc_sample,
                                                          # self.im_sample_ext, None, None,
-                                                          self.im_sample_ext2, None, None,
-                                                          self.im_sample_ext3, None, None, #, self.tar_sample_val, self.sc_sample_val,
+                                                          #self.im_sample_ext2, None, None,
+                                                          #self.im_sample_ext3, None, None, #, self.tar_sample_val, self.sc_sample_val,
                                                           block=False)
-
+        #print "loss is:" , loss
         return loss
 
 
@@ -868,7 +877,7 @@ if __name__ == "__main__":
     p.add_option('--verbose', '--v',  action='store_true', dest='verbose',
                  default=True, help='Printout everything (under construction).')
 
-    p.add_option('--log_interval', type=int, default=15, metavar='N',
+    p.add_option('--log_interval', type=int, default=30, metavar='N',
                  help='number of batches between logging train status')
 
     opt, args = p.parse_args()
@@ -882,7 +891,7 @@ if __name__ == "__main__":
         #filepath_prefix = '/media/henry/multimodal_data_2/data/'
         filepath_suffix = ''
 
-    filepath_suffix = '_output_184k_100e_htwt_clns0p2'
+    filepath_suffix = '_output_46k_FIX_100e_htwt_clns0p1_V2'
     #filepath_suffix = ''
 
     training_database_file_f = []
@@ -896,61 +905,62 @@ if __name__ == "__main__":
         #training_database_file_f.append(filepath_prefix+'synth/random/train_roll0_f_lay_4000_none_stiff_output0p5.p')
         #test_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_m_lay_1000_none_stiff'+filepath_suffix+'.p')
         #training_database_file_f.append(filepath_prefix+'synth/random/test_roll0_plo_m_lay_1000_none_stiff'+filepath_suffix+'.p')
-        #training_database_file_f.append(filepath_prefix+'synth/random3_supp_fix/train_roll0_plo_hbh_f_lay_set1to2_2000'+filepath_suffix+'.p')
-        #training_database_file_f.append(filepath_prefix+'synth/random3_supp_fix/train_roll0_plo_phu_f_lay_set2pl4_4000'+filepath_suffix+'.p')
-        #training_database_file_f.append(filepath_prefix+'synth/random3_fix/test_rollpi_plo_f_lay_set23to24_3000'+filepath_suffix+'.p')
-        #test_database_file_f.append(filepath_prefix+'synth/random3_fix/test_rollpi_plo_f_lay_set23to24_3000'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random3_fix/test_rollpi_plo_f_lay_set23to24_3000'+filepath_suffix+'.p')
-        test_database_file_f.append(filepath_prefix+'synth/random3_fix/test_rollpi_plo_f_lay_set23to24_3000'+filepath_suffix+'.p')
+        #training_database_file_f.append(filepath_prefix+'synth/random3_supp/train_roll0_plo_hbh_f_lay_set1to2_2000'+filepath_suffix+'.p')
+        #training_database_file_f.append(filepath_prefix+'synth/random3_supp/train_roll0_plo_phu_f_lay_set2pl4_4000'+filepath_suffix+'.p')
+        #training_database_file_f.append(filepath_prefix+'synth/random3/test_rollpi_plo_f_lay_set23to24_3000'+filepath_suffix+'.p')
+        #test_database_file_f.append(filepath_prefix+'synth/random3/test_rollpi_plo_f_lay_set23to24_3000'+filepath_suffix+'.p')
+        #training_database_file_f.append(filepath_prefix+'synth/home_poses/home_pose_f.p')
+        training_database_file_f.append(filepath_prefix+'synth/random3/test_rollpi_f_lay_set23to24_3000'+filepath_suffix+'.p')
+        test_database_file_f.append(filepath_prefix+'synth/random3/test_rollpi_f_lay_set23to24_3000'+filepath_suffix+'.p')
 
     else:
 
-        training_database_file_f.append(filepath_prefix + 'synth/random3_fix/train_roll0_f_lay_set5to7_5000' + filepath_suffix + '.p')
-        training_database_file_f.append(filepath_prefix + 'synth/random3_fix/train_roll0_plo_f_lay_set5to7_5000' + filepath_suffix + '.p')
-        training_database_file_f.append(filepath_prefix + 'synth/random3_fix/train_rollpi_f_lay_set18to22_10000' + filepath_suffix + '.p')
-        training_database_file_f.append(filepath_prefix + 'synth/random3_fix/train_rollpi_plo_f_lay_set18to22_10000' + filepath_suffix + '.p')
-        test_database_file_f.append(filepath_prefix+'synth/random3_fix/test_roll0_f_lay_set14_1500'+filepath_suffix+'.p')
-        test_database_file_f.append(filepath_prefix+'synth/random3_fix/test_roll0_plo_f_lay_set14_1500'+filepath_suffix+'.p')
-        test_database_file_f.append(filepath_prefix+'synth/random3_fix/test_rollpi_f_lay_set23to24_3000'+filepath_suffix+'.p')
-        test_database_file_f.append(filepath_prefix+'synth/random3_fix/test_rollpi_plo_f_lay_set23to24_3000'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix + 'synth/random3/train_roll0_f_lay_set5to7_5000' + filepath_suffix + '.p')
+        training_database_file_f.append(filepath_prefix + 'synth/random3/train_roll0_plo_f_lay_set5to7_5000' + filepath_suffix + '.p')
+        training_database_file_f.append(filepath_prefix + 'synth/random3/train_rollpi_f_lay_set18to22_10000' + filepath_suffix + '.p')
+        training_database_file_f.append(filepath_prefix + 'synth/random3/train_rollpi_plo_f_lay_set18to22_10000' + filepath_suffix + '.p')
+        test_database_file_f.append(filepath_prefix+'synth/random3/test_roll0_f_lay_set14_1500'+filepath_suffix+'.p')
+        test_database_file_f.append(filepath_prefix+'synth/random3/test_roll0_plo_f_lay_set14_1500'+filepath_suffix+'.p')
+        test_database_file_f.append(filepath_prefix+'synth/random3/test_rollpi_f_lay_set23to24_3000'+filepath_suffix+'.p')
+        test_database_file_f.append(filepath_prefix+'synth/random3/test_rollpi_plo_f_lay_set23to24_3000'+filepath_suffix+'.p')
 
-        training_database_file_m.append(filepath_prefix + 'synth/random3_fix/train_roll0_m_lay_set5to7_5000' + filepath_suffix + '.p')
-        training_database_file_m.append(filepath_prefix + 'synth/random3_fix/train_roll0_plo_m_lay_set5to7_5000' + filepath_suffix + '.p')
-        training_database_file_m.append(filepath_prefix + 'synth/random3_fix/train_rollpi_m_lay_set18to22_10000' + filepath_suffix + '.p')
-        training_database_file_m.append(filepath_prefix + 'synth/random3_fix/train_rollpi_plo_m_lay_set18to22_10000' + filepath_suffix + '.p')
-        test_database_file_m.append(filepath_prefix+'synth/random3_fix/test_roll0_m_lay_set14_1500'+filepath_suffix+'.p')
-        test_database_file_m.append(filepath_prefix+'synth/random3_fix/test_roll0_plo_m_lay_set14_1500'+filepath_suffix+'.p')
-        test_database_file_m.append(filepath_prefix+'synth/random3_fix/test_rollpi_m_lay_set23to24_3000'+filepath_suffix+'.p')
-        test_database_file_m.append(filepath_prefix+'synth/random3_fix/test_rollpi_plo_m_lay_set23to24_3000'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix + 'synth/random3/train_roll0_m_lay_set5to7_5000' + filepath_suffix + '.p')
+        training_database_file_m.append(filepath_prefix + 'synth/random3/train_roll0_plo_m_lay_set5to7_5000' + filepath_suffix + '.p')
+        training_database_file_m.append(filepath_prefix + 'synth/random3/train_rollpi_m_lay_set18to22_10000' + filepath_suffix + '.p')
+        training_database_file_m.append(filepath_prefix + 'synth/random3/train_rollpi_plo_m_lay_set18to22_10000' + filepath_suffix + '.p')
+        test_database_file_m.append(filepath_prefix+'synth/random3/test_roll0_m_lay_set14_1500'+filepath_suffix+'.p')
+        test_database_file_m.append(filepath_prefix+'synth/random3/test_roll0_plo_m_lay_set14_1500'+filepath_suffix+'.p')
+        test_database_file_m.append(filepath_prefix+'synth/random3/test_rollpi_m_lay_set23to24_3000'+filepath_suffix+'.p')
+        test_database_file_m.append(filepath_prefix+'synth/random3/test_rollpi_plo_m_lay_set23to24_3000'+filepath_suffix+'.p')
 
-        training_database_file_f.append(filepath_prefix+'synth/random3_supp_fix/train_roll0_plo_hbh_f_lay_set1to2_2000'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random3_supp_fix/train_roll0_plo_phu_f_lay_set2pl4_4000'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random3_supp_fix/train_roll0_sl_f_lay_set2pl3pa1_4000'+filepath_suffix+'.p')
-        training_database_file_f.append(filepath_prefix+'synth/random3_supp_fix/train_roll0_xl_f_lay_set2both_4000'+filepath_suffix+'.p')
-        test_database_file_f.append(filepath_prefix+'synth/random3_supp_fix/test_roll0_plo_hbh_f_lay_set4_500'+filepath_suffix+'.p')
-        test_database_file_f.append(filepath_prefix+'synth/random3_supp_fix/test_roll0_plo_phu_f_lay_set1pa3_500'+filepath_suffix+'.p')
-        test_database_file_f.append(filepath_prefix+'synth/random3_supp_fix/test_roll0_sl_f_lay_set1both_500'+filepath_suffix+'.p')
-        test_database_file_f.append(filepath_prefix+'synth/random3_supp_fix/test_roll0_xl_f_lay_set1both_500'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random3_supp/train_roll0_plo_hbh_f_lay_set1to2_2000'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random3_supp/train_roll0_plo_phu_f_lay_set2pl4_4000'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random3_supp/train_roll0_sl_f_lay_set2pl3pa1_4000'+filepath_suffix+'.p')
+        training_database_file_f.append(filepath_prefix+'synth/random3_supp/train_roll0_xl_f_lay_set2both_4000'+filepath_suffix+'.p')
+        test_database_file_f.append(filepath_prefix+'synth/random3_supp/test_roll0_plo_hbh_f_lay_set4_500'+filepath_suffix+'.p')
+        test_database_file_f.append(filepath_prefix+'synth/random3_supp/test_roll0_plo_phu_f_lay_set1pa3_500'+filepath_suffix+'.p')
+        test_database_file_f.append(filepath_prefix+'synth/random3_supp/test_roll0_sl_f_lay_set1both_500'+filepath_suffix+'.p')
+        test_database_file_f.append(filepath_prefix+'synth/random3_supp/test_roll0_xl_f_lay_set1both_500'+filepath_suffix+'.p')
 
-        training_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/train_roll0_plo_hbh_m_lay_set2pa1_2000'+filepath_suffix+'.p')
-        training_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/train_roll0_plo_phu_m_lay_set2pl4_4000'+filepath_suffix+'.p')
-        training_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/train_roll0_sl_m_lay_set2pa1_4000'+filepath_suffix+'.p')
-        training_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/train_roll0_xl_m_lay_set2both_4000'+filepath_suffix+'.p')
-        test_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/test_roll0_plo_hbh_m_lay_set1_500'+filepath_suffix+'.p')
-        test_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/test_roll0_plo_phu_m_lay_set1pa3_500'+filepath_suffix+'.p')
-        test_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/test_roll0_sl_m_lay_set1both_500'+filepath_suffix+'.p')
-        test_database_file_m.append(filepath_prefix+'synth/random3_supp_fix/test_roll0_xl_m_lay_set1both_500'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random3_supp/train_roll0_plo_hbh_m_lay_set2pa1_2000'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random3_supp/train_roll0_plo_phu_m_lay_set2pl4_4000'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random3_supp/train_roll0_sl_m_lay_set2pa1_4000'+filepath_suffix+'.p')
+        training_database_file_m.append(filepath_prefix+'synth/random3_supp/train_roll0_xl_m_lay_set2both_4000'+filepath_suffix+'.p')
+        test_database_file_m.append(filepath_prefix+'synth/random3_supp/test_roll0_plo_hbh_m_lay_set1_500'+filepath_suffix+'.p')
+        test_database_file_m.append(filepath_prefix+'synth/random3_supp/test_roll0_plo_phu_m_lay_set1pa3_500'+filepath_suffix+'.p')
+        test_database_file_m.append(filepath_prefix+'synth/random3_supp/test_roll0_sl_m_lay_set1both_500'+filepath_suffix+'.p')
+        test_database_file_m.append(filepath_prefix+'synth/random3_supp/test_roll0_xl_m_lay_set1both_500'+filepath_suffix+'.p')
 
-        if opt.aws == True:
-            training_database_file_f.append(filepath_prefix + 'synth/random3_fix/train_roll0_f_lay_set10to13_8000' + filepath_suffix + '.p')
-            training_database_file_f.append(filepath_prefix + 'synth/random3_fix/train_roll0_plo_f_lay_set10to13_8000' + filepath_suffix + '.p')
-            training_database_file_f.append(filepath_prefix + 'synth/random3_fix/train_rollpi_f_lay_set10to17_16000' + filepath_suffix + '.p')
-            training_database_file_f.append(filepath_prefix + 'synth/random3_fix/train_rollpi_plo_f_lay_set10to17_16000' + filepath_suffix + '.p')
+        #if opt.aws == True:
+        training_database_file_f.append(filepath_prefix + 'synth/random3/train_roll0_f_lay_set10to13_8000' + filepath_suffix + '.p')
+        training_database_file_f.append(filepath_prefix + 'synth/random3/train_roll0_plo_f_lay_set10to13_8000' + filepath_suffix + '.p')
+        training_database_file_f.append(filepath_prefix + 'synth/random3/train_rollpi_f_lay_set10to17_16000' + filepath_suffix + '.p')
+        training_database_file_f.append(filepath_prefix + 'synth/random3/train_rollpi_plo_f_lay_set10to17_16000' + filepath_suffix + '.p')
 
-            training_database_file_m.append(filepath_prefix + 'synth/random3_fix/train_roll0_m_lay_set10to13_8000' + filepath_suffix + '.p')
-            training_database_file_m.append(filepath_prefix + 'synth/random3_fix/train_roll0_plo_m_lay_set10to13_8000' + filepath_suffix + '.p')
-            training_database_file_m.append(filepath_prefix + 'synth/random3_fix/train_rollpi_m_lay_set10to17_16000' + filepath_suffix + '.p')
-            training_database_file_m.append(filepath_prefix + 'synth/random3_fix/train_rollpi_plo_m_lay_set10to17_16000' + filepath_suffix + '.p')
+        training_database_file_m.append(filepath_prefix + 'synth/random3/train_roll0_m_lay_set10to13_8000' + filepath_suffix + '.p')
+        training_database_file_m.append(filepath_prefix + 'synth/random3/train_roll0_plo_m_lay_set10to13_8000' + filepath_suffix + '.p')
+        training_database_file_m.append(filepath_prefix + 'synth/random3/train_rollpi_m_lay_set10to17_16000' + filepath_suffix + '.p')
+        training_database_file_m.append(filepath_prefix + 'synth/random3/train_rollpi_plo_m_lay_set10to17_16000' + filepath_suffix + '.p')
 
     p = PhysicalTrainer(training_database_file_f, training_database_file_m, test_database_file_f, test_database_file_m, opt)
 

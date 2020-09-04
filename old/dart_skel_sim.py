@@ -24,11 +24,12 @@ import lib_kinematics
 #import pymrt.geometry
 
 GRAVITY = -9.81
-STARTING_HEIGHT = 1.3# + 2.0
+STARTING_HEIGHT = 1.3
 
 #K = 1269.0
 #K = 1521.1
-K = 1196.5
+#K = 1196.5
+K = 1005.0
 #K = 704.5
 #K = 1042.05
 B = K*4
@@ -60,36 +61,6 @@ class DartSkelSim(object):
         length_regs = regs['betas2lens']
         rad_regs = regs['betas2rads']
         betas = m.betas
-        #print m.pose, "JOINT ANGLES"
-        #joint_angles = [ 0.        ,  1.26335619, -0.3345386 , -0.79136163, -0.01261708,  0.5666164,
-        joint_angles = [ 0.        ,  1.26335619, -0.3345386 , -0.79136163, -0.01261708,  0.5666164, #human on pipeline fig of CVPR paper
-             -1.07304849,  0.48226964, -0.20591563,  0.        ,  0.        ,  0.,
-              0.43912317,  0.        ,  0.        ,  2.20073876,  0.        ,  0.,
-              0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.,
-              0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.,
-              0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.,
-              0.        ,  0.        ,  0.        , -0.3404743 ,  0.14827986, -0.49592186,
-             -0.29520415,  0.38421697,  0.24710621,  0.        ,  0.        ,  0.,
-             -0.68094861,  0.29655973, -0.99184372, -0.59040829,  0.76843395,  0.49421242,
-              0.        , -1.44092301,  0.        ,  0.        ,  1.77507246,  0.,
-              0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.,
-              0.        ,  0.        ,  0.        ,  0.        ,  0.        ,  0.        ]
-        
-        #joint_angles = [ 0.         , 0.         , 0.29953766, -0.75371822 , 0.48613525  ,0.36212711, //vertical human on front page
-        #                 -0.29956749-0.5,  0.52879228, -0.075916 -0.2,   0.        ,  0.         , 0.,
-        #                  2.4309954 ,  0.        ,  0.       ,   0.20978406,  0.         , 0.,
-        #                  0.        ,  0.        ,  0.       ,   0.        ,  0.         , 0.,
-        #                  0.        ,  0.        ,  0.       ,   0.        ,  0.         , 0.,
-        #                  0.        ,  0.        ,  0.       ,   0.        ,  0.         , 0.,
-        #                  0.        ,  0.        ,  0.       ,  -0.20439058,  0.11663714-0.4 , 0.01706364,
-        #                  0.39205411,  0.2238351 ,  0.3887238,   0.        ,  0.         , 0.,
-        #                 -0.40878116,  0.23327429-0.7,  0.03412729,  0.78410821,  0.44767019 , 0.77744761,
-        #                  0.        , -0.29885034,  0.        ,  0.        ,  0.39881768 , 0.,
-        #                  0.        ,  0.        ,  0.        ,  0.        ,  0.         , 0.,
-        #                 0.        ,  0.        ,  0.        ,  0.        ,  0.         , 0.        ]
-
-        #for i in range(72):
-        #    m.pose[i] = joint_angles[i]
 
         capsules_median = get_capsules(m, betas*0, length_regs, rad_regs)
         capsules = get_capsules(m, betas, length_regs, rad_regs)
@@ -344,28 +315,36 @@ class DartSkelSim(object):
 
         volume_torso = volume[0] + volume[3] + volume[6] + volume[9] + volume[11] + volume[12]
         volume_head = volume[10] + volume[13]
+        volume_torso_median = volume_median[0] + volume_median[3] + volume_median[6] + volume_median[9] + volume_median[11] + volume_median[12]
+        volume_head_median = volume_median[10] + volume_median[13]
 
 
         #Human Body Dynamics: Classical Mechanics and Human Movement by Aydin Tozeren, the average percentage of weight for each body part is as follows:
         #Trunk(Chest, back and abdomen)- 50.80,  Head - 7.30, Thigh - 9.88 x 2, Lower leg - 4.65 x 2, Foot - 1.45 x 2, Upper arm - 2.7 x 2, Forearm - 1.60 x 2, Hand - 0.66 x 2,
         #Trunk(Chest, back and abdomen) Women- 50.80,  Head - 9.40, Thigh - 8.30 x 2, Lower leg - 5.50 x 2, Foot - 1.20 x 2, Upper arm - 2.7 x 2, Forearm - 1.60 x 2, Hand - 0.50 x 2,
         #Trunk(Chest, back and abdomen) Men - 48.30,  Head - 7.10, Thigh - 10.50 x 2, Lower leg - 4.50 x 2, Foot - 1.50 x 2, Upper arm - 3.3 x 2, Forearm - 1.90 x 2, Hand - 0.60 x 2,
+
+
+        #print "DART SKEL SIM! "
+        #print volume_torso, volume_head
+        #print volume_median[0] + volume_median[3] + volume_median[6] + volume_median[9] + volume_median[11] + volume_median[12], volume_median[10] + volume_median[13]
+
         if gender == "f":
             BODY_MASS = 62.5 #kg median height: -1.658 or about 5 foot 5.3 in
-            skel.bodynodes[0].set_mass(BODY_MASS * 0.5080 * (volume[0]/volume_torso) * (volume[0]/volume_median[0]) + 0.00001)
+            skel.bodynodes[0].set_mass(BODY_MASS * 0.5080 * (volume_median[0]/volume_torso_median) * (volume[0]/volume_median[0]) + 0.00001)
             skel.bodynodes[1].set_mass(BODY_MASS * 0.0830 * (volume[1]/volume_median[1]) + 0.00001)
             skel.bodynodes[2].set_mass(BODY_MASS * 0.0830 * (volume[2]/volume_median[2]) + 0.00001)
-            skel.bodynodes[3].set_mass(BODY_MASS * 0.5080 * (volume[3]/volume_torso) * (volume[3]/volume_median[3]) + 0.00001)
+            skel.bodynodes[3].set_mass(BODY_MASS * 0.5080 * (volume_median[3]/volume_torso_median) * (volume[3]/volume_median[3]) + 0.00001)
             skel.bodynodes[4].set_mass(BODY_MASS * 0.0550 * (volume[4]/volume_median[4]) + 0.00001)
             skel.bodynodes[5].set_mass(BODY_MASS * 0.0550 * (volume[5]/volume_median[5]) + 0.00001)
-            skel.bodynodes[6].set_mass(BODY_MASS * 0.5080 * (volume[6]/volume_torso) * (volume[6]/volume_median[6])+ 0.00001)
+            skel.bodynodes[6].set_mass(BODY_MASS * 0.5080 * (volume_median[6]/volume_torso_median) * (volume[6]/volume_median[6])+ 0.00001)
             skel.bodynodes[7].set_mass(BODY_MASS * 0.0120 * (volume[7]/volume_median[7]) + 0.00001)
             skel.bodynodes[8].set_mass(BODY_MASS * 0.0120 * (volume[8]/volume_median[8]) + 0.00001)
-            skel.bodynodes[9].set_mass(BODY_MASS * 0.5080 * (volume[9]/volume_torso) * (volume[9]/volume_median[9]) + 0.00001)
-            skel.bodynodes[10].set_mass(BODY_MASS * 0.0940 * (volume[10]/volume_head) * (volume[10]/volume_median[10]) + 0.00001)
-            skel.bodynodes[11].set_mass(BODY_MASS * 0.5080 * (volume[11]/volume_torso) * (volume[11]/volume_median[11]) + 0.00001)
-            skel.bodynodes[12].set_mass(BODY_MASS * 0.5080 * (volume[12]/volume_torso) * (volume[12]/volume_median[12]) + 0.00001)
-            skel.bodynodes[13].set_mass(BODY_MASS * 0.0940 * (volume[13]/volume_head) * (volume[13]/volume_median[13]) + 0.00001)
+            skel.bodynodes[9].set_mass(BODY_MASS * 0.5080 * (volume_median[9]/volume_torso_median) * (volume[9]/volume_median[9]) + 0.00001)
+            skel.bodynodes[10].set_mass(BODY_MASS * 0.0940 * (volume_median[10]/volume_head_median) * (volume[10]/volume_median[10]) + 0.00001)
+            skel.bodynodes[11].set_mass(BODY_MASS * 0.5080 * (volume_median[11]/volume_torso_median) * (volume[11]/volume_median[11]) + 0.00001)
+            skel.bodynodes[12].set_mass(BODY_MASS * 0.5080 * (volume_median[12]/volume_torso_median) * (volume[12]/volume_median[12]) + 0.00001)
+            skel.bodynodes[13].set_mass(BODY_MASS * 0.0940 * (volume_median[13]/volume_head_median) * (volume[13]/volume_median[13]) + 0.00001)
             skel.bodynodes[14].set_mass(BODY_MASS * 0.0270 * (volume[14]/volume_median[14]) + 0.00001)
             skel.bodynodes[15].set_mass(BODY_MASS * 0.0270 * (volume[15]/volume_median[15]) + 0.00001)
             skel.bodynodes[16].set_mass(BODY_MASS * 0.0160 * (volume[16]/volume_median[16]) + 0.00001)
@@ -374,20 +353,20 @@ class DartSkelSim(object):
             skel.bodynodes[19].set_mass(BODY_MASS * 0.0050 * (volume[19]/volume_median[19]) + 0.00001)
         else:
             BODY_MASS = 78.4 #kg . median height: 1.791 or about 5 foot 10.5 in
-            skel.bodynodes[0].set_mass(BODY_MASS * 0.4830 * (volume[0]/volume_torso) * (volume[0]/volume_median[0]) + 0.00001)
+            skel.bodynodes[0].set_mass(BODY_MASS * 0.4830 * (volume_median[0]/volume_torso_median) * (volume[0]/volume_median[0]) + 0.00001)
             skel.bodynodes[1].set_mass(BODY_MASS * 0.1050 * (volume[1]/volume_median[1]) + 0.00001)
             skel.bodynodes[2].set_mass(BODY_MASS * 0.1050 * (volume[2]/volume_median[2]) + 0.00001)
-            skel.bodynodes[3].set_mass(BODY_MASS * 0.4830 * (volume[3]/volume_torso) * (volume[3]/volume_median[3]) + 0.00001)
+            skel.bodynodes[3].set_mass(BODY_MASS * 0.4830 * (volume_median[3]/volume_torso_median) * (volume[3]/volume_median[3]) + 0.00001)
             skel.bodynodes[4].set_mass(BODY_MASS * 0.0450 * (volume[4]/volume_median[4]) + 0.00001)
             skel.bodynodes[5].set_mass(BODY_MASS * 0.0450 * (volume[5]/volume_median[5]) + 0.00001)
-            skel.bodynodes[6].set_mass(BODY_MASS * 0.4830 * (volume[6]/volume_torso) * (volume[6]/volume_median[6]) + 0.00001)
+            skel.bodynodes[6].set_mass(BODY_MASS * 0.4830 * (volume_median[6]/volume_torso_median) * (volume[6]/volume_median[6]) + 0.00001)
             skel.bodynodes[7].set_mass(BODY_MASS * 0.0150 * (volume[7]/volume_median[7]) + 0.00001)
             skel.bodynodes[8].set_mass(BODY_MASS * 0.0150 * (volume[8]/volume_median[8]) + 0.00001)
-            skel.bodynodes[9].set_mass(BODY_MASS * 0.4830 * (volume[9]/volume_torso) * (volume[9]/volume_median[9]) + 0.00001)
-            skel.bodynodes[10].set_mass(BODY_MASS * 0.0710 * (volume[10]/volume_head) * (volume[10]/volume_median[10]) + 0.00001)
-            skel.bodynodes[11].set_mass(BODY_MASS * 0.4830 * (volume[11]/volume_torso) * (volume[11]/volume_median[11]) + 0.00001)
-            skel.bodynodes[12].set_mass(BODY_MASS * 0.4830 * (volume[12]/volume_torso * (volume[12]/volume_median[12])) + 0.00001)
-            skel.bodynodes[13].set_mass(BODY_MASS * 0.0710 * (volume[13]/volume_head) * (volume[13]/volume_median[13]) + 0.00001)
+            skel.bodynodes[9].set_mass(BODY_MASS * 0.4830 * (volume_median[9]/volume_torso_median) * (volume[9]/volume_median[9]) + 0.00001)
+            skel.bodynodes[10].set_mass(BODY_MASS * 0.0710 * (volume_median[10]/volume_head_median) * (volume[10]/volume_median[10]) + 0.00001)
+            skel.bodynodes[11].set_mass(BODY_MASS * 0.4830 * (volume_median[11]/volume_torso_median) * (volume[11]/volume_median[11]) + 0.00001)
+            skel.bodynodes[12].set_mass(BODY_MASS * 0.4830 * (volume_median[12]/volume_torso_median) * (volume[12]/volume_median[12]) + 0.00001)
+            skel.bodynodes[13].set_mass(BODY_MASS * 0.0710 * (volume_median[13]/volume_head_median) * (volume[13]/volume_median[13]) + 0.00001)
             skel.bodynodes[14].set_mass(BODY_MASS * 0.0330 * (volume[14]/volume_median[14]) + 0.00001)
             skel.bodynodes[15].set_mass(BODY_MASS * 0.0330 * (volume[15]/volume_median[15]) + 0.00001)
             skel.bodynodes[16].set_mass(BODY_MASS * 0.0190 * (volume[16]/volume_median[16]) + 0.00001)
@@ -490,15 +469,6 @@ class DartSkelSim(object):
             self.a.append(a)
             self.zi.append(signal.lfilter_zi(self.b[-1], self.a[-1]))
 
-
-        self.zi_F = []
-        self.b_F = []
-        self.a_F = []
-        for i in range(60):
-            b, a = signal.butter(1, 0.02, analog=False)
-            self.b_F.append(b)
-            self.a_F.append(a)
-            self.zi_F.append(signal.lfilter_zi(self.b_F[-1], self.a_F[-1]))
 
 
     def getCapsuleVolumes(self, mm_resolution, dataset_num = 1):
@@ -950,7 +920,7 @@ class DartSkelSim(object):
         GLUT.glutMainLoop()
 
 
-    def run_sim_step(self, d_penetrated_red_list = [], force_loc_red_dart = [], force_dir_red_dart = [], pmat_idx_red_dart = [], nearest_capsule_list = [], kill_dart_vel = False):
+    def run_sim_step(self, pmat_red_list = [], force_loc_red_dart = [], force_dir_red_dart = [], pmat_idx_red_dart = [], nearest_capsule_list = [], kill_dart_vel = False):
         self.world.step()
         if kill_dart_vel == True:
             self.world.skeletons[0].reset_momentum()
@@ -960,7 +930,7 @@ class DartSkelSim(object):
         skel = self.world.skeletons[0]
 
 
-        force_dir_red_dart = (np.multiply(np.asarray(force_dir_red_dart), np.expand_dims(np.asarray(d_penetrated_red_list), axis=1)))/10
+        force_dir_red_dart = (np.multiply(np.asarray(force_dir_red_dart), np.expand_dims(np.asarray(pmat_red_list), axis=1)))/10
 
 
         nearest_capsules = nearest_capsule_list
@@ -1089,62 +1059,6 @@ class DartSkelSim(object):
 
 
 
-        #print active_bn_list, 'active bn list'
-
-
-        force_vectors = []
-        for item in range(20):
-            if item in active_bn_list:
-                force_vectors.append(active_force_resultant_COM_list[active_bn_list.index(item)])
-            else:
-                force_vectors.append(np.array([0.0, 0.0, 0.0]))
-        force_vectors = np.array(force_vectors).flatten()
-        force_vectors_filtered = np.copy(force_vectors)
-        for i in range(20*3):
-            force_vectors_filtered[i], self.zi_F[i] = signal.lfilter(self.b_F[i], self.a_F[i], [force_vectors[i]], zi=self.zi_F[i])
-
-        force_vectors_filtered = force_vectors_filtered.reshape(20, 3)
-
-        x_vect, y_vect, z_vect = [], [], []
-        u_vect, v_vect, w_vect, mag_vect, rad_vect = [], [], [], [], []
-        for idx in range(len(active_bn_list)):
-            item = active_bn_list[idx]
-
-            R_cap = np.asarray(skel.bodynodes[item].T[0:3, 0:3])
-
-
-            #print item, np.matmul(R_cap, np.array([1.0, 0.0, 0.0]))
-            #arrow_mult = np.abs(np.matmul(R_cap, np.array([0.0, 0.0, 1.0]))[2])
-
-            #
-            #arrow_mult = np.abs(np.sin(lib_kinematics.rotationMatrixToEulerAngles(R_cap)[0]))
-
-
-            x_vect.append(skel.bodynodes[item].C[1] + 2.55/2.58872)
-            y_vect.append(skel.bodynodes[item].C[2] + self.STARTING_HEIGHT/2.58872)
-            z_vect.append(skel.bodynodes[item].C[0] + 1.185/2.58872)
-
-            #force_dir = active_force_resultant_COM_list[idx] / np.linalg.norm(active_force_resultant_COM_list[idx])
-            #force_mag = np.linalg.norm(active_force_resultant_COM_list[idx])
-            force_dir = force_vectors_filtered[item] / np.linalg.norm(force_vectors_filtered[item])
-
-            force_mag = np.linalg.norm(force_vectors_filtered[item])
-
-
-
-            u_vect.append(force_dir[1])
-            v_vect.append(force_dir[2])
-            w_vect.append(force_dir[0])
-            mag_vect.append(force_mag)
-            rad_vect.append(float(self.capsules[item].rad[0]))
-
-        xyzuvwm_cap = [np.asarray(x_vect), np.asarray(y_vect), np.asarray(z_vect),
-                       np.asarray(u_vect), np.asarray(v_vect), np.asarray(w_vect), np.asarray(mag_vect), np.asarray(rad_vect)]
-
-        #print self.capsules[0].rad[0], skel.bodynodes[0].T, skel.bodynodes[0].T[2][2]
-        #print active_force_resultant_COM_list, 'active force list'
-
-
         #print "dart timing", time1, time2, time3, time4, time() - time4-time3-time2-time1-time0
 
         #this root joint position will tell us how to shift the root when we remesh the capsule model
@@ -1167,7 +1081,7 @@ class DartSkelSim(object):
         #print skel.bodynodes[0].C - dist, 'new root pos'
         root_joint_pos = skel.bodynodes[0].C - dist
         root_joint_pos[2] += self.STARTING_HEIGHT / DART_TO_FLEX_CONV
-        #print root_joint_pos, 'radius: ', self.root_capsule_rad, self.STARTING_HEIGHT
+        print root_joint_pos, 'radius: ', self.root_capsule_rad
 
         #here lets transform the position of skel.bodybodes[0].C by a length of length/2
         midglute_to_left = np.matmul(Trans1, np.array([np.abs(float(self.capsules[0].length[0]))/2, 0.0, 0.0]))
@@ -1197,7 +1111,7 @@ class DartSkelSim(object):
 
 
 
-        return skel.q, skel.bodynodes, root_joint_pos, max_vel, max_acc, xyzuvwm_cap
+        return skel.q, skel.bodynodes, root_joint_pos, max_vel, max_acc
 
 
 

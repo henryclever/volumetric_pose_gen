@@ -95,7 +95,7 @@ class PreprocessingLib():
 
     def preprocessing_add_calibration_noise(self, images, pmat_chan_idx, norm_std_coeffs, is_training):
         if is_training == True:
-            variation_amount = 0.2
+            variation_amount = 0.1
             print "ADDING CALIB NOISE", variation_amount
 
             #pmat_contact_orig = np.copy(images[:, pmat_chan_idx, :, :])
@@ -182,7 +182,7 @@ class PreprocessingLib():
         if verbose: print len(p_map_dataset[0]),'x',len(p_map_dataset[0][0]), 'size of a resized pressure map'
         return p_map_dataset
 
-    def preprocessing_create_pressure_angle_stack_realtime(self, p_map, bedangle, mat_size, verbose = False):
+    def preprocessing_create_pressure_angle_stack_realtime(self, p_map, bedangle, mat_size, verbose = False, return_height = True):
         '''This is for creating a 2-channel input using the height of the bed. '''
         p_map = np.reshape(p_map, mat_size)
 
@@ -207,7 +207,11 @@ class PreprocessingLib():
         sy = ndimage.sobel(p_map, axis=1, mode='constant')
         p_map_inter = np.hypot(sx, sy)
 
-        p_map_dataset.append([p_map, p_map_inter, a_map])
+        if return_height == True:
+            p_map_dataset.append([p_map, p_map_inter, a_map])
+        else:
+            p_map_dataset.append([p_map, p_map_inter])
+
 
         return p_map_dataset
 

@@ -840,6 +840,12 @@ def matrix_from_dir_cos_angles(theta):
     return R
 
 
+def convnet_smpl_root(roll, yaw):
+    euler_angles = [0.0, roll, yaw]
+    rot_mat = ZXYeulerAnglesToRotationMatrix(euler_angles)
+    dir_cos_root = dir_cos_angles_from_matrix(rot_mat)
+    return dir_cos_root
+
 def rotation_matrix(axis, theta):
     """
     Return the rotation matrix associated with counterclockwise rotation about

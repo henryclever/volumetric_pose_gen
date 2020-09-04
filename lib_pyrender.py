@@ -2332,11 +2332,13 @@ class pyRenderMesh():
         # normalize by the average area of triangles around each point. the verts are much less spatially distributed well
         # than the points in the point cloud.
         if camera_point is not None:
-            norm_area_avg = self.get_triangle_area_vert_weight(human_mesh_vtx_gtesterr[0], human_mesh_face_gtesterr_red[0], verts_idx_red_GT)
+            norm_area_avg = np.array(self.get_triangle_area_vert_weight(human_mesh_vtx_gtesterr[0], human_mesh_face_gtesterr_red[0], verts_idx_red_GT))
         else:
-            norm_area_avg = self.get_triangle_area_vert_weight(human_mesh_vtx_gtesterr[0], human_mesh_face_gtesterr[0], verts_idx_red_GT)
+            norm_area_avg = np.array(self.get_triangle_area_vert_weight(human_mesh_vtx_gtesterr[0], human_mesh_face_gtesterr[0], verts_idx_red_GT))
+        gtvert_to_nearest_estvert_error_list = np.array(gtvert_to_nearest_estvert_error_list)
 
-        norm_gtvert_to_nearest_estvert_error = np.array(gtvert_to_nearest_estvert_error_list) * norm_area_avg
+
+        norm_gtvert_to_nearest_estvert_error = gtvert_to_nearest_estvert_error_list[0:np.shape(norm_area_avg)[0]] * norm_area_avg[0:np.shape(gtvert_to_nearest_estvert_error_list)[0]]
         print "average gt vert to nearest est vert error, regardless of normal:", np.mean(norm_gtvert_to_nearest_estvert_error)
         RESULTS_DICT['gt_to_v_err'].append(np.mean(norm_gtvert_to_nearest_estvert_error))
 

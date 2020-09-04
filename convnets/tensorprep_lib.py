@@ -72,7 +72,17 @@ class TensorPrepLib():
                                 datcurr_to_append = list(
                                     np.array(datcurr_to_append).reshape(84, 47)[10:74, 10:37].reshape(1728))
                             try:
-                                dat[key].append(datcurr_to_append)
+                                if len(dat_curr['images']) == 3000:
+                                    if inputgoalset < len(dat_curr['images'])/2:
+                                        dat[key].append(datcurr_to_append)
+                                elif len(dat_curr['images']) == 1500:
+                                    if inputgoalset < len(dat_curr['images'])/3:
+                                        dat[key].append(datcurr_to_append)
+                                else:
+                                #    dat[key].append(datcurr_to_append)
+                                #if inputgoalset < len(dat_curr['images'])/4:
+                                    dat[key].append(datcurr_to_append)
+
                             except:
                                 try:
                                     dat[key] = []
