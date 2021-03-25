@@ -2,9 +2,9 @@ import numpy as np
 import math
 
 #IKPY
-from ikpy.chain import Chain
-from ikpy.link import OriginLink, URDFLink
-from ikpy import geometry_utils
+#from ikpy.chain import Chain
+#from ikpy.link import OriginLink, URDFLink
+#from ikpy import geometry_utils
 
 INTER_SENSOR_DISTANCE = 0.0286#metres
 

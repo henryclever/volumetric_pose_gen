@@ -54,6 +54,7 @@ LOW_TAXEL_THRESH_Y = 0
 HIGH_TAXEL_THRESH_X = (NUMOFTAXELS_X - 1)
 HIGH_TAXEL_THRESH_Y = (NUMOFTAXELS_Y - 1)
 
+
 def visualize_pressure_map(p_map, targets_raw=None, scores_raw=None, p_map_val=None, targets_val=None, scores_val=None, block=False, title=' '):
     # p_map_val[0, :, :] = p_map[1, : ,:]
 
@@ -178,32 +179,36 @@ def reprocess_synth_data():
 
     import dart_skel_sim
 
-    # gender = "f"
-    # posture = "lay"
-    # stiffness = "leftside"
-    # num_resting_poses = 3722
-
-    #all_data_names = [["m", "lay", "none", 560, 800, "0", "set3", "test", "_plo_hbh"]]
-    #all_data_names = [["f", "lay", "none", 2000, 2109, "0", "set14", "test", ""]]
-    #all_data_names = [["m", "lay", "none", 2000, 2043, "0", "set5", "train", ""]]
-    #all_data_names = [["f", "lay", "none", 1942, 2200, "0", "set2", "train", "_plo_sl"],
-    #                  ["f", "lay", "none", 83, 100, "0", "set3", "train", "_plo_sl"],
-    #                  ["f", "lay", "none", 2681, 2900, "0", "set1", "train", "_sl"]]
-    all_data_names = [["f", "lay", "none", 2000, 2221, "pi", "set18", "train", ""],
-                      ["f", "lay", "none", 2000, 2214, "pi", "set19", "train", ""],
-                      ["f", "lay", "none", 2000, 2208, "pi", "set20", "train", ""],
-                      ["f", "lay", "none", 2000, 2217, "pi", "set21", "train", ""],
-                      ["f", "lay", "none", 2000, 2218, "pi", "set22", "train", ""]]
-    #all_data_names = [["f", "lay", "none", 2000, 2117, "0", "set5", "train", ""],
-    #                  ["f", "lay", "none", 2000, 2092, "0", "set6", "train", ""],
-    #                  ["f", "lay", "none", 2000, 2119, "0", "set7", "train", ""]]
-    #                 ["m", "lay", "none", 2000, 2198, "pi", "set15", "train", ""],
-    #                  ["m", "lay", "none", 2000, 2184, "pi", "set16", "train", ""],
-    #                  ["m", "lay", "none", 2000, 2218, "pi", "set17", "train", ""]]
-    #all_data_names = [["f", "lay", "none", 1650, 2601, "0", "set4", "test", "_plo_hbh"]]
-                      #["m", "lay", "none", 2000, 2141, "0", "set12", "train", "_plo"],
-                      #["m", "lay", "none", 2000, 2111, "0", "set13", "train", "_plo"]]
-                      #["f", "lay", "none", 2000, 2511, "pi", "set22", "train", "_plo"]]
+    #all_data_names = [["f", "lay", 2109, "51to60", "train"],
+    #                  ["f", "lay", 2033, "61to70", "train"],
+    #                  ["f", "lay", 2037, "71to80", "train"],
+    #                  ["f", "lay", 1923, "81to90", "train"]]
+    #all_data_names = [["m", "lay", 2112, "51to60", "train"],
+    #                  ["m", "lay", 2023, "61to70", "train"],
+    #                  ["m", "lay", 2042, "71to80", "train"],
+    #                  ["m", "lay", 1937, "81to90", "train"]]
+    #all_data_names = [["f", "ls", 1751, "51to60", "train"],
+    #                  ["f", "ls", 1714, "61to70", "train"],
+    #                  ["f", "ls", 1800, "71to80", "train"],
+    #                  ["f", "ls", 1585, "81to90", "train"]]
+    #all_data_names = [["m", "ls", 1734, "51to60", "train"],
+    #                  ["m", "ls", 1708, "61to70", "train"],
+    #                  ["m", "ls", 1741, "71to80", "train"],
+    #                  ["m", "ls", 1617, "81to90", "train"]]
+    #all_data_names = [["f", "rs", 1802, "51to60", "train"],
+    #                  ["f", "rs", 1806, "61to70", "train"],
+    #                  ["f", "rs", 1770, "71to80", "train"],
+    #                  ["f", "rs", 1710, "81to90", "train"]]
+    all_data_names = [["m", "rs", 1781, "51to60", "train"],
+                      ["m", "rs", 1801, "61to70", "train"],
+                      ["m", "rs", 1751, "71to80", "train"],
+                      ["m", "rs", 1714, "81to90", "train"]]
+    #all_data_names = [["f", "ls", 1650, "91to100", "test"]]
+    #all_data_names = [["m", "ls", 1638, "91to100", "test"]]
+    #all_data_names = [["f", "rs", 1840, "91to100", "test"]]
+    #all_data_names = [["m", "rs", 1774, "91to100", "test"]]
+    #all_data_names = [["m", "lay", 2022, "91to100", "train"]]
+    #all_data_names = [["f", "lay", 1991, "91to100", "train"]]
 
     num_data_points = 0
 
@@ -221,13 +226,9 @@ def reprocess_synth_data():
     for gpsn in all_data_names:
         gender = gpsn[0]
         posture = gpsn[1]
-        stiffness = gpsn[2]
-        num_resting_poses = gpsn[3]
-        num_resting_poses_tried = gpsn[4]
-        roll = gpsn[5]
-        set = gpsn[6]
-        dattype = gpsn[7]
-        isplo = gpsn[8]
+        num_resting_poses = gpsn[2]
+        subj_nums = gpsn[3]
+        dattype = gpsn[4]
 
 
         # training_data_dict['v_template'] = []
@@ -261,15 +262,13 @@ def reprocess_synth_data():
         # print m.pose
         # print "J x trans", m.J_transformed[:, 0]
 
-        resting_pose_data_list = np.load('/home/henry/data/resting_poses/random3/resting_pose_roll' + roll
-                                         + isplo + '_'
-                                         + gender + '_' + posture + '_' + set + '_' + str(num_resting_poses) + '_of_'
-                                         + str(num_resting_poses_tried) + '_' + stiffness + '_stiff_fix.npy', allow_pickle=True)
+        resting_pose_data_list = np.load('/home/henry/data/resting_poses/slp/resting_pose_slp_'
+                                          + posture + '_' + gender + '_' + subj_nums + '_' + str(num_resting_poses)
+                                         + '.npy', allow_pickle=True)
 
-        training_database_pmat_height_list = np.load('/home/henry/data/pmat_height/random3/pmat_height_roll' + roll
-                                         + isplo + '_'
-                                         + gender + '_' + posture + '_' + set + '_' + str(num_resting_poses)
-                                         + '_none_stiff_fix.npy', allow_pickle=True)
+        training_database_pmat_height_list = np.load('/home/henry/data/pmat_height/slp/pmat_height_slp_'
+                                          + posture + '_' + gender + '_' + subj_nums + '_' + str(num_resting_poses)
+                                         + '.npy', allow_pickle=True)
 
 
 
@@ -277,6 +276,7 @@ def reprocess_synth_data():
         print np.shape(training_database_pmat_height_list[0])
 
         for resting_pose_data_ct in range(len(resting_pose_data_list)):
+
             if set == "set3" and len(training_data_dict['images']) >= 2000: #set ==  "set3" and resting_pose_data_ct > 4499:
                 pass
             if set == "set1" and len(training_data_dict['images']) >= 4000:#len(training_data_dict['images']) >= 4000: #set ==  "set3" and resting_pose_data_ct > 4499:
@@ -297,6 +297,11 @@ def reprocess_synth_data():
                 body_shape_list = resting_pose_data[2]
                 body_mass = resting_pose_data[3]
 
+                #print(np.max(pmat))
+
+                if math.isnan(np.max(pmat)): continue
+
+
                 # print "shape", body_shape_list
 
                 #print np.shape(resting_pose_data), np.shape(pmat), np.shape(capsule_angles), np.shape(
@@ -306,22 +311,7 @@ def reprocess_synth_data():
                     m.betas[shape_param] = float(body_shape_list[shape_param])
 
                 m.pose[:] = np.random.rand(m.pose.size) * 0.
-                '''
-                dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture=posture, stiffness=None,
-                                                check_only_distal=True, filepath_prefix='/home/henry', add_floor=False)
-                # print self.m.pose
-                volumes = dss.getCapsuleVolumes(mm_resolution=1.)[2]
-                dss.world.reset()
-                dss.world.destroy()
-                dss = dart_skel_sim.DartSkelSim(render=True, m=m, gender=gender, posture=posture, stiffness=None,
-                                                check_only_distal=True, filepath_prefix='/home/henry', add_floor=False,
-                                                volume=volumes)
-                # print self.m.pose
-                
-                #training_data_dict['body_mass'].append(dss.body_mass)  # , "person's mass"
-                dss.world.reset()
-                dss.world.destroy()
-                '''
+
 
                 training_data_dict['body_mass'].append(body_mass)
                 training_data_dict['body_height'].append(np.abs(np.min(m.r[:, 1]) - np.max(m.r[:, 1])))
@@ -333,22 +323,22 @@ def reprocess_synth_data():
                 m.pose[3:6] = capsule_angles[6:9]
                 m.pose[6:9] = capsule_angles[9:12]
                 m.pose[9:12] = capsule_angles[12:15]
-                m.pose[12] = capsule_angles[15]
-                m.pose[15] = capsule_angles[16]
-                m.pose[18:21] = capsule_angles[17:20]
-                m.pose[21:24] = capsule_angles[20:23]
-                m.pose[24:27] = capsule_angles[23:26]
-                m.pose[27:30] = capsule_angles[26:29]
-                m.pose[36:39] = capsule_angles[29:32]  # neck
-                m.pose[39:42] = capsule_angles[32:35]
-                m.pose[42:45] = capsule_angles[35:38]
-                m.pose[45:48] = capsule_angles[38:41]  # head
-                m.pose[48:51] = capsule_angles[41:44]
-                m.pose[51:54] = capsule_angles[44:47]
-                m.pose[55] = capsule_angles[47]
-                m.pose[58] = capsule_angles[48]
-                m.pose[60:63] = capsule_angles[49:52]
-                m.pose[63:66] = capsule_angles[52:55]
+                m.pose[12:15] = capsule_angles[15:18]
+                m.pose[15:18] = capsule_angles[18:21]
+                m.pose[18:21] = capsule_angles[21:24]
+                m.pose[21:24] = capsule_angles[24:27]
+                m.pose[24:27] = capsule_angles[27:30]
+                m.pose[27:30] = capsule_angles[30:33]
+                m.pose[36:39] = capsule_angles[33:36]  # neck
+                m.pose[39:42] = capsule_angles[36:39]
+                m.pose[42:45] = capsule_angles[39:42]
+                m.pose[45:48] = capsule_angles[42:45]  # head
+                m.pose[48:51] = capsule_angles[45:48]
+                m.pose[51:54] = capsule_angles[48:51]
+                m.pose[54:57] = capsule_angles[51:54]
+                m.pose[57:60] = capsule_angles[54:57]
+                m.pose[60:63] = capsule_angles[57:60]
+                m.pose[63:66] = capsule_angles[60:63]
 
                 training_data_dict['joint_angles'].append(np.array(m.pose).astype(float))
                 training_data_dict['body_shape'].append(np.array(m.betas).astype(float))
@@ -401,37 +391,11 @@ def reprocess_synth_data():
     #pickle.dump(training_data_dict, open(os.path.join(
     #    '/home/henry/data/synth/random/train_' + gender + '_' + posture + '_' + str(num_data_points) + '_' + stiffness + '_stiff.p'), 'wb'))
     pickle.dump(training_data_dict, open(os.path.join(
-        '/home/henry/data_BR/synth/general/'+dattype+'_roll' + roll + isplo + '_'
-                                     + gender + '_' + posture + '_set18to22_' + str(num_data_points)
-                                     + '_FIX.p'), 'wb'))
-
-    #for item in training_data_dict:
-    #    print "item name: ", item
-    #    print np.shape(training_data_dict[item])
-
-    #test_database_file = load_pickle('/home/henry/data/real/trainval4_150rh1_sit120rh.p')
-    # training_database_file.append(filepath_prefix_qt+'/trainval8_150rh1_sit120rh.p')
-
-    #for item in test_database_file:
-    #    print "item name: ", item
-    #    print np.shape(test_database_file[item])
-
-    '''
-    for i in range(len(training_data_dict['markers_xyz_m'])):
-        #print training_data_dict['markers_xyz_m'][i].reshape(24, 3)
-        #print test_database_file['markers_xyz_m'][i].reshape(10, 3)
-
-        print training_data_dict['markers_xyz_m'][i][0:2], training_data_dict['root_xyz_shift'][i]
-
-        training_pmat = np.array(training_data_dict['images'][i]).reshape(1, 64, 27)*5.0
-        training_targets = np.array(training_data_dict['markers_xyz_m'][i])
-
-        validate_pmat = np.array(test_database_file['images'][i]).reshape(1, 84, 47)[:, 10:74, 10:37]
-        validate_targets = np.concatenate((np.array(test_database_file['markers_xyz_m'][i]), np.array(test_database_file['pseudomarkers_xyz_m'][i])), 0)
+        '/home/henry/git/sim_camera_resting_scene/data_BR/synth/slp/'+dattype+'_slp_'
+        + posture + '_' + gender + '_51to90_' + str(len(training_data_dict['images'])) + '.p'), 'wb'))
 
 
-        visualize_pressure_map(training_pmat, training_targets, None, validate_pmat, validate_targets)
-    '''
+
 
 def get_direct_synth_marker_offsets():
 
@@ -642,10 +606,20 @@ def reduce_dataset_size():
 
 
 def get_depth_cont_maps_from_synth():
-    #all_data_names = [["f", "lay", "none", 5000, "0", "train", "_plo"]]
-    all_data_names = [["f", "lay", "none", 10000, "pi", "train", ""]]
+    all_data_names = [["f", "lay", 1991, "91to100", "test"]]
+    all_data_names = [["m", "lay", 2022, "91to100", "test"]]
+    all_data_names = [["f", "ls", 1650, "91to100", "test"]]
+    all_data_names = [["m", "ls", 1638, "91to100", "test"]]
+    all_data_names = [["f", "rs", 1840, "91to100", "test"]]
+    all_data_names = [["m", "rs", 1774, "91to100", "test"]]
+    all_data_names = [["f", "lay", 8102, "51to90", "train"]]
+    all_data_names = [["m", "lay", 8114, "51to90", "train"]]
+    all_data_names = [["f", "ls", 6850, "51to90", "train"]]
+    all_data_names = [["m", "ls", 6800, "51to90", "train"]]
+    all_data_names = [["f", "rs", 7088, "51to90", "train"]]
+    all_data_names = [["m", "rs", 7046, "51to90", "train"]]
 
-    set_name = "set18to22"
+
 
     from visualization_lib import VisualizationLib
 
@@ -659,19 +633,16 @@ def get_depth_cont_maps_from_synth():
     for gpsn in all_data_names:
         gender = gpsn[0]
         posture = gpsn[1]
-        stiffness = gpsn[2]
-        num_data_points = gpsn[3]
-        roll = gpsn[4]
-        dattype = gpsn[5]
-        isplo = gpsn[6]
+        num_resting_poses = gpsn[2]
+        subj_nums = gpsn[3]
+        dattype = gpsn[4]
 
-
+        bed_angle = np.deg2rad(1.0)
 
         if posture == "sit":
             bed_angle = np.deg2rad(60.0)
         elif posture == "lay":
             bed_angle = np.deg2rad(1.0)
-
 
         # training_data_dict['v_template'] = []
         # training_data_dict['shapedirs'] = []
@@ -679,14 +650,18 @@ def get_depth_cont_maps_from_synth():
         model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_' + gender + '_lbs_10_207_0_v1.0.0.pkl'
         m = load_model(model_path)
 
-        filename =  '/home/henry/data_BR/synth/general/' + dattype + '_roll' + roll + isplo + '_' \
-                    + gender + '_' + posture + '_'+set_name+'_' + str(num_data_points) \
-                    + '_FIX.p'
+        filename =  '/home/henry/git/sim_camera_resting_scene/data_BR/synth/slp/' + dattype + '_slp_'\
+            + posture + '_' + gender + '_'+subj_nums+'_' + str(num_resting_poses) + '.p'
         #filename =  '/home/henry/data/synth/home_poses/home_pose_'+gender+'.p'
+
+
+
 
 
         training_data_dict = load_pickle(filename)
         print "loaded ", filename
+
+
 
         betas = training_data_dict['body_shape']
         pose = training_data_dict['joint_angles']
@@ -839,161 +814,14 @@ def get_depth_cont_maps_from_synth():
             #break
 
 
-        filename =  '/home/henry/data_BR/synth/general/' + dattype + '_roll' + roll + isplo + '_' \
-                    + gender + '_' + posture + '_'+set_name+'_' + str(num_data_points) \
-                    + '_' + stiffness + '_stiff_fix_new.p'
+        filename =  '/home/henry/git/sim_camera_resting_scene/data_BR/synth/slp/' + dattype + '_slp_'\
+            + posture + '_' + gender + '_'+subj_nums+'_' + str(num_resting_poses) + '_new.p'
 
         #filename =  '/home/henry/data/synth/home_poses/home_pose_'+gender+'.p'
 
         pickle.dump(training_data_dict, open(os.path.join(filename), 'wb'))
 
-def reprocess_small_bags():
-    from smpl.smpl_webuser.serialization import load_model
 
-    for gender in ["f"]:#, "m"]:
-
-
-        stiffness = "none"
-        posture = "lay"
-
-
-        '''set_num_pairs = [[1, "250"],
-                         [2, "250"],
-                         [3, "250"],
-                         [4, "250"],
-                         [5, "250"],
-                         [6, "250"],
-                         [7, "250"],
-                         [8, "250"],
-                         [9, "250"],
-                         [10, "250"],
-                         [11, "250"],
-                         [12, "250"],
-                         [13, "250"],
-                         [14, "250"],
-                         [15, "250"],
-                         [16, "250"],
-                         [17, "250"],
-                         [18, "250"],
-                         [19, "250"],
-                         [20, "250"],
-                         [21, "200"],
-                         [22, "200"],
-                         [23, "200"],
-                         [24, "200"],
-                         [25, "200"],
-                         [26, "200"],
-                         [27, "200"],
-                         [28, "200"],
-                         [29, "200"],
-                         [30, "200"],
-                         [31, "250"],
-                         [32, "250"],
-                         [33, "250"],
-                         [34, "250"],'''
-
-
-        set_num_pairs = [[62, "100"],
-                         [63, "100"],
-                         [64, "100"],
-                         [65, "100"],
-                         [66, "100"],
-                         [67, "100"],
-                         [68, "100"],
-                         [69, "100"]]
-
-
-        #set_num_pairs = [[2, "1400"],[2, "1400"]]
-        #set_num_pairs = [[2, "600"],[3, "600"],[4, "600"],[5, "600"]]
-
-        plo = "_plo"
-        rp = "0"
-        sl = ""#"_sl"
-        xl = ""#"_xl"
-        phu = ""#"_phu"
-        hbh = "_hbh"
-
-        model_path = '/home/henry/git/SMPL_python_v.1.0.0/smpl/models/basicModel_' + gender + '_lbs_10_207_0_v1.0.0.pkl'
-        prechecked_pose_list_new = []
-        num_data_checked = 0
-
-        for pair in set_num_pairs:
-            set = pair[0]
-            num_data = pair[1]
-
-            prechecked_pose_list = np.load("/home/henry/data/init_poses/random_hbh3/all_rand_nom_endhtbicheck_roll"+rp+plo+hbh+sl+xl+phu+"_"+gender+"_lay_set" + str(set) + "_" + num_data + ".npy", allow_pickle=True).tolist()
-            # prechecked_pose_list = np.load("/home/henry/data/init_poses/all_rand_nom_endhtbicheck_roll0_plo_hbh_m_lay_set" + set + "_" + num_data + ".npy", allow_pickle=True).tolist()
-
-            m = load_model(model_path)
-
-            # shuffle(prechecked_pose_list)
-
-            if set == 17 and gender == "f":
-                prechecked_pose_list = prechecked_pose_list[20:]
-            elif set == 35 and gender == "f":
-                prechecked_pose_list = prechecked_pose_list[5:]
-
-            ct = 0
-            for shape_pose in prechecked_pose_list:  # 1, 6 #FOR all_rand_nom_endhtbicheck_roll0_plo_m_lay_set5_2200.npy
-                # flexbind.StartGpuWork()
-                # flexbind.Init(scenes, param_dict, False)
-                # flexbind.EndGpuWork()
-
-                hbh_cutoff = 1000
-
-                if hbh == "_hbh" and len(prechecked_pose_list_new) <= hbh_cutoff:
-                    for idx in range(len(shape_pose[0])):
-                        m.betas[idx] = shape_pose[0][idx]
-                    for idx in range(len(shape_pose[1])):
-                        m.pose[shape_pose[1][idx]] = shape_pose[2][idx]
-
-                    # Sample some new rotational angle and shifting on the bed over a normal distribution
-                    root_rot = shape_pose[3] * 1  # np.random.uniform(-np.pi/16, np.pi/16)
-                    m.pose[2] = root_rot
-                    m.pose[1] = shape_pose[7] * 1.
-                    # m.pose[0] = np.pi/2
-
-
-
-                    mJtransformed = np.array(m.J_transformed)
-
-                    PASSED = False
-
-                    if mJtransformed[20, 1] > mJtransformed[16, 1]: #pose is OK
-                        if mJtransformed[21, 1] > mJtransformed[17, 1]: #pose is OK
-                            prechecked_pose_list_new.append(shape_pose)
-                            PASSED = True
-                            ct += 1
-                            num_data_checked += 1
-
-                elif hbh == "_hbh" and len(prechecked_pose_list_new) > hbh_cutoff:
-                    break
-
-                elif hbh != "_hbh":
-                    prechecked_pose_list_new.append(shape_pose)
-                    PASSED = True
-                    ct += 1
-                    num_data_checked += 1
-                #if mJtransformed[20, 1] > mJtransformed[16, 1] and mJtransformed[21, 1] > mJtransformed[17, 1]: #pose is OK
-                #    PASSED = False
-                #elif mJtransformed[20, 1] > mJtransformed[16, 1]:
-                #    PASSED = True
-                #    prechecked_pose_list_new.append(shape_pose)
-                #    ct += 1
-                #    num_data_checked += 1
-                #elif mJtransformed[21, 1] > mJtransformed[17, 1]:
-                #    prechecked_pose_list_new.append(shape_pose)
-                #    PASSED = True
-                #    ct += 1
-                #    num_data_checked += 1
-
-
-
-                print PASSED, ct, len(prechecked_pose_list_new)
-
-            print "set:",set, "     num OK:", ct, len(prechecked_pose_list_new)
-
-        np.save("/home/henry/data/init_poses/all_rand_nom_endhtbicheck_roll" + rp + plo + hbh + sl + xl + phu + "_" + gender + "_" + posture + "_set" + str(3) + "_" + str(num_data_checked) + ".npy", np.array(prechecked_pose_list_new))
 
 
 if __name__ == "__main__":
@@ -1001,4 +829,3 @@ if __name__ == "__main__":
     get_depth_cont_maps_from_synth() #this takes the above result and puts additional stuff in it
     #reduce_dataset_size()
     #get_direct_synth_marker_offsets()
-    #reprocess_small_bags()
